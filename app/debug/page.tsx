@@ -11,9 +11,8 @@ type Probe = {
 
 const TABLES = [
   'market_conditions',
-  'daily_signals',
-  'daily_vcp_screen',
-  'daily_structure_pivot_screen',
+  'scanner_vcp',
+  'mc_v4_raw_history',
   'sector_selection_s33',
   'sector_index_prices',
   'chart_ohlcv_cache',

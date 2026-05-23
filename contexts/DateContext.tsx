@@ -17,15 +17,15 @@ export function DateProvider({ children }: { children: ReactNode }) {
   const [availableDates, setAvailableDates] = useState<string[]>([])
   const [selectedDate, setSelectedDate] = useState('')
 
-  // 利用可能日付を取得（daily_signals の DISTINCT date）
+  // 利用可能日付を取得（market_conditions の DISTINCT date）
   const fetchDates = useCallback(async () => {
     const { data, error } = await supabase
-      .from('daily_signals')
+      .from('market_conditions')
       .select('date')
       .order('date', { ascending: false })
       .limit(500)
 
-    if (error) console.error('[daily_signals.date]', error)
+    if (error) console.error('[market_conditions.date]', error)
     if (!data || data.length === 0) return
 
     // ユニーク日付を降順で取得
