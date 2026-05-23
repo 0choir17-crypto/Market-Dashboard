@@ -26,12 +26,7 @@ export function DateProvider({ children }: { children: ReactNode }) {
       .limit(500)
 
     if (error) console.error('[daily_signals.date]', error)
-
-    if (!data || data.length === 0) {
-      // フォールバック: 日付が取れなくても UI を進めるため今日の日付を入れる
-      if (!selectedDate) setSelectedDate(new Date().toISOString().slice(0, 10))
-      return
-    }
+    if (!data || data.length === 0) return
 
     // ユニーク日付を降順で取得
     const unique = [...new Set(data.map((r: { date: string }) => r.date))].sort(
