@@ -1,8 +1,5 @@
 import { supabase } from '@/lib/supabase'
 import type { DailyVcpScreen } from '@/types/vcp'
-import type { StructurePivotRow } from '@/types/structurePivot'
-import type { DailySignal } from '@/types/signals'
-import { fetchStructurePivot } from '@/lib/structurePivotFetch'
 
 export type TodayMarket = {
   date: string
@@ -16,11 +13,7 @@ export type TodayMarket = {
 
 export type TodayResponse = {
   vcpDate: string | null
-  pivotDate: string | null
-  signalsDate: string | null
   vcp: DailyVcpScreen[]
-  pivot: StructurePivotRow[]
-  signals: DailySignal[]
   market: TodayMarket | null
   hotSectors: string[]
 }
@@ -33,21 +26,11 @@ const VCP_COLUMNS = `
   regime, mc_v4
 `
 
-const SIGNAL_COLUMNS = `
-  date, code, company_name, screen_name, sector_s33,
-  price_chg_1d, price_chg_5d, rs_composite, rvol, adr_pct,
-  dist_ema21_r, dist_10wma_r, dist_50sma_r,
-  high_52w_pct, stop_pct, hit_count,
-  cockpit_rs, mansfield_rs,
-  short_interest_ratio, short_position_change,
-  mc_met, mc_condition
-`
-
 async function fetchVcp(date: string | null): Promise<{ date: string | null; rows: DailyVcpScreen[] }> {
   let targetDate = date
   if (!targetDate) {
     const { data: latest } = await supabase
-      .from('daily_vcp_screen')
+      .from('scanner_vcp')
       .select('date')
       .order('date', { ascending: false })
       .limit(1)
@@ -57,7 +40,7 @@ async function fetchVcp(date: string | null): Promise<{ date: string | null; row
   if (!targetDate) return { date: null, rows: [] }
 
   const { data, error } = await supabase
-    .from('daily_vcp_screen')
+    .from('scanner_vcp')
     .select(VCP_COLUMNS)
     .eq('date', targetDate)
     .order('vcs_score', { ascending: false })
@@ -69,44 +52,34 @@ async function fetchVcp(date: string | null): Promise<{ date: string | null; row
   return { date: targetDate, rows: (data ?? []) as DailyVcpScreen[] }
 }
 
-async function fetchSignals(date: string | null): Promise<{ date: string | null; rows: DailySignal[] }> {
-  let targetDate = date
-  if (!targetDate) {
-    const { data: latest } = await supabase
-      .from('daily_signals')
-      .select('date')
+async function fetchMarket(date: string | null, isLatest: boolean): Promise<TodayMarket | null> {
+  const baseSelect = 'date, market_regime, breadth_regime, scorecard_regime, mc_v4, mc_regime_v4, mc_divergence_flag_v4'
+
+  if (isLatest || !date) {
+    const primary = await supabase
+      .from('market_conditions')
+      .select(baseSelect)
+      .not('mc_v4', 'is', null)
       .order('date', { ascending: false })
       .limit(1)
       .maybeSingle()
-    targetDate = (latest?.date as string | undefined) ?? null
+    if (primary.data) return primary.data as TodayMarket
+
+    const fallback = await supabase
+      .from('market_conditions')
+      .select(baseSelect)
+      .order('date', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    return (fallback.data as TodayMarket | null) ?? null
   }
-  if (!targetDate) return { date: null, rows: [] }
 
-  const { data, error } = await supabase
-    .from('daily_signals')
-    .select(SIGNAL_COLUMNS)
-    .eq('date', targetDate)
-    .order('hit_count', { ascending: false })
-
-  if (error) {
-    console.error('today signals fetch error:', error)
-    return { date: targetDate, rows: [] }
-  }
-  return { date: targetDate, rows: (data ?? []) as DailySignal[] }
-}
-
-async function fetchMarket(date: string | null, isLatest: boolean): Promise<TodayMarket | null> {
-  let query = supabase
+  const { data } = await supabase
     .from('market_conditions')
-    .select('date, market_regime, breadth_regime, scorecard_regime, mc_v4, mc_regime_v4, mc_divergence_flag_v4')
-
-  if (isLatest || !date) {
-    query = query.not('mc_v4', 'is', null).order('date', { ascending: false }).limit(1)
-  } else {
-    query = query.eq('date', date).limit(1)
-  }
-
-  const { data } = await query.maybeSingle()
+    .select(baseSelect)
+    .eq('date', date)
+    .limit(1)
+    .maybeSingle()
   return (data as TodayMarket | null) ?? null
 }
 
@@ -140,21 +113,15 @@ export async function fetchToday(opts: { date?: string }): Promise<TodayResponse
   const requested = opts.date ?? null
   const isLatest = !requested
 
-  const [vcpRes, pivotRes, signalsRes, market, hotSectors] = await Promise.all([
+  const [vcpRes, market, hotSectors] = await Promise.all([
     fetchVcp(requested),
-    fetchStructurePivot({ date: requested ?? undefined, limit: 500 }),
-    fetchSignals(requested),
     fetchMarket(requested, isLatest),
     fetchHotSectors(requested),
   ])
 
   return {
     vcpDate: vcpRes.date,
-    pivotDate: pivotRes.date,
-    signalsDate: signalsRes.date,
     vcp: vcpRes.rows,
-    pivot: pivotRes.rows,
-    signals: signalsRes.rows,
     market,
     hotSectors,
   }

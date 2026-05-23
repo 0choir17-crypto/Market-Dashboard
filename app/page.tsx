@@ -21,16 +21,36 @@ export default function Page() {
     setLoading(true)
     setError(null)
 
-    let query = supabase.from('market_conditions').select('*')
+    const latestMode = isLatest || !selectedDate
 
-    if (isLatest || !selectedDate) {
-      // 当日行は mc_v4 / 8 factors が未集計の場合があるので、v4 が入っている直近行を採用
-      query = query.not('mc_v4', 'is', null).order('date', { ascending: false }).limit(1)
-    } else {
-      query = query.eq('date', selectedDate).limit(1)
+    // 当日行は mc_v4 / 8 factors が未集計の場合があるので、v4 が入っている直近行を優先。
+    // ただし mc_v4 がまだどの行にも入っていないブートストラップ期は素の最新行にフォールバック。
+    const primary = latestMode
+      ? supabase
+          .from('market_conditions')
+          .select('*')
+          .not('mc_v4', 'is', null)
+          .order('date', { ascending: false })
+          .limit(1)
+      : supabase
+          .from('market_conditions')
+          .select('*')
+          .eq('date', selectedDate)
+          .limit(1)
+
+    let { data, error: err } = await primary.maybeSingle()
+
+    if (latestMode && !data && !err) {
+      const fallback = await supabase
+        .from('market_conditions')
+        .select('*')
+        .order('date', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      data = fallback.data
+      err = fallback.error
     }
 
-    const { data, error: err } = await query.maybeSingle()
     if (err) {
       console.error('[market_conditions]', err)
       setError(err.message)
