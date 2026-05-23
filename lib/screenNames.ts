@@ -79,15 +79,18 @@ export function formatScreenName(raw: string): string {
 
 // 推奨スクリーン (採用 2 本のいずれか, 現在の regime に合致するもの).
 // 引数 marketRegime は daily_signals.regime (TOPIX-trend ベース: bull/bear/neutral).
-// scorecardRegime は v3 scorecard ラベル (very_bull/bull/neutral/bear/very_bear).
-// Phase 2.1 では mc_v4 score を直接持っていないため, scorecard_regime を v4 regime
-// 相当とみなして判定する (very_bull > bull > neutral > bear > very_bear).
+// scorecardRegime は mc_regime_v4 / scorecard_regime のラベル
+// (strong_bull / bull / neutral / bear / strong_bear).
+// Python パイプライン側の内部表現は very_bull/very_bear だが、market_conditions の
+// 公開カラムは strong_* に正規化されている (types/market.ts と同じ). 両方を受ける.
 const REGIME_TO_RECOMMENDED: Record<string, string[]> = {
-  'very_bear': ['Div Bear', 'Value'],     // DIV_DY + ValueQuality 両方
-  'bear':      ['Div Bear', 'Value'],     // DIV_DY + ValueQuality 両方
-  'neutral':   ['Div Bear'],              // DIV_DY のみ
-  'bull':      [],                        // 推奨なし (採用 2 本とも bear/neutral 限定)
-  'very_bull': [],                        // 推奨なし
+  'strong_bear': ['Div Bear', 'Value'],   // DIV_DY + ValueQuality 両方
+  'very_bear':   ['Div Bear', 'Value'],   // (互換用: pipeline 内部ラベル)
+  'bear':        ['Div Bear', 'Value'],   // DIV_DY + ValueQuality 両方
+  'neutral':     ['Div Bear'],            // DIV_DY のみ
+  'bull':        [],                      // 推奨なし (採用 2 本とも bear/neutral 限定)
+  'strong_bull': [],                      // 推奨なし
+  'very_bull':   [],                      // (互換用: pipeline 内部ラベル)
 }
 
 export function getRecommendedScreens(
