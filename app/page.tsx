@@ -15,22 +15,27 @@ export default function Page() {
   const { selectedDate, isLatest } = useDate()
   const [market, setMarket] = useState<MarketConditions | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   const fetchData = useCallback(async () => {
-    if (!selectedDate) return
     setLoading(true)
+    setError(null)
 
     let query = supabase.from('market_conditions').select('*')
 
-    if (isLatest) {
+    if (isLatest || !selectedDate) {
       // 当日行は mc_v4 / 8 factors が未集計の場合があるので、v4 が入っている直近行を採用
       query = query.not('mc_v4', 'is', null).order('date', { ascending: false }).limit(1)
     } else {
       query = query.eq('date', selectedDate).limit(1)
     }
 
-    const { data } = await query.single()
-    setMarket(data)
+    const { data, error: err } = await query.maybeSingle()
+    if (err) {
+      console.error('[market_conditions]', err)
+      setError(err.message)
+    }
+    setMarket(data ?? null)
     setLoading(false)
   }, [selectedDate, isLatest])
 
@@ -105,6 +110,11 @@ export default function Page() {
               ? 'Supabase の market_conditions テーブルにデータを挿入してください。'
               : `${selectedDate} のマーケットデータはありません。`}
           </p>
+          {error && (
+            <p className="text-xs mt-3 text-red-600 break-all">
+              Supabase error: {error}
+            </p>
+          )}
         </div>
       )}
 
