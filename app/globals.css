@@ -1,0 +1,36 @@
+@import "tailwindcss";
+
+:root {
+  --bg-primary: #f4f5f7;
+  --bg-card: #ffffff;
+  --bg-card-hover: #fafafa;
+  --border: #e8eaed;
+  --text-primary: #1a1d23;
+  --text-secondary: #6b7280;
+  --text-muted: #9ca3af;
+  --positive: #16a34a;
+  --positive-bg: #dcfce7;
+  --negative: #dc2626;
+  --negative-bg: #fee2e2;
+  --neutral-color: #92400e;
+  --neutral-bg: #fef3c7;
+  --accent: #1d4ed8;
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+.card {
+  background-color: var(--bg-card);
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-1px);
+}

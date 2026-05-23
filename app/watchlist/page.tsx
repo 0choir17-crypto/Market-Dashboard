@@ -1,0 +1,388 @@
+'use client'
+
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { supabase } from '@/lib/supabase'
+import { WatchlistItem } from '@/types/portfolio'
+import { Trade } from '@/types/trades'
+import WatchlistModal from '@/components/watchlist/WatchlistModal'
+import ConfirmDialog from '@/components/shared/ConfirmDialog'
+import PositionModal from '@/components/portfolio/PositionModal'
+import StockGrid, { GridEntry } from '@/components/chart/StockGrid'
+import StockChartView from '@/components/chart/StockChartView'
+
+type SortKey = 'watch_date' | 'ticker' | 'screen_tag'
+
+function ScreenTagBadge({ tag }: { tag: string | null }) {
+  if (!tag) return <span className="text-gray-400 text-xs">—</span>
+  return (
+    <span className="inline-block px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded text-xs font-medium">
+      {tag}
+    </span>
+  )
+}
+
+function fmt(v: number | null | undefined, d = 0): string {
+  if (v == null) return '—'
+  return v.toLocaleString('ja-JP', { minimumFractionDigits: d, maximumFractionDigits: d })
+}
+
+export default function WatchlistPage() {
+  const [items, setItems] = useState<WatchlistItem[]>([])
+  const [loading, setLoading] = useState(true)
+  const [sortKey, setSortKey] = useState<SortKey>('watch_date')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
+
+  // Modal states
+  const [addOpen, setAddOpen] = useState(false)
+  const [editItem, setEditItem] = useState<WatchlistItem | null>(null)
+  const [deleteItem, setDeleteItem] = useState<WatchlistItem | null>(null)
+  const [promoteItem, setPromoteItem] = useState<WatchlistItem | null>(null)
+
+  // Chart selection (for inline detail panel below the cards)
+  const [selectedCode, setSelectedCode] = useState<string | null>(null)
+  const detailRef = useRef<HTMLDivElement | null>(null)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    const { data } = await supabase
+      .from('watchlist')
+      .select('*')
+      .order('watch_date', { ascending: false })
+    setItems((data ?? []) as WatchlistItem[])
+    setLoading(false)
+  }, [])
+
+  useEffect(() => { load() }, [load])
+
+  function handleSort(key: SortKey) {
+    if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
+    else { setSortKey(key); setSortDir('desc') }
+  }
+
+  const sorted = [...items].sort((a, b) => {
+    const av = a[sortKey] ?? ''
+    const bv = b[sortKey] ?? ''
+    const cmp = av < bv ? -1 : av > bv ? 1 : 0
+    return sortDir === 'asc' ? cmp : -cmp
+  })
+
+  // Cards: only Japanese 4-digit tickers can hit `chart_ohlcv_cache`.
+  const cardEntries: GridEntry[] = useMemo(
+    () =>
+      sorted
+        .filter(it => /^\d{4}$/.test(it.ticker))
+        .map(it => ({
+          code: it.ticker,
+          name: it.company_name,
+          sector: it.sector_s33,
+          overrides: {
+            rs: it.rs_composite ?? null,
+            adrPct: it.adr_pct ?? null,
+          },
+        })),
+    [sorted],
+  )
+
+  const selectedItem = useMemo(
+    () => items.find(it => it.ticker === selectedCode) ?? null,
+    [items, selectedCode],
+  )
+
+  useEffect(() => {
+    if (selectedCode && detailRef.current) {
+      detailRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }, [selectedCode])
+
+  const handleSelect = (code: string) => {
+    setSelectedCode(prev => (prev === code ? null : code))
+  }
+
+  async function handleDelete() {
+    if (!deleteItem) return
+    await supabase.from('watchlist').delete().eq('id', deleteItem.id)
+    setDeleteItem(null)
+    load()
+  }
+
+  // Build prefill for PositionModal from watchlist item
+  const promotePrefill: Partial<Trade> | undefined = promoteItem ? {
+    ticker: promoteItem.ticker,
+    company_name: promoteItem.company_name,
+    entry_price: promoteItem.entry_price ?? 0,
+    stop_price: promoteItem.stop_price,
+    target_r: promoteItem.target_r,
+    memo: promoteItem.memo,
+    // シグナルスナップショット引き継ぎ
+    sector_s33: promoteItem.sector_s33,
+    signal_price: promoteItem.signal_price,
+    rs_at_entry: promoteItem.rs_composite,
+    rvol_at_entry: promoteItem.rvol,
+    adr_at_entry: promoteItem.adr_pct,
+    dist_ema21_at_entry: promoteItem.dist_ema21_r,
+    stop_pct_at_entry: promoteItem.stop_pct,
+    mc_met_at_entry: promoteItem.mc_met,
+    mc_condition_at_entry: promoteItem.mc_condition,
+  } : undefined
+
+  const thClass = (key: SortKey) =>
+    `px-3 py-2.5 text-xs font-semibold uppercase tracking-wide cursor-pointer select-none whitespace-nowrap hover:bg-gray-100 transition-colors ${sortKey === key ? 'text-blue-600' : 'text-gray-500'}`
+
+  const indicator = (key: SortKey) =>
+    sortKey === key ? (sortDir === 'asc' ? ' ↑' : ' ↓') : ' ↕'
+
+  return (
+    <main className="min-h-screen p-6" style={{ backgroundColor: 'var(--bg-primary)' }}>
+      {/* Header */}
+      <header className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Watchlist</h1>
+          <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
+            21 Cloud — スクリーニング候補管理
+          </p>
+        </div>
+        <button
+          onClick={() => setAddOpen(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors min-h-[44px]"
+        >
+          <span className="text-lg leading-none">+</span> Add Watch
+        </button>
+      </header>
+
+      {/* Cards (Japanese tickers only) */}
+      {cardEntries.length > 0 && (
+        <section className="mb-6">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-2">
+            Charts ({cardEntries.length})
+          </h2>
+          <StockGrid
+            entries={cardEntries}
+            selectedCode={selectedCode}
+            onSelect={handleSelect}
+          />
+        </section>
+      )}
+
+      {selectedCode && (
+        <section ref={detailRef} className="mb-6">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-sm font-semibold text-[var(--text-secondary)] uppercase tracking-wide">
+              Detail — {selectedCode}
+            </h2>
+            <button
+              onClick={() => setSelectedCode(null)}
+              className="text-xs px-2 py-1 rounded border border-[var(--border)] bg-white hover:bg-gray-50 text-[var(--text-secondary)]"
+            >
+              閉じる ✕
+            </button>
+          </div>
+          <StockChartView
+            code={selectedCode}
+            name={selectedItem?.company_name ?? null}
+            sector={selectedItem?.sector_s33 ?? null}
+          />
+        </section>
+      )}
+
+      {/* Desktop Table */}
+      <div className="bg-white rounded-xl border border-[#e8eaed] shadow-sm overflow-x-auto hidden sm:block">
+        <div className="px-4 pt-4 pb-2 text-xs text-gray-400">{items.length} items</div>
+        <table className="w-full min-w-[1200px] text-sm">
+          <thead>
+            <tr className="bg-gray-50 border-b border-t border-[#e8eaed]">
+              <th className={`${thClass('ticker')} text-left`} onClick={() => handleSort('ticker')}>
+                Ticker{indicator('ticker')}
+              </th>
+              <th className="px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide text-left whitespace-nowrap">Name</th>
+              <th className={`${thClass('watch_date')} text-left`} onClick={() => handleSort('watch_date')}>
+                Added{indicator('watch_date')}
+              </th>
+              <th className={`${thClass('screen_tag')} text-left`} onClick={() => handleSort('screen_tag')}>
+                Screen{indicator('screen_tag')}
+              </th>
+              <th className="px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide text-right whitespace-nowrap">Signal Price</th>
+              <th className="px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide text-right whitespace-nowrap">Stop</th>
+              <th className="px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide text-right whitespace-nowrap">R Target</th>
+              <th className="px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide text-right whitespace-nowrap">RS</th>
+              <th className="px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide text-right whitespace-nowrap">RVOL</th>
+              <th className="px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide text-right whitespace-nowrap">ADR%</th>
+              <th className="px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide text-right whitespace-nowrap">EMA21(R)</th>
+              <th className="px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide text-left whitespace-nowrap">Sector</th>
+              <th className="px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide text-left whitespace-nowrap">Memo</th>
+              <th className="px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide text-right whitespace-nowrap">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sorted.map((item, i) => (
+              <tr
+                key={item.id}
+                className={`border-b border-[#f0f2f4] hover:bg-gray-50 transition-colors ${i % 2 === 0 ? 'bg-white' : 'bg-[#fafafa]'}`}
+              >
+                <td className="px-3 py-2.5 whitespace-nowrap">
+                  <a
+                    href={`https://jp.tradingview.com/chart/?symbol=TSE:${item.ticker}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-mono font-bold text-blue-600 hover:underline text-xs"
+                  >
+                    {item.ticker}
+                  </a>
+                </td>
+                <td className="px-3 py-2.5 whitespace-nowrap text-xs text-gray-700">
+                  {item.company_name ? (
+                    <a
+                      href={`https://shikiho.toyokeizai.net/stocks/${item.ticker}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="hover:underline"
+                    >
+                      {item.company_name}
+                    </a>
+                  ) : '—'}
+                </td>
+                <td className="px-3 py-2.5 whitespace-nowrap text-xs text-gray-600 font-mono">{item.watch_date}</td>
+                <td className="px-3 py-2.5 whitespace-nowrap"><ScreenTagBadge tag={item.screen_tag} /></td>
+                <td className="px-3 py-2.5 text-right font-mono text-xs whitespace-nowrap">{fmt(item.entry_price)}</td>
+                <td className="px-3 py-2.5 text-right font-mono text-xs whitespace-nowrap">{fmt(item.stop_price)}</td>
+                <td className="px-3 py-2.5 text-right font-mono text-xs whitespace-nowrap">
+                  {item.target_r != null ? `${item.target_r}R` : '—'}
+                </td>
+                <td className="px-3 py-2.5 text-right font-mono text-xs whitespace-nowrap">{item.rs_composite != null ? item.rs_composite.toFixed(1) : '—'}</td>
+                <td className="px-3 py-2.5 text-right font-mono text-xs whitespace-nowrap">
+                  {item.rvol != null ? (
+                    <span className={item.rvol >= 2 ? 'font-bold text-emerald-600' : ''}>{item.rvol.toFixed(2)}</span>
+                  ) : '—'}
+                </td>
+                <td className="px-3 py-2.5 text-right font-mono text-xs whitespace-nowrap">{item.adr_pct != null ? item.adr_pct.toFixed(1) : '—'}</td>
+                <td className="px-3 py-2.5 text-right font-mono text-xs whitespace-nowrap">{item.dist_ema21_r != null ? item.dist_ema21_r.toFixed(2) : '—'}</td>
+                <td className="px-3 py-2.5 text-xs text-gray-500 whitespace-nowrap">{item.sector_s33 ?? '—'}</td>
+                <td className="px-3 py-2.5 text-xs text-gray-500 max-w-[160px]">
+                  <span className="block truncate">{item.memo ?? '—'}</span>
+                </td>
+                <td className="px-3 py-2.5 whitespace-nowrap">
+                  <div className="flex items-center justify-end gap-1">
+                    <button
+                      onClick={() => setPromoteItem(item)}
+                      className="px-2 py-1 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded hover:bg-green-100 transition-colors"
+                      title="Promote to Portfolio"
+                    >
+                      → Portfolio
+                    </button>
+                    <button
+                      onClick={() => setEditItem(item)}
+                      className="px-2 py-1 text-xs font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded hover:bg-blue-100 transition-colors"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => setDeleteItem(item)}
+                      className="px-2 py-1 text-xs font-medium text-red-600 bg-red-50 border border-red-200 rounded hover:bg-red-100 transition-colors"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {items.length === 0 && !loading && (
+          <div className="py-12 text-center text-gray-400 text-sm">
+            ウォッチリストは空です。「Add Watch」から登録してください。
+          </div>
+        )}
+        {loading && (
+          <div className="py-12 text-center text-gray-400 text-sm">Loading...</div>
+        )}
+      </div>
+
+      {/* Mobile Card Layout */}
+      <div className="block sm:hidden space-y-3">
+        {loading && <p className="text-center text-gray-400 text-sm py-8">Loading...</p>}
+        {!loading && items.length === 0 && (
+          <p className="text-center text-gray-400 text-sm py-8">ウォッチリストは空です。</p>
+        )}
+        {sorted.map(item => (
+          <div key={item.id} className="bg-white rounded-xl border border-[#e8eaed] shadow-sm p-4">
+            <div className="flex justify-between items-start mb-2">
+              <div>
+                <a
+                  href={`https://jp.tradingview.com/chart/?symbol=TSE:${item.ticker}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-mono font-bold text-blue-600 text-base hover:underline"
+                >
+                  {item.ticker}
+                </a>
+                {item.company_name && (
+                  <span className="ml-2 text-xs text-gray-600">{item.company_name}</span>
+                )}
+              </div>
+              <ScreenTagBadge tag={item.screen_tag} />
+            </div>
+            <div className="grid grid-cols-3 gap-2 text-xs text-gray-600 mb-2">
+              <div><span className="text-gray-400 block">Added</span>{item.watch_date}</div>
+              <div><span className="text-gray-400 block">Signal</span>{fmt(item.entry_price)}</div>
+              <div><span className="text-gray-400 block">Stop</span>{fmt(item.stop_price)}</div>
+              <div><span className="text-gray-400 block">R Target</span>{item.target_r != null ? `${item.target_r}R` : '—'}</div>
+            </div>
+            {item.rs_composite != null && (
+              <div className="grid grid-cols-3 gap-2 text-xs text-gray-600 mb-3">
+                <div><span className="text-gray-400 block">RS</span>{item.rs_composite.toFixed(1)}</div>
+                <div><span className="text-gray-400 block">RVOL</span><span className={item.rvol != null && item.rvol >= 2 ? 'font-bold text-emerald-600' : ''}>{item.rvol?.toFixed(2) ?? '—'}</span></div>
+                <div><span className="text-gray-400 block">Sector</span>{item.sector_s33 ?? '—'}</div>
+              </div>
+            )}
+            {item.memo && <p className="text-xs text-gray-500 mb-3 truncate">{item.memo}</p>}
+            <div className="flex gap-2">
+              <button
+                onClick={() => setPromoteItem(item)}
+                className="flex-1 py-2 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100"
+              >
+                → Portfolio
+              </button>
+              <button
+                onClick={() => setEditItem(item)}
+                className="px-3 py-2 text-xs font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100"
+              >
+                Edit
+              </button>
+              <button
+                onClick={() => setDeleteItem(item)}
+                className="px-3 py-2 text-xs font-medium text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Modals */}
+      <WatchlistModal
+        open={addOpen}
+        onClose={() => setAddOpen(false)}
+        onSaved={load}
+      />
+      <WatchlistModal
+        open={!!editItem}
+        onClose={() => setEditItem(null)}
+        onSaved={load}
+        initial={editItem ?? undefined}
+      />
+      <ConfirmDialog
+        open={!!deleteItem}
+        message={`「${deleteItem?.ticker}」をウォッチリストから削除しますか？`}
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteItem(null)}
+      />
+      {/* Promote to Portfolio modal */}
+      <PositionModal
+        open={!!promoteItem}
+        onClose={() => setPromoteItem(null)}
+        onSaved={() => { setPromoteItem(null) }}
+        initial={promotePrefill}
+      />
+    </main>
+  )
+}
