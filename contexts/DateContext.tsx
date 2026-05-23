@@ -19,13 +19,19 @@ export function DateProvider({ children }: { children: ReactNode }) {
 
   // 利用可能日付を取得（daily_signals の DISTINCT date）
   const fetchDates = useCallback(async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('daily_signals')
       .select('date')
       .order('date', { ascending: false })
       .limit(500)
 
-    if (!data || data.length === 0) return
+    if (error) console.error('[daily_signals.date]', error)
+
+    if (!data || data.length === 0) {
+      // フォールバック: 日付が取れなくても UI を進めるため今日の日付を入れる
+      if (!selectedDate) setSelectedDate(new Date().toISOString().slice(0, 10))
+      return
+    }
 
     // ユニーク日付を降順で取得
     const unique = [...new Set(data.map((r: { date: string }) => r.date))].sort(
