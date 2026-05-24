@@ -25,7 +25,7 @@ type SectorSeries = {
   sector: string
   points: { date: string; v: number | null }[]
   latest: number | null
-  delta5d: number | null
+  delta21d: number | null
   rank: number | null
 }
 
@@ -44,22 +44,22 @@ export default function SectorBarChart33({ history }: Props) {
         return -1
       })()
       const latest = lastIdx >= 0 ? (points[lastIdx].v as number) : null
-      let delta5d: number | null = null
-      if (lastIdx >= 5 && points[lastIdx - 5].v != null && latest != null) {
-        delta5d = +(latest - (points[lastIdx - 5].v as number)).toFixed(1)
+      let delta21d: number | null = null
+      if (lastIdx >= 21 && points[lastIdx - 21].v != null && latest != null) {
+        delta21d = +(latest - (points[lastIdx - 21].v as number)).toFixed(1)
       } else if (lastIdx >= 1 && latest != null) {
         const firstValid = points.find(p => p.v != null)
-        if (firstValid) delta5d = +(latest - (firstValid.v as number)).toFixed(1)
+        if (firstValid) delta21d = +(latest - (firstValid.v as number)).toFixed(1)
       }
       const rank = lastIdx >= 0 ? series[points[lastIdx].date]?.composite_score_rank ?? null : null
-      return { sector, points, latest, delta5d, rank }
+      return { sector, points, latest, delta21d, rank }
     })
   }, [sectorsRanked, bySector, dates])
 
   const sorted = useMemo(() => {
     const arr = [...seriesList]
     arr.sort((a, b) => {
-      if (sortKey === 'delta') return (b.delta5d ?? -Infinity) - (a.delta5d ?? -Infinity)
+      if (sortKey === 'delta') return (b.delta21d ?? -Infinity) - (a.delta21d ?? -Infinity)
       return (b.latest ?? -Infinity) - (a.latest ?? -Infinity)
     })
     return arr
@@ -84,7 +84,7 @@ export default function SectorBarChart33({ history }: Props) {
           {(
             [
               { k: 'score', label: '現在スコア' },
-              { k: 'delta', label: '5日変化(Δ)' },
+              { k: 'delta', label: '21日変化(Δ)' },
             ] as { k: SortKey; label: string }[]
           ).map(o => (
             <button
@@ -180,21 +180,21 @@ export default function SectorBarChart33({ history }: Props) {
                   className="text-[10px] font-mono font-semibold"
                   style={{
                     color:
-                      card.delta5d == null
+                      card.delta21d == null
                         ? 'var(--text-muted)'
-                        : card.delta5d > 0
+                        : card.delta21d > 0
                           ? '#16a34a'
-                          : card.delta5d < 0
+                          : card.delta21d < 0
                             ? '#dc2626'
                             : 'var(--text-muted)',
                   }}
                 >
-                  {card.delta5d == null
+                  {card.delta21d == null
                     ? '—'
-                    : card.delta5d > 0
-                      ? `▲${card.delta5d}pt`
-                      : card.delta5d < 0
-                        ? `▼${Math.abs(card.delta5d)}pt`
+                    : card.delta21d > 0
+                      ? `▲${card.delta21d}pt`
+                      : card.delta21d < 0
+                        ? `▼${Math.abs(card.delta21d)}pt`
                         : '— 0pt'}
                 </span>
               </div>
