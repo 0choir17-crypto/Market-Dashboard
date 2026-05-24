@@ -24,10 +24,6 @@ export default function NavBar() {
       }`}
       style={{ fontFamily: 'var(--font-sans, sans-serif)' }}
     >
-      <span className="text-sm font-bold tracking-widest text-[var(--text-primary)] mr-2 flex-shrink-0">
-        21 CLOUD
-      </span>
-
       {/* 日付ピッカー（対象ページのみ表示） */}
       {showPicker && availableDates.length > 0 && (
         <div className="flex items-center gap-1.5 flex-shrink-0">
@@ -57,7 +53,6 @@ export default function NavBar() {
         </div>
       )}
 
-      <span className="text-gray-300 select-none flex-shrink-0">|</span>
       <Link href="/" className={linkClass('/')}>Market</Link>
       <Link href="/sectors33" className={linkClass('/sectors33')}>Sectors-33</Link>
       <Link href="/sectors" className={linkClass('/sectors')}>Sectors-17</Link>
