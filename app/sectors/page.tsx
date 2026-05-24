@@ -97,10 +97,10 @@ export default function SectorsPage() {
             className="text-2xl font-bold"
             style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-sans, sans-serif)' }}
           >
-            Sectors
+            Sectors-17
           </h1>
           <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
-            21 Cloud — TOPIX-17 セクター分析
+            TOPIX-17 セクター分析
           </p>
         </div>
         <div className="flex items-center gap-4">
