@@ -71,7 +71,7 @@ export default function Page() {
             className="text-2xl font-bold"
             style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-sans, sans-serif)' }}
           >
-            21 CLOUD Market Dashboard
+            Market Dashboard
           </h1>
           <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
             日本株マーケットコンディション
