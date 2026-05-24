@@ -10,9 +10,9 @@ import { SectorSelectionRow } from '@/types/sectorSelection'
 import SectorSelectionTable from '@/components/sectors33/SectorSelectionTable'
 import SectorRRG33 from '@/components/sectors33/SectorRRG33'
 import SectorHeatmap33 from '@/components/sectors33/SectorHeatmap33'
-import SectorSparklineGrid33 from '@/components/sectors33/SectorSparklineGrid33'
+import SectorBarChart33 from '@/components/sectors33/SectorBarChart33'
 
-type View = 'rrg' | 'heatmap' | 'sparkline'
+type View = 'bar' | 'rrg' | 'heatmap'
 
 export default function SectorSelectionPage() {
   const [rows, setRows] = useState<SectorSelectionRow[]>([])
@@ -22,14 +22,14 @@ export default function SectorSelectionPage() {
     bySector: {},
     sectorsRanked: [],
   })
-  const [view, setView] = useState<View>('rrg')
+  const [view, setView] = useState<View>('bar')
   const [loading, setLoading] = useState(true)
 
   const fetchData = useCallback(async () => {
     setLoading(true)
     const [latest, hist] = await Promise.all([
       fetchLatestSectorSelection(),
-      fetchSectorSelectionHistory(21),
+      fetchSectorSelectionHistory(63),
     ])
     setRows(latest.rows)
     setLatestDate(latest.latestDate)
@@ -51,7 +51,7 @@ export default function SectorSelectionPage() {
             Sector Selection
           </h1>
           <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
-            21 Cloud — TOPIX-33 業種別 composite_score (今どこを買うか)
+            TOPIX-33 業種別 composite_score (今どこを買うか)
           </p>
         </div>
         <div className="flex items-center gap-4">
@@ -110,10 +110,10 @@ export default function SectorSelectionPage() {
             <div className="flex flex-wrap items-end justify-between mb-3 gap-3">
               <div>
                 <h2 className="text-base font-semibold text-[var(--text-primary)]">
-                  21営業日の推移
+                  63営業日の推移
                 </h2>
                 <p className="text-xs text-[var(--text-muted)] mt-0.5">
-                  どのセクターが強いか・どう動いているかを 3 つの視点で比較
+                  どのセクターが強いか・どう動いているかを比較
                   {history.dates.length > 0 && (
                     <span className="ml-2 text-gray-400 font-mono">
                       ({history.dates[0]} → {history.dates[history.dates.length - 1]})
@@ -124,9 +124,9 @@ export default function SectorSelectionPage() {
               <div className="inline-flex rounded-lg border border-[var(--border)] overflow-hidden text-xs">
                 {(
                   [
+                    { v: 'bar' as const, label: 'Bars' },
                     { v: 'rrg' as const, label: 'RRG' },
                     { v: 'heatmap' as const, label: 'Heatmap' },
-                    { v: 'sparkline' as const, label: 'Sparklines' },
                   ]
                 ).map((opt, i) => (
                   <button
@@ -148,12 +148,12 @@ export default function SectorSelectionPage() {
               <div className="bg-white rounded-xl border border-[#e8eaed] shadow-sm p-8 text-center text-gray-400 text-sm">
                 履歴データを読み込めませんでした
               </div>
+            ) : view === 'bar' ? (
+              <SectorBarChart33 history={history} />
             ) : view === 'rrg' ? (
               <SectorRRG33 history={history} />
-            ) : view === 'heatmap' ? (
-              <SectorHeatmap33 history={history} />
             ) : (
-              <SectorSparklineGrid33 history={history} />
+              <SectorHeatmap33 history={history} />
             )}
           </section>
         </>
