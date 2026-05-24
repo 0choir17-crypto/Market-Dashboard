@@ -9,10 +9,9 @@ import {
 import { SectorSelectionRow } from '@/types/sectorSelection'
 import SectorSelectionTable from '@/components/sectors33/SectorSelectionTable'
 import SectorRRG33 from '@/components/sectors33/SectorRRG33'
-import SectorHeatmap33 from '@/components/sectors33/SectorHeatmap33'
 import SectorBarChart33 from '@/components/sectors33/SectorBarChart33'
 
-type View = 'bar' | 'rrg' | 'heatmap'
+type View = 'bar' | 'rrg'
 
 export default function SectorSelectionPage() {
   const [rows, setRows] = useState<SectorSelectionRow[]>([])
@@ -110,7 +109,7 @@ export default function SectorSelectionPage() {
             <div className="flex flex-wrap items-end justify-between mb-3 gap-3">
               <div>
                 <h2 className="text-base font-semibold text-[var(--text-primary)]">
-                  63営業日の推移
+                  {history.dates.length}営業日の推移
                 </h2>
                 <p className="text-xs text-[var(--text-muted)] mt-0.5">
                   どのセクターが強いか・どう動いているかを比較
@@ -126,7 +125,6 @@ export default function SectorSelectionPage() {
                   [
                     { v: 'bar' as const, label: 'Bars' },
                     { v: 'rrg' as const, label: 'RRG' },
-                    { v: 'heatmap' as const, label: 'Heatmap' },
                   ]
                 ).map((opt, i) => (
                   <button
@@ -150,10 +148,8 @@ export default function SectorSelectionPage() {
               </div>
             ) : view === 'bar' ? (
               <SectorBarChart33 history={history} />
-            ) : view === 'rrg' ? (
-              <SectorRRG33 history={history} />
             ) : (
-              <SectorHeatmap33 history={history} />
+              <SectorRRG33 history={history} />
             )}
           </section>
         </>

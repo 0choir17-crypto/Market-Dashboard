@@ -21,7 +21,7 @@ const notoSansJP = Noto_Sans_JP({
 })
 
 export const metadata: Metadata = {
-  title: '21 Cloud — Market Dashboard',
+  title: 'Market Dashboard',
   description: '日本株マーケットコンディション',
 }
 

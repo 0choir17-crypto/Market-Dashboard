@@ -7,7 +7,7 @@ type Props = {
   history: SectorHistoryResponse
 }
 
-type SortKey = 'score' | 'delta' | 'name' | 'rank'
+type SortKey = 'score' | 'delta'
 
 function phaseColor(score: number): string {
   if (score >= 70) return '#22c55e'
@@ -59,8 +59,6 @@ export default function SectorBarChart33({ history }: Props) {
   const sorted = useMemo(() => {
     const arr = [...seriesList]
     arr.sort((a, b) => {
-      if (sortKey === 'name') return a.sector.localeCompare(b.sector, 'ja')
-      if (sortKey === 'rank') return (a.rank ?? 999) - (b.rank ?? 999)
       if (sortKey === 'delta') return (b.delta5d ?? -Infinity) - (a.delta5d ?? -Infinity)
       return (b.latest ?? -Infinity) - (a.latest ?? -Infinity)
     })
@@ -86,9 +84,7 @@ export default function SectorBarChart33({ history }: Props) {
           {(
             [
               { k: 'score', label: '現在スコア' },
-              { k: 'delta', label: '変化(Δ)' },
-              { k: 'rank', label: 'ランク' },
-              { k: 'name', label: '名前' },
+              { k: 'delta', label: '5日変化(Δ)' },
             ] as { k: SortKey; label: string }[]
           ).map(o => (
             <button
