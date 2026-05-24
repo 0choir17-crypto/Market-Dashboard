@@ -71,10 +71,10 @@ export default function Page() {
             className="text-2xl font-bold"
             style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-sans, sans-serif)' }}
           >
-            Market Dashboard
+            21 CLOUD Market Dashboard
           </h1>
           <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
-            21 Cloud — 日本株マーケットコンディション
+            日本株マーケットコンディション
           </p>
         </div>
         <div className="flex items-center gap-4">
