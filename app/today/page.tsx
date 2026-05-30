@@ -3,13 +3,13 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useDate } from '@/contexts/DateContext'
 import { fetchToday, type TodayResponse } from '@/lib/todayFetch'
-import VcpSection from '@/components/today/VcpSection'
+import ScanResultsSection from '@/components/today/ScanResultsSection'
 
 export default function TodayPage() {
   const { selectedDate, isLatest } = useDate()
   const [data, setData] = useState<TodayResponse>({
-    vcpDate: null,
-    vcp: [],
+    scanDate: null,
+    scan: [],
     market: null,
     hotSectors: [],
   })
@@ -28,7 +28,7 @@ export default function TodayPage() {
     fetchData()
   }, [fetchData])
 
-  const displayDate = data.vcpDate ?? selectedDate
+  const displayDate = data.scanDate ?? selectedDate
 
   return (
     <main
@@ -47,7 +47,7 @@ export default function TodayPage() {
             <span aria-hidden className="mr-2">📋</span>Today&apos;s Watchlist
           </h1>
           <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
-            VCP 候補一覧（{data.vcp.length} 件）
+            スキャン結果一覧（{data.scan.length} 件）
           </p>
         </div>
         <div className="flex items-center gap-4">
@@ -90,7 +90,7 @@ export default function TodayPage() {
         </div>
       )}
 
-      {loading && data.vcp.length === 0 ? (
+      {loading && data.scan.length === 0 ? (
         <div
           className="bg-white rounded-xl border border-[#e8eaed] shadow-sm p-8 text-center"
           style={{ color: 'var(--text-muted)' }}
@@ -98,7 +98,7 @@ export default function TodayPage() {
           <p className="text-lg font-medium">Loading...</p>
         </div>
       ) : (
-        <VcpSection rows={data.vcp} />
+        <ScanResultsSection rows={data.scan} hotSectors={data.hotSectors} />
       )}
     </main>
   )

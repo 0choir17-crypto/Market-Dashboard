@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase'
-import type { DailyVcpScreen } from '@/types/vcp'
+import type { ScanResultRow } from '@/types/scanResults'
 
 export type TodayMarket = {
   date: string
@@ -12,25 +12,22 @@ export type TodayMarket = {
 }
 
 export type TodayResponse = {
-  vcpDate: string | null
-  vcp: DailyVcpScreen[]
+  scanDate: string | null
+  scan: ScanResultRow[]
   market: TodayMarket | null
   hotSectors: string[]
 }
 
-const VCP_COLUMNS = `
-  date, code, name, sector_s33,
-  close, vcs_score, vcs_days_tight, cockpit_rs, adr_pct, turnover_50d_oku,
-  dist_sma50, dist_sma200, ma_stack,
-  daily_pct, weekly_pct, monthly_pct, volume, rvol, pct_from_20d_high, high_52w_pct,
-  regime, mc_v4
+const SCAN_COLUMNS = `
+  date, code, signal, name, sector,
+  rs_topix_21d, rs_sector_21d, atr_ext_sma50
 `
 
-async function fetchVcp(date: string | null): Promise<{ date: string | null; rows: DailyVcpScreen[] }> {
+async function fetchScan(date: string | null): Promise<{ date: string | null; rows: ScanResultRow[] }> {
   let targetDate = date
   if (!targetDate) {
     const { data: latest } = await supabase
-      .from('scanner_vcp')
+      .from('scan_results')
       .select('date')
       .order('date', { ascending: false })
       .limit(1)
@@ -40,16 +37,16 @@ async function fetchVcp(date: string | null): Promise<{ date: string | null; row
   if (!targetDate) return { date: null, rows: [] }
 
   const { data, error } = await supabase
-    .from('scanner_vcp')
-    .select(VCP_COLUMNS)
+    .from('scan_results')
+    .select(SCAN_COLUMNS)
     .eq('date', targetDate)
-    .order('vcs_score', { ascending: false })
+    .order('rs_topix_21d', { ascending: false, nullsFirst: false })
 
   if (error) {
-    console.error('today vcp fetch error:', error)
+    console.error('today scan_results fetch error:', error)
     return { date: targetDate, rows: [] }
   }
-  return { date: targetDate, rows: (data ?? []) as DailyVcpScreen[] }
+  return { date: targetDate, rows: (data ?? []) as ScanResultRow[] }
 }
 
 async function fetchMarket(date: string | null, isLatest: boolean): Promise<TodayMarket | null> {
@@ -113,15 +110,15 @@ export async function fetchToday(opts: { date?: string }): Promise<TodayResponse
   const requested = opts.date ?? null
   const isLatest = !requested
 
-  const [vcpRes, market, hotSectors] = await Promise.all([
-    fetchVcp(requested),
+  const [scanRes, market, hotSectors] = await Promise.all([
+    fetchScan(requested),
     fetchMarket(requested, isLatest),
     fetchHotSectors(requested),
   ])
 
   return {
-    vcpDate: vcpRes.date,
-    vcp: vcpRes.rows,
+    scanDate: scanRes.date,
+    scan: scanRes.rows,
     market,
     hotSectors,
   }
