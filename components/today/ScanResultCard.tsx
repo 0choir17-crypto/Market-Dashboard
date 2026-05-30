@@ -60,7 +60,7 @@ export default function ScanResultCard({ row, hot = false }: Props) {
         backgroundColor: hot ? '#f0fdf4' : '#ffffff',
       }}
     >
-      <div className="px-3 py-2 flex items-start justify-between gap-2 border-b border-[#f0f2f4]">
+      <div className="px-3 py-2 border-b border-[#f0f2f4]">
         <span
           className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide"
           style={{
@@ -72,38 +72,50 @@ export default function ScanResultCard({ row, hot = false }: Props) {
         >
           {row.signal ?? '—'}
         </span>
-        <a
-          href={tradingViewUrl(row.code)}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="font-mono text-sm font-bold text-blue-600 hover:underline flex-shrink-0"
-          title={`${row.code}（TradingView を開く）`}
-        >
-          {row.code}
-        </a>
       </div>
 
-      <div className="px-3 py-2">
-        <a
-          href={shikihoUrl(row.code)}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="block text-sm font-semibold text-[var(--text-primary)] hover:underline truncate"
-          title={`${row.name ?? '—'}（四季報を開く）`}
-        >
-          {row.name ?? '—'}
-        </a>
-        <div
-          className="mt-0.5 text-[11px] truncate"
-          style={{ color: hot ? '#16a34a' : '#6b7280' }}
-          title={row.sector ?? ''}
-        >
-          {hot ? '🟢 ' : ''}
-          {row.sector ?? '—'}
+      <div className="px-3 py-2 flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-baseline gap-2 min-w-0">
+            <a
+              href={shikihoUrl(row.code)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm font-semibold text-[var(--text-primary)] hover:underline truncate"
+              title={`${row.name ?? '—'}（四季報を開く）`}
+            >
+              {row.name ?? '—'}
+            </a>
+            <a
+              href={tradingViewUrl(row.code)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-mono text-xs font-bold text-blue-600 hover:underline flex-shrink-0"
+              title={`${row.code}（TradingView を開く）`}
+            >
+              {row.code}
+            </a>
+          </div>
+          <div
+            className="mt-0.5 text-[11px] truncate"
+            style={{ color: hot ? '#16a34a' : '#6b7280' }}
+            title={row.sector ?? ''}
+          >
+            {hot ? '🟢 ' : ''}
+            {row.sector ?? '—'}
+          </div>
+        </div>
+        <div className="flex-shrink-0">
+          <Metric
+            label="ATR ext 50sma"
+            value={fmtSigned(row.atr_ext_sma50, 2)}
+            color={atrColor(row.atr_ext_sma50)}
+            align="right"
+          />
         </div>
       </div>
 
-      <div className="px-3 pb-3 grid grid-cols-3 gap-2">
+      <div className="px-3 pb-3 grid grid-cols-2 gap-2">
         <Metric
           label="RS-TOPIX 21d"
           value={fmtNum(row.rs_topix_21d, 1)}
@@ -114,11 +126,6 @@ export default function ScanResultCard({ row, hot = false }: Props) {
           value={fmtNum(row.rs_sector_21d, 1)}
           color={rsColor(row.rs_sector_21d)}
         />
-        <Metric
-          label="ATR ext 50sma"
-          value={fmtSigned(row.atr_ext_sma50, 2)}
-          color={atrColor(row.atr_ext_sma50)}
-        />
       </div>
     </div>
   )
@@ -128,18 +135,26 @@ function Metric({
   label,
   value,
   color,
+  align = 'left',
 }: {
   label: string
   value: string
   color: string
+  align?: 'left' | 'right'
 }) {
   return (
     <div className="rounded bg-[#fafafa] border border-[#f0f2f4] px-2 py-1.5">
-      <p className="text-[9px] uppercase tracking-wide text-gray-500 leading-tight">
+      <p
+        className={`text-[9px] uppercase tracking-wide text-gray-500 leading-tight ${
+          align === 'right' ? 'text-right' : ''
+        }`}
+      >
         {label}
       </p>
       <p
-        className="mt-0.5 font-mono text-sm font-semibold leading-tight"
+        className={`mt-0.5 font-mono text-sm font-semibold leading-tight ${
+          align === 'right' ? 'text-right' : ''
+        }`}
         style={{ color }}
       >
         {value}
