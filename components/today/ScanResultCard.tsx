@@ -44,9 +44,8 @@ function rsColor(v: number | null): string {
 
 function atrColor(v: number | null): string {
   if (v == null) return 'var(--text-muted)'
-  if (v >= 3) return '#92400e'
-  if (v >= 1.5) return '#a16207'
-  return 'var(--text-secondary)'
+  if (v >= 7) return 'var(--negative)'
+  return 'var(--text-primary)'
 }
 
 export default function ScanResultCard({ row, hot = false }: Props) {
@@ -90,7 +89,7 @@ export default function ScanResultCard({ row, hot = false }: Props) {
               href={tradingViewUrl(row.code)}
               target="_blank"
               rel="noopener noreferrer"
-              className="font-mono text-xs font-bold text-blue-600 hover:underline flex-shrink-0"
+              className="font-mono text-sm font-bold text-blue-600 hover:underline flex-shrink-0"
               title={`${row.code}（TradingView を開く）`}
             >
               {row.code}
@@ -108,7 +107,7 @@ export default function ScanResultCard({ row, hot = false }: Props) {
         <div className="flex-shrink-0">
           <Metric
             label="ATR ext 50sma"
-            value={fmtSigned(row.atr_ext_sma50, 2)}
+            value={`${row.atr_ext_sma50 != null && row.atr_ext_sma50 >= 7 ? '⚠ ' : ''}${fmtSigned(row.atr_ext_sma50, 2)}`}
             color={atrColor(row.atr_ext_sma50)}
             align="right"
           />
