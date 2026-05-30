@@ -1,5 +1,9 @@
 import { supabase } from '@/lib/supabase'
-import type { ScanResultRow } from '@/types/scanResults'
+import {
+  normalizeScanRow,
+  type RawScanResultRow,
+  type ScanResultRow,
+} from '@/types/scanResults'
 
 export type TodayMarket = {
   date: string
@@ -18,35 +22,69 @@ export type TodayResponse = {
   hotSectors: string[]
 }
 
-const SCAN_COLUMNS = `
-  date, code, signal, name, sector,
-  rs_topix_21d, rs_sector_21d, atr_ext_sma50
-`
-
 async function fetchScan(date: string | null): Promise<{ date: string | null; rows: ScanResultRow[] }> {
   let targetDate = date
+
   if (!targetDate) {
-    const { data: latest } = await supabase
+    const { data: latest, error: latestErr } = await supabase
       .from('scan_results')
       .select('date')
       .order('date', { ascending: false })
       .limit(1)
       .maybeSingle()
+    if (latestErr) console.error('[scan_results] latest date error', latestErr)
     targetDate = (latest?.date as string | undefined) ?? null
   }
   if (!targetDate) return { date: null, rows: [] }
 
-  const { data, error } = await supabase
+  const initial = await supabase
     .from('scan_results')
-    .select(SCAN_COLUMNS)
+    .select('*')
     .eq('date', targetDate)
-    .order('rs_topix_21d', { ascending: false, nullsFirst: false })
 
-  if (error) {
-    console.error('today scan_results fetch error:', error)
+  if (initial.error) {
+    console.error('[scan_results] fetch error', initial.error)
     return { date: targetDate, rows: [] }
   }
-  return { date: targetDate, rows: (data ?? []) as ScanResultRow[] }
+
+  let data = initial.data
+
+  // Fallback: snapshot date may not exist in scan_results (e.g. user picks
+  // a date from market_conditions where scan didn't run). Fall back to the
+  // most recent scan_results date <= requested.
+  if (!data || data.length === 0) {
+    const { data: nearest } = await supabase
+      .from('scan_results')
+      .select('date')
+      .lte('date', targetDate)
+      .order('date', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    const nearestDate = (nearest?.date as string | undefined) ?? null
+    if (nearestDate && nearestDate !== targetDate) {
+      const fb = await supabase
+        .from('scan_results')
+        .select('*')
+        .eq('date', nearestDate)
+      if (fb.error) {
+        console.error('[scan_results] fallback fetch error', fb.error)
+        return { date: targetDate, rows: [] }
+      }
+      data = fb.data ?? []
+      targetDate = nearestDate
+    }
+  }
+
+  const rows = ((data ?? []) as RawScanResultRow[]).map(normalizeScanRow)
+  rows.sort((a, b) => {
+    const av = a.rs_topix_21d
+    const bv = b.rs_topix_21d
+    if (av == null && bv == null) return 0
+    if (av == null) return 1
+    if (bv == null) return -1
+    return bv - av
+  })
+  return { date: targetDate, rows }
 }
 
 async function fetchMarket(date: string | null, isLatest: boolean): Promise<TodayMarket | null> {

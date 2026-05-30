@@ -87,6 +87,11 @@ export default function TodayPage() {
       {!isLatest && selectedDate && (
         <div className="mb-4 px-4 py-2 rounded-lg bg-amber-50 border border-amber-300 text-amber-800 text-sm font-medium">
           {selectedDate} のスナップショットを表示中
+          {data.scanDate && data.scanDate !== selectedDate && (
+            <span className="ml-2 font-normal text-amber-700">
+              （scan_results は {data.scanDate} の最近値にフォールバック）
+            </span>
+          )}
         </div>
       )}
 
