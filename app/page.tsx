@@ -4,12 +4,9 @@ import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { MarketConditions } from '@/types/market'
 import { useDate } from '@/contexts/DateContext'
-import ScoreGauge from '@/components/market/ScoreGauge'
-import FactorGrid from '@/components/market/FactorGrid'
+import EntryGateCard from '@/components/market/EntryGateCard'
 import IndexCard from '@/components/market/IndexCard'
 import BreadthPanel from '@/components/market/BreadthPanel'
-import DynamicsCards from '@/components/market/DynamicsCards'
-import { McScoreChart } from '@/components/market/McScoreChart'
 
 export default function Page() {
   const { selectedDate, isLatest } = useDate()
@@ -23,13 +20,12 @@ export default function Page() {
 
     const latestMode = isLatest || !selectedDate
 
-    // 当日行は mc_v4 / 8 factors が未集計の場合があるので、v4 が入っている直近行を優先。
-    // ただし mc_v4 がまだどの行にも入っていないブートストラップ期は素の最新行にフォールバック。
-    const primary = latestMode
+    // MC v4 は廃止。最新行の選択は単純に直近 date の 1 行を使う。
+    // 過去日モードは selectedDate の行をそのまま取得。
+    const query = latestMode
       ? supabase
           .from('market_conditions')
           .select('*')
-          .not('mc_v4', 'is', null)
           .order('date', { ascending: false })
           .limit(1)
       : supabase
@@ -38,18 +34,7 @@ export default function Page() {
           .eq('date', selectedDate)
           .limit(1)
 
-    let { data, error: err } = await primary.maybeSingle()
-
-    if (latestMode && !data && !err) {
-      const fallback = await supabase
-        .from('market_conditions')
-        .select('*')
-        .order('date', { ascending: false })
-        .limit(1)
-        .maybeSingle()
-      data = fallback.data
-      err = fallback.error
-    }
+    const { data, error: err } = await query.maybeSingle()
 
     if (err) {
       console.error('[market_conditions]', err)
@@ -140,23 +125,10 @@ export default function Page() {
 
       {market && (
         <>
-          {/* ② Scorecard + Factors（左） / 指数カード（右） */}
+          {/* ② Entry Gate カード（左） / 指数カード（右） */}
           <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr] gap-6 mb-8 items-stretch">
-            {/* 左: ゲージ + 12 Factors を1つのカード */}
-            <div className="bg-white rounded-xl border border-[#e8eaed] shadow-sm p-6 flex flex-col h-full">
-              <p className="text-sm font-semibold text-gray-500 mb-4">Market Scorecard</p>
-              <ScoreGauge
-                regime={market.mc_regime_v4 ?? market.scorecard_regime}
-                marketRegime={market.market_regime}
-                breadthRegime={market.breadth_regime}
-                mcV4Score={market.mc_v4}
-                divergenceFlag={market.mc_divergence_flag_v4}
-              />
-              <hr className="my-4 border-[#e8eaed]" />
-              <FactorGrid market={market} />
-              <hr className="my-4 border-[#e8eaed]" />
-              <McScoreChart height={200} />
-            </div>
+            {/* 左: Entry Gate（旧 MC v4 スコアカードの位置） */}
+            <EntryGateCard market={market} />
             {/* 右: 指数カード縦3枚 */}
             <div className="flex flex-col gap-4 h-full">
               <IndexCard label="Nikkei 225"  prefix="nikkei" data={market} className="flex-1" />
@@ -165,10 +137,7 @@ export default function Page() {
             </div>
           </div>
 
-          {/* ③ MC v4 Dynamics — Velocity / Duration / Shock */}
-          <DynamicsCards market={market} />
-
-          {/* ④ Market Breadth */}
+          {/* ③ Market Breadth */}
           <BreadthPanel market={market} />
         </>
       )}
