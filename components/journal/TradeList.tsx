@@ -19,6 +19,13 @@ type Props = {
   sections?: Array<'open' | 'closed'>
 }
 
+function holdDays(entry: string | null, exit: string | null): number | null {
+  if (!entry || !exit) return null
+  const ms = new Date(exit).getTime() - new Date(entry).getTime()
+  if (!Number.isFinite(ms)) return null
+  return Math.max(0, Math.round(ms / 86400000))
+}
+
 function RegimeBadge({ regime }: { regime: string | null }) {
   if (!regime) return null
   const colorMap: Record<string, string> = {
@@ -280,11 +287,27 @@ export default function TradeList({
                       {hasReview && <ReviewTagPills tagIds={tags} />}
                     </div>
 
-                    {/* 右側: PnL% + アクション */}
+                    {/* 右側: PnL% + ¥ + 保有日数 + アクション */}
                     <div className="flex flex-col md:items-end gap-2">
-                      <span className={`text-xl font-bold ${isWin ? 'text-emerald-600' : 'text-red-600'}`}>
-                        {(t.pnl_pct ?? 0) >= 0 ? '+' : ''}{(t.pnl_pct ?? 0).toFixed(2)}%
-                      </span>
+                      <div className="flex flex-col md:items-end leading-tight">
+                        <span className={`text-xl font-bold ${isWin ? 'text-emerald-600' : 'text-red-600'}`}>
+                          {(t.pnl_pct ?? 0) >= 0 ? '+' : ''}{(t.pnl_pct ?? 0).toFixed(2)}%
+                        </span>
+                        {t.pnl != null && (
+                          <span className={`text-xs font-mono font-semibold ${isWin ? 'text-emerald-600' : 'text-red-600'}`}>
+                            {t.pnl >= 0 ? '+' : '-'}&yen;{Math.abs(Math.round(t.pnl)).toLocaleString()}
+                          </span>
+                        )}
+                        {(() => {
+                          const days = holdDays(t.entry_date, t.exit_date)
+                          if (days == null) return null
+                          return (
+                            <span className="text-[11px] text-gray-500">
+                              保有 {days}日
+                            </span>
+                          )
+                        })()}
+                      </div>
                       <div className="flex flex-wrap gap-2">
                         <button
                           onClick={() => onEdit(t)}
