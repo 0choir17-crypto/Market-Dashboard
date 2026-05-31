@@ -2,7 +2,11 @@
 
 import { useMemo, useState } from 'react'
 import type { ScanResultRow } from '@/types/scanResults'
+import type { WatchlistItem } from '@/types/portfolio'
+import type { Trade } from '@/types/trades'
 import ScanResultCard from './ScanResultCard'
+import WatchlistModal from '@/components/watchlist/WatchlistModal'
+import PositionModal from '@/components/portfolio/PositionModal'
 
 type Props = {
   rows: ScanResultRow[]
@@ -11,8 +15,30 @@ type Props = {
 
 type SignalFilter = string
 
+function toWatchlistInitial(row: ScanResultRow): Partial<WatchlistItem> {
+  return {
+    ticker: row.code,
+    company_name: row.name ?? undefined,
+    sector_s33: row.sector ?? undefined,
+    screen_tag: row.signal ?? undefined,
+    rs_composite: row.rs_topix_21d ?? undefined,
+  }
+}
+
+function toPositionInitial(row: ScanResultRow): Partial<Trade> {
+  return {
+    ticker: row.code,
+    company_name: row.name ?? undefined,
+    sector_s33: row.sector ?? undefined,
+    screen_name: row.signal ?? undefined,
+    rs_at_entry: row.rs_topix_21d ?? undefined,
+  }
+}
+
 export default function ScanResultsSection({ rows, hotSectors }: Props) {
   const [signal, setSignal] = useState<SignalFilter>('all')
+  const [watchTarget, setWatchTarget] = useState<Partial<WatchlistItem> | null>(null)
+  const [positionTarget, setPositionTarget] = useState<Partial<Trade> | null>(null)
 
   const hotSet = useMemo(() => new Set(hotSectors), [hotSectors])
 
@@ -67,6 +93,8 @@ export default function ScanResultsSection({ rows, hotSectors }: Props) {
             key={`${row.code}-${i}`}
             row={row}
             hot={row.sector != null && hotSet.has(row.sector)}
+            onAddWatchlist={r => setWatchTarget(toWatchlistInitial(r))}
+            onAddPosition={r => setPositionTarget(toPositionInitial(r))}
           />
         ))}
       </div>
@@ -76,6 +104,20 @@ export default function ScanResultsSection({ rows, hotSectors }: Props) {
           <p className="text-sm">該当する候補がありません</p>
         </div>
       )}
+
+      <WatchlistModal
+        open={watchTarget !== null}
+        onClose={() => setWatchTarget(null)}
+        onSaved={() => setWatchTarget(null)}
+        initial={watchTarget ?? undefined}
+      />
+
+      <PositionModal
+        open={positionTarget !== null}
+        onClose={() => setPositionTarget(null)}
+        onSaved={() => setPositionTarget(null)}
+        initial={positionTarget ?? undefined}
+      />
     </>
   )
 }

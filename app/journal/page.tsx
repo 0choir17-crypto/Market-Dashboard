@@ -65,7 +65,6 @@ export default function JournalPage() {
 
   const openPositions = trades.filter(t => t.status === 'open')
   const closedTrades = trades.filter(t => t.status === 'closed')
-  const unreviewedCount = closedTrades.filter(t => !t.reviewed_at).length
 
   return (
     <main className="min-h-screen p-4 sm:p-6" style={{ backgroundColor: 'var(--bg-primary)' }}>
@@ -118,21 +117,6 @@ export default function JournalPage() {
               }`}
             >
               {tab.label}
-              {tab.key === 'positions' && openPositions.length > 0 && (
-                <span className={`ml-1.5 text-xs px-1.5 py-0.5 rounded-full ${activeTab === 'positions' ? 'bg-white/30' : 'bg-blue-100 text-blue-700'}`}>
-                  {openPositions.length}
-                </span>
-              )}
-              {tab.key === 'journal' && unreviewedCount > 0 && (
-                <span
-                  className={`ml-1.5 text-xs px-1.5 py-0.5 rounded-full ${
-                    activeTab === 'journal' ? 'bg-white/30' : 'bg-amber-100 text-amber-700'
-                  }`}
-                  title="Unreviewed closed trades"
-                >
-                  {unreviewedCount}
-                </span>
-              )}
             </button>
           ))}
         </div>

@@ -6,6 +6,8 @@ import { tradingViewUrl, shikihoUrl } from '@/lib/tickerLinks'
 type Props = {
   row: ScanResultRow
   hot?: boolean
+  onAddWatchlist?: (row: ScanResultRow) => void
+  onAddPosition?: (row: ScanResultRow) => void
 }
 
 const SIGNAL_PALETTE: Record<string, { bg: string; fg: string; border: string }> = {
@@ -48,7 +50,12 @@ function atrColor(v: number | null): string {
   return 'var(--text-primary)'
 }
 
-export default function ScanResultCard({ row, hot = false }: Props) {
+export default function ScanResultCard({
+  row,
+  hot = false,
+  onAddWatchlist,
+  onAddPosition,
+}: Props) {
   const palette = signalPalette(row.signal)
 
   return (
@@ -114,7 +121,7 @@ export default function ScanResultCard({ row, hot = false }: Props) {
         </div>
       </div>
 
-      <div className="px-3 pb-3 grid grid-cols-2 gap-2">
+      <div className="px-3 grid grid-cols-2 gap-2">
         <Metric
           label="RS-TOPIX 21d"
           value={fmtNum(row.rs_topix_21d, 1)}
@@ -126,6 +133,29 @@ export default function ScanResultCard({ row, hot = false }: Props) {
           color={rsColor(row.rs_sector_21d)}
         />
       </div>
+
+      {(onAddWatchlist || onAddPosition) && (
+        <div className="px-3 pt-2 pb-2 mt-2 border-t border-[#f0f2f4] flex items-center justify-end gap-1.5">
+          {onAddWatchlist && (
+            <button
+              onClick={() => onAddWatchlist(row)}
+              className="px-2 py-1 text-[10px] font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded transition-colors"
+              title="Watchlist に追加"
+            >
+              ＋ Watch
+            </button>
+          )}
+          {onAddPosition && (
+            <button
+              onClick={() => onAddPosition(row)}
+              className="px-2 py-1 text-[10px] font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded transition-colors"
+              title="Position として保存"
+            >
+              ＋ Position
+            </button>
+          )}
+        </div>
+      )}
     </div>
   )
 }
