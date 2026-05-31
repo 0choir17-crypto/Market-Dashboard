@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Trade } from '@/types/trades'
 import { SCREEN_NAME_MAP } from '@/lib/screenNames'
+import { classifyResult } from '@/lib/tradeResult'
 import Modal from '@/components/shared/Modal'
 
 type Props = {
@@ -111,7 +112,7 @@ export default function EditTradeModal({ open, onClose, onSaved, trade }: Props)
         .lte('date', entryDate)
         .order('date', { ascending: false })
         .limit(1)
-        .single()
+        .maybeSingle()
 
       if (!cancelled && data) {
         const d = data as Record<string, unknown>
@@ -143,7 +144,7 @@ export default function EditTradeModal({ open, onClose, onSaved, trade }: Props)
     if (!sh) return null
     const pnl = (ep - enp) * sh
     const pnlPct = ((ep - enp) / enp) * 100
-    return { pnl, pnlPct, result: pnl > 0 ? 'WIN' : 'LOSS' }
+    return { pnl, pnlPct, result: classifyResult(pnl) }
   }, [isClosed, exitPrice, entryPrice, shares])
 
   async function handleSave() {
@@ -194,7 +195,7 @@ export default function EditTradeModal({ open, onClose, onSaved, trade }: Props)
       record.exit_price = ep
       record.pnl = pnl
       record.pnl_pct = pnlPct
-      record.result = pnl > 0 ? 'WIN' : 'LOSS'
+      record.result = classifyResult(pnl)
     }
 
     const { error: err } = await supabase
@@ -348,24 +349,29 @@ export default function EditTradeModal({ open, onClose, onSaved, trade }: Props)
             </div>
 
             {/* PnL preview */}
-            {preview && (
-              <div className={`rounded-lg px-4 py-3 text-center ${
-                preview.result === 'WIN' ? 'bg-emerald-50' : 'bg-red-50'
-              }`}>
-                <p className={`text-lg font-bold ${
-                  preview.result === 'WIN' ? 'text-emerald-700' : 'text-red-700'
-                }`}>
-                  {preview.pnl >= 0 ? '+' : ''}&yen;{preview.pnl.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                  {' '}
-                  ({preview.pnlPct >= 0 ? '+' : ''}{preview.pnlPct.toFixed(2)}%)
-                </p>
-                <p className={`text-xs font-semibold ${
-                  preview.result === 'WIN' ? 'text-emerald-600' : 'text-red-600'
-                }`}>
-                  {preview.result}
-                </p>
-              </div>
-            )}
+            {preview && (() => {
+              const bg = preview.result === 'WIN' ? 'bg-emerald-50'
+                : preview.result === 'LOSS' ? 'bg-red-50'
+                : 'bg-gray-50'
+              const fgStrong = preview.result === 'WIN' ? 'text-emerald-700'
+                : preview.result === 'LOSS' ? 'text-red-700'
+                : 'text-gray-700'
+              const fgWeak = preview.result === 'WIN' ? 'text-emerald-600'
+                : preview.result === 'LOSS' ? 'text-red-600'
+                : 'text-gray-600'
+              return (
+                <div className={`rounded-lg px-4 py-3 text-center ${bg}`}>
+                  <p className={`text-lg font-bold ${fgStrong}`}>
+                    {preview.pnl >= 0 ? '+' : ''}&yen;{preview.pnl.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                    {' '}
+                    ({preview.pnlPct >= 0 ? '+' : ''}{preview.pnlPct.toFixed(2)}%)
+                  </p>
+                  <p className={`text-xs font-semibold ${fgWeak}`}>
+                    {preview.result}
+                  </p>
+                </div>
+              )
+            })()}
           </>
         )}
 

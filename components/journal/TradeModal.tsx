@@ -77,7 +77,7 @@ export default function TradeModal({ open, onClose, onSaved, initial }: Props) {
         .lte('date', entryDate)
         .order('date', { ascending: false })
         .limit(1)
-        .single()
+        .maybeSingle()
 
       if (!cancelled && data) {
         const d = data as Record<string, unknown>

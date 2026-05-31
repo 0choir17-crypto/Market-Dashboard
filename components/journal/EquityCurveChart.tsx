@@ -66,11 +66,13 @@ export default function EquityCurveChart({ trades }: Props) {
   const final = data[data.length - 1].cumulative
   const peak = Math.max(...data.map(d => d.cumulative))
   const trough = Math.min(...data.map(d => d.cumulative))
-  const maxDrawdown = data.reduce((dd, d, i) => {
-    const peakSoFar = Math.max(...data.slice(0, i + 1).map(p => p.cumulative))
-    const ddNow = d.cumulative - peakSoFar
-    return Math.min(dd, ddNow)
-  }, 0)
+  // O(n) running-peak instead of the O(n²) slice-and-spread version.
+  let runningPeak = -Infinity
+  let maxDrawdown = 0
+  for (const d of data) {
+    runningPeak = Math.max(runningPeak, d.cumulative)
+    maxDrawdown = Math.min(maxDrawdown, d.cumulative - runningPeak)
+  }
 
   const isUp = final >= 0
   const GREEN = '#10b981'

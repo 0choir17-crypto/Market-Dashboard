@@ -41,7 +41,7 @@ export default function PositionModal({ open, onClose, onSaved, initial }: Props
       .lte('date', date)
       .order('date', { ascending: false })
       .limit(1)
-      .single()
+      .maybeSingle()
     if (data) {
       const d = data as Record<string, unknown>
       const v4 = d.mc_v4 as number | null | undefined

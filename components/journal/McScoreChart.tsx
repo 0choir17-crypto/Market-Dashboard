@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react'
 import { Trade } from '@/types/trades'
+import { isWin, isLoss } from '@/lib/tradeResult'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Cell, ResponsiveContainer,
 } from 'recharts'
@@ -44,15 +45,19 @@ export default function McScoreChart({ trades }: Props) {
   )
   const v3ExcludedCount = closed.length - v4Closed.length
 
-  // MCV4 帯別 WR データ
+  // MCV4 帯別 WR データ。
+  // Win Rate denominator = wins + losses (breakevens excluded), matching
+  // JournalStats so the two panels can't disagree.
   const chartData = useMemo(() => {
     return BUCKETS.map(b => {
       const inBucket = v4Closed.filter(t => {
         const v = t.mc_score as number
         return v >= b.min && v < b.max
       })
-      const bucketWins = inBucket.filter(t => t.result === 'WIN')
-      const winRate = inBucket.length > 0 ? (bucketWins.length / inBucket.length) * 100 : 0
+      const bucketWins = inBucket.filter(isWin)
+      const bucketLosses = inBucket.filter(isLoss)
+      const decided = bucketWins.length + bucketLosses.length
+      const winRate = decided > 0 ? (bucketWins.length / decided) * 100 : 0
       return {
         label: b.label,
         winRate: Math.round(winRate * 10) / 10,
@@ -65,9 +70,10 @@ export default function McScoreChart({ trades }: Props) {
   const regimeData = useMemo(() => {
     return REGIME_ORDER.map(regime => {
       const inRegime = v4Closed.filter(t => t.mc_regime === regime)
-      const wins = inRegime.filter(t => t.result === 'WIN')
-      const losses = inRegime.filter(t => t.result === 'LOSS')
-      const wr = inRegime.length > 0 ? (wins.length / inRegime.length) * 100 : 0
+      const wins = inRegime.filter(isWin)
+      const losses = inRegime.filter(isLoss)
+      const decided = wins.length + losses.length
+      const wr = decided > 0 ? (wins.length / decided) * 100 : 0
       const avgPnl = inRegime.length > 0
         ? inRegime.reduce((s, t) => s + (t.pnl_pct ?? 0), 0) / inRegime.length
         : 0
