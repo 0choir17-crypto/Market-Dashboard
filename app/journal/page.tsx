@@ -4,9 +4,10 @@ import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Trade } from '@/types/trades'
 import { RiskSettings } from '@/types/portfolio'
-import TradeSummary from '@/components/journal/TradeSummary'
+import JournalStats from '@/components/journal/JournalStats'
+import EquityCurveChart from '@/components/journal/EquityCurveChart'
+import PeriodPerformance from '@/components/journal/PeriodPerformance'
 import McScoreChart from '@/components/journal/McScoreChart'
-import HistoryStats from '@/components/journal/HistoryStats'
 import TradeList, { ExpandedReview } from '@/components/journal/TradeList'
 import TradeModal from '@/components/journal/TradeModal'
 import CloseTradeModal from '@/components/journal/CloseTradeModal'
@@ -151,8 +152,9 @@ export default function JournalPage() {
 
           {activeTab === 'journal' && (
             <>
-              <TradeSummary trades={trades} />
-              <HistoryStats history={closedTrades} />
+              <JournalStats trades={trades} />
+              <EquityCurveChart trades={trades} />
+              <PeriodPerformance trades={trades} />
               <McScoreChart trades={trades} />
               <TradeList
                 trades={closedTrades}
