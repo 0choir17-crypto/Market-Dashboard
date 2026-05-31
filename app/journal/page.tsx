@@ -14,12 +14,11 @@ import EditTradeModal from '@/components/journal/EditTradeModal'
 import PositionsTab from '@/components/portfolio/PositionsTab'
 import RiskTab from '@/components/portfolio/RiskTab'
 
-type Tab = 'positions' | 'history' | 'analytics' | 'risk'
+type Tab = 'positions' | 'journal' | 'risk'
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'positions', label: 'Positions' },
-  { key: 'history',   label: 'History' },
-  { key: 'analytics', label: 'Analytics' },
+  { key: 'journal',   label: 'Journal' },
   { key: 'risk',      label: 'Risk' },
 ]
 
@@ -123,10 +122,10 @@ export default function JournalPage() {
                   {openPositions.length}
                 </span>
               )}
-              {tab.key === 'history' && unreviewedCount > 0 && (
+              {tab.key === 'journal' && unreviewedCount > 0 && (
                 <span
                   className={`ml-1.5 text-xs px-1.5 py-0.5 rounded-full ${
-                    activeTab === 'history' ? 'bg-white/30' : 'bg-amber-100 text-amber-700'
+                    activeTab === 'journal' ? 'bg-white/30' : 'bg-amber-100 text-amber-700'
                   }`}
                   title="Unreviewed closed trades"
                 >
@@ -150,24 +149,21 @@ export default function JournalPage() {
             <PositionsTab positions={openPositions} onRefresh={fetchAll} />
           )}
 
-          {activeTab === 'history' && (
-            <TradeList
-              trades={closedTrades}
-              onClose={(trade) => setClosingTrade(trade)}
-              onEdit={(trade) => setEditingTrade(trade)}
-              expandedReview={expandedReview}
-              onToggleReview={toggleReview}
-              onSectionSaved={handleSectionSaved}
-              onSectionCancel={() => setExpandedReview(null)}
-              sections={['closed']}
-            />
-          )}
-
-          {activeTab === 'analytics' && (
+          {activeTab === 'journal' && (
             <>
               <TradeSummary trades={trades} />
               <HistoryStats history={closedTrades} />
               <McScoreChart trades={trades} />
+              <TradeList
+                trades={closedTrades}
+                onClose={(trade) => setClosingTrade(trade)}
+                onEdit={(trade) => setEditingTrade(trade)}
+                expandedReview={expandedReview}
+                onToggleReview={toggleReview}
+                onSectionSaved={handleSectionSaved}
+                onSectionCancel={() => setExpandedReview(null)}
+                sections={['closed']}
+              />
             </>
           )}
 
