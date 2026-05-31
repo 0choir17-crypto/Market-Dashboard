@@ -50,6 +50,12 @@ export type MarketConditions = {
   nh_nl_diff: number | null
   pct_above_sma50: number | null
   pct_above_sma200: number | null
+  // Entry Gate (jquants-scanner 供給) — MC v4 カードの後継
+  gate_state: 'attack' | 'normal' | 'rest' | null
+  gate_score: number | null
+  gate_score_pctile: number | null
+  leader_strength: number | null
+  gate_ema21_slope: number | null
   // 12要因 (v1)
   f01_idx_perf_1w: boolean | null
   f02_idx_perf_1m: boolean | null

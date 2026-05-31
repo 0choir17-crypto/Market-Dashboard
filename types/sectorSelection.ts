@@ -11,12 +11,13 @@ export type SectorSelectionRow = {
   composite_score: number | null
   composite_score_rank: number | null
 
-  // 5 components (0-100)
+  // 4 components (0-100) — Flow は GCS に S33 業種別データが無いため廃止 (今後 NULL)
   component_rs: number | null
   component_acc: number | null
   component_breadth: number | null
-  component_flow: number | null
   component_short: number | null
+  // retired: GCS に S33 業種別データが無いため廃止 (今後 NULL)
+  component_flow: number | null
 
   // Raw / contextual fields used in tooltip / future drilldown
   sector_rs_21d_s33: number | null
@@ -39,13 +40,13 @@ export type SectorSelectionRow = {
   confidence_low: number | null
 }
 
-// Composite score weights (must mirror DB-side formula)
+// Composite score weights — 4 成分に再正規化 (Flow 廃止)。DB 側の計算と一致させること。
+// composite_score = Σ(component × weight)
 export const COMPONENT_WEIGHTS = {
-  component_rs:       0.30,
-  component_acc:      0.15,
-  component_breadth:  0.25,
-  component_flow:     0.15,
-  component_short:    0.15,
+  component_rs:       0.353,
+  component_acc:      0.176,
+  component_breadth:  0.294,
+  component_short:    0.176,
 } as const
 
 export type ComponentKey = keyof typeof COMPONENT_WEIGHTS
@@ -54,7 +55,6 @@ export const COMPONENT_META: { key: ComponentKey; label: string; tooltip: string
   { key: 'component_rs',       label: 'RS',      tooltip: 'RS21d 相対強度ランク (0-100)' },
   { key: 'component_acc',      label: 'Acc',     tooltip: 'RS加速度ランク (50=中立, 21d-63d)' },
   { key: 'component_breadth',  label: 'Brd',     tooltip: 'セクター内の上昇銘柄比率 (0-100)' },
-  { key: 'component_flow',     label: 'Flow',    tooltip: '機関投資家ネット買いランク (0-100)' },
   { key: 'component_short',    label: 'Sht',     tooltip: '空売り過熱の逆 — 踏み上げ余地 (0-100)' },
 ]
 

@@ -9,14 +9,14 @@ function startDateStr(lookbackDays: number, endDate?: string): string {
   return d.toISOString().slice(0, 10)
 }
 
-export async function fetchMcScoreTimeSeries(
+export async function fetchGateScoreTimeSeries(
   lookbackDays: number = DEFAULT_LOOKBACK_DAYS,
   endDate?: string,
 ): Promise<TimeSeriesPoint[]> {
-  // MC v4 Score (0-100) のみ。v4 が未集計の日付はチャートから除外。
+  // Entry Gate スコア (0-100)。未集計の日付 (null) はチャートから除外。
   let query = supabase
     .from('market_conditions')
-    .select('date, mc_v4')
+    .select('date, gate_score')
     .gte('date', startDateStr(lookbackDays, endDate))
     .order('date', { ascending: true })
 
@@ -28,8 +28,10 @@ export async function fetchMcScoreTimeSeries(
 
   if (error || !data) return []
 
-  return (data as { date: string; mc_v4: number | null }[])
-    .map((r) => ({ time: r.date, value: r.mc_v4 != null ? Number(r.mc_v4) : Number.NaN }))
+  // Number(null) === 0 の罠を避けるため null は事前に除外
+  return (data as { date: string; gate_score: number | null }[])
+    .filter((r) => r.gate_score != null)
+    .map((r) => ({ time: r.date, value: Number(r.gate_score) }))
     .filter((p) => Number.isFinite(p.value))
 }
 
