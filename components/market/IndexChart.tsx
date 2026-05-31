@@ -38,17 +38,29 @@ export function IndexChart({ prefix, displayName, height = 260, lookbackDays = 1
     setLoading(true)
     setError(null)
 
-    const priceCol = `${prefix}_price`
     const startDate = new Date()
     startDate.setDate(startDate.getDate() - lookbackDays)
     const startStr = startDate.toISOString().slice(0, 10)
 
-    supabase
-      .from('market_conditions')
-      .select(`date, ${priceCol}`)
-      .gte('date', startStr)
-      .order('date', { ascending: true })
-      .then(({ data: rows, error: err }) => {
+    // 日経平均は ext_market_daily（name='日経平均株価' の close）から取得する。
+    // TOPIX / Growth 250 は従来どおり market_conditions の *_price 列を使う。
+    const query =
+      prefix === 'nikkei'
+        ? supabase
+            .from('ext_market_daily')
+            .select('date, close')
+            .eq('name', '日経平均株価')
+            .gte('date', startStr)
+            .order('date', { ascending: true })
+        : supabase
+            .from('market_conditions')
+            .select(`date, ${prefix}_price`)
+            .gte('date', startStr)
+            .order('date', { ascending: true })
+
+    const valueCol = prefix === 'nikkei' ? 'close' : `${prefix}_price`
+
+    query.then(({ data: rows, error: err }) => {
         if (cancelled) return
         if (err || !rows) {
           setError(err?.message ?? 'データ取得失敗')
@@ -56,10 +68,10 @@ export function IndexChart({ prefix, displayName, height = 260, lookbackDays = 1
           return
         }
         const points = (rows as unknown as Record<string, unknown>[])
-          .filter((r) => r[priceCol] != null)
+          .filter((r) => r[valueCol] != null)
           .map((r) => ({
             time: r.date as string,
-            value: Number(r[priceCol]),
+            value: Number(r[valueCol]),
           }))
           .filter((p) => Number.isFinite(p.value))
         setData(points)
