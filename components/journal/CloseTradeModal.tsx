@@ -17,14 +17,16 @@ type Props = {
 
 const today = () => new Date().toISOString().slice(0, 10)
 
+// Source of truth for exit reason values (also imported by
+// ReasonPerformance for aggregation ordering).
+export const EXIT_REASONS = ['利確', '損切', 'トレール損切', '目標達成', 'その他'] as const
+
 export default function CloseTradeModal({ open, onClose, onSaved, trade }: Props) {
   const [exitDate, setExitDate] = useState(today())
   const [exitPrice, setExitPrice] = useState('')
   const [exitReason, setExitReason] = useState('利確')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-
-  const EXIT_REASONS = ['利確', '損切', 'トレール損切', '目標達成', 'その他']
 
   useEffect(() => {
     if (open) {

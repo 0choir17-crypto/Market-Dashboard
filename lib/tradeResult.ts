@@ -40,3 +40,37 @@ export function isLoss(t: { result?: TradeResult | string | null; pnl?: number |
 export function isBreakeven(t: { result?: TradeResult | string | null; pnl?: number | null }): boolean {
   return effectiveResult(t) === 'BREAKEVEN'
 }
+
+type AggregatableTrade = {
+  result?: TradeResult | string | null
+  pnl?: number | null
+}
+
+// wins / (wins + losses) * 100. Breakeven trades are excluded from the
+// denominator: a flat outcome is not evidence for or against the edge.
+// Returns null when no decided trades exist.
+export function winRate(trades: AggregatableTrade[]): number | null {
+  let wins = 0
+  let losses = 0
+  for (const t of trades) {
+    if (isWin(t)) wins++
+    else if (isLoss(t)) losses++
+  }
+  const decided = wins + losses
+  return decided > 0 ? (wins / decided) * 100 : null
+}
+
+// grossProfit / |grossLoss|. Returns Infinity when there are wins but no
+// losses, and null when both grossProfit and grossLoss are zero.
+export function profitFactor(trades: AggregatableTrade[]): number | null {
+  let grossProfit = 0
+  let grossLoss = 0
+  for (const t of trades) {
+    const pnl = t.pnl ?? 0
+    if (isWin(t)) grossProfit += pnl
+    else if (isLoss(t)) grossLoss += Math.abs(pnl)
+  }
+  if (grossLoss > 0) return grossProfit / grossLoss
+  if (grossProfit > 0) return Infinity
+  return null
+}
