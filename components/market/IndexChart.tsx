@@ -42,23 +42,15 @@ export function IndexChart({ prefix, displayName, height = 260, lookbackDays = 1
     startDate.setDate(startDate.getDate() - lookbackDays)
     const startStr = startDate.toISOString().slice(0, 10)
 
-    // 日経平均は ext_market_daily（name='日経平均株価' の close）から取得する。
-    // TOPIX / Growth 250 は従来どおり market_conditions の *_price 列を使う。
-    const query =
-      prefix === 'nikkei'
-        ? supabase
-            .from('ext_market_daily')
-            .select('date, close')
-            .eq('name', '日経平均株価')
-            .gte('date', startStr)
-            .order('date', { ascending: true })
-        : supabase
-            .from('market_conditions')
-            .select(`date, ${prefix}_price`)
-            .gte('date', startStr)
-            .order('date', { ascending: true })
+    // 3 指数とも market_conditions の *_price 列から取得する。
+    // (Nikkei225 / Growth250 も jquants-scanner が日次供給するようになったため)
+    const valueCol = `${prefix}_price`
 
-    const valueCol = prefix === 'nikkei' ? 'close' : `${prefix}_price`
+    const query = supabase
+      .from('market_conditions')
+      .select(`date, ${valueCol}`)
+      .gte('date', startStr)
+      .order('date', { ascending: true })
 
     query.then(({ data: rows, error: err }) => {
         if (cancelled) return
