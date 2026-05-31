@@ -3,6 +3,7 @@
 import { Trade } from '@/types/trades'
 import { SCREEN_NAME_MAP } from '@/lib/screenNames'
 import { getTagById } from '@/lib/reviewTags'
+import { effectiveResult } from '@/lib/tradeResult'
 import ReviewSection from './ReviewSection'
 
 export type ExpandedReview = number | null
@@ -237,46 +238,37 @@ export default function TradeList({
         ) : (
           <div className="space-y-6">
             {groupTradesByYear(closedTrades).map(group => {
-              const ywins = group.trades.filter(t => t.result === 'WIN').length
-              const ylosses = group.trades.filter(t => t.result === 'LOSS').length
-              const ypnl = group.trades.reduce((s, t) => s + (t.pnl ?? 0), 0)
-              const ywr = group.trades.length > 0
-                ? (ywins / group.trades.length) * 100
-                : 0
+              // Year header shows only the count — WR/PF/PnL belong to the
+              // PeriodPerformance table above and don't need to repeat here.
               return (
                 <div key={group.year}>
-                  <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 mb-3 pb-1.5 border-b border-gray-200">
+                  <div className="flex items-baseline gap-3 mb-3 pb-1.5 border-b border-gray-200">
                     <h4 className="text-base font-bold text-gray-800 font-mono">
                       {group.year}
                     </h4>
                     <span className="text-xs text-gray-500">
                       {group.trades.length}件
                     </span>
-                    <span className="text-xs">
-                      <span className="text-gray-500">WR </span>
-                      <strong className={ywr >= 50 ? 'text-emerald-600' : 'text-red-600'}>
-                        {ywr.toFixed(1)}%
-                      </strong>
-                      <span className="text-gray-400 ml-1">
-                        ({ywins}W / {ylosses}L)
-                      </span>
-                    </span>
-                    <span className="text-xs font-mono font-semibold">
-                      <span className="text-gray-500">PnL </span>
-                      <strong className={ypnl >= 0 ? 'text-emerald-600' : 'text-red-600'}>
-                        {ypnl >= 0 ? '+' : '-'}&yen;{Math.abs(Math.round(ypnl)).toLocaleString()}
-                      </strong>
-                    </span>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 items-start">
                     {group.trades.map(t => {
-                      const isWin = t.result === 'WIN'
+                      const cls = effectiveResult(t)
+                      const tone = cls === 'WIN' ? 'win' : cls === 'LOSS' ? 'loss' : 'be'
+                      const badgeClass =
+                        tone === 'win' ? 'bg-emerald-100 text-emerald-700'
+                        : tone === 'loss' ? 'bg-red-100 text-red-700'
+                        : 'bg-gray-100 text-gray-600'
+                      const valueClass =
+                        tone === 'win' ? 'text-emerald-600'
+                        : tone === 'loss' ? 'text-red-600'
+                        : 'text-gray-600'
                       const tags = t.review_tags ?? []
                       const hasReview = !!t.reviewed_at
                       const days = holdDays(t.entry_date, t.exit_date)
                       const expanded = isReviewExpanded(t)
                       const showScreenRow =
                         !!t.screen_name || t.mc_score != null
+                      const badgeLabel = cls === 'BREAKEVEN' ? 'BE' : (cls ?? '—')
                       return (
                         <div
                           key={t.id}
@@ -308,21 +300,22 @@ export default function TradeList({
                                   </a>
                                 )}
                               </div>
-                              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded flex-shrink-0 ${
-                                isWin ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
-                              }`}>
-                                {t.result}
+                              <span
+                                className={`text-[10px] font-bold px-1.5 py-0.5 rounded flex-shrink-0 ${badgeClass}`}
+                                title={cls ?? ''}
+                              >
+                                {badgeLabel}
                               </span>
                             </div>
 
                             {/* 2行目: PnL %・¥・保有日数 */}
                             <div className="flex items-baseline justify-between gap-2">
-                              <span className={`text-lg font-bold leading-none ${isWin ? 'text-emerald-600' : 'text-red-600'}`}>
+                              <span className={`text-lg font-bold leading-none ${valueClass}`}>
                                 {(t.pnl_pct ?? 0) >= 0 ? '+' : ''}{(t.pnl_pct ?? 0).toFixed(2)}%
                               </span>
                               <div className="flex items-baseline gap-2 text-xs">
                                 {t.pnl != null && (
-                                  <span className={`font-mono font-semibold ${isWin ? 'text-emerald-600' : 'text-red-600'}`}>
+                                  <span className={`font-mono font-semibold ${valueClass}`}>
                                     {t.pnl >= 0 ? '+' : '-'}&yen;{Math.abs(Math.round(t.pnl)).toLocaleString()}
                                   </span>
                                 )}
@@ -357,20 +350,21 @@ export default function TradeList({
                           </div>
 
                           <div className="px-3 py-1.5 border-t border-gray-100 flex items-center justify-end gap-2">
+                            {/* Edit = ghost (secondary), Review = filled (primary action) */}
                             <button
                               onClick={() => onEdit(t)}
-                              className="px-2.5 py-1 text-[11px] font-medium text-gray-600 border border-gray-300 hover:bg-gray-100 rounded transition-colors"
+                              className="px-2.5 py-1 text-[11px] font-medium text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
                             >
                               Edit
                             </button>
                             <button
                               onClick={() => onToggleReview(t.id)}
-                              className={`px-2.5 py-1 text-[11px] font-medium rounded border transition-colors ${
+                              className={`px-2.5 py-1 text-[11px] font-semibold rounded border transition-colors ${
                                 expanded
                                   ? 'bg-blue-100 border-blue-400 text-blue-800'
                                   : hasReview
-                                    ? 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
-                                    : 'bg-amber-50 border-amber-400 text-amber-800 hover:bg-amber-100'
+                                    ? 'bg-blue-600 border-blue-600 text-white hover:bg-blue-700'
+                                    : 'bg-amber-500 border-amber-500 text-white hover:bg-amber-600'
                               }`}
                             >
                               {hasReview ? '🔍 Re-edit' : '🔍 Review'}

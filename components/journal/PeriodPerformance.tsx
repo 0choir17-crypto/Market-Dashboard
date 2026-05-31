@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { Trade } from '@/types/trades'
+import { isWin, isLoss, isBreakeven } from '@/lib/tradeResult'
 
 type Props = {
   trades: Trade[]
@@ -14,19 +15,8 @@ type Bucket = {
   trades: number
   wins: number
   losses: number
+  breakevens: number
   pnl: number
-}
-
-function isWin(t: Trade): boolean {
-  if (t.result === 'WIN') return true
-  if (t.result === 'LOSS') return false
-  return (t.pnl ?? 0) > 0
-}
-
-function isLoss(t: Trade): boolean {
-  if (t.result === 'LOSS') return true
-  if (t.result === 'WIN') return false
-  return (t.pnl ?? 0) < 0
 }
 
 function bucketKey(date: string, mode: Mode): string {
@@ -47,10 +37,11 @@ export default function PeriodPerformance({ trades }: Props) {
     const map = new Map<string, Bucket>()
     for (const t of closed) {
       const key = bucketKey(t.exit_date as string, mode)
-      const b = map.get(key) ?? { key, trades: 0, wins: 0, losses: 0, pnl: 0 }
+      const b = map.get(key) ?? { key, trades: 0, wins: 0, losses: 0, breakevens: 0, pnl: 0 }
       b.trades += 1
       if (isWin(t)) b.wins += 1
       else if (isLoss(t)) b.losses += 1
+      else if (isBreakeven(t)) b.breakevens += 1
       b.pnl += t.pnl ?? 0
       map.set(key, b)
     }
@@ -112,7 +103,8 @@ export default function PeriodPerformance({ trades }: Props) {
           </thead>
           <tbody>
             {buckets.map(b => {
-              const wr = b.trades > 0 ? (b.wins / b.trades) * 100 : 0
+              const decided = b.wins + b.losses
+              const wr = decided > 0 ? (b.wins / decided) * 100 : 0
               const pnlPositive = b.pnl >= 0
               const barWidthPct = (Math.abs(b.pnl) / maxAbsPnl) * 100
               return (
@@ -125,6 +117,12 @@ export default function PeriodPerformance({ trades }: Props) {
                     <span className="text-emerald-600">{b.wins}</span>
                     <span className="text-gray-400 mx-0.5">/</span>
                     <span className="text-red-600">{b.losses}</span>
+                    {b.breakevens > 0 && (
+                      <>
+                        <span className="text-gray-400 mx-0.5">/</span>
+                        <span className="text-gray-500" title="BREAKEVEN">{b.breakevens}</span>
+                      </>
+                    )}
                   </td>
                   <td
                     className="px-3 py-2 text-right font-mono"

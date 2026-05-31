@@ -108,7 +108,8 @@ def main(csv_path: str) -> None:
                     take = min(lot.shares, remaining)
                     pnl = (price - lot.entry_price) * take
                     pnl_pct = (price / lot.entry_price - 1) * 100 if lot.entry_price else None
-                    result = 'WIN' if pnl >= 0 else 'LOSS'
+                    # Mirrors lib/tradeResult.ts: pnl>0 WIN, pnl<0 LOSS, pnl==0 BREAKEVEN.
+                    result = 'WIN' if pnl > 0 else 'LOSS' if pnl < 0 else 'BREAKEVEN'
                     memo = f'{lot.market}/{lot.account} → {market}'
                     trades.append(TradeRow(
                         ticker=code,

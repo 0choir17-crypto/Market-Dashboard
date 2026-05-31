@@ -10,7 +10,7 @@ export interface Trade {
   exit_price: number | null
   pnl: number | null
   pnl_pct: number | null
-  result: 'WIN' | 'LOSS' | null
+  result: 'WIN' | 'LOSS' | 'BREAKEVEN' | null
   mc_score: number | null
   mc_regime: string | null
   // 'v3' (0-21) or 'v4' (0-100). Default 'v3' for legacy rows captured before

@@ -2,6 +2,7 @@
 
 import { Trade } from '@/types/trades'
 import Tooltip from '@/components/shared/Tooltip'
+import { isWin, isLoss, isBreakeven } from '@/lib/tradeResult'
 
 type Props = {
   trades: Trade[]
@@ -18,19 +19,6 @@ function holdDays(entry: string | null, exit: string | null): number | null {
   const ms = new Date(exit).getTime() - new Date(entry).getTime()
   if (!Number.isFinite(ms)) return null
   return Math.max(0, Math.round(ms / 86400000))
-}
-
-function isWin(t: Trade): boolean {
-  if (t.result === 'WIN') return true
-  if (t.result === 'LOSS') return false
-  // Fallback: imported trades may have no `result` but a real pnl.
-  return (t.pnl ?? 0) > 0
-}
-
-function isLoss(t: Trade): boolean {
-  if (t.result === 'LOSS') return true
-  if (t.result === 'WIN') return false
-  return (t.pnl ?? 0) < 0
 }
 
 function Stat({
@@ -74,7 +62,12 @@ export default function JournalStats({ trades }: Props) {
 
   const wins = closed.filter(isWin)
   const losses = closed.filter(isLoss)
-  const winRate = closed.length > 0 ? (wins.length / closed.length) * 100 : null
+  const breakevens = closed.filter(isBreakeven)
+  // Win Rate denominator = wins + losses (breakeven excluded).
+  // Counting breakeven in the denominator would distort the "edge" reading
+  // (a flat outcome isn't evidence for or against the entry being right).
+  const decided = wins.length + losses.length
+  const winRate = decided > 0 ? (wins.length / decided) * 100 : null
   const avgPnlPct = closed.length > 0
     ? closed.reduce((sum, t) => sum + (t.pnl_pct ?? 0), 0) / closed.length
     : null
@@ -104,6 +97,10 @@ export default function JournalStats({ trades }: Props) {
   const pfColor =
     pf == null ? undefined : pf >= 1.5 ? 'var(--positive)' : pf >= 1 ? undefined : 'var(--negative)'
 
+  const wlSub = breakevens.length > 0
+    ? `${wins.length}W / ${losses.length}L / ${breakevens.length}BE`
+    : `${wins.length}W / ${losses.length}L`
+
   return (
     <div className="mb-6 space-y-3">
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
@@ -114,12 +111,14 @@ export default function JournalStats({ trades }: Props) {
         />
         <Stat
           label="Win Rate"
+          tooltip="勝率 = WIN ÷ (WIN + LOSS)。建値撤退 (BREAKEVEN) は分母から除外。"
           value={winRate != null ? `${winRate.toFixed(1)}%` : '—'}
-          sub={`${wins.length}W / ${losses.length}L`}
+          sub={wlSub}
           color={wrColor}
         />
         <Stat
           label="Total PnL"
+          tooltip="クローズ済みトレードの合計 PnL。※手数料は未控除。実損益はこれより小さくなる。"
           value={fmtYen(totalPnl)}
           sub={avgPnlPct != null
             ? `Avg ${avgPnlPct >= 0 ? '+' : ''}${avgPnlPct.toFixed(2)}%`
@@ -132,6 +131,7 @@ export default function JournalStats({ trades }: Props) {
           value={
             pf == null ? '—' : pf === Infinity ? '∞' : pf.toFixed(2)
           }
+          sub={`n=${decided}`}
           color={pfColor}
         />
         <Stat

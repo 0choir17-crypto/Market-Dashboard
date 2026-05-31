@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { Trade } from '@/types/trades'
 import { SCREEN_NAME_MAP } from '@/lib/screenNames'
 import { calculateMfeMae } from '@/lib/mfeMae'
+import { classifyResult } from '@/lib/tradeResult'
 import Modal from '@/components/shared/Modal'
 
 type Props = {
@@ -40,7 +41,7 @@ export default function CloseTradeModal({ open, onClose, onSaved, trade }: Props
     const ep = parseFloat(exitPrice)
     const pnl = (ep - trade.entry_price) * trade.shares
     const pnlPct = ((ep - trade.entry_price) / trade.entry_price) * 100
-    return { pnl, pnlPct, result: pnl > 0 ? 'WIN' : 'LOSS' }
+    return { pnl, pnlPct, result: classifyResult(pnl) }
   }, [trade, exitPrice])
 
   async function handleSave() {
@@ -54,7 +55,7 @@ export default function CloseTradeModal({ open, onClose, onSaved, trade }: Props
     const ep = parseFloat(exitPrice)
     const pnl = (ep - trade.entry_price) * trade.shares
     const pnlPct = ((ep - trade.entry_price) / trade.entry_price) * 100
-    const result = pnl > 0 ? 'WIN' : 'LOSS'
+    const result = classifyResult(pnl)
 
     // R倍率計算（stop_priceがある場合）
     const rMult =
@@ -97,7 +98,12 @@ export default function CloseTradeModal({ open, onClose, onSaved, trade }: Props
       .maybeSingle()
 
     const prevLosses = riskData?.consec_losses ?? 0
-    const newLosses = (rMult != null && rMult < 0) || (rMult == null && pnl < 0) ? prevLosses + 1 : 0
+    // Only LOSS extends the streak; WIN and BREAKEVEN both reset to 0.
+    // r_multiple is checked first because a manual stop placement can flip
+    // a marginally positive pnl into a loss (slippage).
+    const lossByR = rMult != null && rMult < 0
+    const lossByPnl = rMult == null && result === 'LOSS'
+    const newLosses = lossByR || lossByPnl ? prevLosses + 1 : 0
 
     if (riskData?.id) {
       await supabase
@@ -181,24 +187,29 @@ export default function CloseTradeModal({ open, onClose, onSaved, trade }: Props
         </div>
 
         {/* リアルタイム損益プレビュー */}
-        {preview && (
-          <div className={`rounded-lg px-4 py-3 text-center ${
-            preview.result === 'WIN' ? 'bg-emerald-50' : 'bg-red-50'
-          }`}>
-            <p className={`text-lg font-bold ${
-              preview.result === 'WIN' ? 'text-emerald-700' : 'text-red-700'
-            }`}>
-              {preview.pnl >= 0 ? '+' : ''}&yen;{preview.pnl.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-              {' '}
-              ({preview.pnlPct >= 0 ? '+' : ''}{preview.pnlPct.toFixed(2)}%)
-            </p>
-            <p className={`text-xs font-semibold ${
-              preview.result === 'WIN' ? 'text-emerald-600' : 'text-red-600'
-            }`}>
-              {preview.result}
-            </p>
-          </div>
-        )}
+        {preview && (() => {
+          const bg = preview.result === 'WIN' ? 'bg-emerald-50'
+            : preview.result === 'LOSS' ? 'bg-red-50'
+            : 'bg-gray-50'
+          const fgStrong = preview.result === 'WIN' ? 'text-emerald-700'
+            : preview.result === 'LOSS' ? 'text-red-700'
+            : 'text-gray-700'
+          const fgWeak = preview.result === 'WIN' ? 'text-emerald-600'
+            : preview.result === 'LOSS' ? 'text-red-600'
+            : 'text-gray-600'
+          return (
+            <div className={`rounded-lg px-4 py-3 text-center ${bg}`}>
+              <p className={`text-lg font-bold ${fgStrong}`}>
+                {preview.pnl >= 0 ? '+' : ''}&yen;{preview.pnl.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                {' '}
+                ({preview.pnlPct >= 0 ? '+' : ''}{preview.pnlPct.toFixed(2)}%)
+              </p>
+              <p className={`text-xs font-semibold ${fgWeak}`}>
+                {preview.result}
+              </p>
+            </div>
+          )
+        })()}
 
         <div className="flex justify-end gap-3 pt-2">
           <button

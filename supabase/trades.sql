@@ -19,7 +19,7 @@ CREATE TABLE trades (
   -- 損益（exit_price入力時に自動計算）
   pnl           real,
   pnl_pct       real,
-  result        text,
+  result        text CHECK (result IS NULL OR result IN ('WIN', 'LOSS', 'BREAKEVEN')),
 
   -- エントリー時の市場環境（自動取得）
   mc_score      real,
@@ -27,7 +27,8 @@ CREATE TABLE trades (
 
   -- メタデータ
   memo          text,
-  status        text NOT NULL DEFAULT 'OPEN',
+  status        text NOT NULL DEFAULT 'open'
+    CHECK (status IN ('plan', 'open', 'closed')),
   created_at    timestamptz DEFAULT now(),
   updated_at    timestamptz DEFAULT now()
 );
