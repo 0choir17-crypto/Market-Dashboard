@@ -71,7 +71,7 @@ export default function SectorRRG33({ history }: Props) {
       const latest = bySector[sector]?.[latestDate]
       if (!latest) continue
       const x = latest.component_rs
-      const y = latest.sector_rs_acc_s33
+      const y = latest.component_acc
       if (x == null || y == null) continue
       dots.push({
         sector,
@@ -89,11 +89,11 @@ export default function SectorRRG33({ history }: Props) {
         const pts: DotPoint[] = []
         for (const d of trailDates) {
           const r = bySector[sector]?.[d]
-          if (!r || r.component_rs == null || r.sector_rs_acc_s33 == null) continue
+          if (!r || r.component_rs == null || r.component_acc == null) continue
           pts.push({
             sector,
             x: r.component_rs,
-            y: r.sector_rs_acc_s33,
+            y: r.component_acc,
             composite: r.composite_score,
             date: d,
           })

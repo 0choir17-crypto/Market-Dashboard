@@ -118,11 +118,38 @@ async function fetchMarket(date: string | null, isLatest: boolean): Promise<Toda
   return (data as TodayMarket | null) ?? null
 }
 
-// "Hot" sectors はかつて component_flow >= 70 (機関ネット買い上位) で判定していたが、
-// jquants-scanner 移行で component_flow は廃止 (S33 業種別の機関フローデータが無いため)。
-// 機能は供給停止 → 常に空。退役列へのクエリは行わない。
+// "Hot" sectors = セクタースコア (sector_selection_s33.composite_score) >= 60 の業種。
+// Sectors-33 ページと同じ閾値 (緑 ≥60: compositeColor / テーブル凡例) を使い、
+// 該当業種に属するスキャン銘柄カードを緑ハイライトする。
+const HOT_SECTOR_MIN_SCORE = 60
+
 async function fetchHotSectors(): Promise<string[]> {
-  return []
+  // 最新の選別日を取得 (scan の日付とは独立に、現時点の業種強弱を反映)。
+  const { data: latest, error: latestErr } = await supabase
+    .from('sector_selection_s33')
+    .select('date')
+    .order('date', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (latestErr || !latest?.date) {
+    if (latestErr) console.error('[sector_selection_s33] hot sectors latest date error', latestErr)
+    return []
+  }
+
+  const { data, error } = await supabase
+    .from('sector_selection_s33')
+    .select('sector_name_s33, composite_score')
+    .eq('date', latest.date as string)
+    .gte('composite_score', HOT_SECTOR_MIN_SCORE)
+
+  if (error || !data) {
+    if (error) console.error('[sector_selection_s33] hot sectors error', error)
+    return []
+  }
+
+  return data
+    .map(r => r.sector_name_s33 as string | null)
+    .filter((s): s is string => !!s)
 }
 
 export async function fetchToday(opts: { date?: string }): Promise<TodayResponse> {
