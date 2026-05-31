@@ -5,6 +5,7 @@ import {
   Area,
   AreaChart,
   CartesianGrid,
+  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -72,8 +73,16 @@ export default function EquityCurveChart({ trades }: Props) {
   }, 0)
 
   const isUp = final >= 0
-  const stroke = isUp ? '#10b981' : '#ef4444'
-  const fill = isUp ? '#10b981' : '#ef4444'
+  const GREEN = '#10b981'
+  const RED = '#ef4444'
+
+  // Gradient offset for the 0 line: positions where y=0 sits inside the chart
+  // (0 at top, 1 at bottom). When the curve never crosses 0, the gradient
+  // collapses to a single color.
+  const yMax = Math.max(0, peak)
+  const yMin = Math.min(0, trough)
+  const range = yMax - yMin
+  const zeroOffset = range > 0 ? yMax / range : peak >= 0 ? 1 : 0
 
   return (
     <div className="mb-6 bg-white rounded-xl border border-[#e8eaed] shadow-sm p-4">
@@ -107,11 +116,20 @@ export default function EquityCurveChart({ trades }: Props) {
           <AreaChart data={data} margin={{ top: 6, right: 6, left: 0, bottom: 0 }}>
             <defs>
               <linearGradient id="equityFill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={fill} stopOpacity={0.3} />
-                <stop offset="100%" stopColor={fill} stopOpacity={0} />
+                <stop offset="0%" stopColor={GREEN} stopOpacity={0.3} />
+                <stop offset={`${zeroOffset * 100}%`} stopColor={GREEN} stopOpacity={0.02} />
+                <stop offset={`${zeroOffset * 100}%`} stopColor={RED} stopOpacity={0.02} />
+                <stop offset="100%" stopColor={RED} stopOpacity={0.3} />
+              </linearGradient>
+              <linearGradient id="equityStroke" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={GREEN} />
+                <stop offset={`${zeroOffset * 100}%`} stopColor={GREEN} />
+                <stop offset={`${zeroOffset * 100}%`} stopColor={RED} />
+                <stop offset="100%" stopColor={RED} />
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f2f4" />
+            <ReferenceLine y={0} stroke="#9ca3af" strokeDasharray="2 2" />
             <XAxis
               dataKey="date"
               tick={{ fontSize: 10, fill: '#9ca3af' }}
@@ -142,7 +160,7 @@ export default function EquityCurveChart({ trades }: Props) {
             <Area
               type="monotone"
               dataKey="cumulative"
-              stroke={stroke}
+              stroke="url(#equityStroke)"
               strokeWidth={2}
               fill="url(#equityFill)"
             />
