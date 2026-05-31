@@ -19,11 +19,6 @@ export type SectorHistoryResponse = {
 }
 
 const TABLE = 'sector_selection_s33'
-const COLS = `
-  date, sector_name_s33,
-  composite_score, composite_score_rank,
-  component_rs, sector_rs_acc_s33
-`
 
 // Fetch the most recent N business days for all 33 sectors.
 // We pull enough rows to cover ~N business days (N * 33 + margin) and then
@@ -40,6 +35,7 @@ export async function fetchSectorSelectionHistory(
     .limit(days * 40) // 33 sectors + cushion
 
   if (dateErr || !dateRows || dateRows.length === 0) {
+    if (dateErr) console.error('[sector_selection_s33 history/dates]', dateErr)
     return { dates: [], bySector: {}, sectorsRanked: [] }
   }
 
@@ -52,13 +48,15 @@ export async function fetchSectorSelectionHistory(
   const minDate = targetDates[targetDates.length - 1]
 
   // Phase 2: pull all rows in that date range.
+  // select('*') で退役/改名された列があっても落ちないようにする (sector_rs_acc_s33 等)。
   const { data, error } = await supabase
     .from(TABLE)
-    .select(COLS)
+    .select('*')
     .gte('date', minDate)
     .order('date', { ascending: true })
 
   if (error || !data) {
+    if (error) console.error('[sector_selection_s33 history]', error)
     return { dates: [], bySector: {}, sectorsRanked: [] }
   }
 
