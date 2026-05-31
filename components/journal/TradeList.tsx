@@ -235,105 +235,111 @@ export default function TradeList({
         {closedTrades.length === 0 ? (
           <p className="text-sm text-gray-400 pl-4">No closed trades</p>
         ) : (
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {closedTrades.map(t => {
               const isWin = t.result === 'WIN'
               const tags = t.review_tags ?? []
               const hasReview = !!t.reviewed_at
+              const days = holdDays(t.entry_date, t.exit_date)
+              const expanded = isReviewExpanded(t)
               return (
-                <div key={t.id} className="space-y-2">
-                  <div className="bg-white rounded-lg border border-gray-200 px-4 py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3 hover:shadow-sm transition-shadow">
-                    <div className="space-y-1 min-w-0 flex-1">
-                      {/* 1行目: 最重要 */}
-                      <div className="flex flex-wrap items-center gap-2">
+                <div
+                  key={t.id}
+                  className={`bg-white rounded-lg border border-gray-200 hover:shadow-sm transition-shadow flex flex-col ${
+                    expanded ? 'lg:col-span-3 md:col-span-2' : ''
+                  }`}
+                >
+                  <div className="px-3 py-2.5 flex flex-col gap-1.5">
+                    {/* 1行目: ticker・名前・結果バッジ */}
+                    <div className="flex items-center justify-between gap-2 min-w-0">
+                      <div className="flex items-center gap-1.5 min-w-0">
                         <a
                           href={`https://jp.tradingview.com/chart/?symbol=TSE:${t.ticker}`}
                           target="_blank"
                           rel="noreferrer"
-                          className="font-mono font-bold text-base text-blue-600 hover:underline"
+                          className="font-mono font-bold text-sm text-blue-600 hover:underline flex-shrink-0"
                         >
                           {t.ticker}
                         </a>
-                        {t.company_name ? (
+                        {t.company_name && (
                           <a
                             href={`https://shikiho.toyokeizai.net/stocks/${t.ticker}`}
                             target="_blank"
                             rel="noreferrer"
-                            className="text-sm text-gray-700 truncate hover:underline"
+                            className="text-xs text-gray-700 truncate hover:underline"
+                            title={t.company_name}
                           >
                             {t.company_name}
                           </a>
-                        ) : (
-                          <span className="text-sm text-gray-700 truncate" />
                         )}
-                        <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${screenBadgeClass(t.screen_name)}`}>
-                          {t.screen_name ? (SCREEN_NAME_MAP[t.screen_name] ?? t.screen_name) : '—'}
-                        </span>
-                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                          isWin ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
-                        }`}>
-                          {t.result}
-                        </span>
                       </div>
-                      {/* 2行目: エントリー → イグジット */}
-                      <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-gray-500">
-                        <span>{t.entry_date} → {t.exit_date}</span>
-                        <span>&yen;{t.entry_price.toLocaleString()} → &yen;{t.exit_price?.toLocaleString()}</span>
-                        <McBadge score={t.mc_score} regime={t.mc_regime} version={t.mc_score_version} />
-                      </div>
-                      {/* 3行目: シグナルスナップショット */}
-                      <SignalSnapshotLine t={t} />
-                      {/* 振り返りタグ */}
-                      {hasReview && <ReviewTagPills tagIds={tags} />}
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded flex-shrink-0 ${
+                        isWin ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
+                      }`}>
+                        {t.result}
+                      </span>
                     </div>
 
-                    {/* 右側: PnL% + ¥ + 保有日数 + アクション */}
-                    <div className="flex flex-col md:items-end gap-2">
-                      <div className="flex flex-col md:items-end leading-tight">
-                        <span className={`text-xl font-bold ${isWin ? 'text-emerald-600' : 'text-red-600'}`}>
-                          {(t.pnl_pct ?? 0) >= 0 ? '+' : ''}{(t.pnl_pct ?? 0).toFixed(2)}%
-                        </span>
+                    {/* 2行目: PnL %・¥・保有日数 */}
+                    <div className="flex items-baseline justify-between gap-2">
+                      <span className={`text-lg font-bold leading-none ${isWin ? 'text-emerald-600' : 'text-red-600'}`}>
+                        {(t.pnl_pct ?? 0) >= 0 ? '+' : ''}{(t.pnl_pct ?? 0).toFixed(2)}%
+                      </span>
+                      <div className="flex items-baseline gap-2 text-xs">
                         {t.pnl != null && (
-                          <span className={`text-xs font-mono font-semibold ${isWin ? 'text-emerald-600' : 'text-red-600'}`}>
+                          <span className={`font-mono font-semibold ${isWin ? 'text-emerald-600' : 'text-red-600'}`}>
                             {t.pnl >= 0 ? '+' : '-'}&yen;{Math.abs(Math.round(t.pnl)).toLocaleString()}
                           </span>
                         )}
-                        {(() => {
-                          const days = holdDays(t.entry_date, t.exit_date)
-                          if (days == null) return null
-                          return (
-                            <span className="text-[11px] text-gray-500">
-                              保有 {days}日
-                            </span>
-                          )
-                        })()}
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        <button
-                          onClick={() => onEdit(t)}
-                          className="px-3 py-1.5 text-xs font-medium text-gray-600 border border-gray-300 hover:bg-gray-100 rounded-lg transition-colors"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => onToggleReview(t.id)}
-                          className={`px-2.5 py-1 text-[11px] font-medium rounded-lg border transition-colors ${
-                            isReviewExpanded(t)
-                              ? 'bg-blue-100 border-blue-400 text-blue-800'
-                              : hasReview
-                                ? 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
-                                : 'bg-amber-50 border-amber-400 text-amber-800 hover:bg-amber-100'
-                          }`}
-                        >
-                          {hasReview ? '🔍 Re-edit' : '🔍 Review'}
-                        </button>
+                        {days != null && (
+                          <span className="text-[11px] text-gray-500">{days}日</span>
+                        )}
                       </div>
                     </div>
+
+                    {/* 3行目: 日付・価格 */}
+                    <div className="text-[11px] text-gray-500 font-mono leading-tight">
+                      {t.entry_date} → {t.exit_date}
+                      <br />
+                      &yen;{t.entry_price.toLocaleString()} → &yen;{t.exit_price?.toLocaleString()}
+                    </div>
+
+                    {/* 4行目: スクリーン・MC */}
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px]">
+                      <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${screenBadgeClass(t.screen_name)}`}>
+                        {t.screen_name ? (SCREEN_NAME_MAP[t.screen_name] ?? t.screen_name) : '—'}
+                      </span>
+                      <McBadge score={t.mc_score} regime={t.mc_regime} version={t.mc_score_version} />
+                    </div>
+
+                    {hasReview && <ReviewTagPills tagIds={tags} />}
                   </div>
 
-                  {/* Inline expansion */}
-                  {isReviewExpanded(t) && (
-                    <ReviewSection trade={t} onSaved={onSectionSaved} onCancel={onSectionCancel} />
+                  <div className="mt-auto px-3 py-2 border-t border-gray-100 flex items-center justify-end gap-2">
+                    <button
+                      onClick={() => onEdit(t)}
+                      className="px-2.5 py-1 text-[11px] font-medium text-gray-600 border border-gray-300 hover:bg-gray-100 rounded transition-colors"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => onToggleReview(t.id)}
+                      className={`px-2.5 py-1 text-[11px] font-medium rounded border transition-colors ${
+                        expanded
+                          ? 'bg-blue-100 border-blue-400 text-blue-800'
+                          : hasReview
+                            ? 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
+                            : 'bg-amber-50 border-amber-400 text-amber-800 hover:bg-amber-100'
+                      }`}
+                    >
+                      {hasReview ? '🔍 Re-edit' : '🔍 Review'}
+                    </button>
+                  </div>
+
+                  {expanded && (
+                    <div className="border-t border-gray-100 p-3">
+                      <ReviewSection trade={t} onSaved={onSectionSaved} onCancel={onSectionCancel} />
+                    </div>
                   )}
                 </div>
               )
