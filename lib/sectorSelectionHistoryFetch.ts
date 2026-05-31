@@ -5,7 +5,10 @@ export type SectorHistoryRow = {
   sector_name_s33: string
   composite_score: number | null
   composite_score_rank: number | null
+  // RRG 軸: component_rs = RS ランク (0-100), component_acc = RS加速度ランク (50=中立)。
+  // sector_rs_acc_s33 は 0.xx 単位の生の加速度 (0-100 でも 50 中立でもない) なので RRG には使わない。
   component_rs: number | null
+  component_acc: number | null
   sector_rs_acc_s33: number | null
 }
 
