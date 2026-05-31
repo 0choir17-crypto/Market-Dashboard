@@ -118,30 +118,11 @@ async function fetchMarket(date: string | null, isLatest: boolean): Promise<Toda
   return (data as TodayMarket | null) ?? null
 }
 
-// "Hot" sectors = component_flow >= 70 (top ~30% by institutional net buy rank).
-const HOT_FLOW_THRESHOLD = 70
-
-async function fetchHotSectors(date: string | null): Promise<string[]> {
-  let targetDate = date
-  if (!targetDate) {
-    const { data: latest } = await supabase
-      .from('sector_selection_s33')
-      .select('date')
-      .order('date', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-    targetDate = (latest?.date as string | undefined) ?? null
-  }
-  if (!targetDate) return []
-
-  const { data, error } = await supabase
-    .from('sector_selection_s33')
-    .select('sector_name_s33, component_flow')
-    .eq('date', targetDate)
-    .gte('component_flow', HOT_FLOW_THRESHOLD)
-
-  if (error || !data) return []
-  return data.map(r => r.sector_name_s33 as string)
+// "Hot" sectors はかつて component_flow >= 70 (機関ネット買い上位) で判定していたが、
+// jquants-scanner 移行で component_flow は廃止 (S33 業種別の機関フローデータが無いため)。
+// 機能は供給停止 → 常に空。退役列へのクエリは行わない。
+async function fetchHotSectors(): Promise<string[]> {
+  return []
 }
 
 export async function fetchToday(opts: { date?: string }): Promise<TodayResponse> {
@@ -151,7 +132,7 @@ export async function fetchToday(opts: { date?: string }): Promise<TodayResponse
   const [scanRes, market, hotSectors] = await Promise.all([
     fetchScan(requested),
     fetchMarket(requested, isLatest),
-    fetchHotSectors(requested),
+    fetchHotSectors(),
   ])
 
   return {
