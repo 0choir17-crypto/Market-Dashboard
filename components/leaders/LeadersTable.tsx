@@ -5,7 +5,6 @@ import {
   MarketLeader,
   volColor,
   csBarColor,
-  scaleCatColor,
 } from '@/types/marketLeaders'
 import { tradingViewUrl, shikihoUrl } from '@/lib/tickerLinks'
 import Tooltip from '@/components/shared/Tooltip'
@@ -13,6 +12,7 @@ import Tooltip from '@/components/shared/Tooltip'
 type SortKey =
   | 'market_rank'
   | 'code'
+  | 's33nm'
   | 'cs_avg'
   | 'vol_5d'
   | 'return_21d'
@@ -67,21 +67,6 @@ function ReturnCell({ value }: { value: number | null | undefined }) {
   return (
     <span className="font-mono text-xs tabular-nums" style={{ color }}>
       {sign}{value.toFixed(1)}%
-    </span>
-  )
-}
-
-function ScaleCatBadge({ cat }: { cat: string | null | undefined }) {
-  if (!cat || cat === '-') {
-    return <span className="text-[10px] text-gray-300">--</span>
-  }
-  const { bg, text } = scaleCatColor(cat)
-  return (
-    <span
-      className="inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold whitespace-nowrap"
-      style={{ backgroundColor: bg, color: text }}
-    >
-      {cat}
     </span>
   )
 }
@@ -148,7 +133,7 @@ export default function LeadersTable({ rows, query, onSelectCode }: Props) {
       setSortDir(d => (d === 'asc' ? 'desc' : 'asc'))
     } else {
       setSortKey(key)
-      setSortDir(key === 'market_rank' || key === 'code' ? 'asc' : 'desc')
+      setSortDir(key === 'market_rank' || key === 'code' || key === 's33nm' ? 'asc' : 'desc')
     }
   }
 
@@ -167,6 +152,10 @@ export default function LeadersTable({ rows, query, onSelectCode }: Props) {
     arr.sort((a, b) => {
       if (sortKey === 'code') {
         const cmp = a.code.localeCompare(b.code)
+        return sortDir === 'asc' ? cmp : -cmp
+      }
+      if (sortKey === 's33nm') {
+        const cmp = (a.s33nm ?? '').localeCompare(b.s33nm ?? '', 'ja')
         return sortDir === 'asc' ? cmp : -cmp
       }
       const aRaw = a[sortKey]
@@ -188,15 +177,14 @@ export default function LeadersTable({ rows, query, onSelectCode }: Props) {
         <span className="ml-auto text-xs text-gray-400">{sorted.length} 銘柄</span>
       </div>
 
-      <table className="w-full min-w-[1200px] text-sm">
+      <table className="w-full min-w-[1100px] text-sm">
         <thead>
           <tr className="bg-gray-50 border-y border-[#e8eaed]">
             <SortTh label="#" tooltip="market_rank — 当日の市場ランク (1=トップ)" sortKey="market_rank" {...sp} align="center" className="w-10" />
             <SortTh label="Code" tooltip="銘柄コード (TradingView へリンク)" sortKey="code" {...sp} align="left" className="w-16" />
             <th className="px-2 py-2 text-[11px] font-semibold uppercase tracking-wide whitespace-nowrap text-left text-gray-500">Name</th>
-            <th className="px-2 py-2 text-[11px] font-semibold uppercase tracking-wide whitespace-nowrap text-left text-gray-500">Sector (S33)</th>
-            <th className="px-2 py-2 text-[11px] font-semibold uppercase tracking-wide whitespace-nowrap text-center text-gray-500">Scale</th>
-            <SortTh label="Close" sortKey="market_rank" {...sp} align="right" className="w-20" />
+            <SortTh label="Sector (S33)" tooltip="S33 業種名 (五十音順ソート)" sortKey="s33nm" {...sp} align="left" />
+            <th className="px-2 py-2 text-[11px] font-semibold uppercase tracking-wide whitespace-nowrap text-right text-gray-500 w-20">Close</th>
             <SortTh label="cs_avg" tooltip="クロスセクション RS 平均 0-100 (主軸スコア)。99.5=Stage A 上位 0.5%。rs_topix_avg とは別物。" sortKey="cs_avg" {...sp} align="left" className="w-32" />
             <SortTh label="vol_5d" tooltip="直近 5 営業日の出来高比。≥1.5 機関買い継続 / <0.7 出来高枯渇" sortKey="vol_5d" {...sp} align="center" className="w-20" />
             <SortTh label="21d %" tooltip="return_21d — 21 営業日リターン" sortKey="return_21d" {...sp} align="right" className="w-20" />
@@ -240,9 +228,6 @@ export default function LeadersTable({ rows, query, onSelectCode }: Props) {
               </td>
               <td className="px-2 py-1.5 whitespace-nowrap text-xs text-gray-600">
                 {r.s33nm ?? '--'}
-              </td>
-              <td className="px-2 py-1.5 text-center">
-                <ScaleCatBadge cat={r.scalecat} />
               </td>
               <td className="px-2 py-1.5 text-right font-mono text-xs text-gray-700 tabular-nums">
                 {isNum(r.close) ? r.close.toLocaleString('ja-JP', { maximumFractionDigits: 1 }) : '--'}

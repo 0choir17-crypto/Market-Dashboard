@@ -2,7 +2,6 @@
 
 import type { ConsecutiveLeader } from '@/lib/marketLeadersFetch'
 import { tradingViewUrl, shikihoUrl } from '@/lib/tickerLinks'
-import { scaleCatColor } from '@/types/marketLeaders'
 
 type Props = {
   rows: ConsecutiveLeader[]
@@ -26,14 +25,13 @@ export default function ConsecutiveLeaders({ rows, windowDays, loading, onSelect
         <span className="text-xs text-gray-400">{rows.length} 銘柄</span>
       </div>
 
-      <table className="w-full min-w-[760px] text-sm">
+      <table className="w-full min-w-[680px] text-sm">
         <thead>
           <tr className="bg-gray-50 border-y border-[#e8eaed]">
             <th className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-center text-gray-500 w-10">#</th>
             <th className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-left text-gray-500 w-16">Code</th>
             <th className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-left text-gray-500">Name</th>
             <th className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-left text-gray-500">Sector</th>
-            <th className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-center text-gray-500">Scale</th>
             <th className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-left text-gray-500 w-40">Top10 日数</th>
             <th className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-right text-gray-500 w-20">Best Rank</th>
             <th className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-right text-gray-500 w-24">Latest cs_avg</th>
@@ -42,7 +40,6 @@ export default function ConsecutiveLeaders({ rows, windowDays, loading, onSelect
         <tbody>
           {rows.map((r, i) => {
             const pct = (r.days_in_top10 / maxDays) * 100
-            const sc = scaleCatColor(r.scalecat)
             return (
               <tr
                 key={r.code}
@@ -73,18 +70,6 @@ export default function ConsecutiveLeaders({ rows, windowDays, loading, onSelect
                   </a>
                 </td>
                 <td className="px-3 py-1.5 text-xs text-gray-600">{r.s33nm ?? '--'}</td>
-                <td className="px-3 py-1.5 text-center">
-                  {r.scalecat && r.scalecat !== '-' ? (
-                    <span
-                      className="inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold"
-                      style={{ backgroundColor: sc.bg, color: sc.text }}
-                    >
-                      {r.scalecat}
-                    </span>
-                  ) : (
-                    <span className="text-[10px] text-gray-300">--</span>
-                  )}
-                </td>
                 <td className="px-3 py-1.5">
                   <div className="flex items-center gap-2">
                     <div className="flex-1 h-2 bg-gray-100 rounded overflow-hidden">

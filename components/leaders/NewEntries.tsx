@@ -3,7 +3,7 @@
 import { useMemo } from 'react'
 import type { MarketLeader } from '@/types/marketLeaders'
 import { tradingViewUrl, shikihoUrl } from '@/lib/tickerLinks'
-import { scaleCatColor, csBarColor } from '@/types/marketLeaders'
+import { csBarColor } from '@/types/marketLeaders'
 
 type Props = {
   todayRows: MarketLeader[]
@@ -34,14 +34,13 @@ export default function NewEntries({ todayRows, prevCodes, prevDate, onSelectCod
         <span className="text-xs text-gray-400">{newcomers.length} 銘柄</span>
       </div>
 
-      <table className="w-full min-w-[860px] text-sm">
+      <table className="w-full min-w-[760px] text-sm">
         <thead>
           <tr className="bg-gray-50 border-y border-[#e8eaed]">
             <th className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-center text-gray-500 w-10">Rank</th>
             <th className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-left text-gray-500 w-16">Code</th>
             <th className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-left text-gray-500">Name</th>
             <th className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-left text-gray-500">Sector</th>
-            <th className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-center text-gray-500">Scale</th>
             <th className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-right text-gray-500 w-24">cs_avg</th>
             <th className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-right text-gray-500 w-20">21d %</th>
             <th className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-center text-gray-500 w-16">Route</th>
@@ -49,7 +48,6 @@ export default function NewEntries({ todayRows, prevCodes, prevDate, onSelectCod
         </thead>
         <tbody>
           {newcomers.map((r, i) => {
-            const sc = scaleCatColor(r.scalecat)
             const csColor = csBarColor(r.cs_avg)
             return (
               <tr
@@ -83,18 +81,6 @@ export default function NewEntries({ todayRows, prevCodes, prevDate, onSelectCod
                   </a>
                 </td>
                 <td className="px-3 py-1.5 text-xs text-gray-600">{r.s33nm ?? '--'}</td>
-                <td className="px-3 py-1.5 text-center">
-                  {r.scalecat && r.scalecat !== '-' ? (
-                    <span
-                      className="inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold"
-                      style={{ backgroundColor: sc.bg, color: sc.text }}
-                    >
-                      {r.scalecat}
-                    </span>
-                  ) : (
-                    <span className="text-[10px] text-gray-300">--</span>
-                  )}
-                </td>
                 <td className="px-3 py-1.5 text-right">
                   <div className="inline-flex items-center gap-2">
                     <span className="font-mono text-xs tabular-nums font-semibold text-gray-700">

@@ -17,7 +17,7 @@ import SectorRotationHeatmap from '@/components/leaders/SectorRotationHeatmap'
 import NewEntries from '@/components/leaders/NewEntries'
 import LeaderHistoryChart from '@/components/leaders/LeaderHistoryChart'
 
-type Tab = 'sector' | 'consecutive' | 'rotation' | 'newcomer' | 'history'
+type Tab = 'consecutive' | 'rotation' | 'newcomer' | 'history'
 
 const CONSECUTIVE_DAYS = 30
 
@@ -31,7 +31,7 @@ export default function LeadersPage() {
   const [loadingTab, setLoadingTab] = useState<Tab | null>(null)
 
   const [query, setQuery] = useState('')
-  const [tab, setTab] = useState<Tab>('sector')
+  const [tab, setTab] = useState<Tab>('consecutive')
   const [selectedCode, setSelectedCode] = useState<string | null>(null)
 
   // メインデータ (View A + 前営業日コード集合)
@@ -168,21 +168,25 @@ export default function LeadersPage() {
         </div>
       ) : !loading && (
         <>
-          {/* View A: 常時表示 */}
-          <LeadersTable rows={snapshot.rows} query={query} onSelectCode={handleSelectCode} />
+          {/* View B: セクター集中度 (常時表示・テーブルの上) */}
+          <SectorConcentration rows={snapshot.rows} />
 
-          {/* タブ切替: B / C / D / E / F */}
+          {/* View A: Top 50 テーブル */}
+          <div className="mt-6">
+            <LeadersTable rows={snapshot.rows} query={query} onSelectCode={handleSelectCode} />
+          </div>
+
+          {/* タブ切替: C / D / E / F */}
           <section className="mt-8">
             <div className="flex flex-wrap items-end justify-between mb-3 gap-3">
               <div>
                 <h2 className="text-base font-semibold text-[var(--text-primary)]">追加ビュー</h2>
                 <p className="text-xs text-[var(--text-muted)] mt-0.5">
-                  資金フロー・セクター集中・新顔・個別銘柄の足跡を切替表示
+                  連続入賞・ローテーション・新顔・個別銘柄の足跡を切替表示
                 </p>
               </div>
               <div className="inline-flex rounded-lg border border-[var(--border)] overflow-hidden text-xs">
                 {([
-                  { v: 'sector' as const,      label: 'B. セクター集中度' },
                   { v: 'consecutive' as const, label: 'C. 連続入賞' },
                   { v: 'rotation' as const,    label: 'D. ローテーション' },
                   { v: 'newcomer' as const,    label: 'E. 新顔' },
@@ -203,9 +207,6 @@ export default function LeadersPage() {
               </div>
             </div>
 
-            {tab === 'sector' && (
-              <SectorConcentration rows={snapshot.rows} />
-            )}
             {tab === 'consecutive' && (
               <ConsecutiveLeaders
                 rows={consecutive}
