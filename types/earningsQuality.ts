@@ -99,3 +99,114 @@ export function isAfterClose(discTime: string | null): boolean {
   const min = parseInt(m[2], 10)
   return h > 15 || (h === 15 && min >= 0)
 }
+
+// ── 鮮度判定 ─────────────────────────────────────────────────────────────
+// 決算開示は時期偏重 (8月=1Q ピーク, 11月=2Q, 2月=3Q, 5月=本決算)。
+// 本スキャナーは 1Q-3Q のみ → 6月・9月・12月・3月は閑散期で新規開示ほぼ無し。
+// earnings_quality テーブルは「直近開示日」のデータが残るため、ユーザーが
+// 「今日のデータ」と誤読しないよう、鮮度バッジで明示する。
+
+// 閑散期月 (1Q-3Q スキャナー視点): 3 / 6 / 9 / 12 月 (0-indexed: 2,5,8,11)
+const QUIET_MONTHS = [2, 5, 8, 11] as const
+
+export function isQuietMonth(d: Date = new Date()): boolean {
+  return (QUIET_MONTHS as readonly number[]).includes(d.getMonth())
+}
+
+// ISO 'YYYY-MM-DD' → ローカル深夜の Date
+function parseIsoDate(iso: string): Date | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso)
+  if (!m) return null
+  return new Date(parseInt(m[1], 10), parseInt(m[2], 10) - 1, parseInt(m[3], 10))
+}
+
+// 営業日差 (土日のみスキップ。祝日は近似で考慮しない)。
+// from < to で正、同日は 0、from > to は負。
+export function businessDaysBetween(fromIso: string, to: Date = new Date()): number {
+  const from = parseIsoDate(fromIso)
+  if (!from) return 0
+  const toMid = new Date(to.getFullYear(), to.getMonth(), to.getDate())
+  if (from.getTime() === toMid.getTime()) return 0
+  const forward = from.getTime() < toMid.getTime()
+  const [start, end] = forward ? [from, toMid] : [toMid, from]
+  let count = 0
+  const cur = new Date(start)
+  while (cur.getTime() < end.getTime()) {
+    cur.setDate(cur.getDate() + 1)
+    const dow = cur.getDay()
+    if (dow !== 0 && dow !== 6) count++
+  }
+  return forward ? count : -count
+}
+
+export type FreshnessLevel = 'live' | 'fresh' | 'stale' | 'old'
+
+export type Freshness = {
+  level: FreshnessLevel
+  bdays: number       // 営業日差 (from latestDate to today)
+  inQuietMonth: boolean
+  label: string
+  hint: string
+  bg: string
+  text: string
+  border: string
+  icon: string
+}
+
+export function classifyFreshness(latestIso: string, now: Date = new Date()): Freshness {
+  const bdays = businessDaysBetween(latestIso, now)
+  const inQuietMonth = isQuietMonth(now)
+
+  if (bdays <= 0) {
+    return {
+      level: 'live',
+      bdays: 0,
+      inQuietMonth,
+      label: '本日 (LIVE)',
+      hint: '本日の開示データ',
+      bg: '#dcfce7',
+      text: '#15803d',
+      border: '#86efac',
+      icon: '🟢',
+    }
+  }
+  if (bdays === 1) {
+    return {
+      level: 'fresh',
+      bdays,
+      inQuietMonth,
+      label: '1営業日前',
+      hint: '前営業日の開示データ',
+      bg: '#dcfce7',
+      text: '#15803d',
+      border: '#86efac',
+      icon: '🟢',
+    }
+  }
+  if (bdays <= 5) {
+    return {
+      level: 'stale',
+      bdays,
+      inQuietMonth,
+      label: `${bdays}営業日前`,
+      hint: '開示が無い日が続いています',
+      bg: '#fef3c7',
+      text: '#92400e',
+      border: '#fde68a',
+      icon: '🟡',
+    }
+  }
+  return {
+    level: 'old',
+    bdays,
+    inQuietMonth,
+    label: `${bdays}営業日前`,
+    hint: inQuietMonth
+      ? '決算閑散期 (3/6/9/12 月) のため新規開示が無い時期です'
+      : '長期間新規開示がありません — データ供給を確認してください',
+    bg: '#fee2e2',
+    text: '#b91c1c',
+    border: '#fecaca',
+    icon: '🔴',
+  }
+}
