@@ -6,119 +6,128 @@ const TABLE = 'market_leaders'
 // select('*') で供給側 (jquants-scanner) のスキーマ増減に耐性を持たせる。
 // 退役された列が DROP されても select 全体が落ちない (sectors33 と同方針)。
 
-export type LeadersSnapshot = {
-  latestDate: string | null
-  prevDate: string | null         // 前営業日 (View E 用)
-  rows: MarketLeader[]
+// 直近 30 営業日ウィンドウ — ヒット数 / 連続日数の計算範囲
+const HITS_WINDOW = 30
+
+export type LeaderHits = {
+  hits: number                       // ウィンドウ内で Top50 入りした営業日数
+  streak: number                     // targetDate から遡って連続で Top50 入りしている日数
+  lastBeforeStreak: string | null    // 現在の連続区間より前で、ウィンドウ内で直近に Top50 入りした日
 }
 
-// ── View A: 最新日の Top50 (+ 新顔判定用に前営業日も取得) ──────────────
-// テーブルは 直近 5 営業日 × 50 銘柄 = 250 行 を upsert する設計なので
-// limit 300 で 5-6 営業日分を一括取得し、最新2日を抽出する。
-export async function fetchLatestLeaders(): Promise<LeadersSnapshot> {
+export type LeadersSnapshot = {
+  latestDate: string | null          // 表示対象の日付 (= 選択日 or 最新日)
+  prevDate: string | null            // latestDate の前営業日 (テーブル上で存在する直前の日付)
+  rows: MarketLeader[]
+  hitsMap: Map<string, LeaderHits>
+  availableDates: string[]           // 日付ピッカー用 (降順、ウィンドウ範囲のみ)
+}
+
+// ── 最新日付の取得 ─────────────────────────────────────────────────────────
+async function fetchLatestDate(): Promise<string | null> {
   const { data, error } = await supabase
     .from(TABLE)
-    .select('*')
+    .select('date')
     .order('date', { ascending: false })
-    .order('market_rank', { ascending: true })
-    .limit(300)
-
-  if (error || !data || data.length === 0) {
-    if (error) console.error('[market_leaders latest]', error)
-    return { latestDate: null, prevDate: null, rows: [] }
+    .limit(1)
+    .maybeSingle()
+  if (error) {
+    console.error('[market_leaders latest date]', error)
+    return null
   }
-
-  const rows = data as unknown as MarketLeader[]
-  const uniqueDates = [...new Set(rows.map(r => r.date))].sort((a, b) => (a > b ? -1 : 1))
-  const latestDate = uniqueDates[0] ?? null
-  const prevDate = uniqueDates[1] ?? null
-
-  return {
-    latestDate,
-    prevDate,
-    rows: rows.filter(r => r.date === latestDate),
-  }
+  return (data?.date as string | undefined) ?? null
 }
 
-// ── View C: 過去 30 日で top10 入賞日数ランキング ──────────────────────
-export type ConsecutiveLeader = {
-  code: string
-  coname: string | null
-  s33nm: string | null
-  scalecat: string | null
-  days_in_top10: number
-  best_rank: number
-  latest_rank: number | null
-  latest_cs_avg: number | null
-}
+// ── メインスナップショット (View A + B + ヒット数 + 日付ピッカー) ─────
+// 指定日 (省略時は最新) の Top50 を取得し、同時に直近 90 暦日 (~63 営業日) の
+// 履歴をまとめて取得して以下を派生する:
+//   - rows           : targetDate の Top50 行
+//   - prevDate       : テーブル上で targetDate 直前の営業日
+//   - hitsMap        : 銘柄コード毎の hits / streak / lastBeforeStreak
+//   - availableDates : 日付ピッカー用の利用可能日リスト (降順)
+// 1 クエリで完結することで往復を減らす。
+export async function fetchLeadersSnapshot(date?: string): Promise<LeadersSnapshot> {
+  const targetDate = date ?? (await fetchLatestDate())
 
-export async function fetchConsecutiveTop10(days = 30, limit = 30): Promise<ConsecutiveLeader[]> {
-  const since = new Date()
-  since.setDate(since.getDate() - days)
+  if (!targetDate) {
+    return {
+      latestDate: null,
+      prevDate: null,
+      rows: [],
+      hitsMap: new Map(),
+      availableDates: [],
+    }
+  }
+
+  // 90 暦日 = 約 63 営業日 ぶんを一括取得 (HITS_WINDOW=30 を十分カバー)
+  const since = new Date(targetDate)
+  since.setDate(since.getDate() - 90)
   const sinceStr = since.toISOString().slice(0, 10)
 
   const { data, error } = await supabase
     .from(TABLE)
     .select('*')
     .gte('date', sinceStr)
-    .lte('market_rank', 10)
+    .lte('date', targetDate)
     .order('date', { ascending: false })
 
-  if (error || !data) {
-    if (error) console.error('[market_leaders consecutive]', error)
-    return []
-  }
-
-  const rows = data as unknown as MarketLeader[]
-  const latestDate = rows.reduce<string | null>((acc, r) => (acc === null || r.date > acc ? r.date : acc), null)
-
-  const byCode = new Map<string, {
-    code: string
-    coname: string | null
-    s33nm: string | null
-    scalecat: string | null
-    days: Set<string>
-    best: number
-    latest_rank: number | null
-    latest_cs_avg: number | null
-  }>()
-
-  for (const r of rows) {
-    const cur = byCode.get(r.code)
-    const rank = r.market_rank ?? 999
-    if (!cur) {
-      byCode.set(r.code, {
-        code: r.code,
-        coname: r.coname,
-        s33nm: r.s33nm,
-        scalecat: r.scalecat,
-        days: new Set([r.date]),
-        best: rank,
-        latest_rank: r.date === latestDate ? rank : null,
-        latest_cs_avg: r.date === latestDate ? r.cs_avg : null,
-      })
-    } else {
-      cur.days.add(r.date)
-      if (rank < cur.best) cur.best = rank
-      if (r.date === latestDate) {
-        cur.latest_rank = rank
-        cur.latest_cs_avg = r.cs_avg
-      }
+  if (error || !data || data.length === 0) {
+    if (error) console.error('[market_leaders snapshot]', error)
+    return {
+      latestDate: targetDate,
+      prevDate: null,
+      rows: [],
+      hitsMap: new Map(),
+      availableDates: [],
     }
   }
 
-  const out: ConsecutiveLeader[] = Array.from(byCode.values()).map(v => ({
-    code: v.code,
-    coname: v.coname,
-    s33nm: v.s33nm,
-    scalecat: v.scalecat,
-    days_in_top10: v.days.size,
-    best_rank: v.best,
-    latest_rank: v.latest_rank,
-    latest_cs_avg: v.latest_cs_avg,
-  }))
-  out.sort((a, b) => b.days_in_top10 - a.days_in_top10 || a.best_rank - b.best_rank)
-  return out.slice(0, limit)
+  const allRows = data as unknown as MarketLeader[]
+  const availableDates = [...new Set(allRows.map(r => r.date))].sort((a, b) => (a > b ? -1 : 1))
+
+  const targetIdx = availableDates.indexOf(targetDate)
+  const prevDate = targetIdx >= 0 && targetIdx + 1 < availableDates.length
+    ? availableDates[targetIdx + 1]
+    : null
+
+  // ヒット数算出ウィンドウ: targetDate から遡って 30 営業日
+  const startIdx = targetIdx >= 0 ? targetIdx : 0
+  const windowDates = availableDates.slice(startIdx, startIdx + HITS_WINDOW)
+
+  // 銘柄毎の出現日セットを構築 (ウィンドウ外の行は除外)
+  const windowSet = new Set(windowDates)
+  const codeDates = new Map<string, Set<string>>()
+  for (const r of allRows) {
+    if (!windowSet.has(r.date)) continue
+    let s = codeDates.get(r.code)
+    if (!s) {
+      s = new Set<string>()
+      codeDates.set(r.code, s)
+    }
+    s.add(r.date)
+  }
+
+  // streak: windowDates[0] (= targetDate) から連続で出現している日数
+  // lastBeforeStreak: streak の直後 (連続が切れた地点) 以降で、最も近い出現日
+  const hitsMap = new Map<string, LeaderHits>()
+  for (const [code, dates] of codeDates) {
+    let streak = 0
+    while (streak < windowDates.length && dates.has(windowDates[streak])) streak++
+
+    let lastBeforeStreak: string | null = null
+    for (let i = streak; i < windowDates.length; i++) {
+      if (dates.has(windowDates[i])) {
+        lastBeforeStreak = windowDates[i]
+        break
+      }
+    }
+
+    hitsMap.set(code, { hits: dates.size, streak, lastBeforeStreak })
+  }
+
+  const rows = allRows.filter(r => r.date === targetDate)
+
+  return { latestDate: targetDate, prevDate, rows, hitsMap, availableDates }
 }
 
 // ── View D: セクターローテーション (週次 × 過去 6 ヶ月) ────────────────
@@ -181,35 +190,3 @@ export async function fetchSectorRotation(months = 6): Promise<SectorRotation> {
 
   return { weeks, sectors, cells: cellMap }
 }
-
-// ── View F: 個別銘柄の足跡 (直近 6 ヶ月) ──────────────────────────────
-export type LeaderHistoryPoint = {
-  date: string
-  market_rank: number | null
-  cs_avg: number | null
-  vol_5d: number | null
-  close: number | null
-}
-
-export async function fetchLeaderHistory(code: string, months = 6): Promise<LeaderHistoryPoint[]> {
-  const since = new Date()
-  since.setMonth(since.getMonth() - months)
-  const sinceStr = since.toISOString().slice(0, 10)
-
-  const { data, error } = await supabase
-    .from(TABLE)
-    .select('date, market_rank, cs_avg, vol_5d, close')
-    .eq('code', code)
-    .gte('date', sinceStr)
-    .order('date', { ascending: true })
-
-  if (error || !data) {
-    if (error) console.error('[market_leaders history]', error)
-    return []
-  }
-  return data as LeaderHistoryPoint[]
-}
-
-// ── View E: 新顔リスト (前営業日に居なかった銘柄) は ────────────────
-// fetchLatestLeaders の結果から派生できる (prevDate との比較) ので
-// 専用 fetcher は不要。コンポーネント側で派生する。

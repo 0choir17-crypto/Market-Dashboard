@@ -1,98 +1,53 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
-  fetchLatestLeaders,
-  fetchConsecutiveTop10,
+  fetchLeadersSnapshot,
   fetchSectorRotation,
-  type ConsecutiveLeader,
   type SectorRotation,
   type LeadersSnapshot,
 } from '@/lib/marketLeadersFetch'
-import { supabase } from '@/lib/supabase'
 import LeadersTable from '@/components/leaders/LeadersTable'
 import SectorConcentration from '@/components/leaders/SectorConcentration'
-import ConsecutiveLeaders from '@/components/leaders/ConsecutiveLeaders'
 import SectorRotationHeatmap from '@/components/leaders/SectorRotationHeatmap'
-import NewEntries from '@/components/leaders/NewEntries'
-import LeaderHistoryChart from '@/components/leaders/LeaderHistoryChart'
-
-type Tab = 'consecutive' | 'rotation' | 'newcomer' | 'history'
-
-const CONSECUTIVE_DAYS = 30
 
 export default function LeadersPage() {
-  const [snapshot, setSnapshot] = useState<LeadersSnapshot>({ latestDate: null, prevDate: null, rows: [] })
-  const [prevCodes, setPrevCodes] = useState<Set<string>>(new Set())
-  const [consecutive, setConsecutive] = useState<ConsecutiveLeader[]>([])
+  const [snapshot, setSnapshot] = useState<LeadersSnapshot>({
+    latestDate: null,
+    prevDate: null,
+    rows: [],
+    hitsMap: new Map(),
+    availableDates: [],
+  })
   const [rotation, setRotation] = useState<SectorRotation>({ weeks: [], sectors: [], cells: new Map() })
-
   const [loading, setLoading] = useState(true)
-  const [loadingTab, setLoadingTab] = useState<Tab | null>(null)
+  const [rotationLoading, setRotationLoading] = useState(true)
 
   const [query, setQuery] = useState('')
-  const [tab, setTab] = useState<Tab>('consecutive')
-  const [selectedCode, setSelectedCode] = useState<string | null>(null)
+  const [selectedDate, setSelectedDate] = useState<string | null>(null)
 
-  // メインデータ (View A + 前営業日コード集合)
-  const loadMain = useCallback(async () => {
+  const loadSnapshot = useCallback(async (date?: string) => {
     setLoading(true)
-    const snap = await fetchLatestLeaders()
+    const snap = await fetchLeadersSnapshot(date)
     setSnapshot(snap)
-
-    // 前営業日に top50 に居た銘柄コードを取得 (View E)
-    if (snap.prevDate) {
-      const { data } = await supabase
-        .from('market_leaders')
-        .select('code')
-        .eq('date', snap.prevDate)
-      setPrevCodes(new Set((data ?? []).map(d => d.code as string)))
-    } else {
-      setPrevCodes(new Set())
-    }
+    setSelectedDate(date ?? snap.latestDate)
     setLoading(false)
   }, [])
 
-  useEffect(() => { loadMain() }, [loadMain])  // eslint-disable-line react-hooks/set-state-in-effect
+  useEffect(() => { loadSnapshot() }, [loadSnapshot])  // eslint-disable-line react-hooks/set-state-in-effect
 
-  // タブ初回表示時に lazy load (setTimeout で setState を effect 本体直書きから外す)
+  // セクターローテーション (D) は表示対象日に依存しない (常に直近 6 ヶ月)
+  // 初期 rotationLoading は true で立ち上がるので、effect 本体での setState は不要
   useEffect(() => {
-    const needConsecutive = tab === 'consecutive' && consecutive.length === 0 && !loadingTab
-    const needRotation = tab === 'rotation' && rotation.weeks.length === 0 && !loadingTab
-    if (!needConsecutive && !needRotation) return
-    const t = setTimeout(() => {
-      if (needConsecutive) {
-        setLoadingTab('consecutive')
-        fetchConsecutiveTop10(CONSECUTIVE_DAYS, 30).then(r => {
-          setConsecutive(r)
-          setLoadingTab(null)
-        })
-      } else if (needRotation) {
-        setLoadingTab('rotation')
-        fetchSectorRotation(6).then(r => {
-          setRotation(r)
-          setLoadingTab(null)
-        })
-      }
-    }, 0)
-    return () => clearTimeout(t)
-  }, [tab, consecutive.length, rotation.weeks.length, loadingTab])
-
-  const selectedConame = useMemo(() => {
-    const r = snapshot.rows.find(x => x.code === selectedCode)
-    return r?.coname ?? null
-  }, [snapshot.rows, selectedCode])
-
-  const handleSelectCode = useCallback((code: string) => {
-    setSelectedCode(code)
-    setTab('history')
+    fetchSectorRotation(6).then(r => {
+      setRotation(r)
+      setRotationLoading(false)
+    })
   }, [])
 
-  function refreshAll() {
-    setConsecutive([])
-    setRotation({ weeks: [], sectors: [], cells: new Map() })
-    loadMain()
-  }
+  const latestAvailable = snapshot.availableDates[0] ?? snapshot.latestDate ?? null
+  const isLatest =
+    snapshot.availableDates.length === 0 || selectedDate === snapshot.availableDates[0]
 
   return (
     <main className="min-h-screen p-6" style={{ backgroundColor: 'var(--bg-primary)' }}>
@@ -108,11 +63,31 @@ export default function LeadersPage() {
             東証クロスセクション top 50 銘柄 — 資金フロー観測 (cs_avg = 全銘柄横断パーセンタイル)
           </p>
         </div>
-        <div className="flex items-center gap-4">
-          {snapshot.latestDate && (
-            <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-              Updated: {snapshot.latestDate}
-            </span>
+        <div className="flex items-center gap-3 flex-wrap">
+          {snapshot.availableDates.length > 0 && (
+            <select
+              value={selectedDate ?? snapshot.latestDate ?? ''}
+              onChange={e => loadSnapshot(e.target.value)}
+              className={`text-xs font-mono px-2 py-1 rounded border cursor-pointer ${
+                isLatest
+                  ? 'border-gray-200 bg-white text-gray-700'
+                  : 'border-amber-400 bg-amber-100 text-amber-800 font-semibold'
+              }`}
+            >
+              {snapshot.availableDates.map(d => (
+                <option key={d} value={d}>
+                  {d}{d === snapshot.availableDates[0] ? ' (Latest)' : ''}
+                </option>
+              ))}
+            </select>
+          )}
+          {!isLatest && latestAvailable && (
+            <button
+              onClick={() => loadSnapshot(latestAvailable)}
+              className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500 text-white hover:bg-amber-600 transition-colors font-medium"
+            >
+              Back to Latest
+            </button>
           )}
           <input
             type="text"
@@ -122,7 +97,7 @@ export default function LeadersPage() {
             className="text-xs px-3 py-1.5 rounded-lg border border-[var(--border)] bg-white w-56 focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
           />
           <button
-            onClick={refreshAll}
+            onClick={() => loadSnapshot(selectedDate ?? undefined)}
             disabled={loading}
             className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium border border-[var(--border)] bg-white hover:bg-[var(--bg-card-hover)] transition-colors disabled:opacity-50"
             style={{ color: 'var(--accent)' }}
@@ -144,6 +119,12 @@ export default function LeadersPage() {
           </button>
         </div>
       </header>
+
+      {!isLatest && selectedDate && (
+        <div className="mb-4 px-4 py-2 rounded-lg bg-amber-50 border border-amber-300 text-amber-800 text-sm font-medium">
+          {selectedDate} のスナップショットを表示中
+        </div>
+      )}
 
       {loading && snapshot.rows.length === 0 && (
         <div
@@ -168,72 +149,18 @@ export default function LeadersPage() {
         </div>
       ) : !loading && (
         <>
-          {/* View B: セクター集中度 (常時表示・テーブルの上) */}
+          {/* View B: セクター集中度 */}
           <SectorConcentration rows={snapshot.rows} />
 
-          {/* View A: Top 50 テーブル */}
+          {/* View A: Top 50 テーブル (ヒット数 / 連続列 込み) */}
           <div className="mt-6">
-            <LeadersTable rows={snapshot.rows} query={query} onSelectCode={handleSelectCode} />
+            <LeadersTable rows={snapshot.rows} hitsMap={snapshot.hitsMap} query={query} />
           </div>
 
-          {/* タブ切替: C / D / E / F */}
-          <section className="mt-8">
-            <div className="flex flex-wrap items-end justify-between mb-3 gap-3">
-              <div>
-                <h2 className="text-base font-semibold text-[var(--text-primary)]">追加ビュー</h2>
-                <p className="text-xs text-[var(--text-muted)] mt-0.5">
-                  連続入賞・ローテーション・新顔・個別銘柄の足跡を切替表示
-                </p>
-              </div>
-              <div className="inline-flex rounded-lg border border-[var(--border)] overflow-hidden text-xs">
-                {([
-                  { v: 'consecutive' as const, label: 'C. 連続入賞' },
-                  { v: 'rotation' as const,    label: 'D. ローテーション' },
-                  { v: 'newcomer' as const,    label: 'E. 新顔' },
-                  { v: 'history' as const,     label: 'F. 銘柄足跡' },
-                ]).map((opt, i) => (
-                  <button
-                    key={opt.v}
-                    onClick={() => setTab(opt.v)}
-                    className={`px-3 py-1.5 font-medium ${
-                      tab === opt.v
-                        ? 'bg-[var(--accent)] text-white'
-                        : 'bg-white text-[var(--text-secondary)] hover:bg-gray-50'
-                    } ${i > 0 ? 'border-l border-[var(--border)]' : ''}`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {tab === 'consecutive' && (
-              <ConsecutiveLeaders
-                rows={consecutive}
-                windowDays={CONSECUTIVE_DAYS}
-                loading={loadingTab === 'consecutive'}
-                onSelectCode={handleSelectCode}
-              />
-            )}
-            {tab === 'rotation' && (
-              <SectorRotationHeatmap rotation={rotation} loading={loadingTab === 'rotation'} />
-            )}
-            {tab === 'newcomer' && (
-              <NewEntries
-                todayRows={snapshot.rows}
-                prevCodes={prevCodes}
-                prevDate={snapshot.prevDate}
-                onSelectCode={handleSelectCode}
-              />
-            )}
-            {tab === 'history' && (
-              <LeaderHistoryChart
-                code={selectedCode}
-                coname={selectedConame}
-                onClose={() => setSelectedCode(null)}
-              />
-            )}
-          </section>
+          {/* View D: セクターローテーション (常時表示) */}
+          <div className="mt-8">
+            <SectorRotationHeatmap rotation={rotation} loading={rotationLoading} />
+          </div>
         </>
       )}
     </main>
