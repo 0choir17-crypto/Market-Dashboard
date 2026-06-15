@@ -57,6 +57,7 @@ export default function NavBar() {
       <Link href="/sectors33" className={linkClass('/sectors33')}>Sectors-33</Link>
       <Link href="/earnings" className={linkClass('/earnings')}>Earnings</Link>
       <Link href="/leaders" className={linkClass('/leaders')}>Leaders</Link>
+      <Link href="/stage2" className={linkClass('/stage2')}>Stage2</Link>
       <Link href="/today" className={linkClass('/today')}>Daily Watch</Link>
       <Link href="/watchlist" className={linkClass('/watchlist')}>Watchlist</Link>
       <Link href="/journal" className={linkClass('/journal')}>Trading</Link>
