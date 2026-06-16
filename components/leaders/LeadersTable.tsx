@@ -140,7 +140,7 @@ function StreakCell({ hits }: { hits: LeaderHits }) {
     return (
       <span
         className="inline-block px-1.5 py-0.5 rounded text-xs font-mono font-semibold bg-rose-100 text-rose-700"
-        title="ウィンドウ (30 営業日) 内で初登場 — 急浮上候補"
+        title="全履歴で初の Top50 入り — 急浮上候補"
       >
         NEW
       </span>
@@ -259,7 +259,7 @@ export default function LeadersTable({ rows, hitsMap, query }: Props) {
           <tr className="bg-gray-50 border-y border-[#e8eaed]">
             <SortTh label="#" tooltip="market_rank — 当日の市場ランク (1=トップ)" sortKey="market_rank" {...sp} align="center" className="w-10" />
             <SortTh label="ヒット数" tooltip="Top50 に入った通算営業日数 (実数, 表示日まで)" sortKey="hits" {...sp} align="center" className="w-20" />
-            <SortTh label="連続/直近" tooltip="現在の連続 Top50 日数。連続=1 日のみの銘柄はウィンドウ内の直近ヒット日 (前回 M/D)、ウィンドウ初登場は NEW。" sortKey="streak" {...sp} align="center" className="w-24" />
+            <SortTh label="連続/直近" tooltip="現在の連続 Top50 日数 (実数, 全履歴)。連続=1 の銘柄は直近の前回ヒット日 (前回 M/D)、全履歴で初登場は NEW。" sortKey="streak" {...sp} align="center" className="w-24" />
             <SortTh label="Code" tooltip="銘柄コード (TradingView へリンク)" sortKey="code" {...sp} align="left" className="w-16" />
             <th className="px-2 py-2 text-[11px] font-semibold uppercase tracking-wide whitespace-nowrap text-left text-gray-500">Name</th>
             <SortTh label="Sector (S33)" tooltip="S33 業種名 (五十音順ソート)" sortKey="s33nm" {...sp} align="left" />
