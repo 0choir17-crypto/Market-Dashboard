@@ -93,16 +93,17 @@ function PassRouteBadge({ route }: { route: string | null | undefined }) {
   return null
 }
 
-// ヒット数バッジ: 30 営業日ウィンドウ内で Top50 入りした延べ日数
-// 色: 20+ 濃緑 / 10+ 緑 / 5+ 黄 / それ未満 灰
+// ヒット数バッジ: Top50 入りした通算営業日数 (実数, キャップ無し)
+// 色 (しきい値は据え置き): 30+ 水色 / 20+ 濃緑 / 10+ 緑 / 5+ 黄 / それ未満 灰
 function HitsCell({ hits }: { hits: number }) {
   if (hits <= 0) return <span className="text-gray-400 text-xs">--</span>
-  const bg = hits >= 20 ? '#16a34a' : hits >= 10 ? '#22c55e' : hits >= 5 ? '#eab308' : '#9ca3af'
-  const textColor = hits >= 5 ? '#fff' : '#fff'
+  const bg =
+    hits >= 30 ? '#0ea5e9' : hits >= 20 ? '#16a34a' : hits >= 10 ? '#22c55e' : hits >= 5 ? '#eab308' : '#9ca3af'
   return (
     <span
-      className="inline-block min-w-[36px] text-center px-1.5 py-0.5 rounded text-xs font-mono font-semibold tabular-nums"
-      style={{ backgroundColor: bg, color: textColor }}
+      className="inline-block min-w-[36px] text-center px-1.5 py-0.5 rounded text-xs font-mono font-semibold tabular-nums text-white"
+      title={hits >= 30 ? '通算 30 日以上 Top50 入り' : undefined}
+      style={{ backgroundColor: bg }}
     >
       {hits}
     </span>
@@ -257,7 +258,7 @@ export default function LeadersTable({ rows, hitsMap, query }: Props) {
         <thead>
           <tr className="bg-gray-50 border-y border-[#e8eaed]">
             <SortTh label="#" tooltip="market_rank — 当日の市場ランク (1=トップ)" sortKey="market_rank" {...sp} align="center" className="w-10" />
-            <SortTh label="ヒット数" tooltip="直近 30 営業日で Top50 に入った延べ日数 (本日含む)" sortKey="hits" {...sp} align="center" className="w-20" />
+            <SortTh label="ヒット数" tooltip="Top50 に入った通算営業日数 (実数, 表示日まで)" sortKey="hits" {...sp} align="center" className="w-20" />
             <SortTh label="連続/直近" tooltip="現在の連続 Top50 日数。連続=1 日のみの銘柄はウィンドウ内の直近ヒット日 (前回 M/D)、ウィンドウ初登場は NEW。" sortKey="streak" {...sp} align="center" className="w-24" />
             <SortTh label="Code" tooltip="銘柄コード (TradingView へリンク)" sortKey="code" {...sp} align="left" className="w-16" />
             <th className="px-2 py-2 text-[11px] font-semibold uppercase tracking-wide whitespace-nowrap text-left text-gray-500">Name</th>
@@ -370,7 +371,11 @@ export default function LeadersTable({ rows, hitsMap, query }: Props) {
           <span style={{ color: 'var(--text-secondary)' }}>&lt;0.7 出来高枯渇</span>
         </span>
         <span className="text-gray-300">|</span>
-        <span className="text-gray-500">ヒット数 (30営業日):</span>
+        <span className="text-gray-500">ヒット数 (通算 Top50入り日数):</span>
+        <span className="flex items-center gap-1">
+          <span className="inline-block w-2.5 h-2.5 rounded" style={{ backgroundColor: '#0ea5e9' }} />
+          <span style={{ color: 'var(--text-secondary)' }}>30+</span>
+        </span>
         <span className="flex items-center gap-1">
           <span className="inline-block w-2.5 h-2.5 rounded" style={{ backgroundColor: '#16a34a' }} />
           <span style={{ color: 'var(--text-secondary)' }}>20+</span>
