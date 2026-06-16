@@ -3,17 +3,14 @@ import type { MarketLeader } from '@/types/marketLeaders'
 
 const TABLE = 'market_leaders'
 
-// select('*') で供給側 (jquants-scanner) のスキーマ増減に耐性を持たせる。
+// 表示行は select('*') で供給側 (jquants-scanner) のスキーマ増減に耐性を持たせる。
 // 退役された列が DROP されても select 全体が落ちない (sectors33 と同方針)。
-
-// streak (連続日数) の算出ウィンドウ。
-// ヒット数は「通算 Top50 入り日数」の実数 (キャップ無し) で別計算する → fetchTotalHits。
-const STREAK_WINDOW = 30
+// hits / streak / 日付ピッカーは (code, date) の全履歴ページングから実数で算出する。
 
 export type LeaderHits = {
-  hits: number                       // 通算で Top50 入りした営業日数 (targetDate まで, キャップ無し)
-  streak: number                     // targetDate から遡って連続で Top50 入りしている日数
-  lastBeforeStreak: string | null    // 現在の連続区間より前で、ウィンドウ内で直近に Top50 入りした日
+  hits: number                       // 通算で Top50 入りした営業日数 (targetDate まで, 実数)
+  streak: number                     // targetDate から遡って連続で Top50 入りしている日数 (実数)
+  lastBeforeStreak: string | null    // 現在の連続区間より前で、直近に Top50 入りした日 (全履歴)
 }
 
 export type LeadersSnapshot = {
@@ -21,7 +18,7 @@ export type LeadersSnapshot = {
   prevDate: string | null            // latestDate の前営業日 (テーブル上で存在する直前の日付)
   rows: MarketLeader[]
   hitsMap: Map<string, LeaderHits>
-  availableDates: string[]           // 日付ピッカー用 (降順、ウィンドウ範囲のみ)
+  availableDates: string[]           // 日付ピッカー用 (降順、全履歴)
 }
 
 // ── 最新日付の取得 ─────────────────────────────────────────────────────────
@@ -39,125 +36,104 @@ async function fetchLatestDate(): Promise<string | null> {
   return (data?.date as string | undefined) ?? null
 }
 
-// ── 通算ヒット数 (targetDate まで、キャップ無しの実数) ──────────────────────
-// PK = code + date なので 1 行 = その銘柄の 1 営業日の Top50 入り。code 列だけを
-// 全履歴ぶん取得して銘柄ごとに数え上げる。Supabase のデフォルト行上限 (1000) を
-// 超えても取りこぼさないようページングする (Top50 × 多数日で 1000 行を容易に超える)。
-async function fetchTotalHits(targetDate: string): Promise<Map<string, number>> {
-  const counts = new Map<string, number>()
+// ── 全履歴の出現データ (targetDate まで) ───────────────────────────────────
+// PK = code + date なので 1 行 = その銘柄の 1 営業日の Top50 入り。(code, date) を
+// 全履歴ぶんページング取得し、以下を実数 (キャップ無し) で導けるようにする:
+//   - dates      : 全取引日 (降順) — 日付ピッカー / streak の連続判定に使う
+//   - codeDates  : 銘柄コード毎の出現日セット — hits / streak / lastBeforeStreak
+// Supabase の行上限 (1000) を取りこぼさないよう、安定した全順序 (date, code) で
+// ページングする (range ページングは順序が一意でないと境界で重複/欠落し得るため)。
+type LeaderHistory = { dates: string[]; codeDates: Map<string, Set<string>> }
+
+async function fetchHistory(targetDate: string): Promise<LeaderHistory> {
+  const codeDates = new Map<string, Set<string>>()
+  const dateSet = new Set<string>()
   const PAGE = 1000
   for (let from = 0; ; from += PAGE) {
     const { data, error } = await supabase
       .from(TABLE)
-      .select('code')
+      .select('code, date')
       .lte('date', targetDate)
+      .order('date', { ascending: false })
+      .order('code', { ascending: true })
       .range(from, from + PAGE - 1)
     if (error) {
-      console.error('[market_leaders total hits]', error)
+      console.error('[market_leaders history]', error)
       break
     }
     if (!data || data.length === 0) break
-    for (const r of data as { code: string }[]) {
-      counts.set(r.code, (counts.get(r.code) ?? 0) + 1)
+    for (const r of data as { code: string; date: string }[]) {
+      dateSet.add(r.date)
+      let s = codeDates.get(r.code)
+      if (!s) {
+        s = new Set<string>()
+        codeDates.set(r.code, s)
+      }
+      s.add(r.date)
     }
     if (data.length < PAGE) break
   }
-  return counts
+  const dates = [...dateSet].sort((a, b) => (a > b ? -1 : 1))
+  return { dates, codeDates }
 }
 
 // ── メインスナップショット (View A + B + ヒット数 + 日付ピッカー) ─────
-// 指定日 (省略時は最新) の Top50 を取得し、同時に直近 90 暦日 (~63 営業日) の
-// 履歴をまとめて取得して以下を派生する:
-//   - rows           : targetDate の Top50 行
+// 指定日 (省略時は最新) の Top50 全列を取得しつつ、(code, date) の全履歴から
+// hits / streak / availableDates を実数で導出する:
+//   - rows           : targetDate の Top50 行 (全列)
 //   - prevDate       : テーブル上で targetDate 直前の営業日
-//   - hitsMap        : 銘柄コード毎の hits / streak / lastBeforeStreak
-//   - availableDates : 日付ピッカー用の利用可能日リスト (降順)
-// 1 クエリで完結することで往復を減らす。
+//   - hitsMap        : 銘柄コード毎の hits / streak / lastBeforeStreak (実数)
+//   - availableDates : 日付ピッカー用の利用可能日リスト (降順, 全履歴)
 export async function fetchLeadersSnapshot(date?: string): Promise<LeadersSnapshot> {
   const targetDate = date ?? (await fetchLatestDate())
 
   if (!targetDate) {
-    return {
-      latestDate: null,
-      prevDate: null,
-      rows: [],
-      hitsMap: new Map(),
-      availableDates: [],
-    }
+    return { latestDate: null, prevDate: null, rows: [], hitsMap: new Map(), availableDates: [] }
   }
 
-  // 90 暦日 = 約 63 営業日 ぶんを一括取得 (streak / 日付ピッカー用)。
-  const since = new Date(targetDate)
-  since.setDate(since.getDate() - 90)
-  const sinceStr = since.toISOString().slice(0, 10)
-
-  // スナップショット (直近ウィンドウ) と通算ヒット数 (全履歴) を並行取得。
-  const [snapRes, totalHits] = await Promise.all([
-    supabase
-      .from(TABLE)
-      .select('*')
-      .gte('date', sinceStr)
-      .lte('date', targetDate)
-      .order('date', { ascending: false }),
-    fetchTotalHits(targetDate),
+  // targetDate の Top50 全列 と、全履歴の出現データ (実数算出用) を並行取得。
+  const [rowsRes, history] = await Promise.all([
+    supabase.from(TABLE).select('*').eq('date', targetDate).order('market_rank', { ascending: true }),
+    fetchHistory(targetDate),
   ])
-  const { data, error } = snapRes
 
-  if (error || !data || data.length === 0) {
-    if (error) console.error('[market_leaders snapshot]', error)
-    return {
-      latestDate: targetDate,
-      prevDate: null,
-      rows: [],
-      hitsMap: new Map(),
-      availableDates: [],
-    }
-  }
+  if (rowsRes.error) console.error('[market_leaders snapshot]', rowsRes.error)
+  const rows = (rowsRes.data ?? []) as unknown as MarketLeader[]
 
-  const allRows = data as unknown as MarketLeader[]
-  const availableDates = [...new Set(allRows.map(r => r.date))].sort((a, b) => (a > b ? -1 : 1))
-
+  // availableDates = 全取引日 (降順)。targetDate を起点に降順シーケンスで連続判定する。
+  const availableDates = history.dates
   const targetIdx = availableDates.indexOf(targetDate)
   const prevDate = targetIdx >= 0 && targetIdx + 1 < availableDates.length
     ? availableDates[targetIdx + 1]
     : null
 
-  // streak 算出ウィンドウ: targetDate から遡って STREAK_WINDOW 営業日
+  // targetDate から遡る取引日シーケンス (全履歴) — streak / lastBeforeStreak 用
   const startIdx = targetIdx >= 0 ? targetIdx : 0
-  const windowDates = availableDates.slice(startIdx, startIdx + STREAK_WINDOW)
+  const seq = availableDates.slice(startIdx)
 
-  // 銘柄毎の出現日セットを構築 (ウィンドウ外の行は除外)
-  const windowSet = new Set(windowDates)
-  const codeDates = new Map<string, Set<string>>()
-  for (const r of allRows) {
-    if (!windowSet.has(r.date)) continue
-    let s = codeDates.get(r.code)
-    if (!s) {
-      s = new Set<string>()
-      codeDates.set(r.code, s)
-    }
-    s.add(r.date)
-  }
-
-  // streak: windowDates[0] (= targetDate) から連続で出現している日数
-  // lastBeforeStreak: streak の直後 (連続が切れた地点) 以降で、最も近い出現日
+  // 表示行 (= targetDate の Top50) のぶんだけ実数を算出する。
   const hitsMap = new Map<string, LeaderHits>()
-  for (const [code, dates] of codeDates) {
+  for (const r of rows) {
+    const dates = history.codeDates.get(r.code)
+    if (!dates) {
+      hitsMap.set(r.code, { hits: 0, streak: 0, lastBeforeStreak: null })
+      continue
+    }
+    // streak: seq[0] (= targetDate) から連続で出現している日数 (実数, 全履歴)
     let streak = 0
-    while (streak < windowDates.length && dates.has(windowDates[streak])) streak++
+    while (streak < seq.length && dates.has(seq[streak])) streak++
 
+    // lastBeforeStreak: 連続が切れた地点以降で最も近い出現日 (全履歴)
     let lastBeforeStreak: string | null = null
-    for (let i = streak; i < windowDates.length; i++) {
-      if (dates.has(windowDates[i])) {
-        lastBeforeStreak = windowDates[i]
+    for (let i = streak; i < seq.length; i++) {
+      if (dates.has(seq[i])) {
+        lastBeforeStreak = seq[i]
         break
       }
     }
 
-    hitsMap.set(code, { hits: totalHits.get(code) ?? dates.size, streak, lastBeforeStreak })
+    hitsMap.set(r.code, { hits: dates.size, streak, lastBeforeStreak })
   }
-
-  const rows = allRows.filter(r => r.date === targetDate)
 
   return { latestDate: targetDate, prevDate, rows, hitsMap, availableDates }
 }
