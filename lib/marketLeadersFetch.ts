@@ -6,11 +6,12 @@ const TABLE = 'market_leaders'
 // select('*') で供給側 (jquants-scanner) のスキーマ増減に耐性を持たせる。
 // 退役された列が DROP されても select 全体が落ちない (sectors33 と同方針)。
 
-// 直近 30 営業日ウィンドウ — ヒット数 / 連続日数の計算範囲
-const HITS_WINDOW = 30
+// streak (連続日数) の算出ウィンドウ。
+// ヒット数は「通算 Top50 入り日数」の実数 (キャップ無し) で別計算する → fetchTotalHits。
+const STREAK_WINDOW = 30
 
 export type LeaderHits = {
-  hits: number                       // ウィンドウ内で Top50 入りした営業日数
+  hits: number                       // 通算で Top50 入りした営業日数 (targetDate まで, キャップ無し)
   streak: number                     // targetDate から遡って連続で Top50 入りしている日数
   lastBeforeStreak: string | null    // 現在の連続区間より前で、ウィンドウ内で直近に Top50 入りした日
 }
@@ -38,6 +39,32 @@ async function fetchLatestDate(): Promise<string | null> {
   return (data?.date as string | undefined) ?? null
 }
 
+// ── 通算ヒット数 (targetDate まで、キャップ無しの実数) ──────────────────────
+// PK = code + date なので 1 行 = その銘柄の 1 営業日の Top50 入り。code 列だけを
+// 全履歴ぶん取得して銘柄ごとに数え上げる。Supabase のデフォルト行上限 (1000) を
+// 超えても取りこぼさないようページングする (Top50 × 多数日で 1000 行を容易に超える)。
+async function fetchTotalHits(targetDate: string): Promise<Map<string, number>> {
+  const counts = new Map<string, number>()
+  const PAGE = 1000
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await supabase
+      .from(TABLE)
+      .select('code')
+      .lte('date', targetDate)
+      .range(from, from + PAGE - 1)
+    if (error) {
+      console.error('[market_leaders total hits]', error)
+      break
+    }
+    if (!data || data.length === 0) break
+    for (const r of data as { code: string }[]) {
+      counts.set(r.code, (counts.get(r.code) ?? 0) + 1)
+    }
+    if (data.length < PAGE) break
+  }
+  return counts
+}
+
 // ── メインスナップショット (View A + B + ヒット数 + 日付ピッカー) ─────
 // 指定日 (省略時は最新) の Top50 を取得し、同時に直近 90 暦日 (~63 営業日) の
 // 履歴をまとめて取得して以下を派生する:
@@ -59,17 +86,22 @@ export async function fetchLeadersSnapshot(date?: string): Promise<LeadersSnapsh
     }
   }
 
-  // 90 暦日 = 約 63 営業日 ぶんを一括取得 (HITS_WINDOW=30 を十分カバー)
+  // 90 暦日 = 約 63 営業日 ぶんを一括取得 (streak / 日付ピッカー用)。
   const since = new Date(targetDate)
   since.setDate(since.getDate() - 90)
   const sinceStr = since.toISOString().slice(0, 10)
 
-  const { data, error } = await supabase
-    .from(TABLE)
-    .select('*')
-    .gte('date', sinceStr)
-    .lte('date', targetDate)
-    .order('date', { ascending: false })
+  // スナップショット (直近ウィンドウ) と通算ヒット数 (全履歴) を並行取得。
+  const [snapRes, totalHits] = await Promise.all([
+    supabase
+      .from(TABLE)
+      .select('*')
+      .gte('date', sinceStr)
+      .lte('date', targetDate)
+      .order('date', { ascending: false }),
+    fetchTotalHits(targetDate),
+  ])
+  const { data, error } = snapRes
 
   if (error || !data || data.length === 0) {
     if (error) console.error('[market_leaders snapshot]', error)
@@ -90,9 +122,9 @@ export async function fetchLeadersSnapshot(date?: string): Promise<LeadersSnapsh
     ? availableDates[targetIdx + 1]
     : null
 
-  // ヒット数算出ウィンドウ: targetDate から遡って 30 営業日
+  // streak 算出ウィンドウ: targetDate から遡って STREAK_WINDOW 営業日
   const startIdx = targetIdx >= 0 ? targetIdx : 0
-  const windowDates = availableDates.slice(startIdx, startIdx + HITS_WINDOW)
+  const windowDates = availableDates.slice(startIdx, startIdx + STREAK_WINDOW)
 
   // 銘柄毎の出現日セットを構築 (ウィンドウ外の行は除外)
   const windowSet = new Set(windowDates)
@@ -122,7 +154,7 @@ export async function fetchLeadersSnapshot(date?: string): Promise<LeadersSnapsh
       }
     }
 
-    hitsMap.set(code, { hits: dates.size, streak, lastBeforeStreak })
+    hitsMap.set(code, { hits: totalHits.get(code) ?? dates.size, streak, lastBeforeStreak })
   }
 
   const rows = allRows.filter(r => r.date === targetDate)
