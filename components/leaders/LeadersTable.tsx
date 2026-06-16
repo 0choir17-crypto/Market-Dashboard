@@ -93,15 +93,16 @@ function PassRouteBadge({ route }: { route: string | null | undefined }) {
   return null
 }
 
-// ヒット数バッジ: 30 営業日ウィンドウ内で Top50 入りした延べ日数 (最大 30)
-// 色: 25+ 水色「常連」(緑系と別系統で常連を分離) / 15+ 濃緑 / 7+ 緑 / それ未満 灰
+// ヒット数バッジ: 30 営業日ウィンドウ内で Top50 入りした延べ日数 (実数, 最大 30)
+// 色: 30(皆勤) 水色 / 20+ 濃緑 / 10+ 緑 / 5+ 黄 / それ未満 灰
 function HitsCell({ hits }: { hits: number }) {
   if (hits <= 0) return <span className="text-gray-400 text-xs">--</span>
-  const bg = hits >= 25 ? '#0ea5e9' : hits >= 15 ? '#16a34a' : hits >= 7 ? '#22c55e' : '#9ca3af'
+  const bg =
+    hits >= 30 ? '#0ea5e9' : hits >= 20 ? '#16a34a' : hits >= 10 ? '#22c55e' : hits >= 5 ? '#eab308' : '#9ca3af'
   return (
     <span
       className="inline-block min-w-[36px] text-center px-1.5 py-0.5 rounded text-xs font-mono font-semibold tabular-nums text-white"
-      title={hits >= 25 ? '常連 — 直近 30 営業日のうち 25 日以上 Top50 入り' : undefined}
+      title={hits >= 30 ? '皆勤 — 直近 30 営業日すべてで Top50 入り (30/30)' : undefined}
       style={{ backgroundColor: bg }}
     >
       {hits}
@@ -373,15 +374,19 @@ export default function LeadersTable({ rows, hitsMap, query }: Props) {
         <span className="text-gray-500">ヒット数 (30営業日, 最大30):</span>
         <span className="flex items-center gap-1">
           <span className="inline-block w-2.5 h-2.5 rounded" style={{ backgroundColor: '#0ea5e9' }} />
-          <span style={{ color: 'var(--text-secondary)' }}>25+ 常連</span>
+          <span style={{ color: 'var(--text-secondary)' }}>30 皆勤</span>
         </span>
         <span className="flex items-center gap-1">
           <span className="inline-block w-2.5 h-2.5 rounded" style={{ backgroundColor: '#16a34a' }} />
-          <span style={{ color: 'var(--text-secondary)' }}>15+</span>
+          <span style={{ color: 'var(--text-secondary)' }}>20+</span>
         </span>
         <span className="flex items-center gap-1">
           <span className="inline-block w-2.5 h-2.5 rounded" style={{ backgroundColor: '#22c55e' }} />
-          <span style={{ color: 'var(--text-secondary)' }}>7+</span>
+          <span style={{ color: 'var(--text-secondary)' }}>10+</span>
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="inline-block w-2.5 h-2.5 rounded" style={{ backgroundColor: '#eab308' }} />
+          <span style={{ color: 'var(--text-secondary)' }}>5+</span>
         </span>
       </div>
     </div>
