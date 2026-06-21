@@ -23,6 +23,7 @@ export interface Trade {
   cost_basis: number | null
   init_risk_pct: number | null
   target_r: number | null
+  target_price: number | null
   exit_reason: string | null
   r_multiple: number | null
 
