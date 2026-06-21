@@ -87,12 +87,7 @@ export default function TradesTab({ positions, onRefresh }: Props) {
     <div>
       <div className="flex justify-between items-center mb-4">
         <span className="text-sm text-gray-500">{openTrades.length} positions</span>
-        <button
-          onClick={() => setEditPos({} as Trade)}
-          className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors min-h-[36px]"
-        >
-          + Add Position
-        </button>
+        <span className="text-xs text-gray-400">追加はヘッダーの「+ New Trade」から</span>
       </div>
 
       {/* Desktop table */}
