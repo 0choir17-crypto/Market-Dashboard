@@ -61,6 +61,7 @@ export default function NavBar() {
       <Link href="/today" className={linkClass('/today')}>Daily Watch</Link>
       <Link href="/watchlist" className={linkClass('/watchlist')}>Watchlist</Link>
       <Link href="/journal" className={linkClass('/journal')}>Trading</Link>
+      <Link href="/notes" className={linkClass('/notes')}>Notes</Link>
       <Link href="/guide" className={linkClass('/guide')}>Guide</Link>
     </nav>
   )

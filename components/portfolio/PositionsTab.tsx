@@ -95,7 +95,7 @@ export default function TradesTab({ positions, onRefresh }: Props) {
         <table className="w-full min-w-[1200px] text-sm">
           <thead>
             <tr className="bg-gray-50 border-b border-t border-[#e8eaed]">
-              {['Ticker','Name','Sector','Entry Date','Entry Price','Shares','Stop','Stop(21L)','InitRisk%','Current','Unrealized ¥','Unrealized %','TrailDist%','Target','Actions'].map(h => (
+              {['Ticker','Name','Sector','Entry Date','Entry Price','Shares','Stop Price','InitRisk%','Current','Unrealized ¥','Unrealized %','Target Price','Actions'].map(h => (
                 <th key={h} className={`px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap ${h === 'Actions' ? 'text-right' : h === 'Ticker' || h === 'Name' || h === 'Sector' ? 'text-left' : 'text-right'}`}>
                   {h}
                 </th>
@@ -107,9 +107,6 @@ export default function TradesTab({ positions, onRefresh }: Props) {
               const curPrice = prices[pos.ticker] ?? null
               const unrealizedPnl = curPrice != null ? (curPrice - pos.entry_price) * pos.shares : null
               const unrealizedPct = curPrice != null ? (curPrice - pos.entry_price) / pos.entry_price * 100 : null
-              const trailDistPct = curPrice != null && pos.stop_21l != null
-                ? (curPrice - pos.stop_21l) / curPrice * 100
-                : null
               return (
                 <tr
                   key={pos.id}
@@ -129,7 +126,6 @@ export default function TradesTab({ positions, onRefresh }: Props) {
                   <td className="px-3 py-2.5 text-right font-mono text-xs whitespace-nowrap">¥{fmt(pos.entry_price)}</td>
                   <td className="px-3 py-2.5 text-right font-mono text-xs whitespace-nowrap">{fmt(pos.shares)}</td>
                   <td className="px-3 py-2.5 text-right font-mono text-xs whitespace-nowrap">{pos.stop_price != null ? `¥${fmt(pos.stop_price)}` : '—'}</td>
-                  <td className="px-3 py-2.5 text-right font-mono text-xs whitespace-nowrap">{pos.stop_21l != null ? `¥${fmt(pos.stop_21l)}` : '—'}</td>
                   <td className="px-3 py-2.5 text-right font-mono text-xs whitespace-nowrap">
                     {pos.init_risk_pct != null ? <span className="text-orange-600">{pos.init_risk_pct.toFixed(2)}%</span> : '—'}
                   </td>
@@ -138,7 +134,6 @@ export default function TradesTab({ positions, onRefresh }: Props) {
                   </td>
                   <td className="px-3 py-2.5 text-right whitespace-nowrap"><PnlCell value={unrealizedPnl} /></td>
                   <td className="px-3 py-2.5 text-right whitespace-nowrap"><PctCell value={unrealizedPct} /></td>
-                  <td className="px-3 py-2.5 text-right whitespace-nowrap"><PctCell value={trailDistPct} /></td>
                   <td className="px-3 py-2.5 text-right font-mono text-xs whitespace-nowrap">
                     {pos.target_price != null ? (
                       <>
