@@ -10,9 +10,9 @@ import PeriodPerformance from '@/components/journal/PeriodPerformance'
 import ReasonPerformance from '@/components/journal/ReasonPerformance'
 import TagPerformance from '@/components/journal/TagPerformance'
 import TradeList, { ExpandedReview } from '@/components/journal/TradeList'
-import TradeModal from '@/components/journal/TradeModal'
 import CloseTradeModal from '@/components/journal/CloseTradeModal'
 import EditTradeModal from '@/components/journal/EditTradeModal'
+import PositionModal from '@/components/portfolio/PositionModal'
 import PositionsTab from '@/components/portfolio/PositionsTab'
 import RiskTab from '@/components/portfolio/RiskTab'
 
@@ -165,8 +165,8 @@ export default function JournalPage() {
         </>
       )}
 
-      {/* New trade modal */}
-      <TradeModal
+      {/* New trade modal (統合: エントリー + 任意のリスク/イグジット) */}
+      <PositionModal
         open={showNewTrade}
         onClose={() => setShowNewTrade(false)}
         onSaved={fetchAll}

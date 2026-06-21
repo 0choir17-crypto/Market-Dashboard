@@ -5,7 +5,7 @@ import { DailySignal } from '@/types/signals'
 import { SCREEN_NAME_MAP, getRecommendedScreens, isRecommended } from '@/lib/screenNames'
 import Tooltip from '@/components/shared/Tooltip'
 import WatchlistModal from '@/components/watchlist/WatchlistModal'
-import TradeModal from '@/components/journal/TradeModal'
+import PositionModal from '@/components/portfolio/PositionModal'
 import { WatchlistItem } from '@/types/portfolio'
 import { supabase } from '@/lib/supabase'
 import { tradingViewUrl, shikihoUrl } from '@/lib/tickerLinks'
@@ -371,8 +371,8 @@ export default function SignalsTable({ signals, marketRegime, scorecardRegime }:
         initial={watchTarget ?? undefined}
       />
 
-      {/* TradeModal: Entry button からの新規トレード */}
-      <TradeModal
+      {/* PositionModal: Entry button からの新規トレード */}
+      <PositionModal
         open={entryTarget !== null}
         onClose={() => setEntryTarget(null)}
         onSaved={() => setEntryTarget(null)}
