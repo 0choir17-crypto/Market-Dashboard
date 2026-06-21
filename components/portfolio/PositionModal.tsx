@@ -42,6 +42,7 @@ export default function PositionModal({ open, onClose, onSaved, initial }: Props
   const [sectorOptions, setSectorOptions] = useState<string[]>([])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [warning, setWarning] = useState('')
 
   const enp = parseFloat(entryPrice)
 
@@ -93,6 +94,7 @@ export default function PositionModal({ open, onClose, onSaved, initial }: Props
       setExitShares('')
       setExitReason(initial?.exit_reason ?? '利確')
       setError('')
+      setWarning('')
     }
   }, [open, initial])
 
@@ -105,6 +107,7 @@ export default function PositionModal({ open, onClose, onSaved, initial }: Props
 
     setSaving(true)
     setError('')
+    setWarning('')
 
     const ep2 = parseFloat(entryPrice)
     const sh2 = shares !== '' ? parseInt(shares) : 1
@@ -163,13 +166,22 @@ export default function PositionModal({ open, onClose, onSaved, initial }: Props
       }),
     }
 
-    const { error: err } = isEdit
+    const { error: err, stripped } = isEdit
       ? await updateResilient('trades', record, { id: initial!.id! })
       : await insertResilient('trades', record)
 
     setSaving(false)
     if (err) { setError(err.message); return }
+
+    // 入力したのに DB に列が無く保存できなかった項目を可視化（例: target_price）。
     onSaved()
+    if (stripped.length > 0) {
+      setWarning(
+        `保存しましたが、DB に列が無いため未保存の項目があります: ${stripped.join(', ')}。` +
+        `supabase/trades_columns.sql を Supabase で実行すると保存されるようになります。`,
+      )
+      return // 警告を読めるようモーダルは閉じない
+    }
     onClose()
   }
 
@@ -180,6 +192,9 @@ export default function PositionModal({ open, onClose, onSaved, initial }: Props
       <div className="px-6 py-5 space-y-4">
         {error && (
           <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>
+        )}
+        {warning && (
+          <p className="text-sm text-amber-800 bg-amber-50 border border-amber-200 px-3 py-2 rounded-lg">{warning}</p>
         )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
