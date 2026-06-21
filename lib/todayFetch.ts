@@ -1,60 +1,53 @@
 import { supabase } from '@/lib/supabase'
-import {
-  normalizeScanRow,
-  type RawScanResultRow,
-  type ScanResultRow,
-} from '@/types/scanResults'
+import type { CoilPullbackRow, MaPullbackRow } from '@/types/pullbackSetups'
 
-export type TodayMarket = {
-  date: string
-  market_regime: string | null
-  breadth_regime: string | null
-  scorecard_regime: string | null
-  mc_v4: number | null
-  mc_regime_v4: string | null
-  mc_divergence_flag_v4: number | null
-}
+// Daily Watch — 押し目"候補"ウォッチ。新2テーブルを最新 date 中心に読む。
+// jquants-scanner が毎日・平日引け後 (~18:00 JST) に当日分を upsert（冪等）。
+// 旧 scan_results 依存は撤去済み（structure/thrust 系シグナルは本番ごと撤去）。
+
+const COIL_TABLE = 'coil_pullback_setups'
+const MA_TABLE = 'ma_pullback_setups'
 
 export type TodayResponse = {
-  scanDate: string | null
-  scan: ScanResultRow[]
-  market: TodayMarket | null
+  coilDate: string | null
+  coil: CoilPullbackRow[]
+  maDate: string | null
+  ma: MaPullbackRow[]
   hotSectors: string[]
 }
 
-async function fetchScan(date: string | null): Promise<{ date: string | null; rows: ScanResultRow[] }> {
+// 指定日（省略時は最新）の候補一覧。select('*') で供給側のスキーマ増減に耐性。
+// スナップショット日が当該テーブルに無い場合は直近 ≤ requested の日へフォールバック。
+async function fetchSetups<T>(
+  table: string,
+  date: string | null,
+): Promise<{ date: string | null; rows: T[] }> {
   let targetDate = date
 
   if (!targetDate) {
-    const { data: latest, error: latestErr } = await supabase
-      .from('scan_results')
+    const { data: latest, error } = await supabase
+      .from(table)
       .select('date')
       .order('date', { ascending: false })
       .limit(1)
       .maybeSingle()
-    if (latestErr) console.error('[scan_results] latest date error', latestErr)
+    if (error) console.error(`[${table}] latest date error`, error)
     targetDate = (latest?.date as string | undefined) ?? null
   }
   if (!targetDate) return { date: null, rows: [] }
 
-  const initial = await supabase
-    .from('scan_results')
-    .select('*')
-    .eq('date', targetDate)
-
+  const initial = await supabase.from(table).select('*').eq('date', targetDate)
   if (initial.error) {
-    console.error('[scan_results] fetch error', initial.error)
+    console.error(`[${table}] fetch error`, initial.error)
     return { date: targetDate, rows: [] }
   }
 
   let data = initial.data
+  let resolved = targetDate
 
-  // Fallback: snapshot date may not exist in scan_results (e.g. user picks
-  // a date from market_conditions where scan didn't run). Fall back to the
-  // most recent scan_results date <= requested.
   if (!data || data.length === 0) {
     const { data: nearest } = await supabase
-      .from('scan_results')
+      .from(table)
       .select('date')
       .lte('date', targetDate)
       .order('date', { ascending: false })
@@ -62,69 +55,24 @@ async function fetchScan(date: string | null): Promise<{ date: string | null; ro
       .maybeSingle()
     const nearestDate = (nearest?.date as string | undefined) ?? null
     if (nearestDate && nearestDate !== targetDate) {
-      const fb = await supabase
-        .from('scan_results')
-        .select('*')
-        .eq('date', nearestDate)
+      const fb = await supabase.from(table).select('*').eq('date', nearestDate)
       if (fb.error) {
-        console.error('[scan_results] fallback fetch error', fb.error)
-        return { date: targetDate, rows: [] }
+        console.error(`[${table}] fallback fetch error`, fb.error)
+      } else {
+        data = fb.data ?? []
+        resolved = nearestDate
       }
-      data = fb.data ?? []
-      targetDate = nearestDate
     }
   }
 
-  const rows = ((data ?? []) as RawScanResultRow[]).map(normalizeScanRow)
-  rows.sort((a, b) => {
-    const av = a.rs_topix_21d
-    const bv = b.rs_topix_21d
-    if (av == null && bv == null) return 0
-    if (av == null) return 1
-    if (bv == null) return -1
-    return bv - av
-  })
-  return { date: targetDate, rows }
+  return { date: resolved, rows: (data ?? []) as unknown as T[] }
 }
 
-async function fetchMarket(date: string | null, isLatest: boolean): Promise<TodayMarket | null> {
-  const baseSelect = 'date, market_regime, breadth_regime, scorecard_regime, mc_v4, mc_regime_v4, mc_divergence_flag_v4'
-
-  if (isLatest || !date) {
-    const primary = await supabase
-      .from('market_conditions')
-      .select(baseSelect)
-      .not('mc_v4', 'is', null)
-      .order('date', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-    if (primary.data) return primary.data as TodayMarket
-
-    const fallback = await supabase
-      .from('market_conditions')
-      .select(baseSelect)
-      .order('date', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-    return (fallback.data as TodayMarket | null) ?? null
-  }
-
-  const { data } = await supabase
-    .from('market_conditions')
-    .select(baseSelect)
-    .eq('date', date)
-    .limit(1)
-    .maybeSingle()
-  return (data as TodayMarket | null) ?? null
-}
-
-// "Hot" sectors = セクタースコア (sector_selection_s33.composite_score) >= 60 の業種。
-// Sectors-33 ページと同じ閾値 (緑 ≥60: compositeColor / テーブル凡例) を使い、
-// 該当業種に属するスキャン銘柄カードを緑ハイライトする。
+// "Hot" sectors = sector_selection_s33.composite_score >= 60 の業種。
+// Sectors-33 ページと同じ閾値を使い、該当業種に属する候補カードを緑ハイライト。
 const HOT_SECTOR_MIN_SCORE = 60
 
 async function fetchHotSectors(): Promise<string[]> {
-  // 最新の選別日を取得 (scan の日付とは独立に、現時点の業種強弱を反映)。
   const { data: latest, error: latestErr } = await supabase
     .from('sector_selection_s33')
     .select('date')
@@ -154,18 +102,18 @@ async function fetchHotSectors(): Promise<string[]> {
 
 export async function fetchToday(opts: { date?: string }): Promise<TodayResponse> {
   const requested = opts.date ?? null
-  const isLatest = !requested
 
-  const [scanRes, market, hotSectors] = await Promise.all([
-    fetchScan(requested),
-    fetchMarket(requested, isLatest),
+  const [coilRes, maRes, hotSectors] = await Promise.all([
+    fetchSetups<CoilPullbackRow>(COIL_TABLE, requested),
+    fetchSetups<MaPullbackRow>(MA_TABLE, requested),
     fetchHotSectors(),
   ])
 
   return {
-    scanDate: scanRes.date,
-    scan: scanRes.rows,
-    market,
+    coilDate: coilRes.date,
+    coil: coilRes.rows,
+    maDate: maRes.date,
+    ma: maRes.rows,
     hotSectors,
   }
 }
