@@ -5,6 +5,7 @@ import {
   MarketLeader,
   volColor,
   csBarColor,
+  emergingBarColor,
 } from '@/types/marketLeaders'
 import type { LeaderHits } from '@/lib/marketLeadersFetch'
 import { tradingViewUrl, shikihoUrl } from '@/lib/tickerLinks'
@@ -17,6 +18,7 @@ type SortKey =
   | 'code'
   | 's33nm'
   | 'cs_avg'
+  | 'emerging_cs'
   | 'vol_5d'
   | 'return_21d'
   | 'return_63d'
@@ -53,6 +55,43 @@ function CsAvgCell({ value }: { value: number | null | undefined }) {
       </span>
       <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
         <div className="h-full rounded-full" style={{ width: `${safe}%`, backgroundColor: color }} />
+      </div>
+    </div>
+  )
+}
+
+// 符号付き整形（mom 用）: +緑 / −赤、null は '—'
+function fmtSigned(v: number | null | undefined, decimals = 1): string {
+  if (!isNum(v)) return '—'
+  return `${v > 0 ? '+' : ''}${v.toFixed(decimals)}`
+}
+
+// 初動 (emerging_cs): cs_avg と同形式（数値+バー）。加速度で色分け。
+// null（本更新前の過去日）は '—' / バー無し。mom_21d/5d は hover で補助表示。
+function EmergingCell({
+  value,
+  mom21,
+  mom5,
+}: {
+  value: number | null | undefined
+  mom21: number | null | undefined
+  mom5: number | null | undefined
+}) {
+  const safe = isNum(value) ? Math.max(0, Math.min(100, value)) : 0
+  const color = emergingBarColor(value)
+  const title = `RS加速度  21d: ${fmtSigned(mom21)}  /  5d: ${fmtSigned(mom5)}`
+  return (
+    <div className="flex items-center gap-2 min-w-[110px]" title={isNum(value) ? title : undefined}>
+      <span
+        className="font-mono text-xs tabular-nums w-9 text-right font-semibold"
+        style={{ color: isNum(value) ? '#1f2937' : '#9ca3af' }}
+      >
+        {isNum(value) ? value.toFixed(0) : '—'}
+      </span>
+      <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+        {isNum(value) && (
+          <div className="h-full rounded-full" style={{ width: `${safe}%`, backgroundColor: color }} />
+        )}
       </div>
     </div>
   )
@@ -251,10 +290,13 @@ export default function LeadersTable({ rows, hitsMap, query }: Props) {
     <div className="bg-white rounded-xl border border-[#e8eaed] shadow-sm overflow-x-auto">
       <div className="flex items-center gap-3 px-4 pt-4 pb-3 flex-wrap">
         <p className="text-sm font-semibold text-gray-500">市場リーダー Top 50</p>
+        <span className="text-[11px] text-gray-400">
+          cs_avg=確立（資金が向かう度）／ 初動=加速（今RSが伸びてるか）。観測テーブルで売買シグナルではない
+        </span>
         <span className="ml-auto text-xs text-gray-400">{sorted.length} 銘柄</span>
       </div>
 
-      <table className="w-full min-w-[1240px] text-sm">
+      <table className="w-full min-w-[1360px] text-sm">
         <thead>
           <tr className="bg-gray-50 border-y border-[#e8eaed]">
             <SortTh label="#" tooltip="market_rank — 当日の市場ランク (1=トップ)" sortKey="market_rank" {...sp} align="center" className="w-10" />
@@ -264,7 +306,8 @@ export default function LeadersTable({ rows, hitsMap, query }: Props) {
             <th className="px-2 py-2 text-[11px] font-semibold uppercase tracking-wide whitespace-nowrap text-left text-gray-500">Name</th>
             <SortTh label="Sector (S33)" tooltip="S33 業種名 (五十音順ソート)" sortKey="s33nm" {...sp} align="left" />
             <th className="px-2 py-2 text-[11px] font-semibold uppercase tracking-wide whitespace-nowrap text-right text-gray-500 w-20">Close</th>
-            <SortTh label="cs_avg" tooltip="クロスセクション RS 平均 0-100 (主軸スコア)。99.5=Stage A 上位 0.5%。rs_topix_avg とは別物。" sortKey="cs_avg" {...sp} align="left" className="w-32" />
+            <SortTh label="cs_avg" tooltip="クロスセクション RS 平均 0-100 (主軸スコア=確立度)。99.5=Stage A 上位 0.5%。「どれだけ資金が向かっているか」。rs_topix_avg とは別物。" sortKey="cs_avg" {...sp} align="left" className="w-32" />
+            <SortTh label="初動" tooltip="emerging_cs 0-100 (初動スコア=加速度)。高い=今RSが加速中（初動）/ 低い=成熟・失速。cs_avg の鏡像。hover で RS加速度 (21d/5d)。過去日は — (本更新前)。" sortKey="emerging_cs" {...sp} align="left" className="w-32" />
             <SortTh label="vol_5d" tooltip="直近 5 営業日の出来高比。≥1.5 機関買い継続 / <0.7 出来高枯渇" sortKey="vol_5d" {...sp} align="center" className="w-20" />
             <SortTh label="21d %" tooltip="return_21d — 21 営業日リターン" sortKey="return_21d" {...sp} align="right" className="w-20" />
             <SortTh label="63d %" tooltip="return_63d — 63 営業日リターン" sortKey="return_63d" {...sp} align="right" className="w-20" />
@@ -321,6 +364,9 @@ export default function LeadersTable({ rows, hitsMap, query }: Props) {
                 <td className="px-2 py-1.5">
                   <CsAvgCell value={r.cs_avg} />
                 </td>
+                <td className="px-2 py-1.5">
+                  <EmergingCell value={r.emerging_cs} mom21={r.rs_topix_mom_21d} mom5={r.rs_topix_mom_5d} />
+                </td>
                 <td className="px-2 py-1.5 text-center">
                   <VolCell value={r.vol_5d} />
                 </td>
@@ -353,6 +399,20 @@ export default function LeadersTable({ rows, hitsMap, query }: Props) {
 
       {/* Legend */}
       <div className="flex items-center justify-center gap-4 py-3 text-[11px] border-t border-[#f0f2f4] flex-wrap">
+        <span className="text-gray-500">初動 (emerging):</span>
+        <span className="flex items-center gap-1">
+          <span className="inline-block w-2.5 h-2.5 rounded" style={{ backgroundColor: '#16a34a' }} />
+          <span style={{ color: 'var(--text-secondary)' }}>≥80 加速中</span>
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="inline-block w-2.5 h-2.5 rounded" style={{ backgroundColor: '#eab308' }} />
+          <span style={{ color: 'var(--text-secondary)' }}>55–80 中間</span>
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="inline-block w-2.5 h-2.5 rounded" style={{ backgroundColor: '#9ca3af' }} />
+          <span style={{ color: 'var(--text-secondary)' }}>&lt;55 成熟・失速</span>
+        </span>
+        <span className="text-gray-300">|</span>
         <span className="text-gray-500">vol_5d:</span>
         <span className="flex items-center gap-1">
           <span className="inline-block w-2.5 h-2.5 rounded" style={{ backgroundColor: '#bbf7d0' }} />

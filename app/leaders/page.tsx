@@ -60,7 +60,7 @@ export default function LeadersPage() {
             Market Leaders (Top 50)
           </h1>
           <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
-            東証クロスセクション top 50 銘柄 — 資金フロー観測 (cs_avg = 全銘柄横断パーセンタイル)
+            東証クロスセクション top 50 銘柄 — 資金フロー観測。cs_avg=確立度 / 初動(emerging_cs)=加速度の2軸
           </p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">

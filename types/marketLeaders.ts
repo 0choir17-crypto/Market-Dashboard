@@ -23,6 +23,11 @@ export type MarketLeader = {
   cs_21d: number | null
   cs_63d: number | null
 
+  // 初動スコア（鏡像）: 高い=今RSが加速中（初動）/ 低い=成熟・失速。cs_avg と同じ 0-100。
+  emerging_cs: number | null
+  rs_topix_mom_21d: number | null  // 対TOPIX RS(21d) の 21営業日変化＝RS加速度
+  rs_topix_mom_5d: number | null   // 同・5営業日変化（ごく直近）
+
   return_63d: number | null
   return_21d: number | null
   return_5d: number | null
@@ -60,6 +65,15 @@ export function csBarColor(v: number | null | undefined): string {
   if (v >= 85) return '#22c55e'
   if (v >= 70) return '#eab308'
   return '#9ca3af'
+}
+
+// 初動 (emerging_cs) のバー色: 高い=加速中(緑) / 低い=成熟・失速(灰)。閾値は調整可。
+export function emergingBarColor(v: number | null | undefined): string {
+  if (v === null || v === undefined || !Number.isFinite(v)) return '#e5e7eb'
+  if (v >= 80) return '#16a34a'  // 加速中
+  if (v >= 65) return '#22c55e'  // やや加速
+  if (v >= 55) return '#eab308'  // 中間
+  return '#9ca3af'               // 成熟・失速
 }
 
 // scalecat の表示色
