@@ -3,9 +3,9 @@
 import { useState, useEffect, useMemo } from 'react'
 import { insertResilient, updateResilient } from '@/lib/resilientWrite'
 import { Trade } from '@/types/trades'
-import { SCREEN_NAME_MAP } from '@/lib/screenNames'
 import { classifyResult } from '@/lib/tradeResult'
 import { EXIT_REASONS } from '@/components/journal/CloseTradeModal'
+import { fetchSectorNames33 } from '@/lib/sectorNames'
 import Modal from '@/components/shared/Modal'
 
 type Props = {
@@ -17,10 +17,8 @@ type Props = {
 
 const today = () => new Date().toISOString().slice(0, 10)
 
-const SCREEN_OPTIONS = Object.entries(SCREEN_NAME_MAP).map(([raw, display]) => ({
-  value: raw,
-  label: display,
-}))
+// Screen 選択肢（表示名をそのまま screen_name に保存）。末尾に Other。
+const SCREEN_OPTIONS = ['Coil Pullback', 'MA Pullback']
 
 export default function PositionModal({ open, onClose, onSaved, initial }: Props) {
   const isEdit = !!initial?.id
@@ -34,34 +32,48 @@ export default function PositionModal({ open, onClose, onSaved, initial }: Props
   const [shares, setShares] = useState('')
   const [costBasis, setCostBasis] = useState('')
   const [stopPrice, setStopPrice] = useState('')
-  const [stop21l, setStop21l] = useState('')
-  const [targetR, setTargetR] = useState('')
+  const [targetPrice, setTargetPrice] = useState('')
   const [memo, setMemo] = useState('')
   // 任意のイグジット（売り）— 入力すると closed として保存し PnL を自動計算
   const [exitDate, setExitDate] = useState('')
   const [exitPrice, setExitPrice] = useState('')
+  const [exitShares, setExitShares] = useState('')
   const [exitReason, setExitReason] = useState('利確')
+  const [sectorOptions, setSectorOptions] = useState<string[]>([])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
-  // Derived: init_risk_pct
-  const ep = parseFloat(entryPrice)
-  const sp = parseFloat(stopPrice)
-  const initRiskPct = !isNaN(ep) && !isNaN(sp) && ep > 0
-    ? ((ep - sp) / ep * 100)
-    : null
+  const enp = parseFloat(entryPrice)
+
+  // Entry 比の乖離率（ストップ・目標株価の自動計算表示）
+  const stopPctFromEntry =
+    !isNaN(enp) && enp > 0 && stopPrice !== '' && !isNaN(parseFloat(stopPrice))
+      ? (parseFloat(stopPrice) - enp) / enp * 100
+      : null
+  const targetPctFromEntry =
+    !isNaN(enp) && enp > 0 && targetPrice !== '' && !isNaN(parseFloat(targetPrice))
+      ? (parseFloat(targetPrice) - enp) / enp * 100
+      : null
 
   // イグジット価格を入れた時のリアルタイム損益プレビュー
   const exitPreview = useMemo(() => {
-    if (exitPrice === '' || entryPrice === '' || shares === '') return null
+    if (exitPrice === '' || entryPrice === '') return null
     const xp = Number(exitPrice)
-    const enp = Number(entryPrice)
-    const sh = Number(shares)
-    if (isNaN(xp) || isNaN(enp) || isNaN(sh) || enp <= 0) return null
-    const pnl = (xp - enp) * sh
-    const pnlPct = ((xp - enp) / enp) * 100
+    const ep0 = Number(entryPrice)
+    const sh = exitShares !== '' ? Number(exitShares) : Number(shares)
+    if (isNaN(xp) || isNaN(ep0) || isNaN(sh) || ep0 <= 0) return null
+    const pnl = (xp - ep0) * sh
+    const pnlPct = ((xp - ep0) / ep0) * 100
     return { pnl, pnlPct, result: classifyResult(pnl) }
-  }, [exitPrice, entryPrice, shares])
+  }, [exitPrice, entryPrice, exitShares, shares])
+
+  // 33業種プルダウン（最新営業日の sector_name_s33）
+  useEffect(() => {
+    if (!open || sectorOptions.length > 0) return
+    let cancelled = false
+    fetchSectorNames33().then(list => { if (!cancelled) setSectorOptions(list) })
+    return () => { cancelled = true }
+  }, [open, sectorOptions.length])
 
   useEffect(() => {
     if (open) {
@@ -74,11 +86,11 @@ export default function PositionModal({ open, onClose, onSaved, initial }: Props
       setShares(initial?.shares != null ? String(initial.shares) : '')
       setCostBasis(initial?.cost_basis != null ? String(initial.cost_basis) : '')
       setStopPrice(initial?.stop_price != null ? String(initial.stop_price) : '')
-      setStop21l(initial?.stop_21l != null ? String(initial.stop_21l) : '')
-      setTargetR(initial?.target_r != null ? String(initial.target_r) : '')
+      setTargetPrice(initial?.target_price != null ? String(initial.target_price) : '')
       setMemo(initial?.memo ?? '')
       setExitDate(initial?.exit_date ?? '')
       setExitPrice(initial?.exit_price != null ? String(initial.exit_price) : '')
+      setExitShares('')
       setExitReason(initial?.exit_reason ?? '利確')
       setError('')
     }
@@ -97,6 +109,7 @@ export default function PositionModal({ open, onClose, onSaved, initial }: Props
     const ep2 = parseFloat(entryPrice)
     const sh2 = shares !== '' ? parseInt(shares) : 1
     const sp2 = stopPrice !== '' ? parseFloat(stopPrice) : null
+    const tp2 = targetPrice !== '' ? parseFloat(targetPrice) : null
     const riskPct = sp2 != null && !isNaN(ep2) && ep2 > 0
       ? (ep2 - sp2) / ep2 * 100
       : null
@@ -106,7 +119,8 @@ export default function PositionModal({ open, onClose, onSaved, initial }: Props
     let exitFields: Record<string, unknown> = {}
     if (hasExit) {
       const xp = parseFloat(exitPrice)
-      const pnl = (xp - ep2) * sh2
+      const exSh = exitShares !== '' ? parseInt(exitShares) : sh2
+      const pnl = (xp - ep2) * exSh
       const pnlPct = ((xp - ep2) / ep2) * 100
       const rMult = sp2 != null && ep2 !== sp2 ? (xp - ep2) / (ep2 - sp2) : null
       exitFields = {
@@ -130,9 +144,8 @@ export default function PositionModal({ open, onClose, onSaved, initial }: Props
       shares: sh2,
       cost_basis: costBasis !== '' ? parseFloat(costBasis) : null,
       stop_price: sp2,
-      stop_21l: stop21l !== '' ? parseFloat(stop21l) : null,
       init_risk_pct: riskPct,
-      target_r: targetR !== '' ? parseFloat(targetR) : null,
+      target_price: tp2,
       memo: memo.trim() || null,
       status: hasExit ? 'closed' : 'open',
       updated_at: new Date().toISOString(),
@@ -196,16 +209,23 @@ export default function PositionModal({ open, onClose, onSaved, initial }: Props
             />
           </div>
 
-          {/* Sector */}
+          {/* Sector (33業種プルダウン) */}
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Sector</label>
-            <input
-              type="text"
+            <label className="block text-xs font-medium text-gray-600 mb-1">Sector (33業種)</label>
+            <select
               value={sector}
               onChange={e => setSector(e.target.value)}
-              placeholder="例: 自動車・輸送機"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+            >
+              <option value="">-- Select --</option>
+              {/* 既存値が一覧に無い場合も選択を保持 */}
+              {sector && !sectorOptions.includes(sector) && (
+                <option value={sector}>{sector}</option>
+              )}
+              {sectorOptions.map(s => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
           </div>
 
           {/* Screen */}
@@ -217,10 +237,14 @@ export default function PositionModal({ open, onClose, onSaved, initial }: Props
               className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
             >
               <option value="">-- Select --</option>
-              {SCREEN_OPTIONS.map(o => (
-                <option key={o.value} value={o.value}>{o.label}</option>
+              {/* 既存値が選択肢に無い場合も保持 */}
+              {screenName && !SCREEN_OPTIONS.includes(screenName) && screenName !== 'Other' && (
+                <option value={screenName}>{screenName}</option>
+              )}
+              {SCREEN_OPTIONS.map(s => (
+                <option key={s} value={s}>{s}</option>
               ))}
-              <option value="other">Other</option>
+              <option value="Other">Other</option>
             </select>
           </div>
 
@@ -280,9 +304,16 @@ export default function PositionModal({ open, onClose, onSaved, initial }: Props
             />
           </div>
 
-          {/* Stop Price */}
+          {/* Stop Price（Entry比%を自動表示） */}
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Stop Price</label>
+            <label className="block text-xs font-medium text-gray-600 mb-1">
+              Stop Price
+              {stopPctFromEntry != null && (
+                <span className="ml-1 font-normal text-orange-600">
+                  （Entry比 {stopPctFromEntry >= 0 ? '+' : ''}{stopPctFromEntry.toFixed(2)}%）
+                </span>
+              )}
+            </label>
             <input
               type="number"
               inputMode="numeric"
@@ -293,42 +324,25 @@ export default function PositionModal({ open, onClose, onSaved, initial }: Props
             />
           </div>
 
-          {/* Stop 21L */}
+          {/* Target Price（Entry比%を自動表示） */}
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Stop(21L) (optional)</label>
+            <label className="block text-xs font-medium text-gray-600 mb-1">
+              Target Price (目標株価)
+              {targetPctFromEntry != null && (
+                <span className="ml-1 font-normal text-emerald-600">
+                  （Entry比 {targetPctFromEntry >= 0 ? '+' : ''}{targetPctFromEntry.toFixed(2)}%）
+                </span>
+              )}
+            </label>
             <input
               type="number"
               inputMode="numeric"
-              value={stop21l}
-              onChange={e => setStop21l(e.target.value)}
-              placeholder="過去21日安値"
+              value={targetPrice}
+              onChange={e => setTargetPrice(e.target.value)}
+              placeholder="例: 2900"
               className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
-
-          {/* Target R */}
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">R Target</label>
-            <input
-              type="number"
-              inputMode="numeric"
-              value={targetR}
-              onChange={e => setTargetR(e.target.value)}
-              placeholder="例: 3.0"
-              step="0.1"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          {/* Init Risk% (calculated, read-only) */}
-          {initRiskPct != null && (
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Init Risk% (auto)</label>
-              <div className="w-full border border-gray-200 bg-gray-50 rounded-lg px-3 py-2.5 text-base font-mono text-gray-700">
-                {initRiskPct.toFixed(2)}%
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Memo */}
@@ -349,7 +363,7 @@ export default function PositionModal({ open, onClose, onSaved, initial }: Props
             イグジット（売り・任意）
             <span className="ml-1 font-normal text-gray-400">— 入力すると「確定（closed）」として保存し損益を自動計算</span>
           </p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             {/* Exit Date */}
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Exit Date</label>
@@ -369,6 +383,18 @@ export default function PositionModal({ open, onClose, onSaved, initial }: Props
                 value={exitPrice}
                 onChange={e => setExitPrice(e.target.value)}
                 placeholder="例: 4100"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            {/* Exit Shares */}
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Shares</label>
+              <input
+                type="number"
+                inputMode="numeric"
+                value={exitShares}
+                onChange={e => setExitShares(e.target.value)}
+                placeholder={shares !== '' ? `${shares}（全株）` : '例: 100'}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>

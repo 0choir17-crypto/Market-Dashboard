@@ -16,6 +16,7 @@ ALTER TABLE trades ADD COLUMN IF NOT EXISTS stop_21l              real;
 ALTER TABLE trades ADD COLUMN IF NOT EXISTS cost_basis            real;
 ALTER TABLE trades ADD COLUMN IF NOT EXISTS init_risk_pct         real;
 ALTER TABLE trades ADD COLUMN IF NOT EXISTS target_r              real;
+ALTER TABLE trades ADD COLUMN IF NOT EXISTS target_price          real;
 ALTER TABLE trades ADD COLUMN IF NOT EXISTS exit_reason           text;
 ALTER TABLE trades ADD COLUMN IF NOT EXISTS r_multiple            real;
 
