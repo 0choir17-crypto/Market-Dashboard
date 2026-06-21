@@ -1,17 +1,13 @@
 -- trades テーブルに、ダッシュボードが使う任意列をすべて揃える（冪等）。
 -- Supabase SQL Editor で実行すること。既にある列は IF NOT EXISTS でスキップされる。
 --
--- 背景: 本番 trades テーブルが一部の列（例: mc_regime）を持っておらず、
---   トレード記録時に PostgREST が
---   "Could not find the 'mc_regime' column of 'trades' in the schema cache"
+-- 背景: 本番 trades テーブルが一部の列を持っておらず、トレード記録時に
+--   PostgREST が "Could not find the 'COL' column of 'trades' in the schema cache"
 --   を返していた。ダッシュ側は欠損列を自動除外して保存するフォールバックを
---   持つ（lib/resilientWrite.ts）が、本 SQL を実行すれば MC スナップショット等の
+--   持つ（lib/resilientWrite.ts）が、本 SQL を実行すればスナップショット等の
 --   付加情報も含めて正しく永続化されるようになる。
-
--- エントリー時の市場環境
-ALTER TABLE trades ADD COLUMN IF NOT EXISTS mc_score              real;
-ALTER TABLE trades ADD COLUMN IF NOT EXISTS mc_regime             text;
-ALTER TABLE trades ADD COLUMN IF NOT EXISTS mc_score_version      text;
+-- 注: MC Score（mc_score / mc_regime / mc_score_version）はダッシュから撤去済みのため
+--   ここでは追加しない。
 
 -- ポートフォリオ統合用
 ALTER TABLE trades ADD COLUMN IF NOT EXISTS sector_s33            text;

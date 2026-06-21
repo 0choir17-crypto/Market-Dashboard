@@ -27,22 +27,6 @@ function holdDays(entry: string | null, exit: string | null): number | null {
   return Math.max(0, Math.round(ms / 86400000))
 }
 
-function RegimeBadge({ regime }: { regime: string | null }) {
-  if (!regime) return null
-  const colorMap: Record<string, string> = {
-    'Strong Bull': 'bg-emerald-100 text-emerald-800',
-    'Bull':        'bg-green-100 text-green-800',
-    'Neutral':     'bg-gray-100 text-gray-700',
-    'Bear':        'bg-orange-100 text-orange-800',
-    'Strong Bear': 'bg-red-100 text-red-800',
-  }
-  return (
-    <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${colorMap[regime] ?? 'bg-gray-100 text-gray-600'}`}>
-      {regime}
-    </span>
-  )
-}
-
 // スクリーン種別 → バッジ色 (Phase 2.1 採用 2 + legacy グレー)
 function screenBadgeClass(rawScreenName: string | null): string {
   if (!rawScreenName) return 'bg-gray-100 text-gray-600'
@@ -56,14 +40,6 @@ function screenBadgeClass(rawScreenName: string | null): string {
   }
   // Phase 2.1 で archive された旧 screens (過去 signal 互換用 grey)
   return 'bg-gray-100 text-gray-500'
-}
-
-// MC v4 Score (0-100) → 色: 80+ = emerald (strong_bull), 20- = red (strong_bear)
-function mcScoreClass(score: number | null): string {
-  if (score == null) return 'text-gray-400'
-  if (score >= 80) return 'text-emerald-600 font-semibold'
-  if (score <= 20) return 'text-red-600 font-semibold'
-  return 'text-gray-600'
 }
 
 function SignalSnapshotLine({ t }: { t: Trade }) {
@@ -81,29 +57,6 @@ function SignalSnapshotLine({ t }: { t: Trade }) {
         <span>MC: <strong className={t.mc_met_at_entry ? 'text-emerald-600' : 'text-gray-400'}>{t.mc_condition_at_entry} {t.mc_met_at_entry ? '\u2705' : '\u274c'}</strong></span>
       )}
     </div>
-  )
-}
-
-function McBadge({
-  score,
-  regime,
-  version,
-}: {
-  score: number | null
-  regime: string | null
-  version?: 'v3' | 'v4' | null
-}) {
-  if (score == null) return <span className="text-xs text-gray-400">MC: —</span>
-  // 全て v4 (0-100) スケールで表示。legacy v3 行は (score/21)*100 で正規化して描画。
-  const display = version === 'v4' ? score : (score / 21) * 100
-  return (
-    <span className="inline-flex items-center gap-1 text-xs">
-      <span className="text-gray-500">MC:</span>
-      <span className={mcScoreClass(display)}>
-        {Math.round(display)}/100
-      </span>
-      <RegimeBadge regime={regime} />
-    </span>
   )
 }
 
@@ -199,7 +152,6 @@ export default function TradeList({
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-gray-500">
                       <span>{t.entry_date}</span>
                       <span>&yen;{t.entry_price.toLocaleString()} &times; {t.shares}株</span>
-                      <McBadge score={t.mc_score} regime={t.mc_regime} version={t.mc_score_version} />
                     </div>
                     {/* 3行目: シグナルスナップショット */}
                     <SignalSnapshotLine t={t} />
@@ -266,8 +218,7 @@ export default function TradeList({
                       const hasReview = !!t.reviewed_at
                       const days = holdDays(t.entry_date, t.exit_date)
                       const expanded = isReviewExpanded(t)
-                      const showScreenRow =
-                        !!t.screen_name || t.mc_score != null
+                      const showScreenRow = !!t.screen_name
                       const badgeLabel = cls === 'BREAKEVEN' ? 'BE' : (cls ?? '—')
                       return (
                         <div
@@ -332,16 +283,13 @@ export default function TradeList({
                               &yen;{t.entry_price.toLocaleString()} → &yen;{t.exit_price?.toLocaleString()}
                             </div>
 
-                            {/* 4行目: スクリーン・MC (両方欠損時は省略) */}
+                            {/* 4行目: スクリーン (欠損時は省略) */}
                             {showScreenRow && (
                               <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px]">
                                 {t.screen_name && (
                                   <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${screenBadgeClass(t.screen_name)}`}>
                                     {SCREEN_NAME_MAP[t.screen_name] ?? t.screen_name}
                                   </span>
-                                )}
-                                {t.mc_score != null && (
-                                  <McBadge score={t.mc_score} regime={t.mc_regime} version={t.mc_score_version} />
                                 )}
                               </div>
                             )}

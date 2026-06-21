@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { supabase } from '@/lib/supabase'
 import { insertResilient } from '@/lib/resilientWrite'
 import { SCREEN_NAME_MAP } from '@/lib/screenNames'
 import Modal from '@/components/shared/Modal'
@@ -43,9 +42,6 @@ export default function TradeModal({ open, onClose, onSaved, initial }: Props) {
   const [entryPrice, setEntryPrice] = useState('')
   const [shares, setShares] = useState('')
   const [memo, setMemo] = useState('')
-  const [mcScore, setMcScore] = useState<number | null>(null)
-  const [mcRegime, setMcRegime] = useState<string | null>(null)
-  const [mcLoading, setMcLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -59,48 +55,9 @@ export default function TradeModal({ open, onClose, onSaved, initial }: Props) {
       setEntryPrice('')
       setShares('')
       setMemo('')
-      setMcScore(null)
-      setMcRegime(null)
       setError('')
     }
   }, [open, initial])
-
-  // entry_date 変更時に MC v4 Score を自動取得
-  useEffect(() => {
-    if (!open || !entryDate) return
-    let cancelled = false
-
-    async function fetchMc() {
-      setMcLoading(true)
-      const { data } = await supabase
-        .from('market_conditions')
-        .select('mc_v4, mc_regime_v4, scorecard_regime')
-        .lte('date', entryDate)
-        .order('date', { ascending: false })
-        .limit(1)
-        .maybeSingle()
-
-      if (!cancelled && data) {
-        const d = data as Record<string, unknown>
-        const v4 = d.mc_v4 as number | null | undefined
-        if (v4 != null) {
-          setMcScore(v4)
-          setMcRegime((d.mc_regime_v4 as string | null) ?? (d.scorecard_regime as string | null) ?? null)
-        } else {
-          // v4 未集計の日付は空欄のまま (手入力で対応)
-          setMcScore(null)
-          setMcRegime((d.mc_regime_v4 as string | null) ?? (d.scorecard_regime as string | null) ?? null)
-        }
-      } else if (!cancelled) {
-        setMcScore(null)
-        setMcRegime(null)
-      }
-      if (!cancelled) setMcLoading(false)
-    }
-
-    fetchMc()
-    return () => { cancelled = true }
-  }, [open, entryDate])
 
   async function handleSave() {
     if (!ticker.trim()) { setError('銘柄コードは必須です'); return }
@@ -111,15 +68,6 @@ export default function TradeModal({ open, onClose, onSaved, initial }: Props) {
     setSaving(true)
     setError('')
 
-    // MC regime を表示用に変換
-    const regimeMap: Record<string, string> = {
-      strong_bull: 'Strong Bull',
-      bull: 'Bull',
-      neutral: 'Neutral',
-      bear: 'Bear',
-      strong_bear: 'Strong Bear',
-    }
-
     const record: Record<string, unknown> = {
       ticker: ticker.trim(),
       company_name: companyName.trim() || null,
@@ -127,9 +75,6 @@ export default function TradeModal({ open, onClose, onSaved, initial }: Props) {
       entry_date: entryDate,
       entry_price: parseFloat(entryPrice),
       shares: parseInt(shares, 10),
-      mc_score: mcScore,
-      mc_regime: mcRegime ? (regimeMap[mcRegime] ?? mcRegime) : null,
-      mc_score_version: 'v4',
       memo: memo.trim() || null,
       status: 'open',
       // シグナルスナップショット（Signalsページから渡された場合のみ値が入る）
@@ -150,14 +95,6 @@ export default function TradeModal({ open, onClose, onSaved, initial }: Props) {
     if (err) { setError(err.message); return }
     onSaved()
     onClose()
-  }
-
-  const regimeLabel: Record<string, string> = {
-    strong_bull: 'Strong Bull',
-    bull: 'Bull',
-    neutral: 'Neutral',
-    bear: 'Bear',
-    strong_bear: 'Strong Bear',
   }
 
   return (
@@ -272,21 +209,6 @@ export default function TradeModal({ open, onClose, onSaved, initial }: Props) {
             </div>
           </div>
         )}
-
-        {/* MC Score 表示 */}
-        <div className="bg-gray-50 rounded-lg px-4 py-3">
-          <span className="text-xs font-medium text-gray-500">MC Score: </span>
-          {mcLoading ? (
-            <span className="text-xs text-gray-400">Loading...</span>
-          ) : mcScore != null ? (
-            <span className="text-sm font-semibold text-gray-800">
-              {Number(mcScore).toFixed(1)}/100
-              {' '}({regimeLabel[mcRegime ?? ''] ?? mcRegime ?? '—'})
-            </span>
-          ) : (
-            <span className="text-xs text-gray-400">Not available</span>
-          )}
-        </div>
 
         {/* Memo */}
         <div>

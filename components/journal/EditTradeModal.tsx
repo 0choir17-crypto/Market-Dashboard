@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { supabase } from '@/lib/supabase'
 import { updateResilient } from '@/lib/resilientWrite'
 import { Trade } from '@/types/trades'
 import { SCREEN_NAME_MAP } from '@/lib/screenNames'
@@ -20,16 +19,6 @@ const SCREEN_OPTIONS = Object.entries(SCREEN_NAME_MAP).map(([raw, display]) => (
   label: display,
 }))
 
-const REGIME_MAP: Record<string, string> = {
-  strong_bull: 'Strong Bull',
-  bull: 'Bull',
-  neutral: 'Neutral',
-  bear: 'Bear',
-  strong_bear: 'Strong Bear',
-}
-
-const REGIME_LABEL: Record<string, string> = { ...REGIME_MAP }
-
 export default function EditTradeModal({ open, onClose, onSaved, trade }: Props) {
   const [ticker, setTicker] = useState('')
   const [companyName, setCompanyName] = useState('')
@@ -38,9 +27,6 @@ export default function EditTradeModal({ open, onClose, onSaved, trade }: Props)
   const [entryPrice, setEntryPrice] = useState('')
   const [shares, setShares] = useState('')
   const [memo, setMemo] = useState('')
-  const [mcScore, setMcScore] = useState<number | null>(null)
-  const [mcRegime, setMcRegime] = useState<string | null>(null)
-  const [mcLoading, setMcLoading] = useState(false)
 
   // CLOSED trades: exit fields
   const [exitDate, setExitDate] = useState('')
@@ -78,11 +64,6 @@ export default function EditTradeModal({ open, onClose, onSaved, trade }: Props)
       setEntryPrice(String(trade.entry_price))
       setShares(String(trade.shares))
       setMemo(trade.memo ?? '')
-      // legacy v3 (0-21) は読み込み時点で 0-100 へ正規化。保存時は常に v4 として書き戻す。
-      const rawScore = trade.mc_score
-      const wasV4 = trade.mc_score_version === 'v4'
-      setMcScore(rawScore == null ? null : wasV4 ? rawScore : (rawScore / 21) * 100)
-      setMcRegime(trade.mc_regime)
       setExitDate(trade.exit_date ?? '')
       setExitPrice(trade.exit_price != null ? String(trade.exit_price) : '')
       setSignalPrice(toStr(trade.signal_price))
@@ -96,45 +77,6 @@ export default function EditTradeModal({ open, onClose, onSaved, trade }: Props)
       setError('')
     }
   }, [open, trade])
-
-  // Re-fetch MC Score when entry_date changes
-  useEffect(() => {
-    if (!open || !entryDate) return
-    // Skip if date hasn't changed from original
-    if (trade && entryDate === trade.entry_date) return
-
-    let cancelled = false
-
-    async function fetchMc() {
-      setMcLoading(true)
-      const { data } = await supabase
-        .from('market_conditions')
-        .select('mc_v4, mc_regime_v4, scorecard_regime')
-        .lte('date', entryDate)
-        .order('date', { ascending: false })
-        .limit(1)
-        .maybeSingle()
-
-      if (!cancelled && data) {
-        const d = data as Record<string, unknown>
-        const v4 = d.mc_v4 as number | null | undefined
-        if (v4 != null) {
-          setMcScore(v4)
-          setMcRegime((d.mc_regime_v4 as string | null) ?? (d.scorecard_regime as string | null) ?? null)
-        } else {
-          setMcScore(null)
-          setMcRegime((d.mc_regime_v4 as string | null) ?? (d.scorecard_regime as string | null) ?? null)
-        }
-      } else if (!cancelled) {
-        setMcScore(null)
-        setMcRegime(null)
-      }
-      if (!cancelled) setMcLoading(false)
-    }
-
-    fetchMc()
-    return () => { cancelled = true }
-  }, [open, entryDate, trade])
 
   // PnL preview for closed trades
   const preview = useMemo(() => {
@@ -170,9 +112,6 @@ export default function EditTradeModal({ open, onClose, onSaved, trade }: Props)
       entry_date: entryDate,
       entry_price: parseFloat(entryPrice),
       shares: parseInt(shares, 10),
-      mc_score: mcScore,
-      mc_regime: mcRegime ? (REGIME_MAP[mcRegime] ?? mcRegime) : null,
-      mc_score_version: 'v4',
       memo: memo.trim() || null,
       signal_price: toNum(signalPrice),
       rs_at_entry: toNum(rsAtEntry),
@@ -297,21 +236,6 @@ export default function EditTradeModal({ open, onClose, onSaved, trade }: Props)
               className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
-        </div>
-
-        {/* MC Score */}
-        <div className="bg-gray-50 rounded-lg px-4 py-3">
-          <span className="text-xs font-medium text-gray-500">MC Score: </span>
-          {mcLoading ? (
-            <span className="text-xs text-gray-400">Loading...</span>
-          ) : mcScore != null ? (
-            <span className="text-sm font-semibold text-gray-800">
-              {Number(mcScore).toFixed(1)}/100
-              {' '}({REGIME_LABEL[mcRegime ?? ''] ?? mcRegime ?? '—'})
-            </span>
-          ) : (
-            <span className="text-xs text-gray-400">Not available</span>
-          )}
         </div>
 
         {/* Exit fields for CLOSED trades */}

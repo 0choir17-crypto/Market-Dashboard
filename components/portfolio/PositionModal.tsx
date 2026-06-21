@@ -1,7 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '@/lib/supabase'
+import { useState, useEffect } from 'react'
 import { insertResilient, updateResilient } from '@/lib/resilientWrite'
 import { Trade } from '@/types/trades'
 import Modal from '@/components/shared/Modal'
@@ -29,40 +28,8 @@ export default function PositionModal({ open, onClose, onSaved, initial }: Props
   const [stop21l, setStop21l] = useState('')
   const [targetR, setTargetR] = useState('')
   const [memo, setMemo] = useState('')
-  const [mcScore, setMcScore] = useState<number | null>(null)
-  const [mcRegime, setMcRegime] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-
-  // entry_date 変更時に MC v4 Score を自動取得
-  const fetchMcScore = useCallback(async (date: string) => {
-    const { data } = await supabase
-      .from('market_conditions')
-      .select('mc_v4, mc_regime_v4, scorecard_regime')
-      .lte('date', date)
-      .order('date', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-    if (data) {
-      const d = data as Record<string, unknown>
-      const v4 = d.mc_v4 as number | null | undefined
-      const regimeMap: Record<string, string> = {
-        strong_bull: 'Strong Bull', bull: 'Bull', neutral: 'Neutral',
-        bear: 'Bear', strong_bear: 'Strong Bear',
-      }
-      const v4Regime = d.mc_regime_v4 as string | null | undefined
-      const baseRegime = d.scorecard_regime as string | null | undefined
-      const r = v4Regime ?? baseRegime ?? null
-      const regimeLabel = r ? (regimeMap[r] ?? r) : null
-      if (v4 != null) {
-        setMcScore(v4)
-        setMcRegime(regimeLabel)
-      } else {
-        setMcScore(null)
-        setMcRegime(regimeLabel)
-      }
-    }
-  }, [])
 
   // Derived: init_risk_pct
   const ep = parseFloat(entryPrice)
@@ -84,19 +51,9 @@ export default function PositionModal({ open, onClose, onSaved, initial }: Props
       setStop21l(initial?.stop_21l != null ? String(initial.stop_21l) : '')
       setTargetR(initial?.target_r != null ? String(initial.target_r) : '')
       setMemo(initial?.memo ?? '')
-      // legacy v3 (0-21) は読み込み時点で 0-100 へ正規化。保存時は常に v4 として書き戻す。
-      const rawScore = initial?.mc_score ?? null
-      const wasV4 = (initial?.mc_score_version as 'v3' | 'v4' | undefined) === 'v4'
-      setMcScore(rawScore == null ? null : wasV4 ? rawScore : (rawScore / 21) * 100)
-      setMcRegime(initial?.mc_regime ?? null)
       setError('')
-      // 新規作成時: entry_date の MC Score を自動取得
-      if (!initial?.id) {
-        const date = initial?.entry_date ?? today()
-        fetchMcScore(date)
-      }
     }
-  }, [open, initial, fetchMcScore])
+  }, [open, initial])
 
   async function handleSave() {
     if (!ticker.trim()) { setError('Ticker は必須です'); return }
@@ -126,9 +83,6 @@ export default function PositionModal({ open, onClose, onSaved, initial }: Props
       init_risk_pct: riskPct,
       target_r: targetR !== '' ? parseFloat(targetR) : null,
       memo: memo.trim() || null,
-      mc_score: mcScore,
-      mc_regime: mcRegime,
-      mc_score_version: 'v4',
       status: 'open',
       updated_at: new Date().toISOString(),
       // シグナルスナップショット（新規作成時のみ、Watchlist昇格等で渡された場合）
@@ -210,7 +164,7 @@ export default function PositionModal({ open, onClose, onSaved, initial }: Props
             <input
               type="date"
               value={entryDate}
-              onChange={e => { setEntryDate(e.target.value); if (e.target.value) fetchMcScore(e.target.value) }}
+              onChange={e => setEntryDate(e.target.value)}
               className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
