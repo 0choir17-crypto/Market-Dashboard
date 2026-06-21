@@ -3,14 +3,15 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useDate } from '@/contexts/DateContext'
 import { fetchToday, type TodayResponse } from '@/lib/todayFetch'
-import ScanResultsSection from '@/components/today/ScanResultsSection'
+import PullbackSetupsSection from '@/components/today/PullbackSetupsSection'
 
 export default function TodayPage() {
   const { selectedDate, isLatest } = useDate()
   const [data, setData] = useState<TodayResponse>({
-    scanDate: null,
-    scan: [],
-    market: null,
+    coilDate: null,
+    coil: [],
+    maDate: null,
+    ma: [],
     hotSectors: [],
   })
   const [loading, setLoading] = useState(true)
@@ -28,34 +29,26 @@ export default function TodayPage() {
     fetchData()
   }, [fetchData])
 
-  const displayDate = data.scanDate ?? selectedDate
+  const displayDate = data.coilDate ?? data.maDate ?? selectedDate
+  const total = data.coil.length + data.ma.length
 
   return (
-    <main
-      className="min-h-screen p-6"
-      style={{ backgroundColor: 'var(--bg-primary)' }}
-    >
-      <header className="flex justify-between items-center mb-6">
+    <main className="min-h-screen p-6" style={{ backgroundColor: 'var(--bg-primary)' }}>
+      <header className="flex justify-between items-center mb-6 flex-wrap gap-3">
         <div>
           <h1
             className="text-2xl font-bold"
-            style={{
-              color: 'var(--text-primary)',
-              fontFamily: 'var(--font-sans, sans-serif)',
-            }}
+            style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-sans, sans-serif)' }}
           >
-            <span aria-hidden className="mr-2">📋</span>Today&apos;s Watchlist
+            <span aria-hidden className="mr-2">📋</span>Daily Watch — 押し目ウォッチ
           </h1>
           <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
-            スキャン結果一覧（{data.scan.length} 件）
+            高値圏の押し目"候補"（収縮ベース + momentum 押し目）{total} 件 ／ 買いシグナルではありません
           </p>
         </div>
         <div className="flex items-center gap-4">
           {displayDate && (
-            <span
-              className="text-sm"
-              style={{ color: 'var(--text-secondary)' }}
-            >
+            <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
               {isLatest ? '' : 'Snapshot: '}
               {displayDate}
             </span>
@@ -87,15 +80,15 @@ export default function TodayPage() {
       {!isLatest && selectedDate && (
         <div className="mb-4 px-4 py-2 rounded-lg bg-amber-50 border border-amber-300 text-amber-800 text-sm font-medium">
           {selectedDate} のスナップショットを表示中
-          {data.scanDate && data.scanDate !== selectedDate && (
+          {displayDate && displayDate !== selectedDate && (
             <span className="ml-2 font-normal text-amber-700">
-              （scan_results は {data.scanDate} の最近値にフォールバック）
+              （押し目テーブルは {displayDate} の最近値にフォールバック）
             </span>
           )}
         </div>
       )}
 
-      {loading && data.scan.length === 0 ? (
+      {loading && total === 0 ? (
         <div
           className="bg-white rounded-xl border border-[#e8eaed] shadow-sm p-8 text-center"
           style={{ color: 'var(--text-muted)' }}
@@ -103,7 +96,22 @@ export default function TodayPage() {
           <p className="text-lg font-medium">Loading...</p>
         </div>
       ) : (
-        <ScanResultsSection rows={data.scan} hotSectors={data.hotSectors} />
+        <div className="flex flex-col gap-6">
+          <PullbackSetupsSection
+            kind="coil"
+            rows={data.coil}
+            hotSectors={data.hotSectors}
+            title="Coil — 高値圏の静かなベース（収縮）"
+            subtitle="高値圏で値幅が収縮（iqr5 小）した銘柄。ブレイク前の蓄積。小さいほどタイト。"
+          />
+          <PullbackSetupsSection
+            kind="ma"
+            rows={data.ma}
+            hotSectors={data.hotSectors}
+            title="MA — 高値圏 momentum の押し目"
+            subtitle="走行中の強い銘柄が移動平均まで押した局面。バッジ＝深さ(MA)×位置(52週高値)。A(50)×A++ が最上位。"
+          />
+        </div>
       )}
     </main>
   )
