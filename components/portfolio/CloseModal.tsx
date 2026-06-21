@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
+import { insertResilient } from '@/lib/resilientWrite'
 import { Trade } from '@/types/trades'
 import Modal from '@/components/shared/Modal'
 
@@ -105,9 +106,6 @@ export default function CloseModal({ open, onClose, onSaved, position }: Props) 
         pnl: pnl,
         pnl_pct: pnlPct,
         result: pnl >= 0 ? 'WIN' : 'LOSS',
-        mc_score: position.mc_score,
-        mc_regime: position.mc_regime,
-        mc_score_version: position.mc_score_version ?? 'v4',
         memo: position.memo,
         status: 'closed',
         sector_s33: position.sector_s33,
@@ -129,7 +127,7 @@ export default function CloseModal({ open, onClose, onSaved, position }: Props) 
         updated_at: new Date().toISOString(),
       }
 
-      const { error: insertErr } = await supabase.from('trades').insert(closedRecord)
+      const { error: insertErr } = await insertResilient('trades', closedRecord)
       if (insertErr) { setSaving(false); setError(insertErr.message); return }
 
       const { error: updateErr } = await supabase

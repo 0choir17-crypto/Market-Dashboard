@@ -8,7 +8,6 @@ import JournalStats from '@/components/journal/JournalStats'
 import EquityCurveChart from '@/components/journal/EquityCurveChart'
 import PeriodPerformance from '@/components/journal/PeriodPerformance'
 import ReasonPerformance from '@/components/journal/ReasonPerformance'
-import McScoreChart from '@/components/journal/McScoreChart'
 import TagPerformance from '@/components/journal/TagPerformance'
 import TradeList, { ExpandedReview } from '@/components/journal/TradeList'
 import TradeModal from '@/components/journal/TradeModal'
@@ -142,7 +141,6 @@ export default function JournalPage() {
               <EquityCurveChart trades={trades} />
               <PeriodPerformance trades={trades} />
               <ReasonPerformance trades={trades} />
-              <McScoreChart trades={trades} />
               <TagPerformance trades={trades} />
               <TradeList
                 trades={closedTrades}

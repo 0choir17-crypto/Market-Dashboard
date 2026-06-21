@@ -38,8 +38,7 @@ function fmtPct(v: number | null, decimals = 1): string {
   return `${v >= 0 ? '+' : ''}${v.toFixed(decimals)}`
 }
 
-// Same palette spirit as McScoreChart.getBarColor — green at >=55,
-// neutral 45–55, red below.
+// 勝率パレット: green at >=55, neutral 45–55, red below.
 function wrStyleColor(wr: number | null): string {
   if (wr == null) return 'var(--text-muted)'
   if (wr >= 55) return 'var(--positive)'
