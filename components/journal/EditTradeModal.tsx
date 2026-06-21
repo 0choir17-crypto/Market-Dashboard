@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
+import { updateResilient } from '@/lib/resilientWrite'
 import { Trade } from '@/types/trades'
 import { SCREEN_NAME_MAP } from '@/lib/screenNames'
 import { classifyResult } from '@/lib/tradeResult'
@@ -198,10 +199,7 @@ export default function EditTradeModal({ open, onClose, onSaved, trade }: Props)
       record.result = classifyResult(pnl)
     }
 
-    const { error: err } = await supabase
-      .from('trades')
-      .update(record)
-      .eq('id', trade.id)
+    const { error: err } = await updateResilient('trades', record, { id: trade.id })
 
     setSaving(false)
     if (err) { setError(err.message); return }

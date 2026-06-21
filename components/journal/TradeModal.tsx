@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
+import { insertResilient } from '@/lib/resilientWrite'
 import { SCREEN_NAME_MAP } from '@/lib/screenNames'
 import Modal from '@/components/shared/Modal'
 
@@ -143,7 +144,7 @@ export default function TradeModal({ open, onClose, onSaved, initial }: Props) {
       mc_condition_at_entry: initial?.mc_condition_at_entry ?? null,
     }
 
-    const { error: err } = await supabase.from('trades').insert(record)
+    const { error: err } = await insertResilient('trades', record)
 
     setSaving(false)
     if (err) { setError(err.message); return }

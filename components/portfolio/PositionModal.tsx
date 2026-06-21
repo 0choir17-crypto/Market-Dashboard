@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
+import { insertResilient, updateResilient } from '@/lib/resilientWrite'
 import { Trade } from '@/types/trades'
 import Modal from '@/components/shared/Modal'
 
@@ -144,8 +145,8 @@ export default function PositionModal({ open, onClose, onSaved, initial }: Props
     }
 
     const { error: err } = isEdit
-      ? await supabase.from('trades').update(record).eq('id', initial!.id!)
-      : await supabase.from('trades').insert(record)
+      ? await updateResilient('trades', record, { id: initial!.id! })
+      : await insertResilient('trades', record)
 
     setSaving(false)
     if (err) { setError(err.message); return }
