@@ -112,7 +112,12 @@ const GLOSSARY = [
   { term: 'Hit',      desc: '1\u9298\u67c4\u304c\u8907\u6570\u30b9\u30af\u30ea\u30fc\u30f3\u306b\u540c\u6642\u30d2\u30c3\u30c8\u3057\u305f\u56de\u6570\u3002\u591a\u3044\u307b\u3069\u78ba\u4fe1\u5ea6\u304c\u9ad8\u3044' },
   { term: 'Factor',   desc: '\u6bce\u65e5\u5168\u9298\u67c4\u3092\u30b9\u30ad\u30e3\u30f3\u3059\u308b\u30bf\u30a4\u30d7\u3002\u6761\u4ef6\u3092\u6e80\u305f\u3059\u9650\u308a\u6bce\u65e5\u30b7\u30b0\u30ca\u30eb\u304c\u51fa\u308b' },
   { term: 'Event',    desc: '\u7279\u5b9a\u306e\u30a4\u30d9\u30f3\u30c8\uff08\u30ae\u30e3\u30c3\u30d7\u30a2\u30c3\u30d7\u3001\u30d6\u30ec\u30a4\u30af\u30a2\u30a6\u30c8\u7b49\uff09\u304c\u767a\u751f\u3057\u305f\u65e5\u306e\u307f\u30b7\u30b0\u30ca\u30eb\u304c\u51fa\u308b' },
-  { term: 'MC',    desc: 'Market Condition v3\u300221\u8981\u7d20\u306e\u30b9\u30b3\u30a2\u30ab\u30fc\u30c9\u3067\u5e02\u5834\u74b0\u5883\u30920\u301c21\u70b9\u3067\u8a55\u4fa1\u3002\u9ad8\u3044=\u5f37\u6c17\u3001\u4f4e\u3044=\u5f31\u6c17' },
+  { term: 'MC',    desc: 'Market Condition v4\u30028\u30d5\u30a1\u30af\u30bf\u30fc\u52a0\u91cd\u5e73\u5747\u3067\u5e02\u5834\u74b0\u5883\u30920\u301c100\u70b9\u3067\u8a55\u4fa1\uff08Market \u30da\u30fc\u30b8\uff09\u3002\u9ad8\u3044=\u5f37\u6c17\u3001\u4f4e\u3044=\u5f31\u6c17' },
+  { term: 'iqr5',  desc: '\u7d42\u5024\u306e\u53ce\u7e2e\u5ea6\uff08Daily Watch / Coil\uff09\u3002\u5c0f\u3055\u3044\u307b\u3069\u30bf\u30a4\u30c8\u306a\u300c\u9759\u304b\u306a\u30d9\u30fc\u30b9\u300d' },
+  { term: '52w\u9ad8',   desc: 'dist_from_high_pct\u300252\u9031\u9ad8\u5024\u304b\u3089\u306e\u8ddd\u96e2(%)\u30020 \u4ed8\u8fd1=\u9ad8\u5024\u63a5\u8fd1\u3002MA \u62bc\u3057\u76ee\u306e\u300c\u4f4d\u7f6e\u8ef8\u300d' },
+  { term: '\u6df1\u3055(ADR)', desc: '\u79fb\u52d5\u5e73\u5747\u304b\u3089\u306e\u4e56\u96e2\u3092 ADR \u5358\u4f4d\u3067\u6e2c\u3063\u305f\u62bc\u3057\u76ee\u306e\u6df1\u3055\u30020\u301c0.5 \u3067\u300c\u30bf\u30c3\u30c1\u300d\u3068\u307f\u306a\u3059\uff08MA \u62bc\u3057\u76ee\u306e\u300c\u6df1\u3055\u8ef8\u300d\uff09' },
+  { term: 'ret63',  desc: '\u76f4\u8fd1 63 \u55b6\u696d\u65e5\uff083\u30f6\u6708\uff09\u306e\u30ea\u30bf\u30fc\u30f3(%)\u3002\u30e2\u30e1\u30f3\u30bf\u30e0\u306e\u5f37\u3055' },
+  { term: 'fresh',  desc: '\u76f4\u8fd1 5 \u55b6\u696d\u65e5\u306b\u672a\u51fa\u73fe\uff1d\u65b0\u898f\u306e\u62bc\u3057\u76ee\u5019\u88dc\uff08Daily Watch \u3067\u5f37\u8abf\u8868\u793a\uff09' },
   { term: 'DuPont Leverage', desc: '\u7dcf\u8cc7\u7523\u00f7\u81ea\u5df1\u8cc7\u672c\u3002\u8ca1\u52d9\u30ec\u30d0\u30ec\u30c3\u30b8\u306e\u6307\u6a19\u30022.0\u4ee5\u4e0a\u306f\u904e\u5270\u50b5\u52d9\u30ea\u30b9\u30af\u3068\u3057\u3066\u30d5\u30a3\u30eb\u30bf\u30fc' },
   { term: 'Divergence', desc: '\u6307\u6570\u304c\u4e0a\u6607\u3057\u3066\u3044\u308b\u306e\u306bBreadth\u304c\u60aa\u5316\u3057\u3066\u3044\u308b\u72b6\u614b\u3002\u5929\u4e95\u306e\u8b66\u544a\u30b7\u30b0\u30ca\u30eb' },
   { term: 'Velocity',   desc: 'MC v4 \u30b9\u30b3\u30a2\u306e\u5909\u5316\u901f\u5ea6\u30021d / 5d / 10d \u306e\u5dee\u5206\u3068 20d \u6a19\u6e96\u504f\u5dee\u3067\u300c\u3069\u3046\u52d5\u3044\u3066\u3044\u308b\u304b\u300d\u3092\u6e2c\u308b' },
@@ -200,12 +205,81 @@ export default function GuidePage() {
           className="text-2xl font-bold"
           style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-sans, sans-serif)' }}
         >
-          Screen Guide
+          Guide
         </h1>
         <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
-          screens_v5 + MC — Always-on 4 + Bear 4 + Bull 3（11 screens）
+          ダッシュボードの見方 — Daily Watch（押し目ウォッチ）・Trading（記録）・Screens・Market Condition v4
         </p>
       </header>
+
+      {/* ── Daily Watch — 押し目ウォッチ ──────────────────────────────────── */}
+      <section className="mb-8">
+        <h2 className="text-lg font-bold mb-3" style={{ color: 'var(--text-primary)' }}>
+          Daily Watch — 押し目ウォッチ
+        </h2>
+        <div className="bg-white rounded-xl border border-[#e8eaed] shadow-sm p-5 text-sm text-gray-700 space-y-3">
+          <p>
+            高値圏の押し目<strong>&quot;候補&quot;</strong>を毎日（平日引け後 ~18:00 JST）に更新。最新日が「今日の候補」です。
+            <span className="text-gray-500">買いシグナルではなく、実エントリーはトリガー＋管理を別途想定。</span>
+          </p>
+          <ul className="list-disc pl-5 space-y-1.5">
+            <li>
+              <strong className="text-gray-900">Coil（静かなベース）</strong> — 高値圏で値幅が収縮した銘柄。
+              <code className="bg-gray-100 px-1 rounded">iqr5</code> が小さいほどタイト（ブレイク前の蓄積）。
+            </li>
+            <li>
+              <strong className="text-gray-900">MA（momentum 押し目）</strong> — 走行中の強い銘柄が移動平均
+              （EMA10 / EMA21 / SMA50）まで押した局面。
+            </li>
+          </ul>
+          <div className="bg-gray-50 rounded-lg p-3">
+            <p className="font-semibold text-gray-800 mb-1.5">MA の 2 軸グレード（ダッシュ側で算出）</p>
+            <ul className="list-disc pl-5 space-y-1">
+              <li>
+                <strong>深さ</strong> — 各 MA からの乖離（ADR 単位）が 0〜0.5 を満たす最深 MA →
+                <span className="ml-1 font-mono">A(50)</span>（深い） / <span className="font-mono">B(21)</span> /
+                <span className="font-mono">C(10)</span>（浅い）
+              </li>
+              <li>
+                <strong>位置</strong> — 52 週高値からの距離 ≥−5% → <span className="font-mono">A++</span> /
+                ≥−10% → <span className="font-mono">A+</span> / それ未満 → <span className="font-mono">base</span>
+              </li>
+              <li>
+                組合せバッジ <span className="font-mono">A(50)×A++</span> が最上位。
+                <strong className="text-amber-600">fresh</strong> = 直近 5 営業日に未出現の新規候補（強調表示）。
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Trading — トレード記録 ───────────────────────────────────────── */}
+      <section className="mb-8">
+        <h2 className="text-lg font-bold mb-3" style={{ color: 'var(--text-primary)' }}>
+          Trading — トレード記録
+        </h2>
+        <div className="bg-white rounded-xl border border-[#e8eaed] shadow-sm p-5 text-sm text-gray-700 space-y-3">
+          <p>
+            <strong>Positions</strong>（保有中） / <strong>Journal</strong>（確定トレード＋分析） /
+            <strong>Risk</strong>（連敗・リスク設定）の 3 タブ。記録はヘッダーの
+            <strong className="text-blue-600"> + New Trade</strong> から。
+          </p>
+          <ul className="list-disc pl-5 space-y-1.5">
+            <li>
+              New Trade はエントリーに加え、任意で <strong>Stop Price</strong> / <strong>Target Price（目標株価）</strong> を金額で入力でき、
+              それぞれ Entry 比 % を自動表示。
+            </li>
+            <li>
+              任意の <strong>イグジット（売り）</strong> 欄に価格・株数を入れると <strong>確定（closed）</strong> として保存し、
+              損益 / 結果 / R を自動計算（過去の売却済みトレードも一発で記録可）。空ければ建玉（open）。
+            </li>
+            <li>
+              Sector は <strong>33 業種プルダウン</strong>、Screen は <span className="font-mono">Coil Pullback / MA Pullback</span>（＋ Other）。
+              保有中の建玉は各行の <strong>Close</strong> で売り、<strong>Edit</strong> で修正。
+            </li>
+          </ul>
+        </div>
+      </section>
 
       {/* ── Screen Table ─────────────────────────────────────────────────── */}
       <section className="mb-8">
