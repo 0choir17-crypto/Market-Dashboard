@@ -1,0 +1,262 @@
+'use client'
+
+import type { VolumeIgnitionRow } from '@/types/volumeIgnition'
+import { isFreshIgnition } from '@/types/volumeIgnition'
+import { tradingViewUrl, shikihoUrl } from '@/lib/tickerLinks'
+
+type Props = {
+  row: VolumeIgnitionRow
+  hot?: boolean
+  onAddWatchlist?: (row: VolumeIgnitionRow) => void
+  onAddPosition?: (row: VolumeIgnitionRow) => void
+}
+
+function isNum(v: number | null | undefined): v is number {
+  return v !== null && v !== undefined && Number.isFinite(v)
+}
+
+function fmt(v: number | null | undefined, decimals = 1): string {
+  return isNum(v) ? v.toFixed(decimals) : '—'
+}
+
+function fmtSignedPct(v: number | null | undefined, decimals = 1): string {
+  if (!isNum(v)) return '—'
+  return `${v >= 0 ? '+' : ''}${v.toFixed(decimals)}%`
+}
+
+function fmtClose(v: number | null | undefined): string {
+  return isNum(v) ? v.toLocaleString('ja-JP', { maximumFractionDigits: 1 }) : '—'
+}
+
+// rs (0–100, 高いほど強い)
+function rsColor(v: number | null): string {
+  if (!isNum(v)) return 'var(--text-muted)'
+  if (v >= 80) return 'var(--positive)'
+  if (v >= 60) return 'var(--accent)'
+  if (v >= 40) return 'var(--text-secondary)'
+  return 'var(--negative)'
+}
+
+// 点火来 騰落率（正=まだ伸びている / 負=既に押している）
+function retColor(v: number | null): string {
+  if (!isNum(v)) return 'var(--text-muted)'
+  return v >= 0 ? 'var(--positive)' : 'var(--negative)'
+}
+
+// 出来高比（大きいほど点火が強い）
+function volColor(v: number | null): string {
+  if (!isNum(v)) return 'var(--text-muted)'
+  if (v >= 4) return 'var(--positive)'
+  if (v >= 2) return 'var(--text-primary)'
+  return 'var(--text-secondary)'
+}
+
+function Chip({
+  text,
+  palette,
+  title,
+}: {
+  text: string
+  palette: { bg: string; fg: string; border: string }
+  title?: string
+}) {
+  return (
+    <span
+      className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold tabular-nums"
+      style={{ backgroundColor: palette.bg, color: palette.fg, border: `1px solid ${palette.border}` }}
+      title={title}
+    >
+      {text}
+    </span>
+  )
+}
+
+// 鮮度バッジ。0=当日点火を強調、1〜5は経過日数。
+function DaysBadge({ days, entryDate }: { days: number | null; entryDate: string | null }) {
+  const fresh = days === 0
+  const title = `点火日: ${entryDate ?? '—'}（スキャン日との営業日差 = ${isNum(days) ? days : '—'}）`
+  if (fresh) {
+    return (
+      <span
+        className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide"
+        style={{ backgroundColor: '#fef3c7', color: '#92400e', border: '1px solid #fcd34d' }}
+        title={title}
+      >
+        🔥 当日点火
+      </span>
+    )
+  }
+  return (
+    <Chip
+      text={isNum(days) ? `${days}日前` : '—'}
+      palette={{ bg: '#f3f4f6', fg: '#475569', border: '#cbd5e1' }}
+      title={title}
+    />
+  )
+}
+
+// ADR>12 = 大負け多発帯。減サイズ警告（赤）。
+function AdrExtremeChip() {
+  return (
+    <Chip
+      text="⚠ ADR>12 減サイズ"
+      palette={{ bg: '#fee2e2', fg: '#991b1b', border: '#fca5a5' }}
+      title="adr_extreme=true（ADR>12）は大負け多発帯。ポジションサイズを減らす警告。"
+    />
+  )
+}
+
+function Metric({
+  label,
+  value,
+  color,
+  title,
+}: {
+  label: string
+  value: string
+  color?: string
+  title?: string
+}) {
+  return (
+    <div className="rounded bg-[#fafafa] border border-[#f0f2f4] px-2 py-1.5" title={title}>
+      <p className="text-[9px] uppercase tracking-wide text-gray-500 leading-tight">{label}</p>
+      <p
+        className="mt-0.5 font-mono text-sm font-semibold leading-tight tabular-nums"
+        style={{ color: color ?? 'var(--text-primary)' }}
+      >
+        {value}
+      </p>
+    </div>
+  )
+}
+
+export default function VolumeIgnitionCard({ row, hot = false, onAddWatchlist, onAddPosition }: Props) {
+  const fresh = isFreshIgnition(row)
+  const extreme = row.adr_extreme === true
+
+  // 枠/背景: ⚠ADR極端 を最優先（赤）→ 当日点火（橙）→ hotセクター（緑）
+  const borderColor = extreme ? '#fca5a5' : fresh ? '#fcd34d' : hot ? '#86efac' : '#e8eaed'
+  const backgroundColor = extreme ? '#fffafa' : fresh ? '#fffdf5' : hot ? '#f0fdf4' : '#ffffff'
+
+  return (
+    <div
+      className="bg-white rounded-lg border shadow-sm hover:shadow-md transition-shadow flex flex-col"
+      style={{ borderColor, backgroundColor }}
+    >
+      {/* バッジ行 */}
+      <div className="px-3 py-2 border-b border-[#f0f2f4] flex items-center gap-1.5 flex-wrap">
+        <DaysBadge days={row.days_since_entry} entryDate={row.entry_date} />
+        {row.scale_cat && row.scale_cat !== '-' && (
+          <Chip
+            text={row.scale_cat}
+            palette={{ bg: '#eef2ff', fg: '#3730a3', border: '#c7d2fe' }}
+            title="時価規模"
+          />
+        )}
+        {extreme && <AdrExtremeChip />}
+        {row.mkt && <span className="ml-auto text-[10px] text-gray-400 font-mono">{row.mkt}</span>}
+      </div>
+
+      {/* 銘柄 */}
+      <div className="px-3 py-2 flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-baseline gap-2 min-w-0">
+            <a
+              href={shikihoUrl(row.code)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm font-semibold text-[var(--text-primary)] hover:underline truncate"
+              title={`${row.co_name ?? '—'}（四季報を開く）`}
+            >
+              {row.co_name ?? '—'}
+            </a>
+            <a
+              href={tradingViewUrl(row.code)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-mono text-sm font-bold text-blue-600 hover:underline flex-shrink-0"
+              title={`${row.code}（TradingView を開く）`}
+            >
+              {row.code}
+            </a>
+          </div>
+          <div
+            className="mt-0.5 text-[11px] truncate"
+            style={{ color: hot ? '#16a34a' : '#6b7280' }}
+            title={row.sector_s33 ?? ''}
+          >
+            {hot ? '🟢 ' : ''}
+            {row.sector_s33 ?? '—'}
+          </div>
+        </div>
+        <div className="flex-shrink-0 text-right">
+          <p className="text-[9px] uppercase tracking-wide text-gray-400 leading-tight">Close</p>
+          <p className="font-mono text-sm font-semibold text-gray-700 tabular-nums leading-tight">
+            {fmtClose(row.close)}
+          </p>
+          <p className="text-[9px] text-gray-400 leading-tight tabular-nums" title="点火日の終値">
+            点火 {fmtClose(row.entry_close)}
+          </p>
+        </div>
+      </div>
+
+      {/* 指標 */}
+      <div className="px-3 grid grid-cols-2 gap-2">
+        <Metric
+          label="点火来"
+          value={fmtSignedPct(row.ret_since_entry_pct)}
+          color={retColor(row.ret_since_entry_pct)}
+          title="点火日からの騰落率(%)。マイナス=既に押している"
+        />
+        <Metric
+          label="出来高比"
+          value={isNum(row.vol_ratio) ? `${fmt(row.vol_ratio, 1)}x` : '—'}
+          color={volColor(row.vol_ratio)}
+          title="点火日 出来高/20日平均（≥2）。大きいほど点火が強い"
+        />
+        <Metric
+          label="ADR%"
+          value={fmt(row.adr_pct)}
+          color={extreme ? 'var(--negative)' : undefined}
+          title="ADR%（20本）。日中ボラ容量。>12 は減サイズ警告帯"
+        />
+        <Metric
+          label="RS"
+          value={fmt(row.rs_topix_avg, 0)}
+          color={rsColor(row.rs_topix_avg)}
+          title="対TOPIX 相対強さ（21/63/126平均, 0–100）"
+        />
+        <Metric
+          label="150乖離"
+          value={fmtSignedPct(row.dist_sma150_pct)}
+          title="150日線からの乖離(%)。大=伸び切り"
+        />
+        <Metric label="売買代金" value={fmt(row.turnover_oku, 1)} title="直近20日平均 売買代金（億円）。流動性" />
+      </div>
+
+      {/* アクション */}
+      {(onAddWatchlist || onAddPosition) && (
+        <div className="px-3 pt-2 pb-2 mt-2 border-t border-[#f0f2f4] flex items-center justify-end gap-1.5">
+          {onAddWatchlist && (
+            <button
+              onClick={() => onAddWatchlist(row)}
+              className="px-2 py-1 text-[10px] font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded transition-colors"
+              title="Watchlist に追加"
+            >
+              ＋ Watch
+            </button>
+          )}
+          {onAddPosition && (
+            <button
+              onClick={() => onAddPosition(row)}
+              className="px-2 py-1 text-[10px] font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded transition-colors"
+              title="Position として保存"
+            >
+              ＋ Position
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
