@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import type { CoilPullbackRow, MaPullbackRow } from '@/types/pullbackSetups'
+import type { VolumeIgnitionRow } from '@/types/volumeIgnition'
 
 // Daily Watch — 押し目"候補"ウォッチ。新2テーブルを最新 date 中心に読む。
 // jquants-scanner が毎日・平日引け後 (~18:00 JST) に当日分を upsert（冪等）。
@@ -7,12 +8,15 @@ import type { CoilPullbackRow, MaPullbackRow } from '@/types/pullbackSetups'
 
 const COIL_TABLE = 'coil_pullback_setups'
 const MA_TABLE = 'ma_pullback_setups'
+const VOLUME_IGNITION_TABLE = 'volume_ignition'
 
 export type TodayResponse = {
   coilDate: string | null
   coil: CoilPullbackRow[]
   maDate: string | null
   ma: MaPullbackRow[]
+  igniteDate: string | null
+  ignite: VolumeIgnitionRow[]
   hotSectors: string[]
 }
 
@@ -103,9 +107,10 @@ async function fetchHotSectors(): Promise<string[]> {
 export async function fetchToday(opts: { date?: string }): Promise<TodayResponse> {
   const requested = opts.date ?? null
 
-  const [coilRes, maRes, hotSectors] = await Promise.all([
+  const [coilRes, maRes, igniteRes, hotSectors] = await Promise.all([
     fetchSetups<CoilPullbackRow>(COIL_TABLE, requested),
     fetchSetups<MaPullbackRow>(MA_TABLE, requested),
+    fetchSetups<VolumeIgnitionRow>(VOLUME_IGNITION_TABLE, requested),
     fetchHotSectors(),
   ])
 
@@ -114,6 +119,8 @@ export async function fetchToday(opts: { date?: string }): Promise<TodayResponse
     coil: coilRes.rows,
     maDate: maRes.date,
     ma: maRes.rows,
+    igniteDate: igniteRes.date,
+    ignite: igniteRes.rows,
     hotSectors,
   }
 }
