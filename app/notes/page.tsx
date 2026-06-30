@@ -1,12 +1,20 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import type { Note } from '@/types/notes'
+import {
+  listNotes,
+  createNote,
+  updateNote,
+  deleteNote,
+  migrateLocalNotes,
+} from '@/lib/notesFetch'
+import ConfirmDialog from '@/components/shared/ConfirmDialog'
 
-// 自由メモ / 気を付けること。
-// 保存先はこのブラウザの localStorage（サーバ同期なし）。端末横断で同期したい場合は
-// Supabase テーブルに切り替え可能（要相談）。入力は自動保存（デバウンス）。
-
-const STORAGE_KEY = 'market-dashboard:notes'
+// 自由メモ / 気を付けること（複数・タイトル付き）。
+// 保存先は Supabase の notes テーブル。スマホ・PC など全端末で同期される。
+// 旧 localStorage の単一メモは初回アクセス時に自動で 1 件ずつ吸い上げて統合する。
+// 入力は自動保存（デバウンス）。
 
 const PLACEHOLDER = `自由に入力できます。例:
 
@@ -17,52 +25,125 @@ const PLACEHOLDER = `自由に入力できます。例:
 
 # 監視メモ
 - 6479 … 4,400 割れたら撤退
-- セクター: 半導体の出来高に注意
+- セクター: 半導体の出来高に注意`
 
-# 今週のテーマ
-- …`
+function snippet(body: string): string {
+  const line = body.split('\n').map(l => l.replace(/^#+/, '').trim()).find(l => l.length > 0)
+  if (!line) return '（空のメモ）'
+  return line.length > 48 ? `${line.slice(0, 48)}…` : line
+}
+
+function fmtTime(d: Date) {
+  return d.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+}
+
+function fmtUpdated(iso: string): string {
+  const d = new Date(iso)
+  return d.toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+}
 
 export default function NotesPage() {
-  const [text, setText] = useState('')
-  const [loaded, setLoaded] = useState(false)
-  const [savedAt, setSavedAt] = useState<Date | null>(null)
+  const [notes, setNotes] = useState<Note[]>([])
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  // 選択中メモの編集ドラフト
+  const [title, setTitle] = useState('')
+  const [body, setBody] = useState('')
   const [dirty, setDirty] = useState(false)
+  const [savedAt, setSavedAt] = useState<Date | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // 初回ロード
+  // 初回: 旧ローカルメモを移行 → 一覧ロード → 先頭を選択
   useEffect(() => {
-    try {
-      const v = localStorage.getItem(STORAGE_KEY)
-      if (v != null) setText(v) // eslint-disable-line react-hooks/set-state-in-effect
-    } catch {
-      /* localStorage 不可（プライベートモード等）でも編集自体は可能 */
-    }
-    setLoaded(true)
+    let alive = true
+    ;(async () => {
+      await migrateLocalNotes()
+      const list = await listNotes()
+      if (!alive) return
+      setNotes(list)
+      if (list.length > 0) {
+        const first = list[0]
+        setSelectedId(first.id)
+        setTitle(first.title ?? '')
+        setBody(first.body)
+      }
+      setLoading(false)
+    })()
+    return () => { alive = false }
   }, [])
 
-  const save = useCallback((value: string) => {
-    try {
-      localStorage.setItem(STORAGE_KEY, value)
-      setSavedAt(new Date())
-      setDirty(false)
-    } catch {
-      /* 保存不可時は dirty のまま */
-    }
-  }, [])
+  function selectNote(n: Note) {
+    setSelectedId(n.id)
+    setTitle(n.title ?? '')
+    setBody(n.body)
+    setDirty(false)
+    setSavedAt(null)
+  }
 
-  // 変更時にデバウンス自動保存
+  async function handleNew() {
+    const created = await createNote({ title: '', body: '' })
+    if (!created) return
+    setNotes(prev => [created, ...prev])
+    selectNote(created)
+  }
+
+  async function handleDelete() {
+    setConfirmDelete(false)
+    if (!selectedId) return
+    const id = selectedId
+    await deleteNote(id)
+    setNotes(prev => {
+      const next = prev.filter(n => n.id !== id)
+      if (next.length > 0) selectNote(next[0])
+      else {
+        setSelectedId(null)
+        setTitle('')
+        setBody('')
+      }
+      return next
+    })
+  }
+
+  async function togglePin() {
+    if (!selectedId) return
+    const cur = notes.find(n => n.id === selectedId)
+    if (!cur) return
+    const pinned = !cur.pinned
+    await updateNote(selectedId, { pinned })
+    setNotes(prev => prev.map(n => (n.id === selectedId ? { ...n, pinned } : n)))
+  }
+
+  // 変更時にデバウンス自動保存（選択中メモの内容が stored と異なる時だけ）
   useEffect(() => {
-    if (!loaded) return
+    if (!selectedId) return
+    const cur = notes.find(n => n.id === selectedId)
+    if (!cur) return
+    if ((cur.title ?? '') === title && cur.body === body) return // 選択直後など差分なし
+
     setDirty(true) // eslint-disable-line react-hooks/set-state-in-effect
     if (timer.current) clearTimeout(timer.current)
-    timer.current = setTimeout(() => save(text), 600)
+    const id = selectedId
+    timer.current = setTimeout(async () => {
+      const res = await updateNote(id, { title: title || null, body })
+      if (!res.error) {
+        setSavedAt(new Date())
+        setDirty(false)
+        setNotes(prev =>
+          prev.map(n =>
+            n.id === id ? { ...n, title: title || null, body, updated_at: new Date().toISOString() } : n,
+          ),
+        )
+      }
+    }, 600)
     return () => {
       if (timer.current) clearTimeout(timer.current)
     }
-  }, [text, loaded, save])
+  }, [title, body, selectedId, notes])
 
-  const fmtTime = (d: Date) =>
-    d.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+  const selectedNote = selectedId ? notes.find(n => n.id === selectedId) ?? null : null
 
   return (
     <main className="min-h-screen p-6" style={{ backgroundColor: 'var(--bg-primary)' }}>
@@ -75,7 +156,7 @@ export default function NotesPage() {
             <span aria-hidden className="mr-2">📝</span>Notes — メモ / 気を付けること
           </h1>
           <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
-            自由入力の個人メモ。このブラウザに自動保存されます（サーバ同期なし）。
+            複数メモ（タイトル付き）。Supabase に自動保存され、スマホ・PC など全端末で同期します。
           </p>
         </div>
         <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
@@ -89,19 +170,122 @@ export default function NotesPage() {
         </div>
       </header>
 
-      <div className="bg-white rounded-xl border border-[#e8eaed] shadow-sm p-3">
-        <textarea
-          value={text}
-          onChange={e => setText(e.target.value)}
-          placeholder={PLACEHOLDER}
-          spellCheck={false}
-          className="w-full min-h-[70vh] resize-y rounded-lg border border-gray-200 bg-[#fcfcfd] px-4 py-3 text-sm leading-relaxed text-gray-800 font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-        <div className="flex items-center justify-between px-1 pt-2 text-[11px] text-gray-400">
-          <span>{text.length.toLocaleString()} 文字</span>
-          <span>自動保存（このブラウザのみ）。端末横断で同期したい場合はお知らせください。</span>
+      {loading ? (
+        <div
+          className="bg-white rounded-xl border border-[#e8eaed] shadow-sm p-8 text-center"
+          style={{ color: 'var(--text-muted)' }}
+        >
+          <p className="text-lg font-medium">Loading...</p>
         </div>
-      </div>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-[300px_1fr]">
+          {/* 一覧 */}
+          <aside className="bg-white rounded-xl border border-[#e8eaed] shadow-sm p-3 flex flex-col gap-2 md:max-h-[78vh]">
+            <button
+              onClick={handleNew}
+              className="w-full px-3 py-2 rounded-lg text-sm font-medium border border-[var(--border)] bg-white hover:bg-gray-50 transition-colors"
+              style={{ color: 'var(--accent)' }}
+            >
+              ＋ 新規メモ
+            </button>
+            <div className="flex-1 overflow-y-auto -mx-1 px-1">
+              {notes.length === 0 ? (
+                <p className="text-xs text-gray-400 text-center py-6">メモがありません。</p>
+              ) : (
+                <ul className="flex flex-col gap-1.5">
+                  {notes.map(n => {
+                    const active = n.id === selectedId
+                    return (
+                      <li key={n.id}>
+                        <button
+                          onClick={() => selectNote(n)}
+                          className={`w-full text-left rounded-lg border px-3 py-2 transition-colors ${
+                            active
+                              ? 'border-[var(--accent)] bg-blue-50'
+                              : 'border-[#eef0f2] bg-white hover:bg-gray-50'
+                          }`}
+                        >
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            {n.pinned && <span aria-hidden className="text-[11px]">📌</span>}
+                            <span className="text-sm font-semibold text-gray-800 truncate">
+                              {n.title?.trim() || '無題'}
+                            </span>
+                          </div>
+                          <p className="mt-0.5 text-[11px] text-gray-400 truncate">{snippet(n.body)}</p>
+                          <p className="mt-0.5 text-[10px] text-gray-300 tabular-nums">{fmtUpdated(n.updated_at)}</p>
+                        </button>
+                      </li>
+                    )
+                  })}
+                </ul>
+              )}
+            </div>
+          </aside>
+
+          {/* エディタ */}
+          <section className="bg-white rounded-xl border border-[#e8eaed] shadow-sm p-3">
+            {selectedNote ? (
+              <>
+                <div className="flex items-center gap-2 mb-2">
+                  <input
+                    value={title}
+                    onChange={e => setTitle(e.target.value)}
+                    placeholder="タイトル（未入力なら本文先頭が一覧に表示）"
+                    className="flex-1 min-w-0 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <button
+                    onClick={togglePin}
+                    title={selectedNote.pinned ? 'ピンを外す' : 'ピン留め'}
+                    className={`px-2.5 py-2 rounded-lg border text-sm transition-colors ${
+                      selectedNote.pinned
+                        ? 'border-amber-300 bg-amber-50 text-amber-700'
+                        : 'border-gray-200 bg-white text-gray-400 hover:bg-gray-50'
+                    }`}
+                  >
+                    📌
+                  </button>
+                  <button
+                    onClick={() => setConfirmDelete(true)}
+                    title="このメモを削除"
+                    className="px-2.5 py-2 rounded-lg border border-gray-200 bg-white text-red-500 hover:bg-red-50 transition-colors text-sm"
+                  >
+                    🗑
+                  </button>
+                </div>
+                <textarea
+                  value={body}
+                  onChange={e => setBody(e.target.value)}
+                  placeholder={PLACEHOLDER}
+                  spellCheck={false}
+                  className="w-full min-h-[64vh] resize-y rounded-lg border border-gray-200 bg-[#fcfcfd] px-4 py-3 text-sm leading-relaxed text-gray-800 font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <div className="flex items-center justify-between px-1 pt-2 text-[11px] text-gray-400">
+                  <span>{body.length.toLocaleString()} 文字</span>
+                  <span>自動保存（全端末で同期）</span>
+                </div>
+              </>
+            ) : (
+              <div className="py-16 text-center text-sm text-gray-400">
+                <p className="mb-3">メモを選択するか、新規作成してください。</p>
+                <button
+                  onClick={handleNew}
+                  className="px-3 py-2 rounded-lg text-sm font-medium border border-[var(--border)] bg-white hover:bg-gray-50 transition-colors"
+                  style={{ color: 'var(--accent)' }}
+                >
+                  ＋ 新規メモ
+                </button>
+              </div>
+            )}
+          </section>
+        </div>
+      )}
+
+      <ConfirmDialog
+        open={confirmDelete}
+        message={`「${selectedNote?.title?.trim() || '無題'}」を削除しますか？`}
+        onConfirm={handleDelete}
+        onCancel={() => setConfirmDelete(false)}
+      />
     </main>
   )
 }
