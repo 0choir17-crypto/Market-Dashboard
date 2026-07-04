@@ -21,13 +21,13 @@ function isNum(v: number | null | undefined): v is number {
 }
 
 function fmt(v: number | null | undefined, decimals = 1): string {
-  return isNum(v) ? v.toFixed(decimals) : '--'
+  return isNum(v) ? v.toFixed(decimals) : '—'
 }
 
 function MiniBar({ value }: { value: number | null | undefined }) {
   const safe = isNum(value) ? Math.max(0, Math.min(100, value)) : 0
   const color = componentColor(value)
-  const label = isNum(value) ? value.toFixed(0) : '--'
+  const label = isNum(value) ? value.toFixed(0) : '—'
   return (
     <div className="flex items-center gap-1.5 w-full">
       <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden min-w-[24px]">
@@ -45,7 +45,7 @@ function MiniBar({ value }: { value: number | null | undefined }) {
 
 function MomentumBadge({ m }: { m: SectorMomentum | null }) {
   if (!m || !MOMENTUM_CONFIG[m]) {
-    return <span className="text-xs text-gray-400">--</span>
+    return <span className="text-xs text-[var(--text-muted)]">—</span>
   }
   const cfg = MOMENTUM_CONFIG[m]
   return (
@@ -60,7 +60,7 @@ function MomentumBadge({ m }: { m: SectorMomentum | null }) {
 
 function CompositeCell({ score }: { score: number | null | undefined }) {
   const { bg, text } = compositeColor(score)
-  const v = isNum(score) ? score.toFixed(1) : '--'
+  const v = isNum(score) ? score.toFixed(1) : '—'
   return (
     <span
       className="inline-block min-w-[52px] text-center px-2 py-1 rounded-md font-mono text-sm font-bold tabular-nums"
@@ -97,8 +97,9 @@ function SortTh({
   return (
     <th
       onClick={() => onSort(sortKey)}
-      className={`px-3 py-2.5 text-xs font-semibold uppercase tracking-wide whitespace-nowrap cursor-pointer select-none hover:bg-gray-100 transition-colors ${alignClass} ${
-        active ? 'text-[var(--accent)]' : 'text-gray-500'
+      aria-sort={active ? (currentDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+      className={`px-3 py-2.5 text-xs font-medium uppercase tracking-wide whitespace-nowrap cursor-pointer select-none hover:bg-gray-100 transition-colors ${alignClass} ${
+        active ? 'text-[var(--accent)]' : 'text-[var(--text-secondary)]'
       } ${className}`}
     >
       {inner}
@@ -109,7 +110,7 @@ function SortTh({
 
 // ── Drilldown: 5 horizontal bars with weight annotation ─────────────────────
 function DrilldownRow({ row, colSpan }: { row: SectorSelectionRow; colSpan: number }) {
-  const total = isNum(row.composite_score) ? row.composite_score.toFixed(2) : '--'
+  const total = isNum(row.composite_score) ? row.composite_score.toFixed(2) : '—'
   return (
     <tr className="bg-[#f8fafc] border-b border-[#e8eaed]">
       <td colSpan={colSpan} className="px-6 py-4">
@@ -151,7 +152,7 @@ function DrilldownRow({ row, colSpan }: { row: SectorSelectionRow; colSpan: numb
                       className="font-mono tabular-nums w-10 text-right text-gray-700"
                       style={{ color: isNum(value) ? '#374151' : '#9ca3af' }}
                     >
-                      {isNum(value) ? value.toFixed(0) : '--'}
+                      {isNum(value) ? value.toFixed(0) : '—'}
                     </span>
                     <span className="font-mono tabular-nums w-14 text-right text-gray-500">
                       {isNum(value) ? `→ ${(value * weight).toFixed(2)}` : ''}
@@ -185,9 +186,9 @@ function DrilldownRow({ row, colSpan }: { row: SectorSelectionRow; colSpan: numb
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-baseline justify-between border-b border-dashed border-gray-200 py-0.5">
-      <span className="text-gray-500">{label}</span>
-      <span className="font-mono tabular-nums text-gray-800">{value}</span>
+    <div className="flex items-baseline justify-between border-b border-dashed border-[var(--border)] py-0.5">
+      <span className="text-[var(--text-secondary)]">{label}</span>
+      <span className="font-mono tabular-nums text-[var(--text-primary)]">{value}</span>
     </div>
   )
 }
@@ -245,7 +246,7 @@ export default function SectorSelectionTable({ rows }: { rows: SectorSelectionRo
     <div className="bg-white rounded-xl border border-[#e8eaed] shadow-sm overflow-x-auto">
       {/* Toolbar */}
       <div className="flex items-center gap-3 px-4 pt-4 pb-3 flex-wrap">
-        <p className="text-sm font-semibold text-gray-500">セクター選別ランキング</p>
+        <p className="text-sm font-semibold text-[var(--text-primary)]">セクター選別ランキング</p>
         <label className="ml-auto flex items-center gap-2 text-xs text-gray-600 cursor-pointer select-none">
           <input
             type="checkbox"
@@ -255,10 +256,12 @@ export default function SectorSelectionTable({ rows }: { rows: SectorSelectionRo
           />
           信頼度低 (銘柄数&lt;10) を除外
           {lowConfCount > 0 && (
-            <span className="text-gray-400">({lowConfCount}件)</span>
+            <span className="text-[var(--text-muted)]">（<span className="font-mono">{lowConfCount}</span> 件）</span>
           )}
         </label>
-        <span className="text-xs text-gray-400">{sorted.length} sectors</span>
+        <span className="text-xs text-[var(--text-muted)]">
+          <span className="font-mono">{sorted.length}</span> セクター
+        </span>
       </div>
 
       <table className="w-full min-w-[1100px] text-sm">
@@ -267,7 +270,7 @@ export default function SectorSelectionTable({ rows }: { rows: SectorSelectionRo
             <SortTh label="#"        tooltip="composite_score_rank — 当日ランク (1=トップ)" sortKey="rank"               {...sp} align="center" className="w-12" />
             <SortTh label="Sector"   tooltip="TOPIX-33 業種名"                              sortKey="sector_name_s33"    {...sp} align="left" />
             <SortTh label="Score"    tooltip="composite_score 0-100 (赤<30 / 黄30-60 / 緑≥60)" sortKey="composite_score"    {...sp} align="center" />
-            <th className="px-3 py-2.5 text-xs font-semibold uppercase tracking-wide whitespace-nowrap text-left text-gray-500">Trend</th>
+            <th className="px-3 py-2.5 text-xs font-medium uppercase tracking-wide whitespace-nowrap text-left text-[var(--text-secondary)]">Trend</th>
             {COMPONENT_META.map(m => (
               <SortTh
                 key={m.key}
@@ -293,11 +296,11 @@ export default function SectorSelectionTable({ rows }: { rows: SectorSelectionRo
                   onClick={() => setExpanded(isOpen ? null : rowKey)}
                   className={`border-b border-[#f0f2f4] cursor-pointer transition-colors ${
                     isOpen ? 'bg-blue-50/40' : i % 2 === 0 ? 'bg-white' : 'bg-[#fafafa]'
-                  } hover:bg-gray-50 ${isLow ? 'opacity-60' : ''}`}
+                  } hover:bg-gray-100 ${isLow ? 'opacity-60' : ''}`}
                   title={isLow ? '信頼度低: 銘柄数が少ないためノイズ大' : undefined}
                 >
                   <td className="px-3 py-2 text-center font-mono text-xs text-gray-500 tabular-nums">
-                    {row.composite_score_rank ?? '--'}
+                    {row.composite_score_rank ?? '—'}
                   </td>
                   <td className="px-3 py-2 whitespace-nowrap text-xs font-medium text-gray-800">
                     <span className="inline-flex items-center gap-1.5">
@@ -320,7 +323,7 @@ export default function SectorSelectionTable({ rows }: { rows: SectorSelectionRo
                     </td>
                   ))}
                   <td className="px-3 py-2 text-right font-mono text-xs text-gray-600 tabular-nums">
-                    {row.sector_stock_count_s33 ?? '--'}
+                    {row.sector_stock_count_s33 ?? '—'}
                   </td>
                 </tr>
                 {isOpen && <DrilldownRow row={row} colSpan={COL_COUNT} />}
@@ -331,12 +334,12 @@ export default function SectorSelectionTable({ rows }: { rows: SectorSelectionRo
       </table>
 
       {sorted.length === 0 && (
-        <div className="py-10 text-center text-gray-400 text-sm">No data</div>
+        <div className="py-10 text-center text-[var(--text-muted)] text-sm">データがありません</div>
       )}
 
       {/* Legend */}
       <div className="flex items-center justify-center gap-5 py-3 text-[11px] border-t border-[#f0f2f4] flex-wrap">
-        <span className="text-gray-500">Score:</span>
+        <span className="text-[var(--text-secondary)]">Score:</span>
         <span className="flex items-center gap-1">
           <span className="inline-block w-2.5 h-2.5 rounded" style={{ backgroundColor: '#dcfce7' }} />
           <span style={{ color: 'var(--text-secondary)' }}>強 ≥60</span>
@@ -350,7 +353,7 @@ export default function SectorSelectionTable({ rows }: { rows: SectorSelectionRo
           <span style={{ color: 'var(--text-secondary)' }}>弱 &lt;30</span>
         </span>
         <span className="text-gray-300">|</span>
-        <span className="text-gray-500">⚠️ confidence_low = 銘柄数&lt;10</span>
+        <span className="text-[var(--text-secondary)]">⚠️ confidence_low = 銘柄数&lt;10</span>
       </div>
     </div>
   )

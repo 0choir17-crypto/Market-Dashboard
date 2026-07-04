@@ -79,8 +79,8 @@ export default function SectorBarChart33({ history }: Props) {
 
   if (seriesList.length === 0) {
     return (
-      <div className="bg-white rounded-xl border border-[#e8eaed] shadow-sm p-8 text-center text-gray-400">
-        <p className="text-sm">Bar chart 用データがありません</p>
+      <div className="bg-white rounded-xl border border-[#e8eaed] shadow-sm p-8 text-center text-[var(--text-muted)]">
+        <p className="text-sm">Bar Chart 用のデータがありません</p>
       </div>
     )
   }
@@ -88,11 +88,14 @@ export default function SectorBarChart33({ history }: Props) {
   return (
     <div className="bg-white rounded-xl border border-[#e8eaed] shadow-sm p-5">
       <div className="flex flex-wrap items-center gap-3 mb-3">
-        <p className="text-sm font-semibold text-gray-500 mr-auto">
-          RS Bar Chart — 各セクター composite_score 推移（{dates.length} 営業日）
+        <p className="text-sm font-semibold text-[var(--text-primary)] mr-auto">
+          RS Bar Chart{' '}
+          <span className="font-normal text-[var(--text-muted)]">
+            — 各セクター composite_score 推移（<span className="font-mono">{dates.length}</span> 営業日）
+          </span>
         </p>
         <div className="flex items-center gap-1 text-xs">
-          <span className="text-gray-400">並び:</span>
+          <span className="text-[var(--text-muted)]">並び:</span>
           {(
             [
               { k: 'score', label: '現在スコア' },
@@ -104,8 +107,8 @@ export default function SectorBarChart33({ history }: Props) {
               onClick={() => setSortKey(o.k)}
               className={`px-2 py-0.5 rounded border text-xs ${
                 sortKey === o.k
-                  ? 'bg-blue-50 border-blue-300 text-blue-700 font-semibold'
-                  : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'
+                  ? 'bg-[var(--accent-bg)] border-[var(--accent)] text-[var(--accent)] font-semibold'
+                  : 'bg-white border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)]'
               }`}
             >
               {o.label}
@@ -142,7 +145,7 @@ export default function SectorBarChart33({ history }: Props) {
                   className="text-sm font-bold font-mono tabular-nums ml-1 shrink-0"
                   style={{ color: scoreColor }}
                 >
-                  {card.latest != null ? card.latest.toFixed(0) : '--'}
+                  {card.latest != null ? card.latest.toFixed(0) : '—'}
                 </span>
               </div>
 
@@ -157,7 +160,7 @@ export default function SectorBarChart33({ history }: Props) {
                         key={p.date}
                         className="flex-1"
                         style={{ height: 1, backgroundColor: '#f3f4f6' }}
-                        title={`${p.date}: --`}
+                        title={`${p.date}: —`}
                       />
                     )
                   }
@@ -185,7 +188,7 @@ export default function SectorBarChart33({ history }: Props) {
                 >
                   {validCount}d
                   {card.rank != null && (
-                    <span className="ml-1.5 text-gray-400">#{card.rank}</span>
+                    <span className="ml-1.5 text-[var(--text-muted)]">#{card.rank}</span>
                   )}
                 </span>
                 <span
@@ -195,9 +198,9 @@ export default function SectorBarChart33({ history }: Props) {
                       card.delta21d == null
                         ? 'var(--text-muted)'
                         : card.delta21d > 0
-                          ? '#16a34a'
+                          ? 'var(--positive)'
                           : card.delta21d < 0
-                            ? '#dc2626'
+                            ? 'var(--negative)'
                             : 'var(--text-muted)',
                   }}
                 >
