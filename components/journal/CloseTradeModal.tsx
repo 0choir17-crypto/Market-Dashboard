@@ -5,7 +5,8 @@ import { supabase } from '@/lib/supabase'
 import { Trade } from '@/types/trades'
 import { SCREEN_NAME_MAP } from '@/lib/screenNames'
 import { calculateMfeMae } from '@/lib/mfeMae'
-import { classifyResult } from '@/lib/tradeResult'
+import { classifyResult, nextLossStreak } from '@/lib/tradeResult'
+import { todayJST } from '@/lib/dates'
 import Modal from '@/components/shared/Modal'
 
 type Props = {
@@ -15,7 +16,7 @@ type Props = {
   trade: Trade | null
 }
 
-const today = () => new Date().toISOString().slice(0, 10)
+const today = () => todayJST()
 
 // Source of truth for exit reason values (also imported by
 // ReasonPerformance for aggregation ordering).
@@ -49,7 +50,7 @@ export default function CloseTradeModal({ open, onClose, onSaved, trade }: Props
   async function handleSave() {
     if (!trade) return
     if (!exitDate) { setError('イグジット日は必須です'); return }
-    if (!exitPrice || isNaN(Number(exitPrice))) { setError('イグジット価格は必須です'); return }
+    if (!exitPrice || isNaN(Number(exitPrice)) || Number(exitPrice) <= 0) { setError('イグジット価格は正の数で入力してください'); return }
 
     setSaving(true)
     setError('')
@@ -59,10 +60,14 @@ export default function CloseTradeModal({ open, onClose, onSaved, trade }: Props
     const pnlPct = ((ep - trade.entry_price) / trade.entry_price) * 100
     const result = classifyResult(pnl)
 
-    // R倍率計算（stop_priceがある場合）
+    // R倍率 = (exit − entry) / 初期リスク。分母は必ず initial_stop（不変）。
+    // stop_price はトレールで動くため、これを使うと建値超えにトレールした
+    // 勝ちトレードの R が負になる。initial_stop 未設定の旧データのみ
+    // stop_price にフォールバック（近似値）。
+    const riskBase = trade.initial_stop ?? trade.stop_price
     const rMult =
-      trade.stop_price != null && trade.entry_price !== trade.stop_price
-        ? (ep - trade.entry_price) / (trade.entry_price - trade.stop_price)
+      riskBase != null && trade.entry_price !== riskBase
+        ? (ep - trade.entry_price) / (trade.entry_price - riskBase)
         : null
 
     const { error: err } = await supabase
@@ -84,7 +89,7 @@ export default function CloseTradeModal({ open, onClose, onSaved, trade }: Props
 
     // MFE/MAE 計算（失敗してもクローズは成功扱い）
     try {
-      const mfeMae = await calculateMfeMae(trade.ticker, trade.entry_date, exitDate, trade.entry_price)
+      const mfeMae = await calculateMfeMae(trade.ticker, trade.entry_date, exitDate, trade.entry_price, ep)
       if (mfeMae) {
         await supabase.from('trades').update(mfeMae).eq('id', trade.id)
       }
@@ -96,16 +101,12 @@ export default function CloseTradeModal({ open, onClose, onSaved, trade }: Props
     const { data: riskData } = await supabase
       .from('risk_settings')
       .select('id, consec_losses')
+      .order('updated_at', { ascending: false })
       .limit(1)
       .maybeSingle()
 
     const prevLosses = riskData?.consec_losses ?? 0
-    // Only LOSS extends the streak; WIN and BREAKEVEN both reset to 0.
-    // r_multiple is checked first because a manual stop placement can flip
-    // a marginally positive pnl into a loss (slippage).
-    const lossByR = rMult != null && rMult < 0
-    const lossByPnl = rMult == null && result === 'LOSS'
-    const newLosses = lossByR || lossByPnl ? prevLosses + 1 : 0
+    const newLosses = nextLossStreak(prevLosses, result)
 
     if (riskData?.id) {
       await supabase
@@ -165,7 +166,9 @@ export default function CloseTradeModal({ open, onClose, onSaved, trade }: Props
             </label>
             <input
               type="number"
-              inputMode="numeric"
+              inputMode="decimal"
+              min="0"
+              step="any"
               value={exitPrice}
               onChange={e => setExitPrice(e.target.value)}
               placeholder="例: 4100"

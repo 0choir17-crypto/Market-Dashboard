@@ -6,6 +6,7 @@ import { Trade } from '@/types/trades'
 import { classifyResult } from '@/lib/tradeResult'
 import { EXIT_REASONS } from '@/components/journal/CloseTradeModal'
 import { fetchSectorNames33 } from '@/lib/sectorNames'
+import { todayJST } from '@/lib/dates'
 import Modal from '@/components/shared/Modal'
 
 type Props = {
@@ -15,7 +16,7 @@ type Props = {
   initial?: Partial<Trade>
 }
 
-const today = () => new Date().toISOString().slice(0, 10)
+const today = () => todayJST()
 
 // Screen 選択肢（表示名をそのまま screen_name に保存）。末尾に Other。
 const SCREEN_OPTIONS = ['Coil Pullback', 'MA Pullback']
@@ -101,31 +102,44 @@ export default function PositionModal({ open, onClose, onSaved, initial }: Props
   async function handleSave() {
     if (!ticker.trim()) { setError('Ticker は必須です'); return }
     if (!entryDate) { setError('取得日は必須です'); return }
-    if (entryPrice === '') { setError('Entry価格は必須です'); return }
-    if (shares === '') { setError('株数は必須です'); return }
-    if (exitPrice !== '' && isNaN(Number(exitPrice))) { setError('Exit価格が不正です'); return }
-
-    setSaving(true)
-    setError('')
-    setWarning('')
+    if (entryPrice === '' || isNaN(Number(entryPrice)) || Number(entryPrice) <= 0) { setError('Entry価格は正の数で入力してください'); return }
+    if (shares === '' || !Number.isInteger(Number(shares)) || Number(shares) <= 0) { setError('株数は正の整数で入力してください'); return }
+    if (exitPrice !== '' && (isNaN(Number(exitPrice)) || Number(exitPrice) <= 0)) { setError('Exit価格は正の数で入力してください'); return }
 
     const ep2 = parseFloat(entryPrice)
     const sh2 = shares !== '' ? parseInt(shares) : 1
     const sp2 = stopPrice !== '' ? parseFloat(stopPrice) : null
     const tp2 = targetPrice !== '' ? parseFloat(targetPrice) : null
-    const riskPct = sp2 != null && !isNaN(ep2) && ep2 > 0
-      ? (ep2 - sp2) / ep2 * 100
+
+    // 初期ストップは不変。編集で stop_price をトレールしても initial_stop /
+    // init_risk_pct は上書きしない（R と初期リスクの基準が失われるため）。
+    // 新規作成時、および initial_stop 未設定の旧データを編集した時のみ設定する。
+    const initialStop = isEdit ? (initial?.initial_stop ?? sp2) : sp2
+    const setInitialRisk = !isEdit || initial?.initial_stop == null
+    const riskPct = setInitialRisk && initialStop != null && !isNaN(ep2) && ep2 > 0
+      ? (ep2 - initialStop) / ep2 * 100
       : null
 
     // イグジット入力時は closed として確定（PnL/結果/R を自動計算）
     const hasExit = exitPrice !== '' && !isNaN(Number(exitPrice))
     let exitFields: Record<string, unknown> = {}
     if (hasExit) {
-      const xp = parseFloat(exitPrice)
       const exSh = exitShares !== '' ? parseInt(exitShares) : sh2
+      if (!Number.isFinite(exSh) || exSh <= 0) { setError('Exit株数が不正です'); return }
+      // このフォームは全株決済のみ対応。部分決済をここで保存すると
+      // レコード全体が closed になり残株が消えるため、専用の Close モーダル
+      // （分割レコードを正しく作る）へ誘導する。
+      if (exSh !== sh2) {
+        setError(`Exit株数（${exSh}）が保有株数（${sh2}）と一致しません。部分決済はポジション一覧の Close ボタンから行ってください。`)
+        return
+      }
+      const xp = parseFloat(exitPrice)
       const pnl = (xp - ep2) * exSh
       const pnlPct = ((xp - ep2) / ep2) * 100
-      const rMult = sp2 != null && ep2 !== sp2 ? (xp - ep2) / (ep2 - sp2) : null
+      // R の分母は初期ストップ（トレール後の stop_price は使わない）
+      const rMult = initialStop != null && ep2 !== initialStop
+        ? (xp - ep2) / (ep2 - initialStop)
+        : null
       exitFields = {
         exit_date: exitDate || today(),
         exit_price: xp,
@@ -136,6 +150,10 @@ export default function PositionModal({ open, onClose, onSaved, initial }: Props
         exit_reason: exitReason,
       }
     }
+
+    setSaving(true)
+    setError('')
+    setWarning('')
 
     const record = {
       ticker: ticker.trim().toUpperCase(),

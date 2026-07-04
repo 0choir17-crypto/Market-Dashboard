@@ -38,24 +38,25 @@ function PctCell({ value }: { value: number | null }) {
   )
 }
 
-// Fetch current prices from daily_signals (DISTINCT ON code, latest date first)
+// Fetch current prices from daily_signals — 銘柄ごとに最新1行だけ取る。
+// 旧実装は保有銘柄の全履歴を1クエリで引いており、PostgREST の1000行上限に
+// かかると code 昇順で後ろの銘柄の価格が silently 欠落していた。
 async function fetchCurrentPrices(tickers: string[]): Promise<Record<string, number | null>> {
   if (tickers.length === 0) return {}
   try {
-    const { data } = await supabase
-      .from('daily_signals')
-      .select('code, close, date')
-      .in('code', tickers)
-      .order('code', { ascending: true })
-      .order('date', { ascending: false })
-    const map: Record<string, number | null> = {}
-    if (data) {
-      for (const row of data as { code: string; close: number | null; date: string }[]) {
-        // Keep only the first (latest) record per code
-        if (!(row.code in map)) map[row.code] = row.close ?? null
-      }
-    }
-    return map
+    const results = await Promise.all(
+      tickers.map(async code => {
+        const { data } = await supabase
+          .from('daily_signals')
+          .select('close')
+          .eq('code', code)
+          .order('date', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+        return [code, (data as { close: number | null } | null)?.close ?? null] as const
+      }),
+    )
+    return Object.fromEntries(results)
   } catch {
     return {}
   }
@@ -68,11 +69,12 @@ export default function TradesTab({ positions, onRefresh }: Props) {
   const [closePos, setClosePos] = useState<Trade | null>(null)
   const [deletePos, setDeletePos] = useState<Trade | null>(null)
 
+  // 依存キーは事前に文字列へ畳む（式を deps に書くのは lint 違反かつ不安定）
+  const tickerKey = [...new Set(openTrades.map(p => p.ticker))].sort().join(',')
   const loadPrices = useCallback(async () => {
-    const tickers = [...new Set(openTrades.map(p => p.ticker))]
-    const map = await fetchCurrentPrices(tickers)
+    const map = await fetchCurrentPrices(tickerKey ? tickerKey.split(',') : [])
     setPrices(map)
-  }, [openTrades.map(p => p.ticker).join(',')])  // eslint-disable-line react-hooks/exhaustive-deps
+  }, [tickerKey])
 
   useEffect(() => { loadPrices() }, [loadPrices])
 

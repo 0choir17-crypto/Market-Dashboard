@@ -19,6 +19,9 @@ export interface Trade {
   // Portfolio統合用
   sector_s33: string | null
   stop_price: number | null
+  /** 建玉時の初期ストップ（不変）。R = (exit − entry) / (entry − initial_stop)。
+   *  stop_price はトレールで動くため R の分母には使わない。 */
+  initial_stop?: number | null
   stop_21l: number | null
   cost_basis: number | null
   init_risk_pct: number | null

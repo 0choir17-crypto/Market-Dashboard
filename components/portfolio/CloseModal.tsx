@@ -4,6 +4,9 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { insertResilient } from '@/lib/resilientWrite'
 import { Trade } from '@/types/trades'
+import { classifyResult, nextLossStreak } from '@/lib/tradeResult'
+import { calculateMfeMae, type MfeMaeResult } from '@/lib/mfeMae'
+import { todayJST } from '@/lib/dates'
 import Modal from '@/components/shared/Modal'
 
 type Props = {
@@ -13,7 +16,7 @@ type Props = {
   position: Trade | null
 }
 
-const today = () => new Date().toISOString().slice(0, 10)
+const today = () => todayJST()
 
 const EXIT_REASONS = ['利確', '損切', 'トレール損切', '目標達成', 'その他']
 
@@ -46,13 +49,17 @@ export default function CloseModal({ open, onClose, onSaved, position }: Props) 
     : position.shares
   const isPartial = effectiveSellShares < position.shares
   const realizedPnl = !isNaN(ep) ? (ep - position.entry_price) * effectiveSellShares : null
+  // R の分母は必ず初期リスク（initial_stop）。stop_price はトレールで動くため
+  // 使わない（建値超えにトレールすると勝ちトレードの R が負になる）。
+  // initial_stop 未設定の旧データのみ stop_price にフォールバック。
+  const riskBase = position.initial_stop ?? position.stop_price
   const rMultiple =
-    !isNaN(ep) && position.stop_price != null && position.entry_price !== position.stop_price
-      ? (ep - position.entry_price) / (position.entry_price - position.stop_price)
+    !isNaN(ep) && riskBase != null && position.entry_price !== riskBase
+      ? (ep - position.entry_price) / (position.entry_price - riskBase)
       : null
 
   async function handleClose() {
-    if (exitPrice === '') { setError('売値は必須です'); return }
+    if (exitPrice === '' || isNaN(Number(exitPrice)) || Number(exitPrice) <= 0) { setError('売値は正の数で入力してください'); return }
     if (!exitDate) { setError('売却日は必須です'); return }
     if (!position) return
 
@@ -76,23 +83,51 @@ export default function CloseModal({ open, onClose, onSaved, position }: Props) 
     const remainingShares = position.shares - closeShares
     const isPartialClose = remainingShares > 0
     const pnl = (ep2 - position.entry_price) * closeShares
+    // WIN/LOSS/BREAKEVEN は classifyResult が単一の正。pnl=0 は BREAKEVEN であり
+    // WIN ではない（Journal 側の CloseTradeModal と同一分類にする）。
+    const result = classifyResult(pnl)
+    const closeRiskBase = position.initial_stop ?? position.stop_price
     const rMult =
-      position.stop_price != null && position.entry_price !== position.stop_price
-        ? (ep2 - position.entry_price) / (position.entry_price - position.stop_price)
+      closeRiskBase != null && position.entry_price !== closeRiskBase
+        ? (ep2 - position.entry_price) / (position.entry_price - closeRiskBase)
         : null
     const pnlPct = position.entry_price > 0
       ? ((ep2 - position.entry_price) / position.entry_price) * 100
       : null
 
+    // MFE/MAE（取得失敗してもクローズは成功扱い）
+    let mfeMaeFields: Partial<MfeMaeResult> = {}
+    try {
+      const mfeMae = await calculateMfeMae(position.ticker, position.entry_date, exitDate, position.entry_price, ep2)
+      if (mfeMae) mfeMaeFields = mfeMae
+    } catch (e) {
+      console.warn('MFE/MAE計算スキップ:', e)
+    }
+
     if (isPartialClose) {
-      // Partial close: insert a new closed trade record for the sold portion
-      // and reduce the shares on the original (still-open) position.
+      // Partial close: reduce the shares on the original position first, then
+      // insert a closed record for the sold portion. PostgREST では2リクエストを
+      // トランザクションにできないため、順序と補償処理で被害を最小化する:
+      //   - 先に insert する旧実装は、途中失敗→再実行で決済レコードが二重になり
+      //     PnL が二重計上された（挿入は成功済みなので）
+      //   - update 先行なら、insert 失敗時に株数を戻す補償を試み、それも失敗した
+      //     場合は「何が起きたか」を明示してユーザーに委ねる
       const closedCostBasis = position.cost_basis != null
         ? position.cost_basis * (closeShares / position.shares)
         : null
       const remainingCostBasis = position.cost_basis != null
         ? position.cost_basis * (remainingShares / position.shares)
         : position.cost_basis
+
+      const { error: updateErr } = await supabase
+        .from('trades')
+        .update({
+          shares: remainingShares,
+          cost_basis: remainingCostBasis,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', position.id)
+      if (updateErr) { setSaving(false); setError(updateErr.message); return }
 
       const closedRecord = {
         ticker: position.ticker,
@@ -105,11 +140,12 @@ export default function CloseModal({ open, onClose, onSaved, position }: Props) 
         exit_price: ep2,
         pnl: pnl,
         pnl_pct: pnlPct,
-        result: pnl >= 0 ? 'WIN' : 'LOSS',
+        result,
         memo: position.memo,
         status: 'closed',
         sector_s33: position.sector_s33,
         stop_price: position.stop_price,
+        initial_stop: position.initial_stop ?? position.stop_price,
         stop_21l: position.stop_21l,
         cost_basis: closedCostBasis,
         init_risk_pct: position.init_risk_pct,
@@ -124,21 +160,27 @@ export default function CloseModal({ open, onClose, onSaved, position }: Props) 
         stop_pct_at_entry: position.stop_pct_at_entry,
         mc_met_at_entry: position.mc_met_at_entry,
         mc_condition_at_entry: position.mc_condition_at_entry,
+        ...mfeMaeFields,
         updated_at: new Date().toISOString(),
       }
 
       const { error: insertErr } = await insertResilient('trades', closedRecord)
-      if (insertErr) { setSaving(false); setError(insertErr.message); return }
-
-      const { error: updateErr } = await supabase
-        .from('trades')
-        .update({
-          shares: remainingShares,
-          cost_basis: remainingCostBasis,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', position.id)
-      if (updateErr) { setSaving(false); setError(updateErr.message); return }
+      if (insertErr) {
+        // 補償: 減らした株数を元に戻す（決済レコードは作られていない）
+        const { error: rollbackErr } = await supabase
+          .from('trades')
+          .update({
+            shares: position.shares,
+            cost_basis: position.cost_basis,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', position.id)
+        setSaving(false)
+        setError(rollbackErr
+          ? `決済レコードの作成に失敗し、株数の復元にも失敗しました。ポジションの株数が ${remainingShares} になっている可能性があります。手動で確認してください: ${insertErr.message}`
+          : `決済レコードの作成に失敗しました（ポジションは変更されていません）: ${insertErr.message}`)
+        return
+      }
     } else {
       // Full close: update existing trade in place
       const { error: updateErr } = await supabase
@@ -150,31 +192,38 @@ export default function CloseModal({ open, onClose, onSaved, position }: Props) 
           pnl_pct: pnlPct,
           r_multiple: rMult,
           exit_reason: exitReason,
-          result: pnl >= 0 ? 'WIN' : 'LOSS',
+          result,
           status: 'closed',
+          ...mfeMaeFields,
           updated_at: new Date().toISOString(),
         })
         .eq('id', position.id)
       if (updateErr) { setSaving(false); setError(updateErr.message); return }
     }
 
-    // 3. Update consec_losses in risk_settings
-    const { data: riskData } = await supabase
-      .from('risk_settings')
-      .select('id, consec_losses')
-      .limit(1)
-      .maybeSingle()
-
-    const prevLosses = riskData?.consec_losses ?? 0
-    const newLosses = (rMult != null && rMult < 0) ? prevLosses + 1 : 0
-
-    if (riskData?.id) {
-      await supabase
+    // 3. Update consec_losses in risk_settings — 全株決済時のみ。
+    // 分割決済のたびに数えると1銘柄の負けが複数連敗としてカウントされる。
+    // 判定は pnl 由来の result（旧実装の「R<0」はストップ未設定の負けで
+    // ストリークをリセットしてしまっていた）。
+    if (!isPartialClose) {
+      const { data: riskData } = await supabase
         .from('risk_settings')
-        .update({ consec_losses: newLosses, updated_at: new Date().toISOString() })
-        .eq('id', riskData.id)
-    } else {
-      await supabase.from('risk_settings').insert({ consec_losses: newLosses })
+        .select('id, consec_losses')
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      const prevLosses = riskData?.consec_losses ?? 0
+      const newLosses = nextLossStreak(prevLosses, result)
+
+      if (riskData?.id) {
+        await supabase
+          .from('risk_settings')
+          .update({ consec_losses: newLosses, updated_at: new Date().toISOString() })
+          .eq('id', riskData.id)
+      } else {
+        await supabase.from('risk_settings').insert({ consec_losses: newLosses })
+      }
     }
 
     setSaving(false)
@@ -204,7 +253,9 @@ export default function CloseModal({ open, onClose, onSaved, position }: Props) 
             </label>
             <input
               type="number"
-              inputMode="numeric"
+              inputMode="decimal"
+              min="0"
+              step="any"
               value={exitPrice}
               onChange={e => setExitPrice(e.target.value)}
               placeholder="例: 2800"

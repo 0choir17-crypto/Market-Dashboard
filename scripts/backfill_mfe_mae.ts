@@ -53,6 +53,7 @@ async function calculateMfeMae(
   entryDate: string,
   exitDate: string,
   entryPrice: number,
+  exitPrice?: number | null,
 ): Promise<MfeMaeResult | null> {
   const { data, error } = await supabase
     .from('daily_signals')
@@ -68,6 +69,11 @@ async function calculateMfeMae(
   for (const row of data as { date: string; close: number | null }[]) {
     if (row.close == null) continue
     if (!byDate.has(row.date)) byDate.set(row.date, row.close)
+  }
+  // 実際の約定価格は確実に「経験した価格」なので exitDate の候補として優先する
+  // （daily_signals は終値のみで、ストップ執行日の下ヒゲが欠落するため）
+  if (exitPrice != null && Number.isFinite(exitPrice)) {
+    byDate.set(exitDate, exitPrice)
   }
   if (byDate.size === 0) return null
 
@@ -93,7 +99,7 @@ async function main() {
 
   const { data: trades, error } = await supabase
     .from('trades')
-    .select('id, ticker, entry_date, exit_date, entry_price')
+    .select('id, ticker, entry_date, exit_date, entry_price, exit_price')
     .eq('status', 'closed')
     .is('mfe_pct', null)
 
@@ -108,7 +114,7 @@ async function main() {
   let success = 0
   let failed = 0
 
-  for (const t of targets as Array<{ id: number; ticker: string; entry_date: string; exit_date: string | null; entry_price: number | null }>) {
+  for (const t of targets as Array<{ id: number; ticker: string; entry_date: string; exit_date: string | null; entry_price: number | null; exit_price: number | null }>) {
     if (!t.exit_date || t.entry_price == null) {
       console.log(`スキップ: ${t.ticker} (データ不足)`)
       failed++
@@ -116,7 +122,7 @@ async function main() {
     }
 
     try {
-      const result = await calculateMfeMae(t.ticker, t.entry_date, t.exit_date, t.entry_price)
+      const result = await calculateMfeMae(t.ticker, t.entry_date, t.exit_date, t.entry_price, t.exit_price)
       if (!result) {
         console.log(`データなし: ${t.ticker} ${t.entry_date}〜${t.exit_date}`)
         failed++

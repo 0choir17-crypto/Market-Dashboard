@@ -60,7 +60,8 @@ export default function RiskTab({ riskSettings, history, onRefresh }: Props) {
   const isHalfRisk = consecLosses >= 3
   const appliedRiskPct = isHalfRisk ? rPct / 2 : rPct
 
-  const riskYenPerTrade = !isNaN(capital) && !isNaN(rPct) ? capital * rPct / 100 : null
+  // 連敗による半減後のリスク%で計算する（表示中の Applied Risk % と一致させる）
+  const riskYenPerTrade = !isNaN(capital) && !isNaN(rPct) ? capital * appliedRiskPct / 100 : null
   const maxInvestYen = !isNaN(capital) && !isNaN(maxPos) && maxPos > 0 ? capital / maxPos : null
   const monthlyDdPct = !isNaN(mStart) && mStart > 0 && monthlyPnlHasData ? (monthlyPnl / mStart) * 100 : null
   const ddOk = monthlyDdPct != null && !isNaN(mddLimit) ? monthlyDdPct > mddLimit : null
