@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
+import { fetchAllPaged } from '@/lib/pagedFetch'
 import { Trade } from '@/types/trades'
 import { RiskSettings } from '@/types/portfolio'
 import JournalStats from '@/components/journal/JournalStats'
@@ -15,6 +16,7 @@ import EditTradeModal from '@/components/journal/EditTradeModal'
 import PositionModal from '@/components/portfolio/PositionModal'
 import PositionsTab from '@/components/portfolio/PositionsTab'
 import RiskTab from '@/components/portfolio/RiskTab'
+import ErrorBanner from '@/components/shared/ErrorBanner'
 
 type Tab = 'positions' | 'journal' | 'risk'
 
@@ -29,6 +31,7 @@ export default function JournalPage() {
   const [trades, setTrades] = useState<Trade[]>([])
   const [riskSettings, setRiskSettings] = useState<RiskSettings | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [showNewTrade, setShowNewTrade] = useState(false)
   const [closingTrade, setClosingTrade] = useState<Trade | null>(null)
   const [editingTrade, setEditingTrade] = useState<Trade | null>(null)
@@ -36,20 +39,29 @@ export default function JournalPage() {
 
   const fetchAll = useCallback(async () => {
     setLoading(true)
+    // trades は全件取得（旧 .limit(500) はアクティブなトレーダーの統計を黙って切り捨てる）
     const [tradesRes, riskRes] = await Promise.all([
-      supabase
-        .from('trades')
-        .select('*')
-        .order('entry_date', { ascending: false })
-        .limit(500),
+      fetchAllPaged<Trade>((from, to) =>
+        supabase
+          .from('trades')
+          .select('*')
+          .order('entry_date', { ascending: false })
+          .order('id', { ascending: true })
+          .range(from, to),
+      ),
       supabase
         .from('risk_settings')
         .select('*')
         .limit(1)
         .maybeSingle(),
     ])
-    setTrades((tradesRes.data ?? []) as Trade[])
-    setRiskSettings((riskRes.data ?? null) as RiskSettings | null)
+    const errors: string[] = []
+    if (tradesRes.error) errors.push(`trades: ${tradesRes.error}`)
+    else setTrades(tradesRes.rows)
+    if (riskRes.error) errors.push(`risk_settings: ${riskRes.error.message}`)
+    else setRiskSettings((riskRes.data ?? null) as RiskSettings | null)
+    // 取得失敗時は直前の表示内容を保持し、バナーで不完全さを明示する
+    setError(errors.length > 0 ? errors.join(' / ') : null)
     setLoading(false)
   }, [])
 
@@ -123,13 +135,15 @@ export default function JournalPage() {
         </div>
       </div>
 
-      {/* Loading */}
+      {error && <ErrorBanner detail={error} onRetry={fetchAll} />}
+
+      {/* Loading (初回のみ全面表示。再取得中は既存表示を維持し、ヘッダーの Refresh が回る) */}
       {loading && trades.length === 0 && (
         <div className="text-center py-16 text-gray-400 text-sm">Loading...</div>
       )}
 
       {/* Tab content */}
-      {!loading && (
+      {!(loading && trades.length === 0) && (
         <>
           {activeTab === 'positions' && (
             <PositionsTab positions={openPositions} onRefresh={fetchAll} />

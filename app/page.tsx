@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { MarketConditions } from '@/types/market'
 import { useDate } from '@/contexts/DateContext'
@@ -13,8 +13,11 @@ export default function Page() {
   const [market, setMarket] = useState<MarketConditions | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  // 日付の高速切替時に古い応答が後着して新しい表示を上書きしないためのガード
+  const requestIdRef = useRef(0)
 
   const fetchData = useCallback(async () => {
+    const reqId = ++requestIdRef.current
     setLoading(true)
     setError(null)
 
@@ -35,6 +38,7 @@ export default function Page() {
           .limit(1)
 
     const { data, error: err } = await query.maybeSingle()
+    if (reqId !== requestIdRef.current) return // 古いリクエストの応答は破棄
 
     if (err) {
       console.error('[market_conditions]', err)

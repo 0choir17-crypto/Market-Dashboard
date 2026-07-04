@@ -1,12 +1,13 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   fetchEarningsQualitySnapshot,
   type EarningsQualitySnapshot,
 } from '@/lib/earningsQualityFetch'
 import { classifyFreshness } from '@/types/earningsQuality'
 import EarningsQualitySection from '@/components/earnings/EarningsQualitySection'
+import ErrorBanner from '@/components/shared/ErrorBanner'
 
 // 鮮度バッジ: latestDate と本日との営業日差で色分け。
 // 閑散期 (3/6/9/12月) では長期間データ更新が無いことが正常なので、
@@ -40,9 +41,14 @@ export default function EarningsPage() {
   const [loading, setLoading] = useState(true)
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
 
+  // 日付の高速切替時に古い応答が後着して新しい表示を上書きしないためのガード
+  const requestIdRef = useRef(0)
+
   const fetchData = useCallback(async (date?: string) => {
+    const reqId = ++requestIdRef.current
     setLoading(true)
     const snap = await fetchEarningsQualitySnapshot(date)
+    if (reqId !== requestIdRef.current) return // 古いリクエストの応答は破棄
     setSnapshot(snap)
     setSelectedDate(date ?? snap.latestDate)
     setLoading(false)
@@ -161,6 +167,10 @@ export default function EarningsPage() {
         </div>
       )}
 
+      {snapshot.error && (
+        <ErrorBanner detail={snapshot.error} onRetry={() => fetchData(selectedDate ?? undefined)} />
+      )}
+
       {loading && snapshot.rows.length === 0 && (
         <div
           className="bg-white rounded-xl border border-[#e8eaed] shadow-sm p-8 text-center"
@@ -184,7 +194,8 @@ export default function EarningsPage() {
         </div>
       )}
 
-      {!loading && snapshot.rows.length > 0 && (
+      {/* 再取得中も直前の内容を表示し続ける（初回ロード時のみ Loading 全面表示） */}
+      {snapshot.rows.length > 0 && (
         <EarningsQualitySection snapshot={snapshot} />
       )}
     </main>

@@ -1,10 +1,11 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useDate } from '@/contexts/DateContext'
 import { fetchToday, type TodayResponse } from '@/lib/todayFetch'
 import PullbackSetupsSection from '@/components/today/PullbackSetupsSection'
 import VolumeIgnitionSection from '@/components/today/VolumeIgnitionSection'
+import ErrorBanner from '@/components/shared/ErrorBanner'
 
 export default function TodayPage() {
   const { selectedDate, isLatest } = useDate()
@@ -16,14 +17,20 @@ export default function TodayPage() {
     igniteDate: null,
     ignite: [],
     hotSectors: [],
+    error: null,
   })
   const [loading, setLoading] = useState(true)
+  // fetchToday は最大 4 往復。日付を素早く切り替えた際に古い応答が
+  // 新しいバナーの下に残らないよう、最後のリクエストだけを採用する。
+  const requestIdRef = useRef(0)
 
   const fetchData = useCallback(async () => {
+    const reqId = ++requestIdRef.current
     setLoading(true)
     const result = await fetchToday({
       date: !isLatest && selectedDate ? selectedDate : undefined,
     })
+    if (reqId !== requestIdRef.current) return // 古いリクエストの応答は破棄
     setData(result)
     setLoading(false)
   }, [selectedDate, isLatest])
@@ -46,7 +53,7 @@ export default function TodayPage() {
             <span aria-hidden className="mr-2">📋</span>Daily Watch — 押し目ウォッチ
           </h1>
           <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
-            高値圏の押し目"候補"（収縮ベース + momentum 押し目）{total} 件 ／ 買いシグナルではありません
+            高値圏の押し目&quot;候補&quot;（収縮ベース + momentum 押し目）{total} 件 ／ 買いシグナルではありません
           </p>
         </div>
         <div className="flex items-center gap-4">
@@ -90,6 +97,8 @@ export default function TodayPage() {
           )}
         </div>
       )}
+
+      {data.error && <ErrorBanner detail={data.error} onRetry={fetchData} />}
 
       {loading && total === 0 ? (
         <div

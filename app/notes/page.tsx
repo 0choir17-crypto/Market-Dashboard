@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Note } from '@/types/notes'
 import {
   listNotes,
@@ -10,6 +10,7 @@ import {
   migrateLocalNotes,
 } from '@/lib/notesFetch'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
+import ErrorBanner from '@/components/shared/ErrorBanner'
 
 // 自由メモ / 気を付けること（複数・タイトル付き）。
 // 保存先は Supabase の notes テーブル。スマホ・PC など全端末で同期される。
@@ -53,17 +54,21 @@ export default function NotesPage() {
   const [dirty, setDirty] = useState(false)
   const [savedAt, setSavedAt] = useState<Date | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // 未保存の最新ドラフト。メモ切替・アンマウント時にここから flush して入力消失を防ぐ。
+  const pendingRef = useRef<{ id: string; title: string; body: string } | null>(null)
 
   // 初回: 旧ローカルメモを移行 → 一覧ロード → 先頭を選択
   useEffect(() => {
     let alive = true
     ;(async () => {
       await migrateLocalNotes()
-      const list = await listNotes()
+      const { notes: list, error: listError } = await listNotes()
       if (!alive) return
       setNotes(list)
+      if (listError) setError(`メモ一覧の取得に失敗しました: ${listError}`)
       if (list.length > 0) {
         const first = list[0]
         setSelectedId(first.id)
@@ -75,7 +80,40 @@ export default function NotesPage() {
     return () => { alive = false }
   }, [])
 
+  // 未保存ドラフトを即時保存（デバウンス満了前のメモ切替・アンマウント時）
+  const savePending = useCallback(async () => {
+    const pending = pendingRef.current
+    if (!pending) return
+    pendingRef.current = null
+    if (timer.current) {
+      clearTimeout(timer.current)
+      timer.current = null
+    }
+    const res = await updateNote(pending.id, { title: pending.title || null, body: pending.body })
+    if (res.error) {
+      setError(`メモの保存に失敗しました: ${res.error}`)
+      return
+    }
+    setError(null)
+    setSavedAt(new Date())
+    setDirty(false)
+    setNotes(prev =>
+      prev.map(n =>
+        n.id === pending.id
+          ? { ...n, title: pending.title || null, body: pending.body, updated_at: new Date().toISOString() }
+          : n,
+      ),
+    )
+  }, [])
+
+  // アンマウント時も未保存ドラフトを flush
+  useEffect(() => () => { void savePending() }, [savePending])
+
   function selectNote(n: Note) {
+    if (pendingRef.current) {
+      if (pendingRef.current.id === n.id) return // 同じメモ: 入力中ドラフトを保持
+      void savePending() // 切替前に未保存分を確定（600ms 以内の切替で入力が消えないように）
+    }
     setSelectedId(n.id)
     setTitle(n.title ?? '')
     setBody(n.body)
@@ -85,7 +123,10 @@ export default function NotesPage() {
 
   async function handleNew() {
     const created = await createNote({ title: '', body: '' })
-    if (!created) return
+    if (!created) {
+      setError('メモの作成に失敗しました。通信状態を確認してください。')
+      return
+    }
     setNotes(prev => [created, ...prev])
     selectNote(created)
   }
@@ -94,17 +135,28 @@ export default function NotesPage() {
     setConfirmDelete(false)
     if (!selectedId) return
     const id = selectedId
-    await deleteNote(id)
-    setNotes(prev => {
-      const next = prev.filter(n => n.id !== id)
-      if (next.length > 0) selectNote(next[0])
-      else {
-        setSelectedId(null)
-        setTitle('')
-        setBody('')
-      }
-      return next
-    })
+    // 削除対象の未保存ドラフトは破棄
+    if (pendingRef.current?.id === id) {
+      pendingRef.current = null
+      if (timer.current) clearTimeout(timer.current)
+    }
+    const res = await deleteNote(id)
+    if (res.error) {
+      setError(`メモの削除に失敗しました: ${res.error}`)
+      return
+    }
+    setError(null)
+    const next = notes.filter(n => n.id !== id)
+    setNotes(next)
+    if (next.length > 0) {
+      selectNote(next[0])
+    } else {
+      setSelectedId(null)
+      setTitle('')
+      setBody('')
+      setDirty(false)
+      setSavedAt(null)
+    }
   }
 
   async function togglePin() {
@@ -112,7 +164,11 @@ export default function NotesPage() {
     const cur = notes.find(n => n.id === selectedId)
     if (!cur) return
     const pinned = !cur.pinned
-    await updateNote(selectedId, { pinned })
+    const res = await updateNote(selectedId, { pinned })
+    if (res.error) {
+      setError(`メモの更新に失敗しました: ${res.error}`)
+      return
+    }
     setNotes(prev => prev.map(n => (n.id === selectedId ? { ...n, pinned } : n)))
   }
 
@@ -124,24 +180,13 @@ export default function NotesPage() {
     if ((cur.title ?? '') === title && cur.body === body) return // 選択直後など差分なし
 
     setDirty(true) // eslint-disable-line react-hooks/set-state-in-effect
+    pendingRef.current = { id: selectedId, title, body }
     if (timer.current) clearTimeout(timer.current)
-    const id = selectedId
-    timer.current = setTimeout(async () => {
-      const res = await updateNote(id, { title: title || null, body })
-      if (!res.error) {
-        setSavedAt(new Date())
-        setDirty(false)
-        setNotes(prev =>
-          prev.map(n =>
-            n.id === id ? { ...n, title: title || null, body, updated_at: new Date().toISOString() } : n,
-          ),
-        )
-      }
-    }, 600)
+    timer.current = setTimeout(() => { void savePending() }, 600)
     return () => {
       if (timer.current) clearTimeout(timer.current)
     }
-  }, [title, body, selectedId, notes])
+  }, [title, body, selectedId, notes, savePending])
 
   const selectedNote = selectedId ? notes.find(n => n.id === selectedId) ?? null : null
 
@@ -169,6 +214,8 @@ export default function NotesPage() {
           )}
         </div>
       </header>
+
+      {error && <ErrorBanner detail={error} />}
 
       {loading ? (
         <div

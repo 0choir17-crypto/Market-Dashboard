@@ -20,6 +20,7 @@ export type LeadersSnapshot = {
   rows: MarketLeader[]
   hitsMap: Map<string, LeaderHits>
   availableDates: string[]           // 日付ピッカー用 (降順、全履歴)
+  error?: string | null              // fetch失敗時のメッセージ（空データと区別する）
 }
 
 // ── 最新日付の取得 ─────────────────────────────────────────────────────────
@@ -89,7 +90,7 @@ export async function fetchLeadersSnapshot(date?: string): Promise<LeadersSnapsh
   const targetDate = date ?? (await fetchLatestDate())
 
   if (!targetDate) {
-    return { latestDate: null, prevDate: null, rows: [], hitsMap: new Map(), availableDates: [] }
+    return { latestDate: null, prevDate: null, rows: [], hitsMap: new Map(), availableDates: [], error: null }
   }
 
   // targetDate の Top50 全列 と、全履歴の出現データ (実数算出用) を並行取得。
@@ -100,6 +101,7 @@ export async function fetchLeadersSnapshot(date?: string): Promise<LeadersSnapsh
 
   if (rowsRes.error) console.error('[market_leaders snapshot]', rowsRes.error)
   const rows = (rowsRes.data ?? []) as unknown as MarketLeader[]
+  const snapshotError = rowsRes.error ? rowsRes.error.message : null
 
   // availableDates = 全取引日 (降順)。targetDate を起点に降順シーケンスで連続判定する。
   const availableDates = history.dates
@@ -136,7 +138,7 @@ export async function fetchLeadersSnapshot(date?: string): Promise<LeadersSnapsh
     hitsMap.set(r.code, { hits: dates.size, streak, lastBeforeStreak })
   }
 
-  return { latestDate: targetDate, prevDate, rows, hitsMap, availableDates }
+  return { latestDate: targetDate, prevDate, rows, hitsMap, availableDates, error: snapshotError }
 }
 
 // ── View D: セクターローテーション (週次 × 過去 6 ヶ月) ────────────────

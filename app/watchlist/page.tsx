@@ -6,6 +6,7 @@ import { WatchlistItem } from '@/types/portfolio'
 import { Trade } from '@/types/trades'
 import WatchlistModal from '@/components/watchlist/WatchlistModal'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
+import ErrorBanner from '@/components/shared/ErrorBanner'
 import PositionModal from '@/components/portfolio/PositionModal'
 import StockGrid, { GridEntry } from '@/components/chart/StockGrid'
 import StockChartView from '@/components/chart/StockChartView'
@@ -29,6 +30,7 @@ function fmt(v: number | null | undefined, d = 0): string {
 export default function WatchlistPage() {
   const [items, setItems] = useState<WatchlistItem[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [sortKey, setSortKey] = useState<SortKey>('watch_date')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
 
@@ -44,11 +46,18 @@ export default function WatchlistPage() {
 
   const load = useCallback(async () => {
     setLoading(true)
-    const { data } = await supabase
+    const { data, error: err } = await supabase
       .from('watchlist')
       .select('*')
       .order('watch_date', { ascending: false })
-    setItems((data ?? []) as WatchlistItem[])
+    if (err) {
+      // 取得失敗時は直前の表示内容を保持し、バナーで明示（空リストと混同させない）
+      console.error('[watchlist] fetch error', err)
+      setError(`watchlist: ${err.message}`)
+    } else {
+      setItems((data ?? []) as WatchlistItem[])
+      setError(null)
+    }
     setLoading(false)
   }, [])
 
@@ -59,12 +68,16 @@ export default function WatchlistPage() {
     else { setSortKey(key); setSortDir('desc') }
   }
 
-  const sorted = [...items].sort((a, b) => {
-    const av = a[sortKey] ?? ''
-    const bv = b[sortKey] ?? ''
-    const cmp = av < bv ? -1 : av > bv ? 1 : 0
-    return sortDir === 'asc' ? cmp : -cmp
-  })
+  // useMemo 必須: 毎レンダーで新配列を作ると下流の cardEntries も毎回変わり、
+  // StockGrid の表示件数 (shown) が操作のたびに 12 件へリセットされてしまう。
+  const sorted = useMemo(() => {
+    return [...items].sort((a, b) => {
+      const av = a[sortKey] ?? ''
+      const bv = b[sortKey] ?? ''
+      const cmp = av < bv ? -1 : av > bv ? 1 : 0
+      return sortDir === 'asc' ? cmp : -cmp
+    })
+  }, [items, sortKey, sortDir])
 
   // Cards: only Japanese 4-digit tickers can hit `chart_ohlcv_cache`.
   const cardEntries: GridEntry[] = useMemo(
@@ -100,8 +113,15 @@ export default function WatchlistPage() {
 
   async function handleDelete() {
     if (!deleteItem) return
-    await supabase.from('watchlist').delete().eq('id', deleteItem.id)
+    const { error: err } = await supabase.from('watchlist').delete().eq('id', deleteItem.id)
     setDeleteItem(null)
+    if (err) {
+      // 削除失敗は黙って戻さない（リロードで行が復活して見えるだけ、を防ぐ）
+      console.error('[watchlist] delete error', err)
+      setError(`削除に失敗しました: ${err.message}`)
+      return
+    }
+    setError(null)
     load()
   }
 
@@ -148,6 +168,8 @@ export default function WatchlistPage() {
           <span className="text-lg leading-none">+</span> Add Watch
         </button>
       </header>
+
+      {error && <ErrorBanner detail={error} onRetry={load} />}
 
       {/* Cards (Japanese tickers only) */}
       {cardEntries.length > 0 && (
