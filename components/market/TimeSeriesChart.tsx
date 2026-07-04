@@ -6,8 +6,10 @@ import {
   ColorType,
   LineStyle,
   IChartApi,
+  ISeriesApi,
+  IPriceLine,
 } from 'lightweight-charts'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 export interface TimeSeriesPoint {
   time: string
@@ -35,6 +37,15 @@ export interface TimeSeriesChartProps {
   yMin?: number
 }
 
+// デフォルト引数に [] リテラルを使うと毎レンダーで identity が変わり
+// 下の setData effect が無駄に走るため、モジュール定数を使う
+const NO_LINES: HorizontalLine[] = []
+
+type ChartHandles = {
+  chart: IChartApi
+  mainSeries: ISeriesApi<'Line'>
+}
+
 export function TimeSeriesChart({
   data,
   secondaryData,
@@ -42,17 +53,23 @@ export function TimeSeriesChart({
   secondaryColor = '#3b82f6',
   name,
   secondaryName,
-  horizontalLines = [],
+  horizontalLines = NO_LINES,
   height = 240,
   yMax,
   yMin,
 }: TimeSeriesChartProps) {
   const containerRef = useRef<HTMLDivElement>(null)
-  const chartRef = useRef<IChartApi | null>(null)
+  const [handles, setHandles] = useState<ChartHandles | null>(null)
+  const secSeriesRef = useRef<ISeriesApi<'Line'> | null>(null)
+  const priceLinesRef = useRef<IPriceLine[]>([])
 
+  const hasData = data.length > 0
+
+  // チャート生成: マウント時とスタイル系 props 変更時のみ。
+  // data 変更でチャートを作り直すとパン/ズームが失われるため分離している。
   useEffect(() => {
     const container = containerRef.current
-    if (!container || data.length === 0) return
+    if (!container || !hasData) return
 
     const chart = createChart(container, {
       height,
@@ -83,29 +100,6 @@ export function TimeSeriesChart({
       lastValueVisible: true,
       title: name,
     })
-    mainSeries.setData(data)
-
-    if (secondaryData && secondaryData.length > 0) {
-      const secSeries = chart.addSeries(LineSeries, {
-        color: secondaryColor,
-        lineWidth: 2,
-        priceLineVisible: false,
-        lastValueVisible: true,
-        title: secondaryName,
-      })
-      secSeries.setData(secondaryData)
-    }
-
-    horizontalLines.forEach((line) => {
-      mainSeries.createPriceLine({
-        price: line.price,
-        color: line.color,
-        lineWidth: 1,
-        lineStyle: line.lineStyle ?? LineStyle.Dashed,
-        axisLabelVisible: line.axisLabelVisible ?? true,
-        title: line.title ?? '',
-      })
-    })
 
     if (yMax !== undefined && yMin !== undefined) {
       const yMinFixed = yMin
@@ -117,33 +111,64 @@ export function TimeSeriesChart({
       })
     }
 
-    chart.timeScale().fitContent()
-    chartRef.current = chart
+    setHandles({ chart, mainSeries })
 
     const handleResize = () => {
-      if (chartRef.current && container) {
-        chartRef.current.applyOptions({ width: container.clientWidth })
-      }
+      chart.applyOptions({ width: container.clientWidth })
     }
     window.addEventListener('resize', handleResize)
 
     return () => {
       window.removeEventListener('resize', handleResize)
       chart.remove()
-      chartRef.current = null
+      secSeriesRef.current = null
+      priceLinesRef.current = []
+      setHandles(null)
     }
-  }, [
-    data,
-    secondaryData,
-    color,
-    secondaryColor,
-    name,
-    secondaryName,
-    horizontalLines,
-    height,
-    yMax,
-    yMin,
-  ])
+  }, [hasData, color, name, height, yMin, yMax])
+
+  // データ・水平線の反映: 既存チャートに setData するだけで作り直さない
+  useEffect(() => {
+    if (!handles) return
+    const { chart, mainSeries } = handles
+
+    mainSeries.setData(data)
+
+    if (secondaryData && secondaryData.length > 0) {
+      if (!secSeriesRef.current) {
+        secSeriesRef.current = chart.addSeries(LineSeries, {
+          color: secondaryColor,
+          lineWidth: 2,
+          priceLineVisible: false,
+          lastValueVisible: true,
+          title: secondaryName,
+        })
+      } else {
+        secSeriesRef.current.applyOptions({
+          color: secondaryColor,
+          title: secondaryName,
+        })
+      }
+      secSeriesRef.current.setData(secondaryData)
+    } else if (secSeriesRef.current) {
+      chart.removeSeries(secSeriesRef.current)
+      secSeriesRef.current = null
+    }
+
+    priceLinesRef.current.forEach((line) => mainSeries.removePriceLine(line))
+    priceLinesRef.current = horizontalLines.map((line) =>
+      mainSeries.createPriceLine({
+        price: line.price,
+        color: line.color,
+        lineWidth: 1,
+        lineStyle: line.lineStyle ?? LineStyle.Dashed,
+        axisLabelVisible: line.axisLabelVisible ?? true,
+        title: line.title ?? '',
+      }),
+    )
+
+    chart.timeScale().fitContent()
+  }, [handles, data, secondaryData, secondaryColor, secondaryName, horizontalLines])
 
   if (data.length === 0) {
     return (

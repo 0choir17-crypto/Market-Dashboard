@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import type { SectorHistoryResponse } from '@/lib/sectorSelectionHistoryFetch'
+import { compositeColor } from '@/types/sectorSelection'
 
 type Props = {
   history: SectorHistoryResponse
@@ -9,16 +10,27 @@ type Props = {
 
 type SortKey = 'score' | 'delta'
 
+// 閾値は types/sectorSelection.ts の compositeColor (green>=60 / yellow>=30) に
+// 一元化。SectorSelectionTable・ホットセクター判定 (>=60) と同じ色分けになる。
+// バー用に淡色 bg → 濃色 hex へマップするだけで、判定自体は共有関数に委譲する。
+const BAR_COLOR: Record<string, string> = {
+  '#dcfce7': '#22c55e', // green (>=60)
+  '#fef3c7': '#eab308', // yellow (>=30)
+  '#fee2e2': '#ef4444', // red (<30)
+}
+
+const BAR_BORDER: Record<string, string> = {
+  '#dcfce7': '#16a34a',
+  '#fef3c7': '#ca8a04',
+  '#fee2e2': '#dc2626',
+}
+
 function phaseColor(score: number): string {
-  if (score >= 70) return '#22c55e'
-  if (score >= 40) return '#eab308'
-  return '#ef4444'
+  return BAR_COLOR[compositeColor(score).bg] ?? '#9ca3af'
 }
 
 function phaseBorder(score: number): string {
-  if (score >= 70) return '#16a34a'
-  if (score >= 40) return '#ca8a04'
-  return '#dc2626'
+  return BAR_BORDER[compositeColor(score).bg] ?? '#d1d5db'
 }
 
 type SectorSeries = {
@@ -206,15 +218,15 @@ export default function SectorBarChart33({ history }: Props) {
       <div className="flex items-center justify-center gap-5 mt-3 text-[11px]">
         <span className="flex items-center gap-1">
           <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: '#22c55e' }} />
-          <span style={{ color: 'var(--text-secondary)' }}>Leader (≥70)</span>
+          <span style={{ color: 'var(--text-secondary)' }}>Leader (≥60)</span>
         </span>
         <span className="flex items-center gap-1">
           <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: '#eab308' }} />
-          <span style={{ color: 'var(--text-secondary)' }}>Neutral (40–70)</span>
+          <span style={{ color: 'var(--text-secondary)' }}>Neutral (30–60)</span>
         </span>
         <span className="flex items-center gap-1">
           <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: '#ef4444' }} />
-          <span style={{ color: 'var(--text-secondary)' }}>Lagging (&lt;40)</span>
+          <span style={{ color: 'var(--text-secondary)' }}>Lagging (&lt;30)</span>
         </span>
       </div>
     </div>

@@ -204,8 +204,12 @@ export default function SignalsTable({ signals, marketRegime, scorecardRegime }:
         : bv.localeCompare(av, 'ja')
     }
     // 数値ソート
-    const av = (a[sortKey] as number | null) ?? -Infinity
-    const bv = (b[sortKey] as number | null) ?? -Infinity
+    const av = (a[sortKey] as number | null | undefined) ?? null
+    const bv = (b[sortKey] as number | null | undefined) ?? null
+    // null は昇順・降順に関わらず常に末尾
+    if (av == null && bv == null) return 0
+    if (av == null) return 1
+    if (bv == null) return -1
     if (av === bv) return 0
     return sortDir === 'asc' ? (av > bv ? 1 : -1) : (av < bv ? 1 : -1)
   })
