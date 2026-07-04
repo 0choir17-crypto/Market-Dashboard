@@ -11,6 +11,7 @@ import SectorSelectionTable from '@/components/sectors33/SectorSelectionTable'
 import SectorRRG33 from '@/components/sectors33/SectorRRG33'
 import SectorBarChart33 from '@/components/sectors33/SectorBarChart33'
 import ErrorBanner from '@/components/shared/ErrorBanner'
+import PageHeader from '@/components/shared/PageHeader'
 
 type View = 'bar' | 'rrg'
 
@@ -50,47 +51,13 @@ export default function SectorSelectionPage() {
   return (
     <main className="min-h-screen p-6" style={{ backgroundColor: 'var(--bg-primary)' }}>
 
-      <header className="flex justify-between items-center mb-6">
-        <div>
-          <h1
-            className="text-2xl font-bold"
-            style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-sans, sans-serif)' }}
-          >
-            Sector Selection
-          </h1>
-          <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
-            TOPIX-33 業種別 composite_score (今どこを買うか)
-          </p>
-        </div>
-        <div className="flex items-center gap-4">
-          {latestDate && (
-            <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-              Updated: {latestDate}
-            </span>
-          )}
-          <button
-            onClick={fetchData}
-            disabled={loading}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium border border-[var(--border)] bg-white hover:bg-[var(--bg-card-hover)] transition-colors disabled:opacity-50"
-            style={{ color: 'var(--accent)' }}
-          >
-            <svg
-              className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-              />
-            </svg>
-            {loading ? 'Refreshing...' : 'Refresh'}
-          </button>
-        </div>
-      </header>
+      <PageHeader
+        title="Sector Selection"
+        subtitle="TOPIX-33 業種別 composite_score（今どこを買うか）"
+        date={latestDate}
+        onRefresh={fetchData}
+        refreshing={loading}
+      />
 
       {error && <ErrorBanner detail={error} onRetry={fetchData} />}
 
@@ -99,7 +66,7 @@ export default function SectorSelectionPage() {
           className="bg-white rounded-xl border border-[#e8eaed] shadow-sm p-8 text-center"
           style={{ color: 'var(--text-muted)' }}
         >
-          <p className="text-lg font-medium">Loading...</p>
+          <p className="text-lg font-medium">読み込み中…</p>
         </div>
       )}
 

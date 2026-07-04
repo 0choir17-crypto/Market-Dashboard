@@ -1,6 +1,7 @@
 'use client'
 
 import { Trade } from '@/types/trades'
+import { formatYen, formatPct, formatR, pnlColorClass } from '@/lib/format'
 
 type Props = {
   history: Trade[]
@@ -13,20 +14,18 @@ function fmt(v: number | null | undefined, d = 0): string {
 
 function PnlCell({ value }: { value: number | null }) {
   if (value == null) return <span className="text-gray-400 font-mono text-xs">—</span>
-  const pos = value >= 0
   return (
-    <span className={`font-mono text-xs font-semibold ${pos ? 'text-green-600' : 'text-red-600'}`}>
-      {pos ? '+' : ''}¥{fmt(value)}
+    <span className={`font-mono text-xs font-semibold ${pnlColorClass(value)}`}>
+      {formatYen(value, { sign: true })}
     </span>
   )
 }
 
 function RCell({ value }: { value: number | null }) {
   if (value == null) return <span className="text-gray-400 font-mono text-xs">—</span>
-  const pos = value >= 0
   return (
-    <span className={`font-mono text-xs font-bold ${pos ? 'text-green-600' : 'text-red-600'}`}>
-      {pos ? '+' : ''}{value.toFixed(2)}R
+    <span className={`font-mono text-xs font-bold ${pnlColorClass(value)}`}>
+      {formatR(value)}
     </span>
   )
 }
@@ -74,13 +73,13 @@ export default function HistoryTab({ history }: Props) {
       {/* Stats summary */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
         {[
-          { label: 'Win Rate', value: winRate != null ? `${winRate.toFixed(1)}%` : '—', color: winRate != null && winRate >= 50 ? 'text-green-600' : 'text-red-500' },
-          { label: 'Avg R', value: avgR != null ? `${avgR >= 0 ? '+' : ''}${avgR.toFixed(2)}R` : '—', color: avgR != null && avgR >= 0 ? 'text-green-600' : 'text-red-500' },
-          { label: 'Profit Factor', value: profitFactor != null ? profitFactor.toFixed(2) : '—', color: profitFactor != null && profitFactor >= 1.5 ? 'text-green-600' : 'text-gray-700' },
-          { label: 'Total PnL', value: trades.length > 0 ? `${totalPnl >= 0 ? '+' : ''}¥${fmt(totalPnl)}` : '—', color: totalPnl >= 0 ? 'text-green-600' : 'text-red-600' },
+          { label: 'Win Rate', value: winRate != null ? formatPct(winRate, { digits: 1 }) : '—', color: winRate != null && winRate >= 50 ? 'text-[var(--positive)]' : 'text-[var(--negative)]' },
+          { label: 'Avg R', value: formatR(avgR), color: avgR != null && avgR >= 0 ? 'text-[var(--positive)]' : 'text-[var(--negative)]' },
+          { label: 'Profit Factor', value: profitFactor != null ? profitFactor.toFixed(2) : '—', color: profitFactor != null && profitFactor >= 1.5 ? 'text-[var(--positive)]' : 'text-gray-700' },
+          { label: 'Total PnL', value: trades.length > 0 ? formatYen(totalPnl, { sign: true }) : '—', color: pnlColorClass(totalPnl) },
         ].map(({ label, value, color }) => (
           <div key={label} className="bg-white rounded-xl border border-[#e8eaed] shadow-sm px-4 py-3">
-            <p className="text-xs text-gray-400 mb-1">{label}</p>
+            <p className="text-[11px] font-medium uppercase tracking-wide text-[var(--text-muted)] mb-1">{label}</p>
             <p className={`text-lg font-bold font-mono ${color}`}>{value}</p>
           </div>
         ))}
@@ -92,11 +91,11 @@ export default function HistoryTab({ history }: Props) {
           { label: 'Wins', value: String(wins.length) },
           { label: 'Losses', value: String(losses.length) },
           { label: 'Avg Hold', value: avgHoldDays != null ? `${avgHoldDays.toFixed(1)}d` : '—' },
-          { label: 'Max Win', value: maxWin != null ? `+¥${fmt(maxWin)}` : '—' },
-          { label: 'Max Loss', value: maxLoss != null ? `¥${fmt(maxLoss)}` : '—' },
+          { label: 'Max Win', value: formatYen(maxWin, { sign: true }) },
+          { label: 'Max Loss', value: formatYen(maxLoss, { sign: true }) },
         ].map(({ label, value }) => (
           <div key={label} className="bg-white rounded-xl border border-[#e8eaed] shadow-sm px-4 py-3">
-            <p className="text-xs text-gray-400 mb-1">{label}</p>
+            <p className="text-[11px] font-medium uppercase tracking-wide text-[var(--text-muted)] mb-1">{label}</p>
             <p className="text-sm font-semibold text-gray-700 font-mono">{value}</p>
           </div>
         ))}
@@ -108,7 +107,7 @@ export default function HistoryTab({ history }: Props) {
           <thead>
             <tr className="bg-gray-50 border-b border-t border-[#e8eaed]">
               {['Ticker','Name','Entry Date','Exit Date','Entry','Exit','Shares','PnL','R','Exit Reason','Memo'].map(h => (
-                <th key={h} className={`px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap ${h === 'Ticker' || h === 'Name' || h === 'Memo' ? 'text-left' : 'text-right'}`}>
+                <th key={h} className={`px-3 py-2.5 text-xs font-medium text-[var(--text-secondary)] uppercase tracking-wide whitespace-nowrap ${h === 'Ticker' || h === 'Name' || h === 'Memo' ? 'text-left' : 'text-right'}`}>
                   {h}
                 </th>
               ))}
@@ -116,7 +115,7 @@ export default function HistoryTab({ history }: Props) {
           </thead>
           <tbody>
             {history.map((h, i) => (
-              <tr key={h.id} className={`border-b border-[#f0f2f4] hover:bg-gray-50 transition-colors ${i % 2 === 0 ? 'bg-white' : 'bg-[#fafafa]'}`}>
+              <tr key={h.id} className={`border-b border-[#f0f2f4] hover:bg-[var(--bg-card-hover)] transition-colors ${i % 2 === 0 ? 'bg-white' : 'bg-[#fafafa]'}`}>
                 <td className="px-3 py-2.5 whitespace-nowrap">
                   <a href={`https://jp.tradingview.com/chart/?symbol=TSE:${h.ticker}`} target="_blank" rel="noreferrer"
                      className="font-mono font-bold text-blue-600 hover:underline text-xs">{h.ticker}</a>
@@ -156,11 +155,11 @@ export default function HistoryTab({ history }: Props) {
               <ExitBadge reason={h.exit_reason} />
             </div>
             <div className="grid grid-cols-3 gap-2 text-xs text-gray-600 mb-2">
-              <div><span className="text-gray-400 block">Entry</span>{h.entry_date ?? '—'}</div>
-              <div><span className="text-gray-400 block">Exit</span>{h.exit_date ?? '—'}</div>
-              <div><span className="text-gray-400 block">Shares</span>{fmt(h.shares)}</div>
-              <div><span className="text-gray-400 block">Buy</span>{h.entry_price != null ? `¥${fmt(h.entry_price)}` : '—'}</div>
-              <div><span className="text-gray-400 block">Sell</span>{h.exit_price != null ? `¥${fmt(h.exit_price)}` : '—'}</div>
+              <div><span className="text-gray-400 block">Entry</span><span className="font-mono">{h.entry_date ?? '—'}</span></div>
+              <div><span className="text-gray-400 block">Exit</span><span className="font-mono">{h.exit_date ?? '—'}</span></div>
+              <div><span className="text-gray-400 block">Shares</span><span className="font-mono">{fmt(h.shares)}</span></div>
+              <div><span className="text-gray-400 block">Buy</span><span className="font-mono">{h.entry_price != null ? `¥${fmt(h.entry_price)}` : '—'}</span></div>
+              <div><span className="text-gray-400 block">Sell</span><span className="font-mono">{h.exit_price != null ? `¥${fmt(h.exit_price)}` : '—'}</span></div>
               <div><span className="text-gray-400 block">R</span><RCell value={h.r_multiple} /></div>
             </div>
             <div className="flex justify-between items-center">

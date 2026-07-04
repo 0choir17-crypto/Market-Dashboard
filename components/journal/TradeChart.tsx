@@ -242,7 +242,7 @@ export default function TradeChart({ trade }: Props) {
 
       {loading ? (
         <div className="h-80 flex items-center justify-center bg-white border border-gray-200 rounded-lg">
-          <div className="text-sm text-gray-500">📈 チャート読み込み中...</div>
+          <div className="text-sm text-gray-500">📈 チャート読み込み中…</div>
         </div>
       ) : (
         <div

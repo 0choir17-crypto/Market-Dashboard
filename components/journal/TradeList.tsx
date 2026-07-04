@@ -4,6 +4,7 @@ import { Trade } from '@/types/trades'
 import { SCREEN_NAME_MAP } from '@/lib/screenNames'
 import { getTagById } from '@/lib/reviewTags'
 import { effectiveResult } from '@/lib/tradeResult'
+import { formatYen, formatPct } from '@/lib/format'
 import ReviewSection from './ReviewSection'
 
 export type ExpandedReview = number | null
@@ -150,8 +151,8 @@ export default function TradeList({
                     </div>
                     {/* 2行目: エントリー情報 */}
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-gray-500">
-                      <span>{t.entry_date}</span>
-                      <span>&yen;{t.entry_price.toLocaleString()} &times; {t.shares}株</span>
+                      <span className="font-mono">{t.entry_date}</span>
+                      <span className="font-mono">&yen;{t.entry_price.toLocaleString()} &times; {t.shares}株</span>
                     </div>
                     {/* 3行目: シグナルスナップショット */}
                     <SignalSnapshotLine t={t} />
@@ -161,13 +162,13 @@ export default function TradeList({
                       onClick={() => onEdit(t)}
                       className="px-3 py-1.5 text-xs font-medium text-gray-600 border border-gray-300 hover:bg-gray-100 rounded-lg transition-colors"
                     >
-                      Edit
+                      編集
                     </button>
                     <button
                       onClick={() => onClose(t)}
                       className="px-3 py-1.5 text-xs font-medium text-white bg-orange-500 hover:bg-orange-600 rounded-lg transition-colors"
                     >
-                      Close
+                      決済
                     </button>
                   </div>
                 </div>
@@ -211,9 +212,9 @@ export default function TradeList({
                         : tone === 'loss' ? 'bg-red-100 text-red-700'
                         : 'bg-gray-100 text-gray-600'
                       const valueClass =
-                        tone === 'win' ? 'text-emerald-600'
-                        : tone === 'loss' ? 'text-red-600'
-                        : 'text-gray-600'
+                        tone === 'win' ? 'text-[var(--positive)]'
+                        : tone === 'loss' ? 'text-[var(--negative)]'
+                        : 'text-[var(--text-secondary)]'
                       const tags = t.review_tags ?? []
                       const hasReview = !!t.reviewed_at
                       const days = holdDays(t.entry_date, t.exit_date)
@@ -261,17 +262,17 @@ export default function TradeList({
 
                             {/* 2行目: PnL %・¥・保有日数 */}
                             <div className="flex items-baseline justify-between gap-2">
-                              <span className={`text-lg font-bold leading-none ${valueClass}`}>
-                                {(t.pnl_pct ?? 0) >= 0 ? '+' : ''}{(t.pnl_pct ?? 0).toFixed(2)}%
+                              <span className={`text-lg font-bold font-mono leading-none ${valueClass}`}>
+                                {formatPct(t.pnl_pct ?? 0, { sign: true })}
                               </span>
                               <div className="flex items-baseline gap-2 text-xs">
                                 {t.pnl != null && (
                                   <span className={`font-mono font-semibold ${valueClass}`}>
-                                    {t.pnl >= 0 ? '+' : '-'}&yen;{Math.abs(Math.round(t.pnl)).toLocaleString()}
+                                    {formatYen(t.pnl, { sign: true })}
                                   </span>
                                 )}
                                 {days != null && (
-                                  <span className="text-[11px] text-gray-500">{days}日</span>
+                                  <span className="text-[11px] text-gray-500 font-mono">{days}日</span>
                                 )}
                               </div>
                             </div>
@@ -303,7 +304,7 @@ export default function TradeList({
                               onClick={() => onEdit(t)}
                               className="px-2.5 py-1 text-[11px] font-medium text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
                             >
-                              Edit
+                              編集
                             </button>
                             <button
                               onClick={() => onToggleReview(t.id)}
@@ -315,7 +316,7 @@ export default function TradeList({
                                     : 'bg-amber-500 border-amber-500 text-white hover:bg-amber-600'
                               }`}
                             >
-                              {hasReview ? '🔍 Re-edit' : '🔍 Review'}
+                              {hasReview ? '🔍 再編集' : '🔍 レビュー'}
                             </button>
                           </div>
 

@@ -7,6 +7,7 @@ import { classifyResult } from '@/lib/tradeResult'
 import { EXIT_REASONS } from '@/components/journal/CloseTradeModal'
 import { fetchSectorNames33 } from '@/lib/sectorNames'
 import { todayJST } from '@/lib/dates'
+import { formatYen, formatPct } from '@/lib/format'
 import Modal from '@/components/shared/Modal'
 
 type Props = {
@@ -342,8 +343,8 @@ export default function PositionModal({ open, onClose, onSaved, initial }: Props
             <label className="block text-xs font-medium text-gray-600 mb-1">
               Stop Price
               {stopPctFromEntry != null && (
-                <span className="ml-1 font-normal text-orange-600">
-                  （Entry比 {stopPctFromEntry >= 0 ? '+' : ''}{stopPctFromEntry.toFixed(2)}%）
+                <span className="ml-1 font-normal font-mono text-orange-600">
+                  （Entry比 {formatPct(stopPctFromEntry, { sign: true })}）
                 </span>
               )}
             </label>
@@ -362,8 +363,8 @@ export default function PositionModal({ open, onClose, onSaved, initial }: Props
             <label className="block text-xs font-medium text-gray-600 mb-1">
               Target Price (目標株価)
               {targetPctFromEntry != null && (
-                <span className="ml-1 font-normal text-emerald-600">
-                  （Entry比 {targetPctFromEntry >= 0 ? '+' : ''}{targetPctFromEntry.toFixed(2)}%）
+                <span className="ml-1 font-normal font-mono text-emerald-600">
+                  （Entry比 {formatPct(targetPctFromEntry, { sign: true })}）
                 </span>
               )}
             </label>
@@ -453,9 +454,9 @@ export default function PositionModal({ open, onClose, onSaved, initial }: Props
               : exitPreview.result === 'LOSS' ? 'text-red-700' : 'text-gray-700'
             return (
               <div className={`rounded-lg px-4 py-2 text-center ${bg}`}>
-                <span className={`text-base font-bold ${fgStrong}`}>
-                  {exitPreview.pnl >= 0 ? '+' : ''}&yen;{exitPreview.pnl.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                  {' '}({exitPreview.pnlPct >= 0 ? '+' : ''}{exitPreview.pnlPct.toFixed(2)}%)
+                <span className={`text-base font-bold font-mono ${fgStrong}`}>
+                  {formatYen(exitPreview.pnl, { sign: true })}
+                  {' '}({formatPct(exitPreview.pnlPct, { sign: true })})
                 </span>
                 <span className={`ml-2 text-xs font-semibold ${fgStrong}`}>{exitPreview.result}</span>
               </div>
@@ -468,14 +469,14 @@ export default function PositionModal({ open, onClose, onSaved, initial }: Props
             onClick={onClose}
             className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors min-h-[44px]"
           >
-            Cancel
+            キャンセル
           </button>
           <button
             onClick={handleSave}
             disabled={saving}
             className="px-5 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors min-h-[44px] disabled:opacity-50"
           >
-            {saving ? 'Saving...' : 'Save'}
+            {saving ? '保存中…' : '保存'}
           </button>
         </div>
       </div>

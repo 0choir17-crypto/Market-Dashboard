@@ -12,6 +12,7 @@ import {
   YAxis,
 } from 'recharts'
 import { Trade } from '@/types/trades'
+import { formatYen } from '@/lib/format'
 
 type Props = {
   trades: Trade[]
@@ -22,11 +23,6 @@ type Point = {
   cumulative: number
   pnl: number
   ticker: string
-}
-
-function fmtYen(v: number): string {
-  const sign = v >= 0 ? '+' : '-'
-  return `${sign}¥${Math.abs(Math.round(v)).toLocaleString('ja-JP')}`
 }
 
 function fmtAxis(v: number): string {
@@ -98,21 +94,21 @@ export default function EquityCurveChart({ trades }: Props) {
         <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs font-mono">
           <span>
             <span className="text-gray-500">Final: </span>
-            <strong className={isUp ? 'text-emerald-600' : 'text-red-600'}>
-              {fmtYen(final)}
+            <strong className={isUp ? 'text-[var(--positive)]' : 'text-[var(--negative)]'}>
+              {formatYen(final, { sign: true })}
             </strong>
           </span>
           <span>
             <span className="text-gray-500">Peak: </span>
-            <strong className="text-gray-700">{fmtYen(peak)}</strong>
+            <strong className="text-gray-700">{formatYen(peak, { sign: true })}</strong>
           </span>
           <span>
             <span className="text-gray-500">Trough: </span>
-            <strong className="text-gray-700">{fmtYen(trough)}</strong>
+            <strong className="text-gray-700">{formatYen(trough, { sign: true })}</strong>
           </span>
           <span>
             <span className="text-gray-500">Max DD: </span>
-            <strong className="text-red-600">{fmtYen(maxDrawdown)}</strong>
+            <strong className="text-[var(--negative)]">{formatYen(maxDrawdown, { sign: true })}</strong>
           </span>
         </div>
       </div>
@@ -153,13 +149,13 @@ export default function EquityCurveChart({ trades }: Props) {
               }}
               formatter={(value, name) => {
                 const v = typeof value === 'number' ? value : Number(value)
-                if (name === 'cumulative') return [fmtYen(v), '累積 PnL']
+                if (name === 'cumulative') return [formatYen(v, { sign: true }), '累積 PnL']
                 return [String(value), String(name)]
               }}
               labelFormatter={(label, payload) => {
                 const p = payload?.[0]?.payload as Point | undefined
                 if (!p) return label
-                return `${p.date}  ${p.ticker}  ${fmtYen(p.pnl)}`
+                return `${p.date}  ${p.ticker}  ${formatYen(p.pnl, { sign: true })}`
               }}
             />
             <Area

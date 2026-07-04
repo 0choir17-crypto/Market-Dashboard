@@ -11,6 +11,7 @@ import LeadersTable from '@/components/leaders/LeadersTable'
 import SectorConcentration from '@/components/leaders/SectorConcentration'
 import SectorRotationHeatmap from '@/components/leaders/SectorRotationHeatmap'
 import ErrorBanner from '@/components/shared/ErrorBanner'
+import PageHeader from '@/components/shared/PageHeader'
 
 export default function LeadersPage() {
   const [snapshot, setSnapshot] = useState<LeadersSnapshot>({
@@ -57,74 +58,45 @@ export default function LeadersPage() {
 
   return (
     <main className="min-h-screen p-6" style={{ backgroundColor: 'var(--bg-primary)' }}>
-      <header className="flex justify-between items-center mb-6 flex-wrap gap-3">
-        <div>
-          <h1
-            className="text-2xl font-bold"
-            style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-sans, sans-serif)' }}
+      <PageHeader
+        title="Market Leaders (Top 50)"
+        subtitle="東証クロスセクション top 50 銘柄 — 資金フロー観測。cs_avg=確立度 / 初動(emerging_cs)=加速度の2軸"
+        onRefresh={() => loadSnapshot(selectedDate ?? undefined)}
+        refreshing={loading}
+      >
+        {snapshot.availableDates.length > 0 && (
+          <select
+            value={selectedDate ?? snapshot.latestDate ?? ''}
+            onChange={e => loadSnapshot(e.target.value)}
+            className={`text-xs font-mono px-2 py-1 rounded border cursor-pointer ${
+              isLatest
+                ? 'border-gray-200 bg-white text-gray-700'
+                : 'border-amber-400 bg-amber-100 text-amber-800 font-semibold'
+            }`}
           >
-            Market Leaders (Top 50)
-          </h1>
-          <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
-            東証クロスセクション top 50 銘柄 — 資金フロー観測。cs_avg=確立度 / 初動(emerging_cs)=加速度の2軸
-          </p>
-        </div>
-        <div className="flex items-center gap-3 flex-wrap">
-          {snapshot.availableDates.length > 0 && (
-            <select
-              value={selectedDate ?? snapshot.latestDate ?? ''}
-              onChange={e => loadSnapshot(e.target.value)}
-              className={`text-xs font-mono px-2 py-1 rounded border cursor-pointer ${
-                isLatest
-                  ? 'border-gray-200 bg-white text-gray-700'
-                  : 'border-amber-400 bg-amber-100 text-amber-800 font-semibold'
-              }`}
-            >
-              {snapshot.availableDates.map(d => (
-                <option key={d} value={d}>
-                  {d}{d === snapshot.availableDates[0] ? ' (Latest)' : ''}
-                </option>
-              ))}
-            </select>
-          )}
-          {!isLatest && latestAvailable && (
-            <button
-              onClick={() => loadSnapshot(latestAvailable)}
-              className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500 text-white hover:bg-amber-600 transition-colors font-medium"
-            >
-              Back to Latest
-            </button>
-          )}
-          <input
-            type="text"
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-            placeholder="検索: 銘柄コード / 銘柄名"
-            className="text-xs px-3 py-1.5 rounded-lg border border-[var(--border)] bg-white w-56 focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
-          />
+            {snapshot.availableDates.map(d => (
+              <option key={d} value={d}>
+                {d}{d === snapshot.availableDates[0] ? '（最新）' : ''}
+              </option>
+            ))}
+          </select>
+        )}
+        {!isLatest && latestAvailable && (
           <button
-            onClick={() => loadSnapshot(selectedDate ?? undefined)}
-            disabled={loading}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium border border-[var(--border)] bg-white hover:bg-[var(--bg-card-hover)] transition-colors disabled:opacity-50"
-            style={{ color: 'var(--accent)' }}
+            onClick={() => loadSnapshot(latestAvailable)}
+            className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500 text-white hover:bg-amber-600 transition-colors font-medium"
           >
-            <svg
-              className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-              />
-            </svg>
-            {loading ? 'Refreshing...' : 'Refresh'}
+            最新に戻る
           </button>
-        </div>
-      </header>
+        )}
+        <input
+          type="text"
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          placeholder="検索: 銘柄コード / 銘柄名"
+          className="text-xs px-3 py-1.5 rounded-lg border border-[var(--border)] bg-white w-56 focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+        />
+      </PageHeader>
 
       {!isLatest && selectedDate && (
         <div className="mb-4 px-4 py-2 rounded-lg bg-amber-50 border border-amber-300 text-amber-800 text-sm font-medium">
@@ -141,7 +113,7 @@ export default function LeadersPage() {
           className="bg-white rounded-xl border border-[#e8eaed] shadow-sm p-8 text-center"
           style={{ color: 'var(--text-muted)' }}
         >
-          <p className="text-lg font-medium">Loading...</p>
+          <p className="text-lg font-medium">読み込み中…</p>
         </div>
       )}
 

@@ -7,6 +7,7 @@ import { useDate } from '@/contexts/DateContext'
 import EntryGateCard from '@/components/market/EntryGateCard'
 import IndexCard from '@/components/market/IndexCard'
 import BreadthPanel from '@/components/market/BreadthPanel'
+import PageHeader from '@/components/shared/PageHeader'
 
 export default function Page() {
   const { selectedDate, isLatest } = useDate()
@@ -54,47 +55,14 @@ export default function Page() {
     <main className="min-h-screen p-6" style={{ backgroundColor: 'var(--bg-primary)' }}>
 
       {/* ヘッダー */}
-      <header className="flex justify-between items-center mb-8">
-        <div>
-          <h1
-            className="text-2xl font-bold"
-            style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-sans, sans-serif)' }}
-          >
-            Market Dashboard
-          </h1>
-          <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
-            日本株マーケットコンディション
-          </p>
-        </div>
-        <div className="flex items-center gap-4">
-          {(market?.date || selectedDate) && (
-            <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-              {isLatest ? 'Updated' : 'Snapshot'}: {market?.date ?? selectedDate}
-            </span>
-          )}
-          <button
-            onClick={fetchData}
-            disabled={loading}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium border border-[var(--border)] bg-white hover:bg-[var(--bg-card-hover)] transition-colors disabled:opacity-50"
-            style={{ color: 'var(--accent)' }}
-          >
-            <svg
-              className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-              />
-            </svg>
-            {loading ? 'Refreshing...' : 'Refresh'}
-          </button>
-        </div>
-      </header>
+      <PageHeader
+        title="Market Dashboard"
+        subtitle="日本株マーケットコンディション"
+        date={market?.date ?? selectedDate}
+        isLatest={isLatest}
+        onRefresh={fetchData}
+        refreshing={loading}
+      />
 
       {/* 過去日バナー */}
       {!isLatest && selectedDate && (
@@ -106,7 +74,7 @@ export default function Page() {
       {/* ローディング */}
       {loading && !market && (
         <div className="card p-8 text-center" style={{ color: 'var(--text-muted)' }}>
-          <p className="text-lg font-medium">Loading...</p>
+          <p className="text-lg font-medium">読み込み中…</p>
         </div>
       )}
 

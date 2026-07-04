@@ -1,5 +1,14 @@
 @import "tailwindcss";
 
+/* ── フォント ─────────────────────────────────────────────────
+   layout.tsx で next/font が --font-sora / --font-noto / --font-plex を
+   注入する。Tailwind の font-sans / font-mono ユーティリティへ配線し、
+   欧文=Sora・和文=Noto Sans JP・数値=IBM Plex Mono を全画面で効かせる。 */
+@theme inline {
+  --font-sans: var(--font-sora), var(--font-noto), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex), ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
 :root {
   --bg-primary: #f4f5f7;
   --bg-card: #ffffff;
@@ -15,11 +24,30 @@
   --neutral-color: #92400e;
   --neutral-bg: #fef3c7;
   --accent: #1d4ed8;
+  --accent-bg: #eff6ff;
 }
 
 body {
   background-color: var(--bg-primary);
   color: var(--text-primary);
+  font-family: var(--font-sans);
+}
+
+/* 価格・損益・日付など、桁が動く数値は等幅タブラー数字で縦を揃える */
+.font-mono {
+  font-variant-numeric: tabular-nums;
+}
+
+/* キーボード操作時のフォーカスリング（マウス時は出さない） */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+::selection {
+  background: var(--accent-bg);
+  color: var(--accent);
 }
 
 .card {

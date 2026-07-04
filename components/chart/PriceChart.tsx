@@ -208,7 +208,7 @@ export default function PriceChart({
   if (bars.length === 0) {
     return (
       <div
-        className="flex items-center justify-center bg-slate-50 rounded-md text-sm text-slate-400"
+        className="flex items-center justify-center bg-[var(--bg-card-hover)] rounded-md text-sm text-[var(--text-muted)]"
         style={{ height }}
       >
         OHLCV データがありません

@@ -128,7 +128,7 @@ export default function StockGrid({
                   </span>
                 </div>
                 <div className="flex-1 flex items-center justify-center text-xs text-[var(--text-muted)]">
-                  Loading…
+                  読み込み中…
                 </div>
               </div>
             )
@@ -154,9 +154,9 @@ export default function StockGrid({
         <div className="flex justify-center mt-3">
           <button
             onClick={() => setShown(s => Math.min(entries.length, s + pageSize))}
-            className="text-xs font-medium px-4 py-2 rounded-lg border bg-white border-[var(--border)] text-[var(--text-secondary)] hover:bg-gray-50 transition-colors"
+            className="text-xs font-medium px-4 py-2 rounded-lg border bg-white border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)] transition-colors"
           >
-            もっと見る ({entries.length - shown} 件残り)
+            もっと見る（残り <span className="font-mono">{entries.length - shown}</span> 件）
           </button>
         </div>
       )}

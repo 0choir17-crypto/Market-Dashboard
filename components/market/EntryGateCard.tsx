@@ -133,10 +133,10 @@ function GateTrend({ height = 120 }: { height?: number }) {
   if (loading) {
     return (
       <div
-        className="flex items-center justify-center bg-slate-50 rounded-md text-xs text-slate-400"
+        className="flex items-center justify-center bg-[var(--bg-card-hover)] rounded-md text-xs text-[var(--text-muted)]"
         style={{ height }}
       >
-        Loading...
+        読み込み中…
       </div>
     )
   }
@@ -161,8 +161,10 @@ export default function EntryGateCard({ market }: { market: MarketConditions | n
   return (
     <div className="bg-white rounded-xl border border-[#e8eaed] shadow-sm p-6 flex flex-col h-full">
       <div className="flex items-center justify-between mb-4">
-        <p className="text-sm font-semibold text-gray-500">Entry Gate — エントリー可否</p>
-        <span className="text-[11px] font-mono text-gray-400">
+        <p className="text-sm font-semibold text-[var(--text-primary)]">
+          Entry Gate <span className="font-normal text-[var(--text-muted)]">— エントリー可否</span>
+        </p>
+        <span className="text-[11px] font-mono text-[var(--text-muted)]">
           pctile {fmt(market?.gate_score_pctile, 0)}% (上位25%=ATTACK)
         </span>
       </div>
@@ -187,7 +189,7 @@ export default function EntryGateCard({ market }: { market: MarketConditions | n
       {/* gate_score gauge */}
       <div className="mt-2">
         <ScoreGauge score={market?.gate_score ?? null} color={cfg.color} />
-        <p className="text-center text-[11px] text-gray-400 -mt-2">
+        <p className="text-center text-[11px] font-mono text-[var(--text-muted)] -mt-2">
           パーセンタイル 上位 {fmt(market?.gate_score_pctile, 0)}%
         </p>
       </div>
@@ -200,7 +202,7 @@ export default function EntryGateCard({ market }: { market: MarketConditions | n
           backgroundColor: aboveSma50 == null ? '#f8fafc' : aboveSma50 ? '#63992212' : '#e24b4a12',
         }}
       >
-        <span className="text-sm text-gray-600 font-medium">TOPIX vs SMA50（大枠の門）</span>
+        <span className="text-sm text-[var(--text-secondary)] font-medium">TOPIX vs SMA50（大枠の門）</span>
         <span
           className="text-sm font-bold"
           style={{ color: aboveSma50 == null ? '#9ca3af' : aboveSma50 ? '#639922' : '#e24b4a' }}
@@ -210,23 +212,25 @@ export default function EntryGateCard({ market }: { market: MarketConditions | n
       </div>
 
       {/* One-line explanation */}
-      <p className="mt-3 text-xs leading-relaxed text-gray-500">{cfg.note}</p>
+      <p className="mt-3 text-xs leading-relaxed text-[var(--text-secondary)]">{cfg.note}</p>
 
       {/* Sub details */}
       <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
-        <div className="flex items-baseline justify-between border-b border-dashed border-gray-200 py-0.5">
-          <span className="text-gray-500">主導株の新高値広がり</span>
-          <span className="font-mono tabular-nums text-gray-800">{fmt(market?.leader_strength, 1)}</span>
+        <div className="flex items-baseline justify-between border-b border-dashed border-[var(--border)] py-0.5">
+          <span className="text-[var(--text-secondary)]">主導株の新高値広がり</span>
+          <span className="font-mono tabular-nums text-[var(--text-primary)]">{fmt(market?.leader_strength, 1)}</span>
         </div>
-        <div className="flex items-baseline justify-between border-b border-dashed border-gray-200 py-0.5">
-          <span className="text-gray-500">TOPIX EMA21 傾き%</span>
-          <span className="font-mono tabular-nums text-gray-800">{fmtSigned(market?.gate_ema21_slope, 2)}</span>
+        <div className="flex items-baseline justify-between border-b border-dashed border-[var(--border)] py-0.5">
+          <span className="text-[var(--text-secondary)]">TOPIX EMA21 傾き%</span>
+          <span className="font-mono tabular-nums text-[var(--text-primary)]">{fmtSigned(market?.gate_ema21_slope, 2)}</span>
         </div>
       </div>
 
       {/* Optional trend */}
       <hr className="my-4 border-[#e8eaed]" />
-      <p className="text-xs font-semibold text-gray-500 mb-2">gate_score — Last 120 days</p>
+      <p className="text-xs font-semibold text-[var(--text-secondary)] mb-2">
+        gate_score <span className="font-normal text-[var(--text-muted)]">— 直近 120 営業日</span>
+      </p>
       <GateTrend height={140} />
     </div>
   )

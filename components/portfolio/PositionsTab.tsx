@@ -6,6 +6,7 @@ import { Trade } from '@/types/trades'
 import PositionModal from './PositionModal'
 import CloseModal from './CloseModal'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
+import { formatYen, formatPct, pnlColorClass } from '@/lib/format'
 
 type Props = {
   positions: Trade[]
@@ -20,20 +21,18 @@ function fmt(v: number | null | undefined, decimals = 0): string {
 
 function PnlCell({ value }: { value: number | null }) {
   if (value == null) return <span className="text-gray-400 font-mono text-xs">—</span>
-  const pos = value >= 0
   return (
-    <span className={`font-mono text-xs font-semibold ${pos ? 'text-green-600' : 'text-red-600'}`}>
-      {pos ? '+' : ''}¥{fmt(value)}
+    <span className={`font-mono text-xs font-semibold ${pnlColorClass(value)}`}>
+      {formatYen(value, { sign: true })}
     </span>
   )
 }
 
 function PctCell({ value }: { value: number | null }) {
   if (value == null) return <span className="text-gray-400 font-mono text-xs">—</span>
-  const pos = value >= 0
   return (
-    <span className={`font-mono text-xs font-semibold ${pos ? 'text-green-600' : 'text-red-600'}`}>
-      {pos ? '+' : ''}{value.toFixed(2)}%
+    <span className={`font-mono text-xs font-semibold ${pnlColorClass(value)}`}>
+      {formatPct(value, { sign: true })}
     </span>
   )
 }
@@ -89,7 +88,7 @@ export default function TradesTab({ positions, onRefresh }: Props) {
     <div>
       <div className="flex justify-between items-center mb-4">
         <span className="text-sm text-gray-500">{openTrades.length} positions</span>
-        <span className="text-xs text-gray-400">追加はヘッダーの「+ New Trade」から</span>
+        <span className="text-xs text-gray-400">追加はヘッダーの「＋ 新規トレード」から</span>
       </div>
 
       {/* Desktop table */}
@@ -98,7 +97,7 @@ export default function TradesTab({ positions, onRefresh }: Props) {
           <thead>
             <tr className="bg-gray-50 border-b border-t border-[#e8eaed]">
               {['Ticker','Name','Sector','Entry Date','Entry Price','Shares','Stop Price','InitRisk%','Current','Unrealized ¥','Unrealized %','Target Price','Actions'].map(h => (
-                <th key={h} className={`px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap ${h === 'Actions' ? 'text-right' : h === 'Ticker' || h === 'Name' || h === 'Sector' ? 'text-left' : 'text-right'}`}>
+                <th key={h} className={`px-3 py-2.5 text-xs font-medium text-[var(--text-secondary)] uppercase tracking-wide whitespace-nowrap ${h === 'Actions' ? 'text-right' : h === 'Ticker' || h === 'Name' || h === 'Sector' ? 'text-left' : 'text-right'}`}>
                   {h}
                 </th>
               ))}
@@ -112,7 +111,7 @@ export default function TradesTab({ positions, onRefresh }: Props) {
               return (
                 <tr
                   key={pos.id}
-                  className={`border-b border-[#f0f2f4] hover:bg-gray-50 transition-colors ${i % 2 === 0 ? 'bg-white' : 'bg-[#fafafa]'}`}
+                  className={`border-b border-[#f0f2f4] hover:bg-[var(--bg-card-hover)] transition-colors ${i % 2 === 0 ? 'bg-white' : 'bg-[#fafafa]'}`}
                 >
                   <td className="px-3 py-2.5 whitespace-nowrap">
                     <a href={`https://jp.tradingview.com/chart/?symbol=TSE:${pos.ticker}`} target="_blank" rel="noreferrer"
@@ -129,7 +128,7 @@ export default function TradesTab({ positions, onRefresh }: Props) {
                   <td className="px-3 py-2.5 text-right font-mono text-xs whitespace-nowrap">{fmt(pos.shares)}</td>
                   <td className="px-3 py-2.5 text-right font-mono text-xs whitespace-nowrap">{pos.stop_price != null ? `¥${fmt(pos.stop_price)}` : '—'}</td>
                   <td className="px-3 py-2.5 text-right font-mono text-xs whitespace-nowrap">
-                    {pos.init_risk_pct != null ? <span className="text-orange-600">{pos.init_risk_pct.toFixed(2)}%</span> : '—'}
+                    {pos.init_risk_pct != null ? <span className="text-orange-600">{formatPct(pos.init_risk_pct)}</span> : '—'}
                   </td>
                   <td className="px-3 py-2.5 text-right font-mono text-xs whitespace-nowrap">
                     {curPrice != null ? `¥${fmt(curPrice)}` : '—'}
@@ -141,9 +140,8 @@ export default function TradesTab({ positions, onRefresh }: Props) {
                       <>
                         ¥{fmt(pos.target_price)}
                         {pos.entry_price > 0 && (
-                          <span className="text-emerald-600">
-                            {' '}({pos.target_price >= pos.entry_price ? '+' : ''}
-                            {((pos.target_price - pos.entry_price) / pos.entry_price * 100).toFixed(1)}%)
+                          <span className="text-[var(--positive)]">
+                            {' '}({formatPct((pos.target_price - pos.entry_price) / pos.entry_price * 100, { digits: 1, sign: true })})
                           </span>
                         )}
                       </>
@@ -152,11 +150,11 @@ export default function TradesTab({ positions, onRefresh }: Props) {
                   <td className="px-3 py-2.5 whitespace-nowrap">
                     <div className="flex justify-end gap-1">
                       <button onClick={() => setClosePos(pos)}
-                        className="px-2 py-1 text-xs font-medium text-orange-600 bg-orange-50 border border-orange-200 rounded hover:bg-orange-100">Close</button>
+                        className="px-2 py-1 text-xs font-medium text-orange-600 bg-orange-50 border border-orange-200 rounded hover:bg-orange-100">決済</button>
                       <button onClick={() => setEditPos(pos)}
-                        className="px-2 py-1 text-xs font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded hover:bg-blue-100">Edit</button>
+                        className="px-2 py-1 text-xs font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded hover:bg-blue-100">編集</button>
                       <button onClick={() => setDeletePos(pos)}
-                        className="px-2 py-1 text-xs font-medium text-red-600 bg-red-50 border border-red-200 rounded hover:bg-red-100">Delete</button>
+                        className="px-2 py-1 text-xs font-medium text-red-600 bg-red-50 border border-red-200 rounded hover:bg-red-100">削除</button>
                     </div>
                   </td>
                 </tr>
@@ -192,20 +190,20 @@ export default function TradesTab({ positions, onRefresh }: Props) {
                 </div>
               </div>
               <div className="grid grid-cols-3 gap-2 text-xs text-gray-600 mb-3">
-                <div><span className="text-gray-400 block">Entry</span>¥{fmt(pos.entry_price)}</div>
-                <div><span className="text-gray-400 block">Shares</span>{fmt(pos.shares)}</div>
-                <div><span className="text-gray-400 block">Current</span>{curPrice != null ? `¥${fmt(curPrice)}` : '—'}</div>
-                <div><span className="text-gray-400 block">Stop</span>{pos.stop_price != null ? `¥${fmt(pos.stop_price)}` : '—'}</div>
-                <div><span className="text-gray-400 block">InitRisk</span>{pos.init_risk_pct != null ? `${pos.init_risk_pct.toFixed(1)}%` : '—'}</div>
-                <div><span className="text-gray-400 block">Target</span>{pos.target_price != null ? `¥${fmt(pos.target_price)}` : pos.target_r != null ? `${pos.target_r}R` : '—'}</div>
+                <div><span className="text-gray-400 block">Entry</span><span className="font-mono">¥{fmt(pos.entry_price)}</span></div>
+                <div><span className="text-gray-400 block">Shares</span><span className="font-mono">{fmt(pos.shares)}</span></div>
+                <div><span className="text-gray-400 block">Current</span><span className="font-mono">{curPrice != null ? `¥${fmt(curPrice)}` : '—'}</span></div>
+                <div><span className="text-gray-400 block">Stop</span><span className="font-mono">{pos.stop_price != null ? `¥${fmt(pos.stop_price)}` : '—'}</span></div>
+                <div><span className="text-gray-400 block">InitRisk</span><span className="font-mono">{pos.init_risk_pct != null ? formatPct(pos.init_risk_pct, { digits: 1 }) : '—'}</span></div>
+                <div><span className="text-gray-400 block">Target</span><span className="font-mono">{pos.target_price != null ? `¥${fmt(pos.target_price)}` : pos.target_r != null ? `${pos.target_r}R` : '—'}</span></div>
               </div>
               <div className="flex gap-2">
                 <button onClick={() => setClosePos(pos)}
-                  className="flex-1 py-2 text-xs font-medium text-orange-600 bg-orange-50 border border-orange-200 rounded-lg">Close</button>
+                  className="flex-1 py-2 text-xs font-medium text-orange-600 bg-orange-50 border border-orange-200 rounded-lg">決済</button>
                 <button onClick={() => setEditPos(pos)}
-                  className="px-3 py-2 text-xs font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-lg">Edit</button>
+                  className="px-3 py-2 text-xs font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-lg">編集</button>
                 <button onClick={() => setDeletePos(pos)}
-                  className="px-3 py-2 text-xs font-medium text-red-600 bg-red-50 border border-red-200 rounded-lg">Delete</button>
+                  className="px-3 py-2 text-xs font-medium text-red-600 bg-red-50 border border-red-200 rounded-lg">削除</button>
               </div>
             </div>
           )

@@ -4,20 +4,21 @@ import './globals.css'
 import NavBar from '@/components/NavBar'
 import Providers from '@/components/Providers'
 
+// 変数名は globals.css の @theme（--font-sans / --font-mono への配線）と対応
 const ibmPlexMono = IBM_Plex_Mono({
   weight: ['400', '600', '700'],
   subsets: ['latin'],
-  variable: '--font-mono',
+  variable: '--font-plex',
 })
 
 const sora = Sora({
   subsets: ['latin'],
-  variable: '--font-sans',
+  variable: '--font-sora',
 })
 
 const notoSansJP = Noto_Sans_JP({
   subsets: ['latin'],
-  variable: '--font-jp',
+  variable: '--font-noto',
 })
 
 export const metadata: Metadata = {

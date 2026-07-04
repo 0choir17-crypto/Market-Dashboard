@@ -3,6 +3,7 @@
 import { useMemo } from 'react'
 import type { OhlcvBar, StructurePivotPhase } from '@/types/chart'
 import { ema, sma } from '@/lib/indicators'
+import { formatPct } from '@/lib/format'
 import { tradingViewUrl, shikihoUrl } from '@/lib/tickerLinks'
 import MiniChart from './MiniChart'
 
@@ -33,14 +34,13 @@ interface Props {
 const TRADINGVIEW_URL = tradingViewUrl
 const SHIKIHO_URL = shikihoUrl
 
+// 表示フォーマットは lib/format.ts に委譲（符号付き/なし %）
 function fmtSignedPct(v: number | null | undefined, digits = 1): string {
-  if (v == null || !Number.isFinite(v)) return '—'
-  return `${v >= 0 ? '+' : ''}${v.toFixed(digits)}%`
+  return formatPct(v, { digits, sign: true })
 }
 
 function fmtPct(v: number | null | undefined, digits = 1): string {
-  if (v == null || !Number.isFinite(v)) return '—'
-  return `${v.toFixed(digits)}%`
+  return formatPct(v, { digits })
 }
 
 function fmtNum(v: number | null | undefined, digits = 1): string {

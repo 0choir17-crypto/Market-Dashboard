@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import PageHeader from '@/components/shared/PageHeader'
 
 // ── Screen Guide Data (Phase 2.1, 2026-05-05) ───────────────────────────────
 // 採用 2 screens (本リポ commit a47852a): DIV_DY_Incr_EpsGr + FCT_ValueQuality_CRS
@@ -200,17 +201,10 @@ export default function GuidePage() {
 
   return (
     <main className="min-h-screen p-6" style={{ backgroundColor: 'var(--bg-primary)' }}>
-      <header className="mb-6">
-        <h1
-          className="text-2xl font-bold"
-          style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-sans, sans-serif)' }}
-        >
-          Guide
-        </h1>
-        <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
-          ダッシュボードの見方 — Daily Watch（押し目ウォッチ）・Trading（記録）・Screens・Market Condition v4
-        </p>
-      </header>
+      <PageHeader
+        title="Guide"
+        subtitle="ダッシュボードの見方 — Daily Watch（押し目ウォッチ）・Trading（記録）・Screens・Market Condition v4"
+      />
 
       {/* ── Daily Watch — 押し目ウォッチ ──────────────────────────────────── */}
       <section className="mb-8">
@@ -262,11 +256,11 @@ export default function GuidePage() {
           <p>
             <strong>Positions</strong>（保有中） / <strong>Journal</strong>（確定トレード＋分析） /
             <strong>Risk</strong>（連敗・リスク設定）の 3 タブ。記録はヘッダーの
-            <strong className="text-blue-600"> + New Trade</strong> から。
+            <strong className="text-blue-600">「＋ 新規トレード」</strong> から。
           </p>
           <ul className="list-disc pl-5 space-y-1.5">
             <li>
-              New Trade はエントリーに加え、任意で <strong>Stop Price</strong> / <strong>Target Price（目標株価）</strong> を金額で入力でき、
+              新規トレードはエントリーに加え、任意で <strong>Stop Price</strong> / <strong>Target Price（目標株価）</strong> を金額で入力でき、
               それぞれ Entry 比 % を自動表示。
             </li>
             <li>
