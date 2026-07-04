@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import type { OhlcvBar, StructurePivotPhase } from '@/types/chart'
+import { formatPct } from '@/lib/format'
 import { computeCockpit } from '@/lib/cockpit'
 import { fetchChart } from '@/lib/chartFetch'
 import PriceChart from './PriceChart'
@@ -132,8 +133,7 @@ export default function StockChartView({ code, name, sector }: Props) {
                 color: dailyPct >= 0 ? 'var(--positive)' : 'var(--negative)',
               }}
             >
-              {dailyPct >= 0 ? '+' : ''}
-              {dailyPct.toFixed(2)}%
+              {formatPct(dailyPct, { sign: true })}
             </span>
           )}
           <span className="flex items-center gap-1">
@@ -144,7 +144,7 @@ export default function StockChartView({ code, name, sector }: Props) {
                 className={`text-xs px-2 py-1 rounded border transition-colors ${
                   lookback === k
                     ? 'bg-[var(--accent)] text-white border-[var(--accent)]'
-                    : 'bg-white text-[var(--text-secondary)] border-[var(--border)] hover:bg-gray-50'
+                    : 'bg-white text-[var(--text-secondary)] border-[var(--border)] hover:bg-[var(--bg-card-hover)]'
                 }`}
               >
                 {k}
@@ -160,11 +160,11 @@ export default function StockChartView({ code, name, sector }: Props) {
       {/* Chart */}
       {loading ? (
         <div className="card p-8 text-center text-[var(--text-muted)] text-sm">
-          Loading chart…
+          読み込み中…
         </div>
       ) : error ? (
         <div className="card p-6 text-center text-sm text-red-600 bg-red-50 border border-red-200">
-          チャート取得失敗: {error}
+          チャートの取得に失敗しました: {error}
         </div>
       ) : visibleBars.length === 0 ? (
         <div className="card p-6 text-center text-sm text-[var(--text-muted)]">

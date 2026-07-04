@@ -152,10 +152,10 @@ export function IndexChart({ prefix, displayName, height = 260, lookbackDays = 1
   if (loading) {
     return (
       <div
-        className="flex items-center justify-center bg-slate-50 rounded-md"
+        className="flex items-center justify-center bg-[var(--bg-card-hover)] rounded-md"
         style={{ height }}
       >
-        <div className="text-sm text-slate-400">読み込み中...</div>
+        <div className="text-sm text-[var(--text-muted)]">読み込み中…</div>
       </div>
     )
   }
@@ -163,7 +163,7 @@ export function IndexChart({ prefix, displayName, height = 260, lookbackDays = 1
   if (data.length === 0) {
     return (
       <div
-        className="flex items-center justify-center bg-slate-50 rounded-md text-sm text-slate-400"
+        className="flex items-center justify-center bg-[var(--bg-card-hover)] rounded-md text-sm text-[var(--text-muted)]"
         style={{ height }}
       >
         {displayName ?? prefix} のデータがありません

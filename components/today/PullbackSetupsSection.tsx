@@ -131,13 +131,13 @@ export default function PullbackSetupsSection(props: Props) {
   return (
     <section className="bg-white rounded-xl border border-[#e8eaed] shadow-sm p-4">
       <div className="flex items-baseline gap-2 flex-wrap mb-1">
-        <h2 className="text-base font-bold text-[var(--text-primary)]">{title}</h2>
-        <span className="text-xs text-gray-400">
-          {sorted.length} / {rows.length} 件
-          {freshCount > 0 && <span className="ml-1 text-amber-600">（★fresh {freshCount}）</span>}
+        <h2 className="text-sm font-semibold text-[var(--text-primary)]">{title}</h2>
+        <span className="text-xs text-[var(--text-muted)]">
+          <span className="font-mono">{sorted.length} / {rows.length}</span> 件
+          {freshCount > 0 && <span className="ml-1 text-amber-600">（★fresh <span className="font-mono">{freshCount}</span>）</span>}
         </span>
       </div>
-      <p className="text-xs text-gray-500 mb-3">{subtitle}</p>
+      <p className="text-xs text-[var(--text-secondary)] mb-3">{subtitle}</p>
 
       {/* フィルタ / ソート */}
       <div className="flex flex-wrap items-center gap-2 mb-4">
@@ -179,7 +179,7 @@ export default function PullbackSetupsSection(props: Props) {
         </button>
 
         <span className="ml-auto flex items-center gap-1.5">
-          <span className="text-[11px] text-gray-400">並び:</span>
+          <span className="text-[11px] text-[var(--text-muted)]">並び:</span>
           <select
             value={sortKey}
             onChange={e => setSortKey(e.target.value)}

@@ -120,13 +120,13 @@ export default function VolumeIgnitionSection({ rows, hotSectors, title, subtitl
   return (
     <section className="bg-white rounded-xl border border-[#e8eaed] shadow-sm p-4">
       <div className="flex items-baseline gap-2 flex-wrap mb-1">
-        <h2 className="text-base font-bold text-[var(--text-primary)]">{title}</h2>
-        <span className="text-xs text-gray-400">
-          {sorted.length} / {rows.length} 件
-          {freshCount > 0 && <span className="ml-1 text-amber-600">（🔥当日 {freshCount}）</span>}
+        <h2 className="text-sm font-semibold text-[var(--text-primary)]">{title}</h2>
+        <span className="text-xs text-[var(--text-muted)]">
+          <span className="font-mono">{sorted.length} / {rows.length}</span> 件
+          {freshCount > 0 && <span className="ml-1 text-amber-600">（🔥当日 <span className="font-mono">{freshCount}</span>）</span>}
         </span>
       </div>
-      <p className="text-xs text-gray-500 mb-2">{subtitle}</p>
+      <p className="text-xs text-[var(--text-secondary)] mb-2">{subtitle}</p>
 
       {/* 管理ルール注記（瞬発トレード用ウォッチ） */}
       <div className="mb-3 px-3 py-2 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-[11px] leading-relaxed flex items-start gap-2">
@@ -178,7 +178,7 @@ export default function VolumeIgnitionSection({ rows, hotSectors, title, subtitl
         </button>
 
         <span className="ml-auto flex items-center gap-1.5">
-          <span className="text-[11px] text-gray-400">並び:</span>
+          <span className="text-[11px] text-[var(--text-muted)]">並び:</span>
           <select
             value={sortKey}
             onChange={e => setSortKey(e.target.value)}
