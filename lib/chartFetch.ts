@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase'
+import { fetchAllPaged } from '@/lib/pagedFetch'
 import type {
   ChartApiResponse,
   CounterTrendBar,
@@ -50,28 +51,48 @@ let warnedAboutMissingOverlay = false
 export async function fetchChart(
   code: string,
   opts: FetchChartOptions = {},
-): Promise<ChartApiResponse> {
+): Promise<ChartApiResponse & { error: string | null }> {
   if (!CODE_RE.test(code)) {
     throw new Error('invalid code (must be 4 alphanumeric)')
   }
 
   const lookback = opts.lookbackDays ?? null
 
+  // Fatal errors (base OHLCV unavailable) still throw — StockChartView /
+  // StockGrid consume failures via .catch(). The returned `error` field only
+  // carries soft failures (best-effort overlay), and is null on full success.
+  let softError: string | null = null
+
   // ---- OHLCV (base) ----------------------------------------------------
-  let ohlcvQ = supabase
-    .from('chart_ohlcv_cache')
-    .select(OHLCV_COLUMNS)
-    .eq('code', code)
-
-  ohlcvQ = lookback != null
-    ? ohlcvQ.order('date', { ascending: false }).limit(lookback)
-    : ohlcvQ.order('date', { ascending: true })
-
-  const { data: ohlcvData, error: ohlcvErr } = await ohlcvQ
-  if (ohlcvErr) throw new Error(ohlcvErr.message)
-
-  const ohlcvRows = (ohlcvData ?? []) as unknown as Array<Record<string, unknown>>
-  const ohlcvSorted = lookback != null ? [...ohlcvRows].reverse() : ohlcvRows
+  // lookback 指定時: 直近 N 本だけなので desc + limit + reverse で足りる。
+  // 全履歴 (lookback = null): Supabase は 1 リクエスト 1000 行で打ち切るため、
+  // date asc の安定順序 (PK = code + date なので code 固定なら date だけで全順序)
+  // で .range() ページングしないと「最古の 1000 本」しか返らない。
+  let ohlcvSorted: Array<Record<string, unknown>>
+  if (lookback != null) {
+    const { data: ohlcvData, error: ohlcvErr } = await supabase
+      .from('chart_ohlcv_cache')
+      .select(OHLCV_COLUMNS)
+      .eq('code', code)
+      .order('date', { ascending: false })
+      .limit(lookback)
+    if (ohlcvErr) throw new Error(ohlcvErr.message)
+    ohlcvSorted = [
+      ...((ohlcvData ?? []) as unknown as Array<Record<string, unknown>>),
+    ].reverse()
+  } else {
+    const { rows, error } = await fetchAllPaged<Record<string, unknown>>(
+      (from, to) =>
+        supabase
+          .from('chart_ohlcv_cache')
+          .select(OHLCV_COLUMNS)
+          .eq('code', code)
+          .order('date', { ascending: true })
+          .range(from, to),
+    )
+    if (error) throw new Error(error)
+    ohlcvSorted = rows
+  }
 
   const ohlcv: OhlcvBar[] = ohlcvSorted
     .filter(
@@ -95,30 +116,52 @@ export async function fetchChart(
   let structurePivotPhases: StructurePivotPhase[] = []
   let counterTrend: CounterTrendBar[] = []
   try {
-    let overlayQ = supabase
-      .from('chart_ohlcv_cache')
-      .select(PER_BAR_OVERLAY_COLUMNS)
-      .eq('code', code)
+    // OHLCV と同じ理由で、全履歴パスは date asc の安定順序でページングする。
+    let overlaySorted: Array<Record<string, unknown>> | null = null
+    let overlayErrMsg: string | null = null
+    if (lookback != null) {
+      const { data: overlayData, error: overlayErr } = await supabase
+        .from('chart_ohlcv_cache')
+        .select(PER_BAR_OVERLAY_COLUMNS)
+        .eq('code', code)
+        .order('date', { ascending: false })
+        .limit(lookback)
+      if (overlayErr) overlayErrMsg = overlayErr.message
+      else {
+        overlaySorted = [
+          ...((overlayData ?? []) as unknown as Array<Record<string, unknown>>),
+        ].reverse()
+      }
+    } else {
+      const { rows, error } = await fetchAllPaged<Record<string, unknown>>(
+        (from, to) =>
+          // PER_BAR_OVERLAY_COLUMNS は実行時 join した string なので supabase-js の
+          // 型パーサが効かず GenericStringError[] に落ちる → 手動キャスト。
+          supabase
+            .from('chart_ohlcv_cache')
+            .select(PER_BAR_OVERLAY_COLUMNS)
+            .eq('code', code)
+            .order('date', { ascending: true })
+            .range(from, to) as unknown as PromiseLike<{
+            data: Record<string, unknown>[] | null
+            error: { message: string } | null
+          }>,
+      )
+      if (error) overlayErrMsg = error
+      else overlaySorted = rows
+    }
 
-    overlayQ = lookback != null
-      ? overlayQ.order('date', { ascending: false }).limit(lookback)
-      : overlayQ.order('date', { ascending: true })
-
-    const { data: overlayData, error: overlayErr } = await overlayQ
-    if (overlayErr) {
+    if (overlaySorted == null) {
+      softError = overlayErrMsg
       if (!warnedAboutMissingOverlay) {
         warnedAboutMissingOverlay = true
         console.warn(
           '[structure-pivot] overlay columns unavailable in chart_ohlcv_cache:',
-          overlayErr.message,
+          overlayErrMsg,
           '— chart will render without overlay until backend (21-Cloudl-Database) ships the new schema.',
         )
       }
     } else {
-      const overlayRows =
-        (overlayData ?? []) as unknown as Array<Record<string, unknown>>
-      const overlaySorted = lookback != null ? [...overlayRows].reverse() : overlayRows
-
       counterTrend = overlaySorted
         .filter(r => r.date)
         .map(r => ({
@@ -132,6 +175,7 @@ export async function fetchChart(
       structurePivotPhases = aggregatePhases(overlaySorted)
     }
   } catch (e) {
+    softError = e instanceof Error ? e.message : String(e)
     if (!warnedAboutMissingOverlay) {
       warnedAboutMissingOverlay = true
       console.warn('[structure-pivot] overlay fetch failed:', e)
@@ -145,6 +189,7 @@ export async function fetchChart(
     counterTrend,
     cockpit_rs: null,
     mc_v4: null,
+    error: softError,
   }
 }
 

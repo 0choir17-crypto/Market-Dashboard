@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase'
+import { fetchAllPaged } from '@/lib/pagedFetch'
 
 export type SectorHistoryRow = {
   date: string
@@ -19,6 +20,9 @@ export type SectorHistoryResponse = {
   bySector: Record<string, Record<string, SectorHistoryRow>>
   // Convenience: list of unique sector names (sorted by composite_score on the latest date, desc)
   sectorsRanked: string[]
+  // Fetch failure message (null on success). Optional so existing callers'
+  // initial-state literals keep compiling; the fetcher always sets it.
+  error?: string | null
 }
 
 const TABLE = 'sector_selection_s33'
@@ -30,40 +34,53 @@ const TABLE = 'sector_selection_s33'
 export async function fetchSectorSelectionHistory(
   days = 21,
 ): Promise<SectorHistoryResponse> {
-  // Phase 1: discover the latest N unique dates.
-  const { data: dateRows, error: dateErr } = await supabase
-    .from(TABLE)
-    .select('date')
-    .order('date', { ascending: false })
-    .limit(days * 40) // 33 sectors + cushion
+  // Phase 1: discover the latest N unique dates. Supabase caps every response
+  // at 1000 rows (~30 days × 33 sectors), so page with a stable total order
+  // (date desc, sector asc) until the row budget covers N days.
+  const { rows: dateRows, error: dateErr } = await fetchAllPaged<{ date: string }>(
+    (from, to) =>
+      supabase
+        .from(TABLE)
+        .select('date')
+        .order('date', { ascending: false })
+        .order('sector_name_s33', { ascending: true })
+        .range(from, to),
+    days * 40, // 33 sectors + cushion
+  )
 
-  if (dateErr || !dateRows || dateRows.length === 0) {
+  if (dateErr || dateRows.length === 0) {
     if (dateErr) console.error('[sector_selection_s33 history/dates]', dateErr)
-    return { dates: [], bySector: {}, sectorsRanked: [] }
+    return { dates: [], bySector: {}, sectorsRanked: [], error: dateErr }
   }
 
-  const uniqueDates = [...new Set(dateRows.map(r => r.date as string))]
+  const uniqueDates = [...new Set(dateRows.map(r => r.date))]
   uniqueDates.sort((a, b) => (a > b ? -1 : 1))
   const targetDates = uniqueDates.slice(0, days)
   if (targetDates.length === 0) {
-    return { dates: [], bySector: {}, sectorsRanked: [] }
+    return { dates: [], bySector: {}, sectorsRanked: [], error: null }
   }
   const minDate = targetDates[targetDates.length - 1]
 
-  // Phase 2: pull all rows in that date range.
+  // Phase 2: pull all rows in that date range. 63 days × 33 sectors ≈ 2079 行
+  // なので、こちらも安定順序 (date asc, sector asc) で全件ページングする。
   // select('*') で退役/改名された列があっても落ちないようにする (sector_rs_acc_s33 等)。
-  const { data, error } = await supabase
-    .from(TABLE)
-    .select('*')
-    .gte('date', minDate)
-    .order('date', { ascending: true })
+  const { rows: dataRows, error } = await fetchAllPaged<Record<string, unknown>>(
+    (from, to) =>
+      supabase
+        .from(TABLE)
+        .select('*')
+        .gte('date', minDate)
+        .order('date', { ascending: true })
+        .order('sector_name_s33', { ascending: true })
+        .range(from, to),
+  )
 
-  if (error || !data) {
-    if (error) console.error('[sector_selection_s33 history]', error)
-    return { dates: [], bySector: {}, sectorsRanked: [] }
+  if (error) {
+    console.error('[sector_selection_s33 history]', error)
+    return { dates: [], bySector: {}, sectorsRanked: [], error }
   }
 
-  const rows = data as unknown as SectorHistoryRow[]
+  const rows = dataRows as unknown as SectorHistoryRow[]
   const bySector: Record<string, Record<string, SectorHistoryRow>> = {}
   for (const r of rows) {
     if (!r.sector_name_s33) continue
@@ -83,5 +100,6 @@ export async function fetchSectorSelectionHistory(
     dates: [...targetDates].reverse(), // ascending
     bySector,
     sectorsRanked,
+    error: null,
   }
 }
