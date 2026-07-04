@@ -17,6 +17,7 @@ import PositionModal from '@/components/portfolio/PositionModal'
 import PositionsTab from '@/components/portfolio/PositionsTab'
 import RiskTab from '@/components/portfolio/RiskTab'
 import ErrorBanner from '@/components/shared/ErrorBanner'
+import PageHeader from '@/components/shared/PageHeader'
 
 type Tab = 'positions' | 'journal' | 'risk'
 
@@ -82,39 +83,19 @@ export default function JournalPage() {
   return (
     <main className="min-h-screen p-4 sm:p-6" style={{ backgroundColor: 'var(--bg-primary)' }}>
       {/* Header */}
-      <header className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
-            Trading
-          </h1>
-          <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
-            21 Cloud — ポジション・トレード記録・分析・リスク管理
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={fetchAll}
-            disabled={loading}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium border border-[var(--border)] bg-white hover:bg-[var(--bg-card-hover)] transition-colors disabled:opacity-50"
-            style={{ color: 'var(--accent)' }}
-          >
-            <svg
-              className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`}
-              fill="none" stroke="currentColor" viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-            {loading ? 'Refreshing...' : 'Refresh'}
-          </button>
-          <button
-            onClick={() => setShowNewTrade(true)}
-            className="px-4 py-1.5 rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors"
-          >
-            + New Trade
-          </button>
-        </div>
-      </header>
+      <PageHeader
+        title="Trading"
+        subtitle="21 Cloud — ポジション・トレード記録・分析・リスク管理"
+        onRefresh={fetchAll}
+        refreshing={loading}
+      >
+        <button
+          onClick={() => setShowNewTrade(true)}
+          className="px-4 py-1.5 rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors min-h-[36px]"
+        >
+          ＋ 新規トレード
+        </button>
+      </PageHeader>
 
       {/* Tab navigation */}
       <div className="overflow-x-auto whitespace-nowrap mb-6 -mx-4 sm:mx-0 px-4 sm:px-0">
@@ -139,7 +120,7 @@ export default function JournalPage() {
 
       {/* Loading (初回のみ全面表示。再取得中は既存表示を維持し、ヘッダーの Refresh が回る) */}
       {loading && trades.length === 0 && (
-        <div className="text-center py-16 text-gray-400 text-sm">Loading...</div>
+        <div className="text-center py-16 text-gray-400 text-sm">読み込み中…</div>
       )}
 
       {/* Tab content */}

@@ -8,6 +8,7 @@ import {
 import { classifyFreshness } from '@/types/earningsQuality'
 import EarningsQualitySection from '@/components/earnings/EarningsQualitySection'
 import ErrorBanner from '@/components/shared/ErrorBanner'
+import PageHeader from '@/components/shared/PageHeader'
 
 // 鮮度バッジ: latestDate と本日との営業日差で色分け。
 // 閑散期 (3/6/9/12月) では長期間データ更新が無いことが正常なので、
@@ -67,84 +68,47 @@ export default function EarningsPage() {
 
   return (
     <main className="min-h-screen p-6" style={{ backgroundColor: 'var(--bg-primary)' }}>
-      <header className="flex justify-between items-start mb-6 flex-wrap gap-3">
-        <div>
-          <div className="flex items-center flex-wrap gap-x-3 gap-y-1">
-            <h1
-              className="text-2xl font-bold"
-              style={{
-                color: 'var(--text-primary)',
-                fontFamily: 'var(--font-sans, sans-serif)',
-              }}
-            >
-              <span aria-hidden className="mr-2">📊</span>決算品質 (Earnings Quality)
-            </h1>
-            {latestAvailable && (
-              <span className="inline-flex items-center gap-2 text-sm">
-                <span className="text-[var(--text-muted)]">最新開示日:</span>
-                <span className="font-mono font-semibold text-[var(--text-primary)]">
-                  {latestAvailable}
-                </span>
-                <FreshnessBadge latestDate={latestAvailable} />
-              </span>
-            )}
-          </div>
-          <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-            当日決算開示銘柄の品質スコア (0-7) — 翌営業日 (D+1) 寄り買い候補
-            <span className="ml-2 text-[10px] text-gray-400">
-              ※ 本スキャナーは 1Q-3Q のみ対象 (本決算除外) ／ 3・6・9・12月は構造的閑散期
+      <PageHeader
+        title="Earnings Quality"
+        subtitle="決算品質 — 当日決算開示銘柄の品質スコア（0-7）・翌営業日（D+1）寄り買い候補 ※ 1Q-3Q のみ対象（本決算除外）／3・6・9・12月は構造的閑散期"
+        onRefresh={() => fetchData(selectedDate ?? undefined)}
+        refreshing={loading}
+      >
+        {latestAvailable && (
+          <span className="inline-flex items-center gap-2 text-sm">
+            <span className="text-[var(--text-muted)]">最新開示日:</span>
+            <span className="font-mono font-semibold text-[var(--text-primary)]">
+              {latestAvailable}
             </span>
-          </p>
-        </div>
-        <div className="flex items-center gap-3 flex-wrap">
-          {snapshot.availableDates.length > 0 && (
-            <select
-              value={selectedDate ?? snapshot.latestDate ?? ''}
-              onChange={e => fetchData(e.target.value)}
-              className={`text-xs font-mono px-2 py-1 rounded border cursor-pointer ${
-                isLatest
-                  ? 'border-gray-200 bg-white text-gray-700'
-                  : 'border-amber-400 bg-amber-100 text-amber-800 font-semibold'
-              }`}
-            >
-              {snapshot.availableDates.map(d => (
-                <option key={d} value={d}>
-                  {d}{d === snapshot.availableDates[0] ? ' (Latest)' : ''}
-                </option>
-              ))}
-            </select>
-          )}
-          {!isLatest && snapshot.availableDates[0] && (
-            <button
-              onClick={() => fetchData(snapshot.availableDates[0])}
-              className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500 text-white hover:bg-amber-600 transition-colors font-medium"
-            >
-              Back to Latest
-            </button>
-          )}
-          <button
-            onClick={() => fetchData(selectedDate ?? undefined)}
-            disabled={loading}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium border border-[var(--border)] bg-white hover:bg-[var(--bg-card-hover)] transition-colors disabled:opacity-50"
-            style={{ color: 'var(--accent)' }}
+            <FreshnessBadge latestDate={latestAvailable} />
+          </span>
+        )}
+        {snapshot.availableDates.length > 0 && (
+          <select
+            value={selectedDate ?? snapshot.latestDate ?? ''}
+            onChange={e => fetchData(e.target.value)}
+            className={`text-xs font-mono px-2 py-1 rounded border cursor-pointer ${
+              isLatest
+                ? 'border-gray-200 bg-white text-gray-700'
+                : 'border-amber-400 bg-amber-100 text-amber-800 font-semibold'
+            }`}
           >
-            <svg
-              className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-              />
-            </svg>
-            {loading ? 'Refreshing...' : 'Refresh'}
+            {snapshot.availableDates.map(d => (
+              <option key={d} value={d}>
+                {d}{d === snapshot.availableDates[0] ? '（最新）' : ''}
+              </option>
+            ))}
+          </select>
+        )}
+        {!isLatest && snapshot.availableDates[0] && (
+          <button
+            onClick={() => fetchData(snapshot.availableDates[0])}
+            className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500 text-white hover:bg-amber-600 transition-colors font-medium"
+          >
+            最新に戻る
           </button>
-        </div>
-      </header>
+        )}
+      </PageHeader>
 
       {showQuietBanner && fresh && latestAvailable && (
         <div className="mb-4 px-4 py-2.5 rounded-lg bg-red-50 border border-red-200 text-red-800 text-sm flex items-start gap-2">
@@ -176,7 +140,7 @@ export default function EarningsPage() {
           className="bg-white rounded-xl border border-[#e8eaed] shadow-sm p-8 text-center"
           style={{ color: 'var(--text-muted)' }}
         >
-          <p className="text-lg font-medium">Loading...</p>
+          <p className="text-lg font-medium">読み込み中…</p>
         </div>
       )}
 

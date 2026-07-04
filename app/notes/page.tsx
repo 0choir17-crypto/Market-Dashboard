@@ -11,6 +11,7 @@ import {
 } from '@/lib/notesFetch'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import ErrorBanner from '@/components/shared/ErrorBanner'
+import PageHeader from '@/components/shared/PageHeader'
 
 // 自由メモ / 気を付けること（複数・タイトル付き）。
 // 保存先は Supabase の notes テーブル。スマホ・PC など全端末で同期される。
@@ -192,28 +193,20 @@ export default function NotesPage() {
 
   return (
     <main className="min-h-screen p-6" style={{ backgroundColor: 'var(--bg-primary)' }}>
-      <header className="flex justify-between items-center mb-4 flex-wrap gap-3">
-        <div>
-          <h1
-            className="text-2xl font-bold"
-            style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-sans, sans-serif)' }}
-          >
-            <span aria-hidden className="mr-2">📝</span>Notes — メモ / 気を付けること
-          </h1>
-          <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
-            複数メモ（タイトル付き）。Supabase に自動保存され、スマホ・PC など全端末で同期します。
-          </p>
-        </div>
+      <PageHeader
+        title="Notes"
+        subtitle="メモ / 気を付けること。Supabase に自動保存され、スマホ・PC など全端末で同期します。"
+      >
         <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
           {dirty ? (
             <span className="text-amber-600">編集中…</span>
           ) : savedAt ? (
-            <span className="text-emerald-600">保存済み {fmtTime(savedAt)}</span>
+            <span className="text-emerald-600">保存済み <span className="font-mono">{fmtTime(savedAt)}</span></span>
           ) : (
             <span>—</span>
           )}
         </div>
-      </header>
+      </PageHeader>
 
       {error && <ErrorBanner detail={error} />}
 
@@ -222,7 +215,7 @@ export default function NotesPage() {
           className="bg-white rounded-xl border border-[#e8eaed] shadow-sm p-8 text-center"
           style={{ color: 'var(--text-muted)' }}
         >
-          <p className="text-lg font-medium">Loading...</p>
+          <p className="text-lg font-medium">読み込み中…</p>
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-[300px_1fr]">
@@ -237,7 +230,7 @@ export default function NotesPage() {
             </button>
             <div className="flex-1 overflow-y-auto -mx-1 px-1">
               {notes.length === 0 ? (
-                <p className="text-xs text-gray-400 text-center py-6">メモがありません。</p>
+                <p className="text-xs text-gray-400 text-center py-6">メモはありません。</p>
               ) : (
                 <ul className="flex flex-col gap-1.5">
                   {notes.map(n => {
