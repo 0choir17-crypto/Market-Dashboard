@@ -328,7 +328,7 @@ export default function LeadersTable({ rows, hitsMap, query }: Props) {
                 key={r.code}
                 className={`border-b border-[#f0f2f4] transition-colors ${
                   i % 2 === 0 ? 'bg-white' : 'bg-[#fafafa]'
-                } hover:bg-[var(--bg-card-hover)]`}
+                } hover:bg-gray-100`}
               >
                 <td className="px-2 py-1.5 text-center font-mono text-xs text-gray-700 tabular-nums font-semibold">
                   {r.market_rank ?? '—'}
@@ -403,7 +403,7 @@ export default function LeadersTable({ rows, hitsMap, query }: Props) {
 
       {/* Legend */}
       <div className="flex items-center justify-center gap-4 py-3 text-[11px] border-t border-[#f0f2f4] flex-wrap">
-        <span className="text-gray-500">初動 (emerging):</span>
+        <span className="text-[var(--text-secondary)]">初動 (emerging):</span>
         <span className="flex items-center gap-1">
           <span className="inline-block w-2.5 h-2.5 rounded" style={{ backgroundColor: '#16a34a' }} />
           <span style={{ color: 'var(--text-secondary)' }}>≥80 加速中</span>
@@ -417,7 +417,7 @@ export default function LeadersTable({ rows, hitsMap, query }: Props) {
           <span style={{ color: 'var(--text-secondary)' }}>&lt;55 成熟・失速</span>
         </span>
         <span className="text-gray-300">|</span>
-        <span className="text-gray-500">vol_5d:</span>
+        <span className="text-[var(--text-secondary)]">vol_5d:</span>
         <span className="flex items-center gap-1">
           <span className="inline-block w-2.5 h-2.5 rounded" style={{ backgroundColor: '#bbf7d0' }} />
           <span style={{ color: 'var(--text-secondary)' }}>≥1.5 機関買い継続</span>
@@ -435,7 +435,7 @@ export default function LeadersTable({ rows, hitsMap, query }: Props) {
           <span style={{ color: 'var(--text-secondary)' }}>&lt;0.7 出来高枯渇</span>
         </span>
         <span className="text-gray-300">|</span>
-        <span className="text-gray-500">ヒット数 (通算 Top50入り日数):</span>
+        <span className="text-[var(--text-secondary)]">ヒット数 (通算 Top50入り日数):</span>
         <span className="flex items-center gap-1">
           <span className="inline-block w-2.5 h-2.5 rounded" style={{ backgroundColor: '#0ea5e9' }} />
           <span style={{ color: 'var(--text-secondary)' }}>30+</span>

@@ -12,6 +12,7 @@ import {
   score3Color,
 } from '@/types/earningsQuality'
 import type { EarningsQualitySnapshot } from '@/lib/earningsQualityFetch'
+import { formatPct } from '@/lib/format'
 import { shikihoUrl, tradingViewUrl } from '@/lib/tickerLinks'
 import Tooltip from '@/components/shared/Tooltip'
 
@@ -32,10 +33,9 @@ function isNum(v: number | null | undefined): v is number {
   return v != null && Number.isFinite(v)
 }
 
+// 符号付き % は lib/format.ts に委譲
 function fmtPct(v: number | null | undefined, decimals = 1): string {
-  if (!isNum(v)) return '—'
-  const s = v.toFixed(decimals)
-  return v > 0 ? `+${s}%` : `${s}%`
+  return formatPct(v, { digits: decimals, sign: true })
 }
 
 function fmtNum(v: number | null | undefined, decimals = 1): string {
@@ -49,7 +49,7 @@ function Score3Badge({ row }: { row: EarningsQualityRow }) {
   const isPerfect = row.score3 === max
   return (
     <span
-      className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-md font-mono text-xs font-bold tabular-nums"
+      className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full font-mono text-xs font-bold tabular-nums"
       style={{ backgroundColor: bg, color: text, border: `1px solid ${border}` }}
       title={
         isPerfect
@@ -167,8 +167,9 @@ function SortTh({
   return (
     <th
       onClick={() => onSort(sortKey)}
-      className={`px-2 py-2.5 text-xs font-semibold uppercase tracking-wide whitespace-nowrap cursor-pointer select-none hover:bg-gray-100 transition-colors ${alignClass} ${
-        active ? 'text-[var(--accent)]' : 'text-gray-500'
+      aria-sort={active ? (currentDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+      className={`px-2 py-2.5 text-xs font-medium uppercase tracking-wide whitespace-nowrap cursor-pointer select-none hover:bg-gray-100 transition-colors ${alignClass} ${
+        active ? 'text-[var(--accent)]' : 'text-[var(--text-secondary)]'
       } ${className}`}
     >
       {inner}
@@ -186,7 +187,7 @@ function Row({ row }: { row: EarningsQualityRow }) {
 
   return (
     <tr
-      className={`border-b border-[#f0f2f4] transition-colors hover:bg-gray-50 ${
+      className={`border-b border-[#f0f2f4] transition-colors hover:bg-[var(--bg-card-hover)] ${
         isPerfect ? 'bg-emerald-50/60' : 'bg-white'
       }`}
     >
@@ -253,11 +254,11 @@ function Row({ row }: { row: EarningsQualityRow }) {
       </td>
       <td className="px-2 py-2 text-center text-xs">
         {row.above_sma200 === true ? (
-          <span className="text-green-600" title=">200日SMA">
+          <span className="text-[var(--positive)]" title=">200日SMA">
             ✓
           </span>
         ) : row.above_sma200 === false ? (
-          <span className="text-red-500" title="<200日SMA">
+          <span className="text-[var(--negative)]" title="<200日SMA">
             ✗
           </span>
         ) : (
@@ -269,7 +270,7 @@ function Row({ row }: { row: EarningsQualityRow }) {
       </td>
       <td className="px-2 py-2 text-center">
         <span
-          className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold ${
+          className={`inline-block px-2 py-0.5 rounded-full text-[11px] font-mono font-semibold ${
             isQ1
               ? 'bg-blue-50 text-blue-700'
               : row.cur_per_type === '2Q'
@@ -576,9 +577,9 @@ export default function EarningsQualitySection({
       {/* ── テーブル ────────────────────────────────────────────── */}
       <div className="bg-white rounded-xl border border-[#e8eaed] shadow-sm overflow-x-auto">
         <div className="flex items-center gap-3 px-4 pt-4 pb-3">
-          <p className="text-sm font-semibold text-gray-500">品質スコア ランキング</p>
-          <span className="ml-auto text-xs text-gray-400">
-            {sorted.length} / {rows.length} 件表示
+          <p className="text-sm font-semibold text-[var(--text-primary)]">品質スコア ランキング</p>
+          <span className="ml-auto text-xs text-[var(--text-muted)]">
+            <span className="font-mono">{sorted.length} / {rows.length}</span> 件表示
           </span>
         </div>
 
@@ -587,8 +588,8 @@ export default function EarningsQualitySection({
             <tr className="bg-gray-50 border-y border-[#e8eaed]">
               <SortTh label="順位" tooltip="rank_in_day — score3 降順順位 (1=トップ)" sortKey="rank_in_day" {...sp} align="center" className="w-14" />
               <SortTh label="Score" tooltip="score3 = s_div + s_eps + s_sales (0-7, Q1 は最大 5)" sortKey="score3" {...sp} align="center" className="w-20" />
-              <th className="px-2 py-2.5 text-xs font-semibold uppercase tracking-wide text-left text-gray-500">Verdict</th>
-              <th className="px-2 py-2.5 text-xs font-semibold uppercase tracking-wide text-left text-gray-500 w-20">Code</th>
+              <th className="px-2 py-2.5 text-xs font-medium uppercase tracking-wide text-left text-[var(--text-secondary)]">Verdict</th>
+              <th className="px-2 py-2.5 text-xs font-medium uppercase tracking-wide text-left text-[var(--text-secondary)] w-20">Code</th>
               <SortTh label="銘柄名" sortKey="co_name" {...sp} align="left" className="min-w-[180px]" />
               <SortTh label="セクター" sortKey="sector_s33" {...sp} align="left" className="min-w-[110px]" />
               <SortTh label="売上 YoY/QoQ" tooltip="上: sales_yoy_pct (前年同期累計比 %) / 下: sales_qoq_pct (前期単Q比 %)" sortKey="sales_yoy_pct" {...sp} />
@@ -596,11 +597,11 @@ export default function EarningsQualitySection({
               <SortTh label="増配率" tooltip="div_change_pct — 同 FY 前回 FDivAnn からの増配率 % (>=10 で「大」★)" sortKey="div_change_pct" {...sp} />
               <SortTh label="通期 OP" tooltip="fop_rev_pct — 通期予想 OP 上方修正率 % (同 FY 前回 FOP 比)" sortKey="fop_rev_pct" {...sp} />
               <SortTh label="進捗超過" tooltip="progress_excess_pct — 実進捗 − 期待ペース (pt)" sortKey="progress_excess_pct" {...sp} />
-              <th className="px-2 py-2.5 text-xs font-semibold uppercase tracking-wide text-right text-gray-500">終値</th>
+              <th className="px-2 py-2.5 text-xs font-medium uppercase tracking-wide text-right text-[var(--text-secondary)]">終値</th>
               <SortTh label="売買代金" tooltip="turnover_oku — 20 日平均売買代金 (億円)" sortKey="turnover_oku" {...sp} />
-              <th className="px-2 py-2.5 text-xs font-semibold uppercase tracking-wide text-center text-gray-500">SMA200</th>
-              <th className="px-2 py-2.5 text-xs font-semibold uppercase tracking-wide text-center text-gray-500">開示時刻</th>
-              <th className="px-2 py-2.5 text-xs font-semibold uppercase tracking-wide text-center text-gray-500">Q</th>
+              <th className="px-2 py-2.5 text-xs font-medium uppercase tracking-wide text-center text-[var(--text-secondary)]">SMA200</th>
+              <th className="px-2 py-2.5 text-xs font-medium uppercase tracking-wide text-center text-[var(--text-secondary)]">開示時刻</th>
+              <th className="px-2 py-2.5 text-xs font-medium uppercase tracking-wide text-center text-[var(--text-secondary)]">Q</th>
             </tr>
           </thead>
           <tbody>
@@ -611,14 +612,14 @@ export default function EarningsQualitySection({
         </table>
 
         {sorted.length === 0 && (
-          <div className="py-10 text-center text-gray-400 text-sm">
-            条件に合う銘柄がありません — フィルタを緩めてください
+          <div className="py-10 text-center text-[var(--text-muted)] text-sm">
+            条件に合う銘柄はありません — フィルタを緩めてください
           </div>
         )}
 
         {/* Legend */}
         <div className="flex items-center justify-center gap-4 py-3 text-[11px] border-t border-[#f0f2f4] flex-wrap">
-          <span className="text-gray-500">Score:</span>
+          <span className="text-[var(--text-secondary)]">Score:</span>
           <span className="flex items-center gap-1">
             <span className="inline-block w-2.5 h-2.5 rounded" style={{ backgroundColor: '#86efac' }} />
             <span style={{ color: 'var(--text-secondary)' }}>満点</span>
@@ -662,17 +663,17 @@ function StatCard({
 }) {
   const accentColor =
     accent === 'green'
-      ? 'text-green-700'
+      ? 'text-[var(--positive)]'
       : accent === 'blue'
-        ? 'text-blue-700'
+        ? 'text-[var(--accent)]'
         : accent === 'amber'
-          ? 'text-amber-700'
-          : 'text-gray-800'
+          ? 'text-[var(--neutral-color)]'
+          : 'text-[var(--text-primary)]'
   return (
     <div className="bg-white rounded-xl border border-[#e8eaed] shadow-sm p-3">
-      <p className="text-[10px] text-gray-500 uppercase tracking-wide font-semibold">{label}</p>
+      <p className="text-[10px] text-[var(--text-secondary)] uppercase tracking-wide font-medium">{label}</p>
       <p className={`text-2xl font-bold font-mono tabular-nums mt-1 ${accentColor}`}>{value}</p>
-      {sub && <p className="text-[10px] text-gray-400 mt-0.5 truncate" title={sub}>{sub}</p>}
+      {sub && <p className="text-[10px] text-[var(--text-muted)] mt-0.5 truncate" title={sub}>{sub}</p>}
     </div>
   )
 }
