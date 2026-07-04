@@ -41,6 +41,21 @@ export function isBreakeven(t: { result?: TradeResult | string | null; pnl?: num
   return effectiveResult(t) === 'BREAKEVEN'
 }
 
+// Canonical losing-streak transition, shared by both close paths (journal
+// CloseTradeModal and portfolio CloseModal). Rules:
+//   LOSS      → streak + 1
+//   WIN       → 0
+//   BREAKEVEN → unchanged (a flat exit is not evidence the streak is broken)
+//   null      → unchanged (open / unknown outcome must not touch the breaker)
+// The classification comes from pnl via classifyResult — never from the sign
+// of the R-multiple, which is null when no stop was set and (historically)
+// flipped sign under trailed stops.
+export function nextLossStreak(prev: number, result: TradeResult | null): number {
+  if (result === 'LOSS') return prev + 1
+  if (result === 'WIN') return 0
+  return prev
+}
+
 type AggregatableTrade = {
   result?: TradeResult | string | null
   pnl?: number | null
