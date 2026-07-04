@@ -2,6 +2,7 @@
 
 import type { VolumeIgnitionRow } from '@/types/volumeIgnition'
 import { isFreshIgnition } from '@/types/volumeIgnition'
+import { formatPct } from '@/lib/format'
 import { tradingViewUrl, shikihoUrl } from '@/lib/tickerLinks'
 
 type Props = {
@@ -19,9 +20,9 @@ function fmt(v: number | null | undefined, decimals = 1): string {
   return isNum(v) ? v.toFixed(decimals) : '—'
 }
 
+// 符号付き % は lib/format.ts に委譲
 function fmtSignedPct(v: number | null | undefined, decimals = 1): string {
-  if (!isNum(v)) return '—'
-  return `${v >= 0 ? '+' : ''}${v.toFixed(decimals)}%`
+  return formatPct(v, { digits: decimals, sign: true })
 }
 
 function fmtClose(v: number | null | undefined): string {
@@ -62,7 +63,7 @@ function Chip({
 }) {
   return (
     <span
-      className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold tabular-nums"
+      className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold tabular-nums"
       style={{ backgroundColor: palette.bg, color: palette.fg, border: `1px solid ${palette.border}` }}
       title={title}
     >
@@ -78,8 +79,8 @@ function DaysBadge({ days, entryDate }: { days: number | null; entryDate: string
   if (fresh) {
     return (
       <span
-        className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide"
-        style={{ backgroundColor: '#fef3c7', color: '#92400e', border: '1px solid #fcd34d' }}
+        className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold uppercase tracking-wide"
+        style={{ backgroundColor: 'var(--neutral-bg)', color: 'var(--neutral-color)', border: '1px solid #fcd34d' }}
         title={title}
       >
         🔥 当日点火
@@ -100,7 +101,7 @@ function AdrExtremeChip() {
   return (
     <Chip
       text="⚠ ADR>12 減サイズ"
-      palette={{ bg: '#fee2e2', fg: '#991b1b', border: '#fca5a5' }}
+      palette={{ bg: 'var(--negative-bg)', fg: '#991b1b', border: '#fca5a5' }}
       title="adr_extreme=true（ADR>12）は大負け多発帯。ポジションサイズを減らす警告。"
     />
   )
@@ -118,8 +119,8 @@ function Metric({
   title?: string
 }) {
   return (
-    <div className="rounded bg-[#fafafa] border border-[#f0f2f4] px-2 py-1.5" title={title}>
-      <p className="text-[9px] uppercase tracking-wide text-gray-500 leading-tight">{label}</p>
+    <div className="rounded bg-[var(--bg-card-hover)] border border-[#f0f2f4] px-2 py-1.5" title={title}>
+      <p className="text-[9px] font-medium uppercase tracking-wide text-[var(--text-secondary)] leading-tight">{label}</p>
       <p
         className="mt-0.5 font-mono text-sm font-semibold leading-tight tabular-nums"
         style={{ color: color ?? 'var(--text-primary)' }}
@@ -154,7 +155,7 @@ export default function VolumeIgnitionCard({ row, hot = false, onAddWatchlist, o
           />
         )}
         {extreme && <AdrExtremeChip />}
-        {row.mkt && <span className="ml-auto text-[10px] text-gray-400 font-mono">{row.mkt}</span>}
+        {row.mkt && <span className="ml-auto text-[10px] text-[var(--text-muted)] font-mono">{row.mkt}</span>}
       </div>
 
       {/* 銘柄 */}
@@ -174,7 +175,7 @@ export default function VolumeIgnitionCard({ row, hot = false, onAddWatchlist, o
               href={tradingViewUrl(row.code)}
               target="_blank"
               rel="noopener noreferrer"
-              className="font-mono text-sm font-bold text-blue-600 hover:underline flex-shrink-0"
+              className="font-mono text-sm font-bold text-[var(--accent)] hover:underline flex-shrink-0"
               title={`${row.code}（TradingView を開く）`}
             >
               {row.code}
@@ -182,7 +183,7 @@ export default function VolumeIgnitionCard({ row, hot = false, onAddWatchlist, o
           </div>
           <div
             className="mt-0.5 text-[11px] truncate"
-            style={{ color: hot ? '#16a34a' : '#6b7280' }}
+            style={{ color: hot ? 'var(--positive)' : 'var(--text-secondary)' }}
             title={row.sector_s33 ?? ''}
           >
             {hot ? '🟢 ' : ''}
@@ -190,11 +191,11 @@ export default function VolumeIgnitionCard({ row, hot = false, onAddWatchlist, o
           </div>
         </div>
         <div className="flex-shrink-0 text-right">
-          <p className="text-[9px] uppercase tracking-wide text-gray-400 leading-tight">Close</p>
-          <p className="font-mono text-sm font-semibold text-gray-700 tabular-nums leading-tight">
+          <p className="text-[9px] font-medium uppercase tracking-wide text-[var(--text-muted)] leading-tight">Close</p>
+          <p className="font-mono text-sm font-semibold text-[var(--text-primary)] tabular-nums leading-tight">
             {fmtClose(row.close)}
           </p>
-          <p className="text-[9px] text-gray-400 leading-tight tabular-nums" title="点火日の終値">
+          <p className="text-[9px] text-[var(--text-muted)] leading-tight font-mono tabular-nums" title="点火日の終値">
             点火 {fmtClose(row.entry_close)}
           </p>
         </div>

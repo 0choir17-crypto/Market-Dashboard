@@ -33,7 +33,7 @@ function isNum(v: number | null | undefined): v is number {
 }
 
 function fmt(v: number | null | undefined, decimals = 1): string {
-  return isNum(v) ? v.toFixed(decimals) : '--'
+  return isNum(v) ? v.toFixed(decimals) : '—'
 }
 
 // 'YYYY-MM-DD' → 'M/D'
@@ -51,7 +51,7 @@ function CsAvgCell({ value }: { value: number | null | undefined }) {
         className="font-mono text-xs tabular-nums w-9 text-right font-semibold"
         style={{ color: isNum(value) ? '#1f2937' : '#9ca3af' }}
       >
-        {isNum(value) ? value.toFixed(1) : '--'}
+        {isNum(value) ? value.toFixed(1) : '—'}
       </span>
       <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
         <div className="h-full rounded-full" style={{ width: `${safe}%`, backgroundColor: color }} />
@@ -101,18 +101,19 @@ function VolCell({ value }: { value: number | null | undefined }) {
   const { bg, text, label } = volColor(value)
   return (
     <span
-      title={`${label} (${isNum(value) ? value.toFixed(2) : '--'})`}
-      className="inline-block min-w-[48px] text-center px-1.5 py-0.5 rounded text-xs font-mono font-semibold tabular-nums"
+      title={`${label} (${isNum(value) ? value.toFixed(2) : '—'})`}
+      className="inline-block min-w-[48px] text-center px-2 py-0.5 rounded-full text-xs font-mono font-semibold tabular-nums"
       style={{ backgroundColor: bg, color: text }}
     >
-      {isNum(value) ? value.toFixed(2) : '--'}
+      {isNum(value) ? value.toFixed(2) : '—'}
     </span>
   )
 }
 
 function ReturnCell({ value }: { value: number | null | undefined }) {
-  if (!isNum(value)) return <span className="text-gray-400 text-xs">--</span>
-  const color = value > 0 ? '#16a34a' : value < 0 ? '#dc2626' : '#6b7280'
+  if (!isNum(value)) return <span className="text-[var(--text-muted)] text-xs">—</span>
+  // 損益色は CSS 変数に統一（rule: --positive / --negative）
+  const color = value > 0 ? 'var(--positive)' : value < 0 ? 'var(--negative)' : 'var(--text-secondary)'
   const sign = value > 0 ? '+' : ''
   return (
     <span className="font-mono text-xs tabular-nums" style={{ color }}>
@@ -124,7 +125,7 @@ function ReturnCell({ value }: { value: number | null | undefined }) {
 function PassRouteBadge({ route }: { route: string | null | undefined }) {
   if (route === 'ipo') {
     return (
-      <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700">
+      <span className="inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[var(--negative-bg)] text-[var(--negative)]">
         IPO
       </span>
     )
@@ -135,12 +136,12 @@ function PassRouteBadge({ route }: { route: string | null | undefined }) {
 // ヒット数バッジ: Top50 入りした通算営業日数 (実数, キャップ無し)
 // 色 (しきい値は据え置き): 30+ 水色 / 20+ 濃緑 / 10+ 緑 / 5+ 黄 / それ未満 灰
 function HitsCell({ hits }: { hits: number }) {
-  if (hits <= 0) return <span className="text-gray-400 text-xs">--</span>
+  if (hits <= 0) return <span className="text-[var(--text-muted)] text-xs">—</span>
   const bg =
     hits >= 30 ? '#0ea5e9' : hits >= 20 ? '#16a34a' : hits >= 10 ? '#22c55e' : hits >= 5 ? '#eab308' : '#9ca3af'
   return (
     <span
-      className="inline-block min-w-[36px] text-center px-1.5 py-0.5 rounded text-xs font-mono font-semibold tabular-nums text-white"
+      className="inline-block min-w-[36px] text-center px-2 py-0.5 rounded-full text-xs font-mono font-semibold tabular-nums text-white"
       title={hits >= 30 ? '通算 30 日以上 Top50 入り' : undefined}
       style={{ backgroundColor: bg }}
     >
@@ -158,7 +159,7 @@ function StreakCell({ hits }: { hits: LeaderHits }) {
   if (hits.streak >= 2) {
     return (
       <span
-        className="inline-block px-1.5 py-0.5 rounded text-xs font-mono font-semibold tabular-nums bg-emerald-100 text-emerald-800"
+        className="inline-block px-2 py-0.5 rounded-full text-xs font-mono font-semibold tabular-nums bg-emerald-100 text-emerald-800"
         title={`${hits.streak} 営業日連続で Top50 入り`}
       >
         {hits.streak}日連続
@@ -169,7 +170,7 @@ function StreakCell({ hits }: { hits: LeaderHits }) {
     if (hits.lastBeforeStreak) {
       return (
         <span
-          className="inline-block px-1.5 py-0.5 rounded text-xs font-mono tabular-nums bg-gray-100 text-gray-700"
+          className="inline-block px-2 py-0.5 rounded-full text-xs font-mono tabular-nums bg-gray-100 text-gray-700"
           title={`前回 Top50 入り: ${hits.lastBeforeStreak}`}
         >
           前回 {shortDate(hits.lastBeforeStreak)}
@@ -178,14 +179,14 @@ function StreakCell({ hits }: { hits: LeaderHits }) {
     }
     return (
       <span
-        className="inline-block px-1.5 py-0.5 rounded text-xs font-mono font-semibold bg-rose-100 text-rose-700"
+        className="inline-block px-2 py-0.5 rounded-full text-xs font-mono font-semibold bg-rose-100 text-rose-700"
         title="全履歴で初の Top50 入り — 急浮上候補"
       >
         NEW
       </span>
     )
   }
-  return <span className="text-gray-400 text-xs">--</span>
+  return <span className="text-[var(--text-muted)] text-xs">—</span>
 }
 
 function SortTh({
@@ -214,8 +215,9 @@ function SortTh({
   return (
     <th
       onClick={() => onSort(sortKey)}
-      className={`px-2 py-2 text-[11px] font-semibold uppercase tracking-wide whitespace-nowrap cursor-pointer select-none hover:bg-gray-100 transition-colors ${alignClass} ${
-        active ? 'text-[var(--accent)]' : 'text-gray-500'
+      aria-sort={active ? (currentDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+      className={`px-2 py-2 text-xs font-medium uppercase tracking-wide whitespace-nowrap cursor-pointer select-none hover:bg-gray-100 transition-colors ${alignClass} ${
+        active ? 'text-[var(--accent)]' : 'text-[var(--text-secondary)]'
       } ${className}`}
     >
       {inner}
@@ -289,11 +291,13 @@ export default function LeadersTable({ rows, hitsMap, query }: Props) {
   return (
     <div className="bg-white rounded-xl border border-[#e8eaed] shadow-sm overflow-x-auto">
       <div className="flex items-center gap-3 px-4 pt-4 pb-3 flex-wrap">
-        <p className="text-sm font-semibold text-gray-500">市場リーダー Top 50</p>
-        <span className="text-[11px] text-gray-400">
+        <p className="text-sm font-semibold text-[var(--text-primary)]">市場リーダー Top 50</p>
+        <span className="text-[11px] text-[var(--text-muted)]">
           cs_avg=確立（資金が向かう度）／ 初動=加速（今RSが伸びてるか）。観測テーブルで売買シグナルではない
         </span>
-        <span className="ml-auto text-xs text-gray-400">{sorted.length} 銘柄</span>
+        <span className="ml-auto text-xs text-[var(--text-muted)]">
+          <span className="font-mono">{sorted.length}</span> 銘柄
+        </span>
       </div>
 
       <table className="w-full min-w-[1360px] text-sm">
@@ -303,9 +307,9 @@ export default function LeadersTable({ rows, hitsMap, query }: Props) {
             <SortTh label="ヒット数" tooltip="Top50 に入った通算営業日数 (実数, 表示日まで)" sortKey="hits" {...sp} align="center" className="w-20" />
             <SortTh label="連続/直近" tooltip="現在の連続 Top50 日数 (実数, 全履歴)。連続=1 の銘柄は直近の前回ヒット日 (前回 M/D)、全履歴で初登場は NEW。" sortKey="streak" {...sp} align="center" className="w-24" />
             <SortTh label="Code" tooltip="銘柄コード (TradingView へリンク)" sortKey="code" {...sp} align="left" className="w-16" />
-            <th className="px-2 py-2 text-[11px] font-semibold uppercase tracking-wide whitespace-nowrap text-left text-gray-500">Name</th>
+            <th className="px-2 py-2 text-xs font-medium uppercase tracking-wide whitespace-nowrap text-left text-[var(--text-secondary)]">Name</th>
             <SortTh label="Sector (S33)" tooltip="S33 業種名 (五十音順ソート)" sortKey="s33nm" {...sp} align="left" />
-            <th className="px-2 py-2 text-[11px] font-semibold uppercase tracking-wide whitespace-nowrap text-right text-gray-500 w-20">Close</th>
+            <th className="px-2 py-2 text-xs font-medium uppercase tracking-wide whitespace-nowrap text-right text-[var(--text-secondary)] w-20">Close</th>
             <SortTh label="cs_avg" tooltip="クロスセクション RS 平均 0-100 (主軸スコア=確立度)。99.5=Stage A 上位 0.5%。「どれだけ資金が向かっているか」。rs_topix_avg とは別物。" sortKey="cs_avg" {...sp} align="left" className="w-32" />
             <SortTh label="初動" tooltip="emerging_cs 0-100 (初動スコア=加速度)。高い=今RSが加速中（初動）/ 低い=成熟・失速。cs_avg の鏡像。hover で RS加速度 (21d/5d)。過去日は — (本更新前)。" sortKey="emerging_cs" {...sp} align="left" className="w-32" />
             <SortTh label="vol_5d" tooltip="直近 5 営業日の出来高比。≥1.5 機関買い継続 / <0.7 出来高枯渇" sortKey="vol_5d" {...sp} align="center" className="w-20" />
@@ -313,7 +317,7 @@ export default function LeadersTable({ rows, hitsMap, query }: Props) {
             <SortTh label="63d %" tooltip="return_63d — 63 営業日リターン" sortKey="return_63d" {...sp} align="right" className="w-20" />
             <SortTh label="売買代金" tooltip="turnover_oku — 売買代金 20日平均 (億円)" sortKey="turnover_oku" {...sp} align="right" className="w-20" />
             <SortTh label="時価総額" tooltip="mcap_oku — 時価総額 (億円)" sortKey="mcap_oku" {...sp} align="right" className="w-20" />
-            <th className="px-2 py-2 text-[11px] font-semibold uppercase tracking-wide whitespace-nowrap text-center text-gray-500">Route</th>
+            <th className="px-2 py-2 text-xs font-medium uppercase tracking-wide whitespace-nowrap text-center text-[var(--text-secondary)]">Route</th>
           </tr>
         </thead>
         <tbody>
@@ -324,10 +328,10 @@ export default function LeadersTable({ rows, hitsMap, query }: Props) {
                 key={r.code}
                 className={`border-b border-[#f0f2f4] transition-colors ${
                   i % 2 === 0 ? 'bg-white' : 'bg-[#fafafa]'
-                } hover:bg-blue-50/40`}
+                } hover:bg-[var(--bg-card-hover)]`}
               >
                 <td className="px-2 py-1.5 text-center font-mono text-xs text-gray-700 tabular-nums font-semibold">
-                  {r.market_rank ?? '--'}
+                  {r.market_rank ?? '—'}
                 </td>
                 <td className="px-2 py-1.5 text-center">
                   <HitsCell hits={hits.hits} />
@@ -352,14 +356,14 @@ export default function LeadersTable({ rows, hitsMap, query }: Props) {
                     rel="noopener noreferrer"
                     className="text-gray-800 hover:text-[var(--accent)] hover:underline"
                   >
-                    {r.coname ?? '--'}
+                    {r.coname ?? '—'}
                   </a>
                 </td>
                 <td className="px-2 py-1.5 whitespace-nowrap text-xs text-gray-600">
-                  {r.s33nm ?? '--'}
+                  {r.s33nm ?? '—'}
                 </td>
                 <td className="px-2 py-1.5 text-right font-mono text-xs text-gray-700 tabular-nums">
-                  {isNum(r.close) ? r.close.toLocaleString('ja-JP', { maximumFractionDigits: 1 }) : '--'}
+                  {isNum(r.close) ? r.close.toLocaleString('ja-JP', { maximumFractionDigits: 1 }) : '—'}
                 </td>
                 <td className="px-2 py-1.5">
                   <CsAvgCell value={r.cs_avg} />
@@ -392,8 +396,8 @@ export default function LeadersTable({ rows, hitsMap, query }: Props) {
       </table>
 
       {sorted.length === 0 && (
-        <div className="py-10 text-center text-gray-400 text-sm">
-          {query ? `"${query}" にマッチする銘柄なし` : 'データなし'}
+        <div className="py-10 text-center text-[var(--text-muted)] text-sm">
+          {query ? `「${query}」に一致する銘柄はありません` : 'データがありません'}
         </div>
       )}
 
