@@ -3,15 +3,10 @@
 import { Trade } from '@/types/trades'
 import Tooltip from '@/components/shared/Tooltip'
 import { isWin, isLoss, isBreakeven } from '@/lib/tradeResult'
+import { formatYen, formatPct, pnlColorClass } from '@/lib/format'
 
 type Props = {
   trades: Trade[]
-}
-
-function fmtYen(v: number | null | undefined): string {
-  if (v == null) return '—'
-  const sign = v >= 0 ? '+' : '-'
-  return `${sign}¥${Math.abs(Math.round(v)).toLocaleString('ja-JP')}`
 }
 
 function holdDays(entry: string | null, exit: string | null): number | null {
@@ -25,32 +20,32 @@ function Stat({
   label,
   value,
   sub,
-  color,
+  valueClass,
   tooltip,
 }: {
   label: string
   value: string
   sub?: string
-  color?: string
+  valueClass?: string
   tooltip?: string
 }) {
+  const labelSpan = (
+    <span className="text-[11px] font-medium uppercase tracking-wide text-[var(--text-muted)]">
+      {label}
+    </span>
+  )
   const labelEl = tooltip ? (
-    <Tooltip content={tooltip}>
-      <span className="text-xs font-medium text-gray-500">{label}</span>
-    </Tooltip>
+    <Tooltip content={tooltip}>{labelSpan}</Tooltip>
   ) : (
-    <span className="text-xs font-medium text-gray-500">{label}</span>
+    labelSpan
   )
   return (
-    <div className="bg-white rounded-xl border border-[#e8eaed] shadow-sm px-4 py-3">
+    <div className="bg-white rounded-xl border border-[var(--border)] shadow-sm px-4 py-3">
       <div className="mb-1">{labelEl}</div>
-      <p
-        className="text-lg font-bold font-mono leading-tight"
-        style={{ color: color ?? 'var(--text-primary)' }}
-      >
+      <p className={`text-lg font-bold font-mono leading-tight ${valueClass ?? 'text-[var(--text-primary)]'}`}>
         {value}
       </p>
-      {sub && <p className="text-[10px] text-gray-400 mt-0.5">{sub}</p>}
+      {sub && <p className="text-[10px] text-[var(--text-muted)] mt-0.5 font-mono">{sub}</p>}
     </div>
   )
 }
@@ -91,11 +86,14 @@ export default function JournalStats({ trades }: Props) {
 
   const unreviewedCount = closed.filter(t => !t.reviewed_at).length
 
-  const pnlColor = totalPnl >= 0 ? 'var(--positive)' : 'var(--negative)'
-  const wrColor =
-    winRate == null ? undefined : winRate >= 50 ? 'var(--positive)' : 'var(--negative)'
-  const pfColor =
-    pf == null ? undefined : pf >= 1.5 ? 'var(--positive)' : pf >= 1 ? undefined : 'var(--negative)'
+  const wrClass =
+    winRate == null
+      ? undefined
+      : winRate >= 50 ? 'text-[var(--positive)]' : 'text-[var(--negative)]'
+  const pfClass =
+    pf == null
+      ? undefined
+      : pf >= 1.5 ? 'text-[var(--positive)]' : pf >= 1 ? undefined : 'text-[var(--negative)]'
 
   const wlSub = breakevens.length > 0
     ? `${wins.length}W / ${losses.length}L / ${breakevens.length}BE`
@@ -112,18 +110,18 @@ export default function JournalStats({ trades }: Props) {
         <Stat
           label="Win Rate"
           tooltip="勝率 = WIN ÷ (WIN + LOSS)。建値撤退 (BREAKEVEN) は分母から除外。"
-          value={winRate != null ? `${winRate.toFixed(1)}%` : '—'}
+          value={winRate != null ? formatPct(winRate, { digits: 1 }) : '—'}
           sub={wlSub}
-          color={wrColor}
+          valueClass={wrClass}
         />
         <Stat
           label="Total PnL"
           tooltip="クローズ済みトレードの合計 PnL。※手数料は未控除。実損益はこれより小さくなる。"
-          value={fmtYen(totalPnl)}
+          value={formatYen(totalPnl, { sign: true })}
           sub={avgPnlPct != null
-            ? `Avg ${avgPnlPct >= 0 ? '+' : ''}${avgPnlPct.toFixed(2)}%`
+            ? `Avg ${formatPct(avgPnlPct, { sign: true })}`
             : undefined}
-          color={pnlColor}
+          valueClass={pnlColorClass(totalPnl)}
         />
         <Stat
           label="Profit Factor"
@@ -132,12 +130,12 @@ export default function JournalStats({ trades }: Props) {
             pf == null ? '—' : pf === Infinity ? '∞' : pf.toFixed(2)
           }
           sub={`n=${decided}`}
-          color={pfColor}
+          valueClass={pfClass}
         />
         <Stat
           label="🔍 Unreviewed"
           value={`${unreviewedCount}`}
-          color={unreviewedCount > 0 ? 'var(--warning, #d97706)' : 'var(--text-muted)'}
+          valueClass={unreviewedCount > 0 ? 'text-amber-600' : 'text-[var(--text-muted)]'}
         />
       </div>
 
@@ -148,13 +146,13 @@ export default function JournalStats({ trades }: Props) {
         />
         <Stat
           label="Max Win"
-          value={maxWin != null ? fmtYen(maxWin) : '—'}
-          color={maxWin != null ? 'var(--positive)' : undefined}
+          value={formatYen(maxWin, { sign: true })}
+          valueClass={maxWin != null ? pnlColorClass(maxWin) : undefined}
         />
         <Stat
           label="Max Loss"
-          value={maxLoss != null ? fmtYen(maxLoss) : '—'}
-          color={maxLoss != null ? 'var(--negative)' : undefined}
+          value={formatYen(maxLoss, { sign: true })}
+          valueClass={maxLoss != null ? pnlColorClass(maxLoss) : undefined}
         />
         <Stat
           label="Open"

@@ -9,6 +9,7 @@ import {
   type ReviewTagCategory,
 } from '@/lib/reviewTags'
 import { isWin, isLoss, profitFactor, winRate } from '@/lib/tradeResult'
+import { formatYen, formatPct, pnlColorClass } from '@/lib/format'
 
 type Props = {
   trades: Trade[]
@@ -27,16 +28,6 @@ type TagRow = {
 }
 
 const CATEGORY_ORDER: ReviewTagCategory[] = ['entry', 'exit', 'external']
-
-function fmtYen(v: number): string {
-  const sign = v >= 0 ? '+' : '-'
-  return `${sign}¥${Math.abs(Math.round(v)).toLocaleString('ja-JP')}`
-}
-
-function fmtPct(v: number | null, decimals = 1): string {
-  if (v == null) return '—'
-  return `${v >= 0 ? '+' : ''}${v.toFixed(decimals)}`
-}
 
 // 勝率パレット: green at >=55, neutral 45–55, red below.
 function wrStyleColor(wr: number | null): string {
@@ -138,14 +129,14 @@ export default function TagPerformance({ trades }: Props) {
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-gray-50 border-b border-[#f0f2f4]">
-              <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-gray-500">Tag</th>
-              <th className="px-3 py-2 text-right text-xs font-semibold uppercase text-gray-500">Trades</th>
-              <th className="px-3 py-2 text-right text-xs font-semibold uppercase text-gray-500">W·L</th>
-              <th className="px-3 py-2 text-right text-xs font-semibold uppercase text-gray-500">Win Rate</th>
-              <th className="px-3 py-2 text-right text-xs font-semibold uppercase text-gray-500">Avg%</th>
-              <th className="px-3 py-2 text-right text-xs font-semibold uppercase text-gray-500">PnL</th>
-              <th className="px-3 py-2 text-right text-xs font-semibold uppercase text-gray-500">PF</th>
-              <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-gray-500 w-1/4">
+              <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-[var(--text-secondary)]">Tag</th>
+              <th className="px-3 py-2 text-right text-xs font-medium uppercase tracking-wide text-[var(--text-secondary)]">Trades</th>
+              <th className="px-3 py-2 text-right text-xs font-medium uppercase tracking-wide text-[var(--text-secondary)]">W·L</th>
+              <th className="px-3 py-2 text-right text-xs font-medium uppercase tracking-wide text-[var(--text-secondary)]">Win Rate</th>
+              <th className="px-3 py-2 text-right text-xs font-medium uppercase tracking-wide text-[var(--text-secondary)]">Avg%</th>
+              <th className="px-3 py-2 text-right text-xs font-medium uppercase tracking-wide text-[var(--text-secondary)]">PnL</th>
+              <th className="px-3 py-2 text-right text-xs font-medium uppercase tracking-wide text-[var(--text-secondary)]">PF</th>
+              <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-[var(--text-secondary)] w-1/4">
                 Distribution
               </th>
             </tr>
@@ -170,7 +161,7 @@ export default function TagPerformance({ trades }: Props) {
                     return (
                       <tr
                         key={r.tag.id}
-                        className="border-b border-[#f0f2f4] hover:bg-gray-50"
+                        className="border-b border-[#f0f2f4] hover:bg-[var(--bg-card-hover)]"
                       >
                         <td
                           className="px-3 py-2 text-gray-800"
@@ -180,15 +171,15 @@ export default function TagPerformance({ trades }: Props) {
                         </td>
                         <td className="px-3 py-2 text-right font-mono">{r.count}</td>
                         <td className="px-3 py-2 text-right font-mono text-xs">
-                          <span className="text-emerald-600">{r.wins}</span>
+                          <span className="text-[var(--positive)]">{r.wins}</span>
                           <span className="text-gray-400 mx-0.5">/</span>
-                          <span className="text-red-600">{r.losses}</span>
+                          <span className="text-[var(--negative)]">{r.losses}</span>
                         </td>
                         <td
                           className="px-3 py-2 text-right font-mono"
                           style={{ color: wrStyleColor(r.wr) }}
                         >
-                          {r.wr != null ? `${r.wr.toFixed(1)}%` : '—'}
+                          {r.wr != null ? formatPct(r.wr, { digits: 1 }) : '—'}
                         </td>
                         <td
                           className="px-3 py-2 text-right font-mono"
@@ -198,15 +189,12 @@ export default function TagPerformance({ trades }: Props) {
                               : r.avgPct >= 0 ? 'var(--positive)' : 'var(--negative)',
                           }}
                         >
-                          {fmtPct(r.avgPct)}%
+                          {formatPct(r.avgPct, { digits: 1, sign: true })}
                         </td>
                         <td
-                          className="px-3 py-2 text-right font-mono font-semibold"
-                          style={{
-                            color: pnlPositive ? 'var(--positive)' : 'var(--negative)',
-                          }}
+                          className={`px-3 py-2 text-right font-mono font-semibold ${pnlColorClass(r.pnl)}`}
                         >
-                          {fmtYen(r.pnl)}
+                          {formatYen(r.pnl, { sign: true })}
                         </td>
                         <td
                           className="px-3 py-2 text-right font-mono"

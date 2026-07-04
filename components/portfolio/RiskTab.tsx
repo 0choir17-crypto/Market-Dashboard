@@ -4,16 +4,12 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Trade } from '@/types/trades'
 import { RiskSettings } from '@/types/portfolio'
+import { formatYen, formatPct, pnlColorClass } from '@/lib/format'
 
 type Props = {
   riskSettings: RiskSettings | null
   history: Trade[]
   onRefresh: () => void
-}
-
-function fmt(v: number | null | undefined, d = 0): string {
-  if (v == null) return '—'
-  return v.toLocaleString('ja-JP', { minimumFractionDigits: d, maximumFractionDigits: d })
 }
 
 export default function RiskTab({ riskSettings, history, onRefresh }: Props) {
@@ -124,7 +120,7 @@ export default function RiskTab({ riskSettings, history, onRefresh }: Props) {
           </div>
           <div>
             <label className={labelClass}>→ Risk ¥/Trade (auto)</label>
-            <div className={roClass}>{riskYenPerTrade != null ? `¥${fmt(riskYenPerTrade)}` : '—'}</div>
+            <div className={roClass}>{formatYen(riskYenPerTrade)}</div>
           </div>
           <div>
             <label className={labelClass}>Max Positions</label>
@@ -134,7 +130,7 @@ export default function RiskTab({ riskSettings, history, onRefresh }: Props) {
           </div>
           <div>
             <label className={labelClass}>→ Max Invest ¥/Ticker (auto)</label>
-            <div className={roClass}>{maxInvestYen != null ? `¥${fmt(maxInvestYen)}` : '—'}</div>
+            <div className={roClass}>{formatYen(maxInvestYen)}</div>
           </div>
         </div>
       </div>
@@ -169,22 +165,22 @@ export default function RiskTab({ riskSettings, history, onRefresh }: Props) {
           </div>
           <div>
             <label className={labelClass}>Realized P&L ¥ (auto, {thisMonth})</label>
-            <div className={`${roClass} ${monthlyPnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {monthlyPnlHasData ? `${monthlyPnl >= 0 ? '+' : ''}¥${fmt(monthlyPnl)}` : '—'}
+            <div className={`${roClass} ${pnlColorClass(monthlyPnl)}`}>
+              {monthlyPnlHasData ? formatYen(monthlyPnl, { sign: true }) : '—'}
             </div>
           </div>
           <div>
             <label className={labelClass}>Monthly DD % (auto)</label>
-            <div className={`${roClass} ${monthlyDdPct != null ? (monthlyDdPct >= 0 ? 'text-green-600' : 'text-red-600') : ''}`}>
-              {monthlyDdPct != null ? `${monthlyDdPct >= 0 ? '+' : ''}${monthlyDdPct.toFixed(2)}%` : '—'}
+            <div className={`${roClass} ${monthlyDdPct != null ? pnlColorClass(monthlyDdPct) : ''}`}>
+              {monthlyDdPct != null ? formatPct(monthlyDdPct, { sign: true }) : '—'}
             </div>
           </div>
           <div>
             <label className={labelClass}>DD Check</label>
             <div className={roClass}>
               {ddOk === null ? '—' : ddOk
-                ? <span className="text-green-600 font-bold">🟢 OK</span>
-                : <span className="text-red-600 font-bold">🔴 NG — DD over limit</span>
+                ? <span className="text-[var(--positive)] font-bold">🟢 OK</span>
+                : <span className="text-[var(--negative)] font-bold">🔴 NG — DD over limit</span>
               }
             </div>
           </div>
@@ -208,8 +204,8 @@ export default function RiskTab({ riskSettings, history, onRefresh }: Props) {
           </div>
           <div>
             <label className={labelClass}>Applied Risk %</label>
-            <div className={`${roClass} ${isHalfRisk ? 'text-orange-600 font-bold' : 'text-green-600'}`}>
-              {!isNaN(appliedRiskPct) ? `${appliedRiskPct.toFixed(2)}%${isHalfRisk ? ' (halved)' : ''}` : '—'}
+            <div className={`${roClass} ${isHalfRisk ? 'text-orange-600 font-bold' : 'text-[var(--positive)]'}`}>
+              {!isNaN(appliedRiskPct) ? `${formatPct(appliedRiskPct)}${isHalfRisk ? ' (halved)' : ''}` : '—'}
             </div>
           </div>
         </div>
@@ -229,7 +225,7 @@ export default function RiskTab({ riskSettings, history, onRefresh }: Props) {
           disabled={saving}
           className={`px-6 py-3 text-sm font-semibold text-white rounded-lg transition-colors min-h-[44px] disabled:opacity-50 ${saved ? 'bg-green-600' : 'bg-blue-600 hover:bg-blue-700'}`}
         >
-          {saving ? 'Saving...' : saved ? '✓ Saved' : 'Save'}
+          {saving ? '保存中…' : saved ? '✓ 保存しました' : '保存'}
         </button>
       </div>
     </div>

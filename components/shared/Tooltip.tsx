@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 type Props = {
@@ -22,12 +22,13 @@ export default function Tooltip({ content, children }: Props) {
     isRight: boolean
   } | null>(null)
   const ref = useRef<HTMLDivElement>(null)
+  const tooltipId = useId()
 
   useEffect(() => {
     setMounted(true)
   }, [])
 
-  function handleMouseEnter() {
+  function show() {
     if (!ref.current) return
     const rect = ref.current.getBoundingClientRect()
     const isRight = rect.right > window.innerWidth - (TOOLTIP_W - 4)
@@ -50,20 +51,43 @@ export default function Tooltip({ content, children }: Props) {
     setVisible(true)
   }
 
+  function hide() {
+    setVisible(false)
+  }
+
   return (
     <div
       ref={ref}
       className="relative inline-flex items-center gap-1"
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={() => setVisible(false)}
+      onMouseEnter={show}
+      onMouseLeave={hide}
     >
       {children}
-      <span className="w-3.5 h-3.5 rounded-full bg-gray-200 text-gray-500 text-[10px] flex items-center justify-center cursor-help select-none flex-shrink-0">
+      {/* キーボード（Tab フォーカス）とタッチ（タップでトグル）にも対応 */}
+      <span
+        tabIndex={0}
+        role="button"
+        aria-label="補足説明"
+        aria-describedby={visible ? tooltipId : undefined}
+        onFocus={show}
+        onBlur={hide}
+        onClick={e => {
+          e.stopPropagation()
+          if (visible) hide()
+          else show()
+        }}
+        onKeyDown={e => {
+          if (e.key === 'Escape') hide()
+        }}
+        className="w-3.5 h-3.5 rounded-full bg-gray-200 text-gray-500 text-[10px] flex items-center justify-center cursor-help select-none flex-shrink-0"
+      >
         ?
       </span>
       {mounted && visible && pos &&
         createPortal(
           <div
+            id={tooltipId}
+            role="tooltip"
             className="fixed z-[100] bg-gray-900 text-white text-xs rounded-lg py-2 px-3 w-56 shadow-lg pointer-events-none normal-case font-normal tracking-normal leading-snug"
             style={{ top: pos.top, left: pos.left }}
           >

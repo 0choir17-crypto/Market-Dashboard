@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { Trade } from '@/types/trades'
 import { CATEGORY_LABELS, ReviewTagCategory, groupTagsByCategory } from '@/lib/reviewTags'
 import { calculateMissedRate } from '@/lib/mfeMae'
+import { formatPct } from '@/lib/format'
 import TradeChart from './TradeChart'
 
 type Props = {
@@ -62,11 +63,11 @@ export default function ReviewSection({ trade, onSaved, onCancel }: Props) {
         <span className="text-sm font-semibold text-gray-800">
           🔍 Review: <span className="font-mono">{trade.ticker}</span> {trade.company_name ?? ''}
         </span>
-        <span className="text-xs text-gray-500">
+        <span className="text-xs text-gray-500 font-mono">
           {trade.entry_date} → {trade.exit_date}
         </span>
-        <span className={`text-xs font-semibold ${isWin ? 'text-emerald-600' : 'text-red-600'}`}>
-          {(trade.pnl_pct ?? 0) >= 0 ? '+' : ''}{(trade.pnl_pct ?? 0).toFixed(2)}%
+        <span className={`text-xs font-semibold font-mono ${isWin ? 'text-[var(--positive)]' : 'text-[var(--negative)]'}`}>
+          {formatPct(trade.pnl_pct ?? 0, { sign: true })}
         </span>
         <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
           isWin ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
@@ -92,29 +93,29 @@ export default function ReviewSection({ trade, onSaved, onCancel }: Props) {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
             <div className="bg-white border border-gray-200 rounded-lg px-3 py-2.5">
               <p className="text-[11px] text-gray-500">Peak gain (MFE)</p>
-              <p className="text-xl font-bold text-emerald-600 mt-0.5">
-                {trade.mfe_pct >= 0 ? '+' : ''}{trade.mfe_pct.toFixed(1)}%
+              <p className="text-xl font-bold font-mono text-[var(--positive)] mt-0.5">
+                {formatPct(trade.mfe_pct, { digits: 1, sign: true })}
               </p>
               {trade.mfe_date && (
-                <p className="text-[11px] text-gray-400 mt-0.5">{trade.mfe_date}</p>
+                <p className="text-[11px] text-gray-400 mt-0.5 font-mono">{trade.mfe_date}</p>
               )}
             </div>
             <div className="bg-white border border-gray-200 rounded-lg px-3 py-2.5">
               <p className="text-[11px] text-gray-500">Worst drawdown (MAE)</p>
-              <p className="text-xl font-bold text-red-600 mt-0.5">
-                {trade.mae_pct >= 0 ? '+' : ''}{trade.mae_pct.toFixed(1)}%
+              <p className="text-xl font-bold font-mono text-[var(--negative)] mt-0.5">
+                {formatPct(trade.mae_pct, { digits: 1, sign: true })}
               </p>
               {trade.mae_date && (
-                <p className="text-[11px] text-gray-400 mt-0.5">{trade.mae_date}</p>
+                <p className="text-[11px] text-gray-400 mt-0.5 font-mono">{trade.mae_date}</p>
               )}
             </div>
             <div className="bg-white border border-gray-200 rounded-lg px-3 py-2.5">
               <p className="text-[11px] text-gray-500">Missed rate</p>
-              <p className="text-xl font-bold text-amber-600 mt-0.5">
-                {calculateMissedRate(trade.mfe_pct, trade.pnl_pct).toFixed(0)}%
+              <p className="text-xl font-bold font-mono text-amber-600 mt-0.5">
+                {formatPct(calculateMissedRate(trade.mfe_pct, trade.pnl_pct), { digits: 0 })}
               </p>
-              <p className="text-[11px] text-gray-400 mt-0.5">
-                MFE {trade.mfe_pct.toFixed(1)}% → Actual {trade.pnl_pct != null ? `${trade.pnl_pct >= 0 ? '+' : ''}${trade.pnl_pct.toFixed(1)}%` : '—'}
+              <p className="text-[11px] text-gray-400 mt-0.5 font-mono">
+                MFE {formatPct(trade.mfe_pct, { digits: 1 })} → Actual {trade.pnl_pct != null ? formatPct(trade.pnl_pct, { digits: 1, sign: true }) : '—'}
               </p>
             </div>
           </div>
@@ -186,14 +187,14 @@ export default function ReviewSection({ trade, onSaved, onCancel }: Props) {
           onClick={onCancel}
           className="px-3 py-1.5 text-xs font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
         >
-          Cancel
+          キャンセル
         </button>
         <button
           onClick={handleSave}
           disabled={saving}
           className="px-4 py-1.5 text-xs font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
         >
-          {saving ? 'Saving...' : 'Save & Done'}
+          {saving ? '保存中…' : '保存'}
         </button>
       </div>
     </div>

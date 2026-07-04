@@ -7,6 +7,7 @@ import { Trade } from '@/types/trades'
 import { classifyResult, nextLossStreak } from '@/lib/tradeResult'
 import { calculateMfeMae, type MfeMaeResult } from '@/lib/mfeMae'
 import { todayJST } from '@/lib/dates'
+import { formatYen, formatR, pnlColorClass } from '@/lib/format'
 import Modal from '@/components/shared/Modal'
 
 type Props = {
@@ -236,9 +237,9 @@ export default function CloseModal({ open, onClose, onSaved, position }: Props) 
       <div className="px-6 py-5 space-y-4">
         {/* Position summary */}
         <div className="bg-gray-50 rounded-lg px-4 py-3 text-xs text-gray-600 grid grid-cols-3 gap-2">
-          <div><span className="text-gray-400 block">Entry Price</span>¥{position.entry_price.toLocaleString()}</div>
-          <div><span className="text-gray-400 block">Shares</span>{position.shares.toLocaleString()} sh</div>
-          <div><span className="text-gray-400 block">Stop</span>{position.stop_price != null ? `¥${position.stop_price.toLocaleString()}` : '—'}</div>
+          <div><span className="text-gray-400 block">Entry Price</span><span className="font-mono">¥{position.entry_price.toLocaleString()}</span></div>
+          <div><span className="text-gray-400 block">Shares</span><span className="font-mono">{position.shares.toLocaleString()} sh</span></div>
+          <div><span className="text-gray-400 block">Stop</span><span className="font-mono">{position.stop_price != null ? `¥${position.stop_price.toLocaleString()}` : '—'}</span></div>
         </div>
 
         {error && (
@@ -325,18 +326,18 @@ export default function CloseModal({ open, onClose, onSaved, position }: Props) 
             <div>
               <span className="text-xs text-gray-400 block mb-0.5">Realized PnL</span>
               <span
-                className={`text-lg font-bold font-mono ${realizedPnl >= 0 ? 'text-green-600' : 'text-red-600'}`}
+                className={`text-lg font-bold font-mono ${pnlColorClass(realizedPnl)}`}
               >
-                {realizedPnl >= 0 ? '+' : ''}¥{realizedPnl.toLocaleString('ja-JP', { maximumFractionDigits: 0 })}
+                {formatYen(realizedPnl, { sign: true })}
               </span>
             </div>
             {rMultiple != null && (
               <div>
                 <span className="text-xs text-gray-400 block mb-0.5">R Multiple</span>
                 <span
-                  className={`text-lg font-bold font-mono ${rMultiple >= 0 ? 'text-green-600' : 'text-red-600'}`}
+                  className={`text-lg font-bold font-mono ${pnlColorClass(rMultiple)}`}
                 >
-                  {rMultiple >= 0 ? '+' : ''}{rMultiple.toFixed(2)}R
+                  {formatR(rMultiple)}
                 </span>
               </div>
             )}
@@ -348,7 +349,7 @@ export default function CloseModal({ open, onClose, onSaved, position }: Props) 
             onClick={onClose}
             className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors min-h-[44px]"
           >
-            Cancel
+            キャンセル
           </button>
           <button
             onClick={handleClose}
@@ -356,10 +357,10 @@ export default function CloseModal({ open, onClose, onSaved, position }: Props) 
             className="px-5 py-2 text-sm font-medium text-white bg-orange-600 rounded-lg hover:bg-orange-700 transition-colors min-h-[44px] disabled:opacity-50"
           >
             {saving
-              ? 'Processing...'
+              ? '処理中…'
               : isPartial
-                ? `Confirm Partial Close (${effectiveSellShares.toLocaleString()} sh)`
-                : 'Confirm Close'}
+                ? `部分決済を確定（${effectiveSellShares.toLocaleString()} 株）`
+                : '決済を確定'}
           </button>
         </div>
       </div>

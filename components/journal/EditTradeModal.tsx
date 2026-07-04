@@ -5,6 +5,7 @@ import { updateResilient } from '@/lib/resilientWrite'
 import { Trade } from '@/types/trades'
 import { SCREEN_NAME_MAP } from '@/lib/screenNames'
 import { classifyResult } from '@/lib/tradeResult'
+import { formatYen, formatPct } from '@/lib/format'
 import Modal from '@/components/shared/Modal'
 
 type Props = {
@@ -283,10 +284,10 @@ export default function EditTradeModal({ open, onClose, onSaved, trade }: Props)
                 : 'text-gray-600'
               return (
                 <div className={`rounded-lg px-4 py-3 text-center ${bg}`}>
-                  <p className={`text-lg font-bold ${fgStrong}`}>
-                    {preview.pnl >= 0 ? '+' : ''}&yen;{preview.pnl.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                  <p className={`text-lg font-bold font-mono ${fgStrong}`}>
+                    {formatYen(preview.pnl, { sign: true })}
                     {' '}
-                    ({preview.pnlPct >= 0 ? '+' : ''}{preview.pnlPct.toFixed(2)}%)
+                    ({formatPct(preview.pnlPct, { sign: true })})
                   </p>
                   <p className={`text-xs font-semibold ${fgWeak}`}>
                     {preview.result}
@@ -404,14 +405,14 @@ export default function EditTradeModal({ open, onClose, onSaved, trade }: Props)
             onClick={onClose}
             className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors min-h-[44px]"
           >
-            Cancel
+            キャンセル
           </button>
           <button
             onClick={handleSave}
             disabled={saving}
             className="px-5 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors min-h-[44px] disabled:opacity-50"
           >
-            {saving ? 'Saving...' : 'Save'}
+            {saving ? '保存中…' : '保存'}
           </button>
         </div>
       </div>

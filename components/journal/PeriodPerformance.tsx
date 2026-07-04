@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import { Trade } from '@/types/trades'
 import { isWin, isLoss, isBreakeven } from '@/lib/tradeResult'
+import { formatYen, formatPct, pnlColorClass } from '@/lib/format'
 
 type Props = {
   trades: Trade[]
@@ -22,11 +23,6 @@ type Bucket = {
 function bucketKey(date: string, mode: Mode): string {
   // date is YYYY-MM-DD; take YYYY-MM or YYYY
   return mode === 'month' ? date.slice(0, 7) : date.slice(0, 4)
-}
-
-function fmtYen(v: number): string {
-  const sign = v >= 0 ? '+' : '-'
-  return `${sign}¥${Math.abs(Math.round(v)).toLocaleString('ja-JP')}`
 }
 
 export default function PeriodPerformance({ trades }: Props) {
@@ -81,22 +77,22 @@ export default function PeriodPerformance({ trades }: Props) {
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-gray-50 border-b border-[#f0f2f4]">
-              <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-gray-500">
+              <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-[var(--text-secondary)]">
                 {mode === 'month' ? '月' : '年'}
               </th>
-              <th className="px-3 py-2 text-right text-xs font-semibold uppercase text-gray-500">
+              <th className="px-3 py-2 text-right text-xs font-medium uppercase tracking-wide text-[var(--text-secondary)]">
                 Trades
               </th>
-              <th className="px-3 py-2 text-right text-xs font-semibold uppercase text-gray-500">
+              <th className="px-3 py-2 text-right text-xs font-medium uppercase tracking-wide text-[var(--text-secondary)]">
                 W / L
               </th>
-              <th className="px-3 py-2 text-right text-xs font-semibold uppercase text-gray-500">
+              <th className="px-3 py-2 text-right text-xs font-medium uppercase tracking-wide text-[var(--text-secondary)]">
                 Win Rate
               </th>
-              <th className="px-3 py-2 text-right text-xs font-semibold uppercase text-gray-500">
+              <th className="px-3 py-2 text-right text-xs font-medium uppercase tracking-wide text-[var(--text-secondary)]">
                 PnL
               </th>
-              <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-gray-500 w-1/3">
+              <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-[var(--text-secondary)] w-1/3">
                 Distribution
               </th>
             </tr>
@@ -108,15 +104,15 @@ export default function PeriodPerformance({ trades }: Props) {
               const pnlPositive = b.pnl >= 0
               const barWidthPct = (Math.abs(b.pnl) / maxAbsPnl) * 100
               return (
-                <tr key={b.key} className="border-b border-[#f0f2f4] hover:bg-gray-50">
+                <tr key={b.key} className="border-b border-[#f0f2f4] hover:bg-[var(--bg-card-hover)]">
                   <td className="px-3 py-2 font-mono font-semibold text-gray-700">
                     {b.key}
                   </td>
                   <td className="px-3 py-2 text-right font-mono">{b.trades}</td>
                   <td className="px-3 py-2 text-right font-mono text-xs">
-                    <span className="text-emerald-600">{b.wins}</span>
+                    <span className="text-[var(--positive)]">{b.wins}</span>
                     <span className="text-gray-400 mx-0.5">/</span>
-                    <span className="text-red-600">{b.losses}</span>
+                    <span className="text-[var(--negative)]">{b.losses}</span>
                     {b.breakevens > 0 && (
                       <>
                         <span className="text-gray-400 mx-0.5">/</span>
@@ -130,15 +126,12 @@ export default function PeriodPerformance({ trades }: Props) {
                       color: wr >= 50 ? 'var(--positive)' : 'var(--negative)',
                     }}
                   >
-                    {wr.toFixed(1)}%
+                    {formatPct(wr, { digits: 1 })}
                   </td>
                   <td
-                    className="px-3 py-2 text-right font-mono font-semibold"
-                    style={{
-                      color: pnlPositive ? 'var(--positive)' : 'var(--negative)',
-                    }}
+                    className={`px-3 py-2 text-right font-mono font-semibold ${pnlColorClass(b.pnl)}`}
                   >
-                    {fmtYen(b.pnl)}
+                    {formatYen(b.pnl, { sign: true })}
                   </td>
                   <td className="px-3 py-2">
                     <div className="relative h-3 w-full">
