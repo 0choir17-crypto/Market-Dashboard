@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { fetchLatestSectorSelection } from '@/lib/sectorSelectionFetch'
 import {
   fetchSectorSelectionHistory,
@@ -10,6 +10,7 @@ import { SectorSelectionRow } from '@/types/sectorSelection'
 import SectorSelectionTable from '@/components/sectors33/SectorSelectionTable'
 import SectorRRG33 from '@/components/sectors33/SectorRRG33'
 import SectorBarChart33 from '@/components/sectors33/SectorBarChart33'
+import ErrorBanner from '@/components/shared/ErrorBanner'
 
 type View = 'bar' | 'rrg'
 
@@ -23,16 +24,24 @@ export default function SectorSelectionPage() {
   })
   const [view, setView] = useState<View>('bar')
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  // 再取得の高速連打時に古い応答が後着して新しい表示を上書きしないためのガード
+  const requestIdRef = useRef(0)
 
   const fetchData = useCallback(async () => {
+    const reqId = ++requestIdRef.current
     setLoading(true)
     const [latest, hist] = await Promise.all([
       fetchLatestSectorSelection(),
       fetchSectorSelectionHistory(63),
     ])
+    if (reqId !== requestIdRef.current) return // 古いリクエストの応答は破棄
     setRows(latest.rows)
     setLatestDate(latest.latestDate)
     setHistory(hist)
+    // ランキング本体と履歴、どちらの失敗も「0件」と区別して表示する
+    setError([latest.error, hist.error].filter(Boolean).join(' / ') || null)
     setLoading(false)
   }, [])
 
@@ -83,6 +92,8 @@ export default function SectorSelectionPage() {
         </div>
       </header>
 
+      {error && <ErrorBanner detail={error} onRetry={fetchData} />}
+
       {loading && rows.length === 0 && (
         <div
           className="bg-white rounded-xl border border-[#e8eaed] shadow-sm p-8 text-center"
@@ -100,7 +111,7 @@ export default function SectorSelectionPage() {
           <p className="text-lg font-medium mb-2">データが見つかりません</p>
           <p className="text-sm">Supabase の sector_selection_s33 テーブルにデータを挿入してください。</p>
         </div>
-      ) : !loading && (
+      ) : rows.length > 0 && (
         <>
           <SectorSelectionTable rows={rows} />
 

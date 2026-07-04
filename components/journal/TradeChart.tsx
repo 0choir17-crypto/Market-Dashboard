@@ -34,6 +34,7 @@ export default function TradeChart({ trade }: Props) {
 
   const [data, setData] = useState<ChartDataPoint[]>([])
   const [loading, setLoading] = useState(true)
+  const [fetchError, setFetchError] = useState(false)
   const [visible, setVisible] = useState<MarkerVisibility>({
     entry: true,
     mfe: true,
@@ -45,10 +46,17 @@ export default function TradeChart({ trade }: Props) {
   useEffect(() => {
     let cancelled = false
     setLoading(true)
+    setFetchError(false)
     const exit = trade.exit_date ?? trade.entry_date
     fetchTradeChartData(trade.ticker, trade.entry_date, exit)
-      .then(result => { if (!cancelled) { setData(result); setLoading(false) } })
-      .catch(() => { if (!cancelled) setLoading(false) })
+      .then(result => {
+        if (!cancelled) {
+          setData(result.rows)
+          setFetchError(result.error != null)
+          setLoading(false)
+        }
+      })
+      .catch(() => { if (!cancelled) { setFetchError(true); setLoading(false) } })
     return () => { cancelled = true }
   }, [trade.ticker, trade.entry_date, trade.exit_date])
 
@@ -113,38 +121,57 @@ export default function TradeChart({ trade }: Props) {
   useEffect(() => {
     if (!markersRef.current) return
 
+    // daily_signals はスクリーンにヒットした日しか行が無いため、Entry/Exit 等の
+    // 日付が系列に存在しないことがある（存在しない time のマーカーは描画されない）。
+    // 直近の過去営業日（無ければ最初の未来日）にスナップして必ず表示する。
+    // 表示テキストは実際の日付・価格のまま（数日のズレはレビュー用途では許容）。
+    const snapTime = (target: string): string | null => {
+      if (data.length === 0) return null
+      let prev: string | null = null
+      for (const p of data) {
+        if (p.time === target) return target
+        if (p.time < target) prev = p.time
+        else break
+      }
+      return prev ?? data[0].time
+    }
+
     const markers: SeriesMarker<Time>[] = []
 
-    if (visible.entry && trade.entry_date) {
+    const entryTime = trade.entry_date ? snapTime(trade.entry_date) : null
+    if (visible.entry && entryTime) {
       markers.push({
-        time: trade.entry_date as Time,
+        time: entryTime as Time,
         position: 'belowBar',
         color: '#3b82f6',
         shape: 'arrowUp',
         text: `Entry ¥${trade.entry_price?.toLocaleString() ?? ''}`,
       })
     }
-    if (visible.mfe && trade.mfe_date && trade.mfe_pct != null) {
+    const mfeTime = trade.mfe_date ? snapTime(trade.mfe_date) : null
+    if (visible.mfe && mfeTime && trade.mfe_pct != null) {
       markers.push({
-        time: trade.mfe_date as Time,
+        time: mfeTime as Time,
         position: 'aboveBar',
         color: '#f59e0b',
         shape: 'circle',
         text: `MFE ${trade.mfe_pct >= 0 ? '+' : ''}${trade.mfe_pct.toFixed(1)}%`,
       })
     }
-    if (visible.mae && trade.mae_date && trade.mae_pct != null) {
+    const maeTime = trade.mae_date ? snapTime(trade.mae_date) : null
+    if (visible.mae && maeTime && trade.mae_pct != null) {
       markers.push({
-        time: trade.mae_date as Time,
+        time: maeTime as Time,
         position: 'belowBar',
         color: '#ef4444',
         shape: 'circle',
         text: `MAE ${trade.mae_pct.toFixed(1)}%`,
       })
     }
-    if (visible.exit && trade.exit_date) {
+    const exitTime = trade.exit_date ? snapTime(trade.exit_date) : null
+    if (visible.exit && exitTime) {
       markers.push({
-        time: trade.exit_date as Time,
+        time: exitTime as Time,
         position: 'aboveBar',
         color: '#10b981',
         shape: 'arrowDown',
@@ -155,6 +182,14 @@ export default function TradeChart({ trade }: Props) {
     markers.sort((a, b) => String(a.time).localeCompare(String(b.time)))
     markersRef.current.setMarkers(markers)
   }, [visible, trade, data])
+
+  if (!loading && fetchError) {
+    return (
+      <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+        ⚠️ チャートの取得に失敗しました（通信エラー。再読み込みしてください）
+      </div>
+    )
+  }
 
   if (!loading && data.length === 0) {
     return (

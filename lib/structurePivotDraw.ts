@@ -44,6 +44,9 @@ export function drawStructurePivot(
 
   const latest = phases[phases.length - 1]
 
+  // Typed as number but may arrive null from the DB — skip drawing then.
+  if ((latest.break_val as number | null) == null) return
+
   // Drop the phase entirely if it ended before the visible window.
   if (clipBefore != null && latest.phase_end_date < clipBefore) return
 
@@ -61,8 +64,16 @@ export function drawStructurePivot(
     crosshairMarkerVisible: false,
     title: 'Pivot',
   })
-  pivotLine.setData([
-    { time: startDate as Time, value: latest.break_val },
-    { time: latest.phase_end_date as Time, value: latest.break_val },
-  ])
+  // A phase that activated on the latest bar (or got clipped down to it) has
+  // startDate >= phase_end_date; two equal times would violate the strictly
+  // ascending order lightweight-charts asserts and throw. A one-point line
+  // still renders the right-axis "Pivot" price label, which is the point.
+  pivotLine.setData(
+    startDate >= latest.phase_end_date
+      ? [{ time: latest.phase_end_date as Time, value: latest.break_val }]
+      : [
+          { time: startDate as Time, value: latest.break_val },
+          { time: latest.phase_end_date as Time, value: latest.break_val },
+        ],
+  )
 }

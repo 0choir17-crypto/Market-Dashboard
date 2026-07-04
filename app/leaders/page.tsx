@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   fetchLeadersSnapshot,
   fetchSectorRotation,
@@ -10,6 +10,7 @@ import {
 import LeadersTable from '@/components/leaders/LeadersTable'
 import SectorConcentration from '@/components/leaders/SectorConcentration'
 import SectorRotationHeatmap from '@/components/leaders/SectorRotationHeatmap'
+import ErrorBanner from '@/components/shared/ErrorBanner'
 
 export default function LeadersPage() {
   const [snapshot, setSnapshot] = useState<LeadersSnapshot>({
@@ -26,9 +27,14 @@ export default function LeadersPage() {
   const [query, setQuery] = useState('')
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
 
+  // 日付の高速切替時に古い応答が後着して新しい表示を上書きしないためのガード
+  const requestIdRef = useRef(0)
+
   const loadSnapshot = useCallback(async (date?: string) => {
+    const reqId = ++requestIdRef.current
     setLoading(true)
     const snap = await fetchLeadersSnapshot(date)
+    if (reqId !== requestIdRef.current) return // 古いリクエストの応答は破棄
     setSnapshot(snap)
     setSelectedDate(date ?? snap.latestDate)
     setLoading(false)
@@ -126,6 +132,10 @@ export default function LeadersPage() {
         </div>
       )}
 
+      {(snapshot.error || rotation.error) && (
+        <ErrorBanner detail={[snapshot.error, rotation.error].filter(Boolean).join(' / ')} />
+      )}
+
       {loading && snapshot.rows.length === 0 && (
         <div
           className="bg-white rounded-xl border border-[#e8eaed] shadow-sm p-8 text-center"
@@ -147,7 +157,7 @@ export default function LeadersPage() {
             毎営業日 18:23 JST に jquants-scanner から自動 push されます。
           </p>
         </div>
-      ) : !loading && (
+      ) : snapshot.rows.length > 0 && (
         <>
           {/* View B: セクター集中度 */}
           <SectorConcentration rows={snapshot.rows} />

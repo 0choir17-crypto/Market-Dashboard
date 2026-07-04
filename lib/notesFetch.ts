@@ -10,7 +10,8 @@ const TABLE = 'notes'
 const LEGACY_KEY = 'market-dashboard:notes'
 const MIGRATED_FLAG = 'market-dashboard:notes:migrated-v1'
 
-export async function listNotes(): Promise<Note[]> {
+// error を返して呼び出し側で表示する（黙って [] を返すと「全メモ消失」に見えてしまう）。
+export async function listNotes(): Promise<{ notes: Note[]; error: string | null }> {
   const { data, error } = await supabase
     .from(TABLE)
     .select('*')
@@ -18,9 +19,9 @@ export async function listNotes(): Promise<Note[]> {
     .order('updated_at', { ascending: false })
   if (error) {
     console.error('[notes] list error', error)
-    return []
+    return { notes: [], error: error.message }
   }
-  return (data ?? []) as Note[]
+  return { notes: (data ?? []) as Note[], error: null }
 }
 
 export async function createNote(fields: Partial<Note> = {}): Promise<Note | null> {

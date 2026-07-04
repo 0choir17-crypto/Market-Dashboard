@@ -20,6 +20,20 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 ローカル開発は `.env.local` を、GitHub Pages デプロイはリポジトリの Secrets に登録してください。
 
+> **注意**: `NEXT_PUBLIC_*` はビルド時に公開 JS へ埋め込まれます。Secrets 登録は「リポジトリに平文を置かない」ためのもので、デプロイ後のサイトからは誰でも取り出せる前提で扱ってください。
+
+## 認証とRLS
+
+書き込み系テーブル（`trades` / `notes` / `risk_settings` / `watchlist`）は
+`supabase/migrations/20260704_secure_user_tables.sql` 適用後、**閲覧は anon のまま・書き込みは authenticated 限定**になります。
+
+セットアップ手順:
+
+1. Supabase ダッシュボード > Authentication > Users で自分のメール + パスワードのユーザーを作成
+2. Authentication > Sign In / Up で新規サインアップを無効化（Allow new users to sign up = OFF）
+3. SQL Editor で `supabase/migrations/20260704_secure_user_tables.sql` と `20260704_initial_stop.sql` を実行
+4. アプリのナビバー右端「🔒 ログイン」からログイン（セッションは端末に保存され、端末ごとに初回のみ）
+
 ## 開発
 
 ```bash

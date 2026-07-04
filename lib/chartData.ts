@@ -5,6 +5,12 @@ export interface ChartDataPoint {
   value: number
 }
 
+// 取得失敗と「該当期間データなし」を呼び出し側で区別できるようにする
+export interface TradeChartResult {
+  rows: ChartDataPoint[]
+  error: string | null
+}
+
 function shiftMonths(dateStr: string, months: number): string {
   const d = new Date(dateStr + 'T00:00:00Z')
   d.setUTCMonth(d.getUTCMonth() + months)
@@ -19,7 +25,7 @@ export async function fetchTradeChartData(
   ticker: string,
   entryDate: string,
   exitDate: string,
-): Promise<ChartDataPoint[]> {
+): Promise<TradeChartResult> {
   const rangeStart = shiftMonths(entryDate, -1)
   const rangeEnd = shiftMonths(exitDate, 1)
 
@@ -31,7 +37,8 @@ export async function fetchTradeChartData(
     .lte('date', rangeEnd)
     .order('date', { ascending: true })
 
-  if (error || !data) return []
+  if (error) return { rows: [], error: error.message || 'fetch failed' }
+  if (!data) return { rows: [], error: null }
 
   const byDate = new Map<string, number>()
   for (const row of data as { date: string; close: number | null }[]) {
@@ -39,7 +46,9 @@ export async function fetchTradeChartData(
     if (!byDate.has(row.date)) byDate.set(row.date, row.close)
   }
 
-  return Array.from(byDate.entries())
+  const rows = Array.from(byDate.entries())
     .map(([time, value]) => ({ time, value }))
     .sort((a, b) => a.time.localeCompare(b.time))
+
+  return { rows, error: null }
 }

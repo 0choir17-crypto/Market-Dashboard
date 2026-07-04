@@ -9,6 +9,7 @@ import {
   ISeriesApi,
 } from 'lightweight-charts'
 import { supabase } from '@/lib/supabase'
+import { useDate } from '@/contexts/DateContext'
 
 type Prefix = 'topix' | 'nikkei' | 'growth'
 
@@ -28,17 +29,22 @@ export function IndexChart({ prefix, displayName, height = 260, lookbackDays = 1
   const containerRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
   const seriesRef = useRef<ISeriesApi<'Line'> | null>(null)
+  const { selectedDate, isLatest } = useDate()
 
   const [data, setData] = useState<PricePoint[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // 過去スナップショット選択時はその日以前のみ描画（ヘッダーの数値と揃える）。
+  // 最新選択時は endDate なし = 従来どおり全期間。
+  const endDate = isLatest ? undefined : selectedDate
 
   useEffect(() => {
     let cancelled = false
     setLoading(true)
     setError(null)
 
-    const startDate = new Date()
+    const startDate = endDate ? new Date(endDate) : new Date()
     startDate.setDate(startDate.getDate() - lookbackDays)
     const startStr = startDate.toISOString().slice(0, 10)
 
@@ -46,11 +52,15 @@ export function IndexChart({ prefix, displayName, height = 260, lookbackDays = 1
     // (Nikkei225 / Growth250 も jquants-scanner が日次供給するようになったため)
     const valueCol = `${prefix}_price`
 
-    const query = supabase
+    let query = supabase
       .from('market_conditions')
       .select(`date, ${valueCol}`)
       .gte('date', startStr)
       .order('date', { ascending: true })
+
+    if (endDate) {
+      query = query.lte('date', endDate)
+    }
 
     query.then(({ data: rows, error: err }) => {
         if (cancelled) return
@@ -73,7 +83,7 @@ export function IndexChart({ prefix, displayName, height = 260, lookbackDays = 1
     return () => {
       cancelled = true
     }
-  }, [prefix, lookbackDays])
+  }, [prefix, lookbackDays, endDate])
 
   useEffect(() => {
     const container = containerRef.current

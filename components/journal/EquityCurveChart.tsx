@@ -67,7 +67,10 @@ export default function EquityCurveChart({ trades }: Props) {
   const peak = Math.max(...data.map(d => d.cumulative))
   const trough = Math.min(...data.map(d => d.cumulative))
   // O(n) running-peak instead of the O(n²) slice-and-spread version.
-  let runningPeak = -Infinity
+  // 起点は 0（累積PnLはゼロから始まる）。-Infinity だと初回ピークが
+  // 「最初のトレードの累積値」になり、開始直後に負け込んだ場合の
+  // ドローダウンを過小表示してしまう。
+  let runningPeak = 0
   let maxDrawdown = 0
   for (const d of data) {
     runningPeak = Math.max(runningPeak, d.cumulative)

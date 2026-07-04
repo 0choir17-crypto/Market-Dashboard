@@ -13,12 +13,18 @@ export interface MfeMaeResult {
  * 保有期間中のMFE/MAEを daily_signals の終値から計算
  * daily_signals は (code, date, screen_name) で重複することがあるため、
  * (code, date) でユニーク化してから最高/最安を抽出する
+ *
+ * 制約: daily_signals には終値しか無いため日中の高値/安値は拾えず、
+ * 特にストップ執行日の下ヒゲが欠落して MAE が系統的に過小になる。
+ * 実際の約定価格（exitPrice）は確実に「経験した価格」なので、渡された
+ * 場合は候補に含める — これで「MAE が実現損より良い」矛盾は起きなくなる。
  */
 export async function calculateMfeMae(
   ticker: string,
   entryDate: string,
   exitDate: string,
   entryPrice: number,
+  exitPrice?: number | null,
 ): Promise<MfeMaeResult | null> {
   const { data, error } = await supabase
     .from('daily_signals')
@@ -37,6 +43,11 @@ export async function calculateMfeMae(
   for (const row of data as { date: string; close: number | null }[]) {
     if (row.close == null) continue
     if (!byDate.has(row.date)) byDate.set(row.date, row.close)
+  }
+
+  // 実際の約定価格を exitDate の候補として上書き（終値より優先）
+  if (exitPrice != null && Number.isFinite(exitPrice)) {
+    byDate.set(exitDate, exitPrice)
   }
 
   if (byDate.size === 0) return null

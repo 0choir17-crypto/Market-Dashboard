@@ -37,12 +37,19 @@ export async function fetchGateScoreTimeSeries(
 
 export async function fetchAdvDecRatioTimeSeries(
   lookbackDays: number = DEFAULT_LOOKBACK_DAYS,
+  endDate?: string,
 ): Promise<TimeSeriesPoint[]> {
-  const { data, error } = await supabase
+  let query = supabase
     .from('market_conditions')
     .select('date, ad_ratio_10')
-    .gte('date', startDateStr(lookbackDays))
+    .gte('date', startDateStr(lookbackDays, endDate))
     .order('date', { ascending: true })
+
+  if (endDate) {
+    query = query.lte('date', endDate)
+  }
+
+  const { data, error } = await query
 
   if (error || !data) return []
 
@@ -55,12 +62,19 @@ export async function fetchAdvDecRatioTimeSeries(
 
 export async function fetchNhNlDiffTimeSeries(
   lookbackDays: number = DEFAULT_LOOKBACK_DAYS,
+  endDate?: string,
 ): Promise<TimeSeriesPoint[]> {
-  const { data, error } = await supabase
+  let query = supabase
     .from('market_conditions')
     .select('date, nh_nl_diff')
-    .gte('date', startDateStr(lookbackDays))
+    .gte('date', startDateStr(lookbackDays, endDate))
     .order('date', { ascending: true })
+
+  if (endDate) {
+    query = query.lte('date', endDate)
+  }
+
+  const { data, error } = await query
 
   if (error || !data) return []
 
@@ -72,12 +86,19 @@ export async function fetchNhNlDiffTimeSeries(
 
 export async function fetchPctAboveSmaTimeSeries(
   lookbackDays: number = DEFAULT_LOOKBACK_DAYS,
+  endDate?: string,
 ): Promise<{ sma50: TimeSeriesPoint[]; sma200: TimeSeriesPoint[] }> {
-  const { data, error } = await supabase
+  let query = supabase
     .from('market_conditions')
     .select('date, pct_above_sma50, pct_above_sma200')
-    .gte('date', startDateStr(lookbackDays))
+    .gte('date', startDateStr(lookbackDays, endDate))
     .order('date', { ascending: true })
+
+  if (endDate) {
+    query = query.lte('date', endDate)
+  }
+
+  const { data, error } = await query
 
   if (error || !data) return { sma50: [], sma200: [] }
 

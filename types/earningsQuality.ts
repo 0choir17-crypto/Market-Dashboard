@@ -90,14 +90,15 @@ export function pctColor(v: number | null | undefined): string {
   return '#6b7280'
 }
 
-// 開示時刻が引け後 (15:00 以降) → 翌営業日 D+1 寄り対象
+// 開示時刻が引け後 (15:30 以降) → 翌営業日 D+1 寄り対象
+// 東証現物の大引けは 2024-11-05 から 15:30 (それ以前は 15:00)
 export function isAfterClose(discTime: string | null): boolean {
   if (!discTime) return false
   const m = /^(\d{1,2}):(\d{2})/.exec(discTime)
   if (!m) return false
   const h = parseInt(m[1], 10)
   const min = parseInt(m[2], 10)
-  return h > 15 || (h === 15 && min >= 0)
+  return h > 15 || (h === 15 && min >= 30)
 }
 
 // ── 鮮度判定 ─────────────────────────────────────────────────────────────

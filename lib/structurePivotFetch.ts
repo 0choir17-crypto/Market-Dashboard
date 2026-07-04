@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase'
+import { fetchAllPaged } from '@/lib/pagedFetch'
 import type {
   StructurePivotQuery,
   StructurePivotResponse,
@@ -49,21 +50,37 @@ function buildSummary(rows: StructurePivotRow[]): StructurePivotSummary {
   return summary
 }
 
-export async function fetchStructurePivotDates(): Promise<string[]> {
-  const { data, error } = await supabase
-    .from(TABLE)
-    .select('date')
-    .order('date', { ascending: false })
-    .limit(500)
+// 日付ピッカー用。テーブルは 1 日あたり最大 ~200 行入るので、行数 limit だと
+// 数日分しかカバーできない。distinct な日付が maxDates 件集まるまで安定順序
+// (date desc, code asc) で .range() ページングし、集まり次第打ち切る。
+export async function fetchStructurePivotDates(maxDates = 60): Promise<string[]> {
+  const PAGE = 1000
+  const seen = new Set<string>()
+  const dates: string[] = [] // date desc で走査するので降順のまま溜まる
+  for (let from = 0; dates.length < maxDates; from += PAGE) {
+    const { data, error } = await supabase
+      .from(TABLE)
+      .select('date')
+      .order('date', { ascending: false })
+      .order('code', { ascending: true })
+      .range(from, from + PAGE - 1)
 
-  if (error) {
-    console.error('structure_pivot dates fetch error:', error)
-    return []
+    if (error) {
+      console.error('structure_pivot dates fetch error:', error)
+      break
+    }
+    if (!data || data.length === 0) break
+    for (const r of data) {
+      const d = r.date as string
+      if (!seen.has(d)) {
+        seen.add(d)
+        dates.push(d)
+        if (dates.length >= maxDates) break
+      }
+    }
+    if (data.length < PAGE) break
   }
-
-  const unique = [...new Set((data ?? []).map(r => r.date as string))]
-  unique.sort((a, b) => (a > b ? -1 : 1))
-  return unique
+  return dates
 }
 
 export async function fetchStructurePivot(
@@ -86,34 +103,57 @@ export async function fetchStructurePivot(
     return { date: null, rows: [], summary: emptySummary() }
   }
 
-  let query = supabase
-    .from(TABLE)
-    .select(COLUMNS)
-    .eq('date', targetDate)
+  // PostgREST は enum の任意順 (tier S→A→B, signal HL_BREAK→SETUP_LONG) を表現
+  // できない (アルファベット順だと A→B→S になり、limit 到達時に最重要の S/HL_BREAK
+  // 行から落ちる)。そこでサーバー側は安定順序 (code asc; PK = date + code) で
+  // 全件ページング取得し、クライアント側で意図した優先度に並べ替えてから表示上限
+  // に切り詰める。summary は切り詰め前の全件で数える。
+  const buildQuery = (from: number, to: number) => {
+    let query = supabase
+      .from(TABLE)
+      .select(COLUMNS)
+      .eq('date', targetDate)
 
-  if (opts.tier && opts.tier !== 'all') {
-    query = query.eq('quality_tier', opts.tier)
-  }
-  if (opts.signal && opts.signal !== 'all') {
-    query = query.eq('signal_type', opts.signal)
-  }
-  if (opts.institutionalOnly) {
-    query = query.eq('jq_institutional_pass', true)
+    if (opts.tier && opts.tier !== 'all') {
+      query = query.eq('quality_tier', opts.tier)
+    }
+    if (opts.signal && opts.signal !== 'all') {
+      query = query.eq('signal_type', opts.signal)
+    }
+    if (opts.institutionalOnly) {
+      query = query.eq('jq_institutional_pass', true)
+    }
+
+    return query.order('code', { ascending: true }).range(from, to)
   }
 
-  // Ordering: tier S → A → B, signal HL_BREAK → SETUP_LONG, longer base first.
-  query = query
-    .order('quality_tier', { ascending: true })
-    .order('signal_type', { ascending: false })
-    .order('days_in_setup', { ascending: false })
-    .limit(limit)
-
-  const { data, error } = await query
+  const { rows: fetched, error } = await fetchAllPaged<Record<string, unknown>>(
+    buildQuery,
+    10_000,
+  )
   if (error) {
     console.error('structure_pivot fetch error:', error)
     return { date: targetDate, rows: [], summary: emptySummary() }
   }
 
-  const rows = (data ?? []) as unknown as StructurePivotRow[]
-  return { date: targetDate, rows, summary: buildSummary(rows) }
+  const allRows = fetched as unknown as StructurePivotRow[]
+
+  // Intended priority: tier S → A → B, signal HL_BREAK → SETUP_LONG, longer base first.
+  const tierRank: Record<string, number> = { S: 0, A: 1, B: 2 }
+  const signalRank: Record<string, number> = { HL_BREAK: 0, SETUP_LONG: 1 }
+  allRows.sort((a, b) => {
+    const t = (tierRank[a.quality_tier] ?? 9) - (tierRank[b.quality_tier] ?? 9)
+    if (t !== 0) return t
+    const s = (signalRank[a.signal_type] ?? 9) - (signalRank[b.signal_type] ?? 9)
+    if (s !== 0) return s
+    const d = (b.days_in_setup ?? -1) - (a.days_in_setup ?? -1)
+    if (d !== 0) return d
+    return a.code < b.code ? -1 : a.code > b.code ? 1 : 0
+  })
+
+  return {
+    date: targetDate,
+    rows: allRows.slice(0, limit),
+    summary: buildSummary(allRows),
+  }
 }

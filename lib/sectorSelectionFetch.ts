@@ -4,6 +4,7 @@ import { SectorSelectionRow } from '@/types/sectorSelection'
 export type LatestSelection = {
   latestDate: string | null
   rows: SectorSelectionRow[]
+  error?: string | null
 }
 
 // Fetch the latest available business day's full ranking.
@@ -24,7 +25,8 @@ export async function fetchLatestSectorSelection(): Promise<LatestSelection> {
 
   if (error || !data || data.length === 0) {
     if (error) console.error('[sector_selection_s33]', error)
-    return { latestDate: null, rows: [] }
+    // エラーと「本当にデータ0件」を区別して返す（画面側でバナー表示に使う）
+    return { latestDate: null, rows: [], error: error ? error.message : null }
   }
 
   const rows = data as unknown as SectorSelectionRow[]
@@ -32,5 +34,6 @@ export async function fetchLatestSectorSelection(): Promise<LatestSelection> {
   return {
     latestDate,
     rows: rows.filter(r => r.date === latestDate),
+    error: null,
   }
 }

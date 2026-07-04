@@ -22,7 +22,22 @@ const TABLES = [
   'risk_settings',
 ] as const
 
+// 本番ビルドでは無効化する。このページはテーブル一覧・RLS 探査結果・
+// サンプル行まで表示する内部診断ツールで、公開サイトに載せると
+// 攻撃者への偵察情報になる。NODE_ENV はビルド時に静的展開されるため、
+// production ビルドでは実装コードごとスタブに置き換わる。
 export default function DebugPage() {
+  if (process.env.NODE_ENV === 'production') {
+    return (
+      <main className="p-8 text-sm text-gray-500">
+        Debug ページは開発ビルドでのみ利用できます。
+      </main>
+    )
+  }
+  return <DebugPageInner />
+}
+
+function DebugPageInner() {
   const [envUrl, setEnvUrl] = useState('')
   const [envKeyTail, setEnvKeyTail] = useState('')
   const [probes, setProbes] = useState<Probe[]>([])

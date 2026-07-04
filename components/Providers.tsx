@@ -2,7 +2,12 @@
 
 import { ReactNode } from 'react'
 import { DateProvider } from '@/contexts/DateContext'
+import { AuthProvider } from '@/contexts/AuthContext'
 
 export default function Providers({ children }: { children: ReactNode }) {
-  return <DateProvider>{children}</DateProvider>
+  return (
+    <AuthProvider>
+      <DateProvider>{children}</DateProvider>
+    </AuthProvider>
+  )
 }

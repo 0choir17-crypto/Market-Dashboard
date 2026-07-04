@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase'
+import { fetchAllPaged } from '@/lib/pagedFetch'
 import type { MarketLeader } from '@/types/marketLeaders'
 
 const TABLE = 'market_leaders'
@@ -19,6 +20,7 @@ export type LeadersSnapshot = {
   rows: MarketLeader[]
   hitsMap: Map<string, LeaderHits>
   availableDates: string[]           // 日付ピッカー用 (降順、全履歴)
+  error?: string | null              // fetch失敗時のメッセージ（空データと区別する）
 }
 
 // ── 最新日付の取得 ─────────────────────────────────────────────────────────
@@ -88,7 +90,7 @@ export async function fetchLeadersSnapshot(date?: string): Promise<LeadersSnapsh
   const targetDate = date ?? (await fetchLatestDate())
 
   if (!targetDate) {
-    return { latestDate: null, prevDate: null, rows: [], hitsMap: new Map(), availableDates: [] }
+    return { latestDate: null, prevDate: null, rows: [], hitsMap: new Map(), availableDates: [], error: null }
   }
 
   // targetDate の Top50 全列 と、全履歴の出現データ (実数算出用) を並行取得。
@@ -99,6 +101,7 @@ export async function fetchLeadersSnapshot(date?: string): Promise<LeadersSnapsh
 
   if (rowsRes.error) console.error('[market_leaders snapshot]', rowsRes.error)
   const rows = (rowsRes.data ?? []) as unknown as MarketLeader[]
+  const snapshotError = rowsRes.error ? rowsRes.error.message : null
 
   // availableDates = 全取引日 (降順)。targetDate を起点に降順シーケンスで連続判定する。
   const availableDates = history.dates
@@ -135,7 +138,7 @@ export async function fetchLeadersSnapshot(date?: string): Promise<LeadersSnapsh
     hitsMap.set(r.code, { hits: dates.size, streak, lastBeforeStreak })
   }
 
-  return { latestDate: targetDate, prevDate, rows, hitsMap, availableDates }
+  return { latestDate: targetDate, prevDate, rows, hitsMap, availableDates, error: snapshotError }
 }
 
 // ── View D: セクターローテーション (週次 × 過去 6 ヶ月) ────────────────
@@ -144,6 +147,9 @@ export type SectorRotation = {
   weeks: string[]           // ISO Monday の文字列 (asc)
   sectors: string[]         // 期間内に1回でも出現したセクター (latest 週でのカウント降順)
   cells: Map<string, number> // key = `${week}|${sector}`
+  // fetch 失敗時のメッセージ (成功時は null)。既存の呼び出し元の初期値リテラルを
+  // 壊さないよう optional にしている (fetchSectorRotation は常にセットして返す)。
+  error?: string | null
 }
 
 function isoMonday(dateStr: string): string {
@@ -162,22 +168,29 @@ export async function fetchSectorRotation(months = 6): Promise<SectorRotation> {
   since.setMonth(since.getMonth() - months)
   const sinceStr = since.toISOString().slice(0, 10)
 
-  const { data, error } = await supabase
-    .from(TABLE)
-    .select('date, s33nm')
-    .gte('date', sinceStr)
-    .order('date', { ascending: true })
+  // 6ヶ月 × ~21営業日 × 50銘柄 ≈ 6300 行 — Supabase の 1000 行上限を大きく超える
+  // ため、(date, code) の安定順序で全件ページングする (fetchHistory と同方針)。
+  const { rows, error } = await fetchAllPaged<{ date: string; s33nm: string | null }>(
+    (from, to) =>
+      supabase
+        .from(TABLE)
+        .select('date, s33nm')
+        .gte('date', sinceStr)
+        .order('date', { ascending: true })
+        .order('code', { ascending: true })
+        .range(from, to),
+  )
 
-  if (error || !data) {
-    if (error) console.error('[market_leaders rotation]', error)
-    return { weeks: [], sectors: [], cells: new Map() }
+  if (error) {
+    console.error('[market_leaders rotation]', error)
+    return { weeks: [], sectors: [], cells: new Map(), error }
   }
 
   const cellMap = new Map<string, number>()
   const weekSet = new Set<string>()
   const sectorCounts = new Map<string, number>()
 
-  for (const r of data as { date: string; s33nm: string | null }[]) {
+  for (const r of rows) {
     if (!r.s33nm) continue
     const week = isoMonday(r.date)
     weekSet.add(week)
@@ -196,5 +209,5 @@ export async function fetchSectorRotation(months = 6): Promise<SectorRotation> {
     return (sectorCounts.get(b) ?? 0) - (sectorCounts.get(a) ?? 0)
   })
 
-  return { weeks, sectors, cells: cellMap }
+  return { weeks, sectors, cells: cellMap, error: null }
 }

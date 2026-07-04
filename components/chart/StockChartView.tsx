@@ -9,8 +9,9 @@ import CockpitPanel from './CockpitPanel'
 
 type LookbackKey = '6M' | '1Y' | '2Y' | 'ALL'
 
+// 営業日ベース (6M=126, 1Y=252, 2Y=504) — StockGrid と同一
 const LOOKBACK_DAYS: Record<LookbackKey, number | null> = {
-  '6M': 180,
+  '6M': 126,
   '1Y': 252,
   '2Y': 504,
   ALL: null,

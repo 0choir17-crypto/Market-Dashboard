@@ -1,12 +1,17 @@
 'use client'
 
 import Link from 'next/link'
+import { useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { useDate } from '@/contexts/DateContext'
+import { useAuth } from '@/contexts/AuthContext'
+import LoginModal from '@/components/auth/LoginModal'
 
 export default function NavBar() {
   const pathname = usePathname()
   const { selectedDate, setSelectedDate, isLatest, availableDates, resetToLatest } = useDate()
+  const { session, loading: authLoading, signOut } = useAuth()
+  const [loginOpen, setLoginOpen] = useState(false)
 
   // 日付ピッカー対象ページ
   const datePages = ['/', '/today']
@@ -62,6 +67,32 @@ export default function NavBar() {
       <Link href="/journal" className={linkClass('/journal')}>Trading</Link>
       <Link href="/notes" className={linkClass('/notes')}>Notes</Link>
       <Link href="/guide" className={linkClass('/guide')}>Guide</Link>
+
+      {/* 認証状態（書き込みは authenticated 限定 — RLS 移行 20260704 参照） */}
+      <div className="ml-auto flex items-center gap-2 flex-shrink-0">
+        {!authLoading && (session ? (
+          <>
+            <span className="text-[10px] text-gray-400 hidden sm:inline" title={session.user.email ?? ''}>
+              🔓 {session.user.email}
+            </span>
+            <button
+              onClick={() => signOut()}
+              className="text-[10px] px-2 py-0.5 rounded border border-gray-300 text-gray-500 hover:text-gray-700 hover:border-gray-400 transition-colors"
+            >
+              ログアウト
+            </button>
+          </>
+        ) : (
+          <button
+            onClick={() => setLoginOpen(true)}
+            className="text-[10px] px-2 py-0.5 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors font-medium"
+            title="記録の追加・編集にはログインが必要です"
+          >
+            🔒 ログイン
+          </button>
+        ))}
+      </div>
+      <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} />
     </nav>
   )
 }
