@@ -130,13 +130,6 @@ export default function PullbackSetupCard(props: Props) {
       {/* バッジ行 */}
       <div className="px-3 py-2 border-b border-[#f0f2f4] flex items-center gap-1.5 flex-wrap">
         {kind === 'ma' && <MaGradeBadges row={props.row} />}
-        {row.scale_cat && (
-          <Chip
-            text={row.scale_cat}
-            palette={{ bg: '#eef2ff', fg: '#3730a3', border: '#c7d2fe' }}
-            title="時価規模"
-          />
-        )}
         {fresh && <FreshChip />}
         {row.mkt && <span className="ml-auto text-[10px] text-[var(--text-muted)] font-mono">{row.mkt}</span>}
       </div>

@@ -26,8 +26,36 @@ export type TodayResponse = {
   error: string | null
 }
 
+// 「2日以上連続してヒットする銘柄は当日分に表記しない」— resolved の直前営業日にも
+// 同テーブルに出ていたコード集合を返す。当日〈新規/再登場〉のみに絞り、Daily Watch が
+// 同じ銘柄で毎日埋まる混雑を解消する（走行中の銘柄は初日だけ出て、2日目以降は隠れる）。
+// 取得失敗時は空集合を返し、除外せず全件表示にフォールバックする（安全側）。
+async function fetchPrevDayCodes(table: string, resolvedDate: string): Promise<Set<string>> {
+  const { data: prev, error: prevErr } = await supabase
+    .from(table)
+    .select('date')
+    .lt('date', resolvedDate)
+    .order('date', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (prevErr) {
+    console.error(`[${table}] prev date error`, prevErr)
+    return new Set()
+  }
+  const prevDate = (prev?.date as string | undefined) ?? null
+  if (!prevDate) return new Set()
+
+  const { data, error } = await supabase.from(table).select('code').eq('date', prevDate)
+  if (error) {
+    console.error(`[${table}] prev codes error`, error)
+    return new Set()
+  }
+  return new Set((data ?? []).map(r => (r as { code: string }).code))
+}
+
 // 指定日（省略時は最新）の候補一覧。select('*') で供給側のスキーマ増減に耐性。
 // スナップショット日が当該テーブルに無い場合は直近 ≤ requested の日へフォールバック。
+// 直前営業日にも出ていた銘柄（=2日以上連続ヒット）は除外し、当日分だけに絞る。
 async function fetchSetups<T>(
   table: string,
   date: string | null,
@@ -84,7 +112,17 @@ async function fetchSetups<T>(
     }
   }
 
-  return { date: resolved, rows: (data ?? []) as unknown as T[], error: fetchError }
+  let rows = (data ?? []) as unknown as T[]
+
+  // 2日以上連続ヒットの除外: 直前営業日にも出ていたコードを落とす（当日分のみ表示）。
+  if (rows.length > 0) {
+    const prevCodes = await fetchPrevDayCodes(table, resolved)
+    if (prevCodes.size > 0) {
+      rows = rows.filter(r => !prevCodes.has((r as unknown as { code: string }).code))
+    }
+  }
+
+  return { date: resolved, rows, error: fetchError }
 }
 
 // "Hot" sectors = sector_selection_s33.composite_score >= 60 の業種。
