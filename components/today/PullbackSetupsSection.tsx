@@ -111,7 +111,7 @@ export default function PullbackSetupsSection(props: Props) {
   return (
     <section className="bg-white rounded-xl border border-[#e8eaed] shadow-sm p-4">
       <div className="flex items-baseline gap-2 flex-wrap mb-1">
-        <h2 className="text-sm font-semibold text-[var(--text-primary)]">{title}</h2>
+        <h2 className="text-lg font-bold text-[var(--text-primary)]">{title}</h2>
         <span className="text-xs text-[var(--text-muted)]">
           <span className="font-mono">{sorted.length} / {rows.length}</span> 件
         </span>
