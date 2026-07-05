@@ -49,7 +49,9 @@ type SortDef = { key: string; label: string; compare: (a: SpringSetupRow, b: Spr
 // type の優先度（both を先頭に）。同 type 内は defended_pct 昇順（ライン際で死守=堅い）。
 const TYPE_ORDER: Record<SpringType, number> = { both: 0, ignition_open: 1, swing_low: 2 }
 
+// 既定は「52週高値に近い順」（全スキャナー共通）。
 const SORTS: SortDef[] = [
+  { key: 'high', label: '52週高値に近い順', compare: descBy(r => r.dist_from_high_pct) },
   {
     key: 'type',
     label: 'シグナル種別（both→ignition_open→swing_low）',
@@ -61,7 +63,6 @@ const SORTS: SortDef[] = [
     },
   },
   { key: 'defended', label: '防衛ライン際 死守順（近い順）', compare: ascBy(r => r.defended_pct) },
-  { key: 'high', label: '52週高値に近い順', compare: descBy(r => r.dist_from_high_pct) },
   { key: 'm126', label: '126日モメンタム 高い順', compare: descBy(r => r.m126) },
   { key: 'adr', label: 'ADR 高い順', compare: descBy(r => r.adr_pct) },
 ]
@@ -182,7 +183,7 @@ export default function SpringSetupsSection({ rows, hotSectors, title, subtitle 
           {rows.length === 0 ? '本日の押し目候補は 0 件です。' : '該当する候補がありません。'}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-2.5">
           {sorted.map((r, i) => (
             <SpringSetupCard
               key={`${r.code}-${i}`}
