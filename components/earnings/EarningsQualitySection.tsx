@@ -318,13 +318,8 @@ export default function EarningsQualitySection({
   const { rows, latestDate, eventsInDay } = snapshot
   const isPeakDay = eventsInDay >= PEAK_DAY_THRESHOLD
 
-  // ── フィルタ state ──
-  const [minScore, setMinScore] = useState(5)
-  const [topPctEnabled, setTopPctEnabled] = useState(false)
-  const [maxPctRank, setMaxPctRank] = useState(5)
-  const [qSelected, setQSelected] = useState<Set<string>>(new Set(['1Q', '2Q', '3Q']))
+  // ── フィルタ state（セクターのみ）──
   const [sectorSelected, setSectorSelected] = useState<Set<string>>(new Set())
-  const [mktSelected, setMktSelected] = useState<Set<string>>(new Set())
   const [sortKey, setSortKey] = useState<SortKey>('score3')
   const [sortDir, setSortDir] = useState<SortDir>('desc')
 
@@ -351,28 +346,15 @@ export default function EarningsQualitySection({
       ).sort((a, b) => a.localeCompare(b, 'ja')),
     [rows],
   )
-  const mktOptions = useMemo(
-    () => Array.from(new Set(rows.map(r => r.mkt).filter((s): s is string => !!s))).sort(),
-    [rows],
-  )
 
   const filtered = useMemo(() => {
     return rows.filter(r => {
-      if (r.score3 < minScore) return false
-      if (
-        topPctEnabled &&
-        (!isNum(r.pct_rank_in_day) || r.pct_rank_in_day > maxPctRank)
-      ) {
-        return false
-      }
-      if (!qSelected.has(r.cur_per_type)) return false
       if (sectorSelected.size > 0 && (!r.sector_s33 || !sectorSelected.has(r.sector_s33))) {
         return false
       }
-      if (mktSelected.size > 0 && (!r.mkt || !mktSelected.has(r.mkt))) return false
       return true
     })
-  }, [rows, minScore, topPctEnabled, maxPctRank, qSelected, sectorSelected, mktSelected])
+  }, [rows, sectorSelected])
 
   const sorted = useMemo(() => {
     const arr = [...filtered]
@@ -407,36 +389,11 @@ export default function EarningsQualitySection({
 
   const sp = { currentKey: sortKey, currentDir: sortDir, onSort: handleSort }
 
-  // 統計
-  const perfectCount = rows.filter(r => r.score3 === maxScoreFor(r.cur_per_type) && r.cur_per_type !== '1Q').length
-  const q1PerfectCount = rows.filter(r => r.cur_per_type === '1Q' && r.score3 === 5).length
-  const top1pctCount = rows.filter(
-    r => isNum(r.pct_rank_in_day) && r.pct_rank_in_day <= TOP_1PCT_THRESHOLD,
-  ).length
-
   return (
     <>
-      {/* ── サマリ カード ─────────────────────────────────────────── */}
-      <section className="mb-5 grid grid-cols-2 sm:grid-cols-4 gap-3">
+      {/* ── サマリ カード（開示件数のみ）───────────────────────────── */}
+      <section className="mb-5 max-w-[200px]">
         <StatCard label="開示件数" value={`${eventsInDay}`} sub={latestDate ?? ''} />
-        <StatCard
-          label="満点 (score3=7)"
-          value={`${perfectCount}`}
-          sub="増配大 ∙ EPS両+ ∙ 売上両+"
-          accent="green"
-        />
-        <StatCard
-          label="Q1 構造的満点 (5/5)"
-          value={`${q1PerfectCount}`}
-          sub="QoQ 計算不能を加味"
-          accent="blue"
-        />
-        <StatCard
-          label="Top 1%"
-          value={`${top1pctCount}`}
-          sub="検証 end_per_risk 1.509"
-          accent="amber"
-        />
       </section>
 
       {isPeakDay && (
@@ -449,130 +406,34 @@ export default function EarningsQualitySection({
         </div>
       )}
 
-      {/* ── フィルタ UI ──────────────────────────────────────────── */}
-      <div className="bg-white rounded-xl border border-[#e8eaed] shadow-sm p-4 mb-5">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* スコア下限 */}
-          <div>
-            <label className="text-[11px] font-semibold text-gray-600 uppercase tracking-wide flex items-center justify-between mb-1.5">
-              <span>スコア下限 (score3 ≥)</span>
-              <span className="font-mono text-[var(--accent)] text-sm">{minScore}</span>
-            </label>
-            <input
-              type="range"
-              min={0}
-              max={7}
-              step={1}
-              value={minScore}
-              onChange={e => setMinScore(parseInt(e.target.value, 10))}
-              className="w-full accent-[var(--accent)]"
-            />
-            <div className="flex justify-between text-[9px] text-gray-400 font-mono mt-0.5">
-              <span>0</span>
-              <span>2</span>
-              <span>4</span>
-              <span>5★</span>
-              <span>7</span>
-            </div>
-          </div>
-
-          {/* 当日 Top X% */}
-          <div>
-            <label className="text-[11px] font-semibold text-gray-600 uppercase tracking-wide flex items-center justify-between mb-1.5">
-              <span className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={topPctEnabled}
-                  onChange={e => setTopPctEnabled(e.target.checked)}
-                  className="accent-[var(--accent)]"
-                />
-                当日 Top X% (pct_rank_in_day ≤)
-              </span>
-              <span className="font-mono text-[var(--accent)] text-sm">{maxPctRank}%</span>
-            </label>
-            <input
-              type="range"
-              min={0.5}
-              max={20}
-              step={0.5}
-              value={maxPctRank}
-              onChange={e => setMaxPctRank(parseFloat(e.target.value))}
-              disabled={!topPctEnabled}
-              className="w-full accent-[var(--accent)] disabled:opacity-40"
-            />
-            <div className="flex justify-between text-[9px] text-gray-400 font-mono mt-0.5">
-              <span>0.5</span>
-              <span>1★</span>
-              <span>5</span>
-              <span>10</span>
-              <span>20</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Q / セクター / 市場 チップ */}
-        <div className="mt-4 space-y-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[11px] font-semibold text-gray-500 uppercase w-14 shrink-0">期</span>
-            {(['1Q', '2Q', '3Q'] as const).map(q => (
-              <ChipFilter
-                key={q}
-                label={q}
-                selected={qSelected.has(q)}
-                onToggle={() => setQSelected(toggleSet(qSelected, q))}
-              />
-            ))}
-          </div>
-
-          {mktOptions.length > 0 && (
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[11px] font-semibold text-gray-500 uppercase w-14 shrink-0">市場</span>
-              {mktOptions.map(m => (
+      {/* ── フィルタ UI（セクターのみ）──────────────────────────── */}
+      {sectorOptions.length > 0 && (
+        <div className="bg-white rounded-xl border border-[#e8eaed] shadow-sm p-4 mb-5">
+          <div className="flex flex-wrap items-start gap-2">
+            <span className="text-[11px] font-semibold text-gray-500 uppercase w-14 shrink-0 mt-1">
+              セクター
+            </span>
+            <div className="flex flex-wrap gap-1.5 flex-1">
+              {sectorOptions.map(s => (
                 <ChipFilter
-                  key={m}
-                  label={m}
-                  selected={mktSelected.has(m)}
-                  onToggle={() => setMktSelected(toggleSet(mktSelected, m))}
+                  key={s}
+                  label={s}
+                  selected={sectorSelected.has(s)}
+                  onToggle={() => setSectorSelected(toggleSet(sectorSelected, s))}
                 />
               ))}
-              {mktSelected.size > 0 && (
+              {sectorSelected.size > 0 && (
                 <button
-                  onClick={() => setMktSelected(new Set())}
-                  className="text-[10px] text-gray-400 hover:text-gray-600 ml-1"
+                  onClick={() => setSectorSelected(new Set())}
+                  className="text-[10px] text-gray-400 hover:text-gray-600"
                 >
                   クリア
                 </button>
               )}
             </div>
-          )}
-
-          {sectorOptions.length > 0 && (
-            <div className="flex flex-wrap items-start gap-2">
-              <span className="text-[11px] font-semibold text-gray-500 uppercase w-14 shrink-0 mt-1">
-                セクター
-              </span>
-              <div className="flex flex-wrap gap-1.5 flex-1">
-                {sectorOptions.map(s => (
-                  <ChipFilter
-                    key={s}
-                    label={s}
-                    selected={sectorSelected.has(s)}
-                    onToggle={() => setSectorSelected(toggleSet(sectorSelected, s))}
-                  />
-                ))}
-                {sectorSelected.size > 0 && (
-                  <button
-                    onClick={() => setSectorSelected(new Set())}
-                    className="text-[10px] text-gray-400 hover:text-gray-600"
-                  >
-                    クリア
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* ── テーブル ────────────────────────────────────────────── */}
       <div className="bg-white rounded-xl border border-[#e8eaed] shadow-sm overflow-x-auto">
