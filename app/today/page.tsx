@@ -6,6 +6,7 @@ import { fetchToday, type TodayResponse } from '@/lib/todayFetch'
 import PullbackSetupsSection from '@/components/today/PullbackSetupsSection'
 import VolumeIgnitionSection from '@/components/today/VolumeIgnitionSection'
 import SpringSetupsSection from '@/components/today/SpringSetupsSection'
+import MultiHitSummary from '@/components/today/MultiHitSummary'
 import ErrorBanner from '@/components/shared/ErrorBanner'
 import PageHeader from '@/components/shared/PageHeader'
 
@@ -50,7 +51,6 @@ export default function TodayPage() {
     <main className="min-h-screen p-6" style={{ backgroundColor: 'var(--bg-primary)' }}>
       <PageHeader
         title="Daily Watch"
-        subtitle={`高値圏の押し目"候補"（収縮ベース + momentum 押し目）${total} 件 ／ 買いシグナルではありません`}
         date={displayDate}
         isLatest={isLatest}
         onRefresh={fetchData}
@@ -79,6 +79,12 @@ export default function TodayPage() {
         </div>
       ) : (
         <div className="flex flex-col gap-6">
+          <MultiHitSummary
+            coil={data.coil}
+            ma={data.ma}
+            volume={data.ignite}
+            spring={data.spring}
+          />
           <PullbackSetupsSection
             kind="coil"
             rows={data.coil}
