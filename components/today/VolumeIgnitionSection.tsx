@@ -33,22 +33,11 @@ function descBy(value: (r: VolumeIgnitionRow) => number | null) {
 
 type SortDef = { key: string; label: string; compare: (a: VolumeIgnitionRow, b: VolumeIgnitionRow) => number }
 
+// 既定は「52週高値に近い順」（全スキャナー共通）。
 const SORTS: SortDef[] = [
-  {
-    // 初期ソート: days_since_entry 昇順 → 同値は vol_ratio 降順（新しい点火・大商い順）
-    key: 'fresh',
-    label: '鮮度（点火が新しい順）',
-    compare: (a, b) => {
-      const ad = isNum(a.days_since_entry) ? a.days_since_entry : Number.POSITIVE_INFINITY
-      const bd = isNum(b.days_since_entry) ? b.days_since_entry : Number.POSITIVE_INFINITY
-      if (ad !== bd) return ad - bd
-      return descBy(r => r.vol_ratio)(a, b)
-    },
-  },
+  { key: 'high', label: '52週高値に近い順', compare: descBy(r => r.dist_from_high_pct) },
   { key: 'vol', label: '出来高比 大きい順', compare: descBy(r => r.vol_ratio) },
-  { key: 'ret', label: '点火来 騰落率 高い順', compare: descBy(r => r.ret_since_entry_pct) },
   { key: 'rs', label: 'RS 高い順', compare: descBy(r => r.rs_topix_avg) },
-  { key: 'turnover', label: '売買代金 多い順', compare: descBy(r => r.turnover_oku) },
 ]
 
 export default function VolumeIgnitionSection({ rows, hotSectors, title, subtitle }: Props) {
@@ -147,7 +136,7 @@ export default function VolumeIgnitionSection({ rows, hotSectors, title, subtitl
           {rows.length === 0 ? '本日の点火銘柄は 0 件です。' : '該当する銘柄がありません。'}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-2.5">
           {sorted.map((r, i) => (
             <VolumeIgnitionCard
               key={`${r.code}-${i}`}

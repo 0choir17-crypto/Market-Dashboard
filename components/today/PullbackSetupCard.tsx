@@ -232,6 +232,7 @@ function MaGradeBadges({ row }: { row: MaPullbackRow }) {
   )
 }
 
+// 共通4枠: 固有指標① / 52w高 / ADR% / 強さ(RS)
 function CoilMetrics({ row }: { row: CoilPullbackRow }) {
   // iqr5 は小さいほどタイト（良）。視認用に緑/通常で色分け。
   const iqrColor = isNum(row.iqr5)
@@ -245,8 +246,8 @@ function CoilMetrics({ row }: { row: CoilPullbackRow }) {
     <>
       <Metric label="収縮 iqr5" value={fmt(row.iqr5, 2)} color={iqrColor} title="終値の収縮度（小さいほどタイト）" />
       <Metric label="52w高" value={fmtSignedPct(row.dist_from_high_pct)} title="52週高値からの距離(%)" />
+      <Metric label="ADR%" value={fmt(row.adr_pct)} title="平均日中変動率(%) = ボラの目安" />
       <Metric label="RS" value={fmt(row.rs_topix_avg, 0)} color={rsColor(row.rs_topix_avg)} title="対TOPIX 相対強度" />
-      <Metric label="売買代金" value={fmt(row.turnover_oku, 0)} title="20日平均 売買代金（億円）" />
     </>
   )
 }
@@ -258,12 +259,7 @@ function MaMetrics({ row }: { row: MaPullbackRow }) {
     <>
       <Metric label="深さ ADR" value={depthVal} title="採用MAからの乖離（ADR単位, 0〜0.5）／括弧内はMA" />
       <Metric label="52w高" value={fmtSignedPct(row.dist_from_high_pct)} title="52週高値からの距離(%)【位置軸】" />
-      <Metric
-        label="3ヶ月"
-        value={fmtSignedPct(row.ret63, 0)}
-        color={isNum(row.ret63) && row.ret63 >= 0 ? 'var(--positive)' : 'var(--negative)'}
-        title="3ヶ月モメンタム(%)"
-      />
+      <Metric label="ADR%" value={fmt(row.adr_pct)} title="平均日中変動率(%) = ボラの目安" />
       <Metric label="RS" value={fmt(row.rs, 0)} color={rsColor(row.rs)} title="対TOPIX 相対強度" />
     </>
   )

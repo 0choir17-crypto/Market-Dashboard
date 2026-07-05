@@ -28,17 +28,16 @@ function isNum(v: number | null | undefined): v is number {
 // kind 別のソート定義（key, ラベル, セレクタ, 並び向き）
 type SortDef = { key: string; label: string; value: (r: AnyRow) => number | null; dir: 'asc' | 'desc' }
 
+// 既定は「52週高値に近い順」（全スキャナー共通）。
 const COIL_SORTS: SortDef[] = [
-  { key: 'tight', label: '収縮（タイト順）', value: r => (r as CoilPullbackRow).iqr5, dir: 'asc' },
   { key: 'high', label: '52週高値に近い順', value: r => r.dist_from_high_pct, dir: 'desc' },
+  { key: 'tight', label: '収縮（タイト順）', value: r => (r as CoilPullbackRow).iqr5, dir: 'asc' },
   { key: 'rs', label: 'RS 高い順', value: r => (r as CoilPullbackRow).rs_topix_avg, dir: 'desc' },
-  { key: 'turnover', label: '売買代金 多い順', value: r => r.turnover_oku, dir: 'desc' },
 ]
 
 const MA_SORTS: SortDef[] = [
-  { key: 'grade', label: 'グレード（良い順）', value: r => maGrade(r as MaPullbackRow).score, dir: 'desc' },
   { key: 'high', label: '52週高値に近い順', value: r => r.dist_from_high_pct, dir: 'desc' },
-  { key: 'mom', label: '3ヶ月モメンタム 高い順', value: r => (r as MaPullbackRow).ret63, dir: 'desc' },
+  { key: 'grade', label: 'グレード（良い順）', value: r => maGrade(r as MaPullbackRow).score, dir: 'desc' },
   { key: 'rs', label: 'RS 高い順', value: r => (r as MaPullbackRow).rs, dir: 'desc' },
 ]
 
@@ -155,7 +154,7 @@ export default function PullbackSetupsSection(props: Props) {
           {rows.length === 0 ? '本日の候補は 0 件です。' : '該当する候補がありません。'}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-2.5">
           {kind === 'coil'
             ? (sorted as CoilPullbackRow[]).map((r, i) => (
                 <PullbackSetupCard

@@ -165,7 +165,7 @@ export default function SpringSetupCard({ row, hot = false, onAddWatchlist, onAd
       {/* 防衛ライン（目立たせる） */}
       <DefenseLine row={row} />
 
-      {/* 指標 */}
+      {/* 共通枠: 固有(防衛ライン=上部) / 52w高 / ADR% / 強さ(126d) */}
       <div className="px-3 grid grid-cols-2 gap-2">
         <Metric label="52w高" value={fmtSignedPct(row.dist_from_high_pct)} title="52週高値からの距離(%)" />
         <Metric label="ADR%" value={fmt(row.adr_pct)} title="平均日中変動率(%) = ボラの目安" />
@@ -173,12 +173,7 @@ export default function SpringSetupCard({ row, hot = false, onAddWatchlist, onAd
           label="126d"
           value={fmtSignedPct(row.m126, 0)}
           color={isNum(row.m126) && row.m126 >= 0 ? 'var(--positive)' : 'var(--negative)'}
-          title="126日上昇率(%)。なぜリーダー判定されたかの内訳（長期）"
-        />
-        <Metric
-          label="63d / 21d"
-          value={`${fmt(row.m63, 0)} / ${fmt(row.m21, 0)}`}
-          title="63日 / 21日上昇率(%)。リーダー判定の内訳（中期・短期）"
+          title="126日上昇率(%)。なぜリーダー判定されたか（長期モメンタム）"
         />
       </div>
 

@@ -37,12 +37,6 @@ function rsColor(v: number | null): string {
   return 'var(--negative)'
 }
 
-// 点火来 騰落率（正=まだ伸びている / 負=既に押している）
-function retColor(v: number | null): string {
-  if (!isNum(v)) return 'var(--text-muted)'
-  return v >= 0 ? 'var(--positive)' : 'var(--negative)'
-}
-
 // 出来高比（大きいほど点火が強い）
 function volColor(v: number | null): string {
   if (!isNum(v)) return 'var(--text-muted)'
@@ -163,25 +157,21 @@ export default function VolumeIgnitionCard({ row, hot = false, onAddWatchlist, o
           <p className="font-mono text-sm font-semibold text-[var(--text-primary)] tabular-nums leading-tight">
             {fmtClose(row.close)}
           </p>
-          <p className="text-[9px] text-[var(--text-muted)] leading-tight font-mono tabular-nums" title="点火日の終値">
-            点火 {fmtClose(row.entry_close)}
-          </p>
         </div>
       </div>
 
-      {/* 指標 */}
+      {/* 共通4枠: 固有指標①(出来高比) / 52w高 / ADR% / 強さ(RS) */}
       <div className="px-3 grid grid-cols-2 gap-2">
-        <Metric
-          label="点火来"
-          value={fmtSignedPct(row.ret_since_entry_pct)}
-          color={retColor(row.ret_since_entry_pct)}
-          title="点火日からの騰落率(%)。マイナス=既に押している"
-        />
         <Metric
           label="出来高比"
           value={isNum(row.vol_ratio) ? `${fmt(row.vol_ratio, 1)}x` : '—'}
           color={volColor(row.vol_ratio)}
           title="点火日 出来高/20日平均（≥2）。大きいほど点火が強い"
+        />
+        <Metric
+          label="52w高"
+          value={fmtSignedPct(row.dist_from_high_pct)}
+          title="52週高値からの距離(%)"
         />
         <Metric
           label="ADR%"
@@ -195,12 +185,6 @@ export default function VolumeIgnitionCard({ row, hot = false, onAddWatchlist, o
           color={rsColor(row.rs_topix_avg)}
           title="対TOPIX 相対強さ（21/63/126平均, 0–100）"
         />
-        <Metric
-          label="150乖離"
-          value={fmtSignedPct(row.dist_sma150_pct)}
-          title="150日線からの乖離(%)。大=伸び切り"
-        />
-        <Metric label="売買代金" value={fmt(row.turnover_oku, 1)} title="直近20日平均 売買代金（億円）。流動性" />
       </div>
 
       {/* アクション */}
