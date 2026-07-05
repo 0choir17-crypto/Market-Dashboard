@@ -7,6 +7,7 @@ import { tradingViewUrl, shikihoUrl } from '@/lib/tickerLinks'
 type Props = {
   row: VolumeIgnitionRow
   hot?: boolean
+  multiHit?: boolean
   onAddWatchlist?: (row: VolumeIgnitionRow) => void
   onAddPosition?: (row: VolumeIgnitionRow) => void
 }
@@ -100,12 +101,12 @@ function Metric({
   )
 }
 
-export default function VolumeIgnitionCard({ row, hot = false, onAddWatchlist, onAddPosition }: Props) {
+export default function VolumeIgnitionCard({ row, hot = false, multiHit = false, onAddWatchlist, onAddPosition }: Props) {
   const extreme = row.adr_extreme === true
 
-  // 枠/背景: ⚠ADR極端 を最優先（赤）→ hotセクター（緑）
-  const borderColor = extreme ? '#fca5a5' : hot ? '#86efac' : '#e8eaed'
-  const backgroundColor = extreme ? '#fffafa' : hot ? '#f0fdf4' : '#ffffff'
+  // 枠/背景: 複数シグナル重複（黄）を最優先 → ⚠ADR極端（赤）→ hotセクター（緑）
+  const borderColor = multiHit ? '#fbbf24' : extreme ? '#fca5a5' : hot ? '#86efac' : '#e8eaed'
+  const backgroundColor = multiHit ? '#fef9c3' : extreme ? '#fffafa' : hot ? '#f0fdf4' : '#ffffff'
 
   return (
     <div

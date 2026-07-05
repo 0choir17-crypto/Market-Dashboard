@@ -10,6 +10,7 @@ type Props =
       kind: 'coil'
       row: CoilPullbackRow
       hot?: boolean
+      multiHit?: boolean
       onAddWatchlist?: (row: CoilPullbackRow) => void
       onAddPosition?: (row: CoilPullbackRow) => void
     }
@@ -17,6 +18,7 @@ type Props =
       kind: 'ma'
       row: MaPullbackRow
       hot?: boolean
+      multiHit?: boolean
       onAddWatchlist?: (row: MaPullbackRow) => void
       onAddPosition?: (row: MaPullbackRow) => void
     }
@@ -104,14 +106,14 @@ function Metric({
 }
 
 export default function PullbackSetupCard(props: Props) {
-  const { kind, row, hot = false } = props
+  const { kind, row, hot = false, multiHit = false } = props
 
   return (
     <div
       className="bg-white rounded-lg border shadow-sm hover:shadow-md transition-shadow flex flex-col"
       style={{
-        borderColor: hot ? '#86efac' : '#e8eaed',
-        backgroundColor: hot ? '#f0fdf4' : '#ffffff',
+        borderColor: multiHit ? '#fbbf24' : hot ? '#86efac' : '#e8eaed',
+        backgroundColor: multiHit ? '#fef9c3' : hot ? '#f0fdf4' : '#ffffff',
       }}
     >
       {/* バッジ行 */}
