@@ -28,6 +28,7 @@ export type SpringSetupRow = {
 
   dist_from_high_pct: number | null // 52週高値からの距離(%)
   adr_pct: number | null            // 平均日中変動率(%)
+  rs_topix_avg: number | null       // 対TOPIX 相対強さ（21/63/126平均, 0–100）
 
   m21: number | null                // 21日上昇率(%)  = なぜリーダー判定されたかの内訳
   m63: number | null                // 63日上昇率(%)

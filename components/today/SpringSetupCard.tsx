@@ -72,38 +72,13 @@ function Metric({
   )
 }
 
-// 防衛ライン（ignition_level）は「◯◯円・現在+X%で死守中」とチャート判断に直結するので目立たせる。
-// ③ swing_low のみの行は ignition_level=null → 防衛ラインなしの注記を出す。
-function DefenseLine({ row }: { row: SpringSetupRow }) {
-  if (!isNum(row.ignition_level)) {
-    return (
-      <div className="mx-3 mb-1 px-2.5 py-1.5 rounded-lg bg-violet-50 border border-violet-200 text-[11px] text-violet-800">
-        直近10日安値をリクレイム（点火ライン無し）
-      </div>
-    )
-  }
-  const defended = row.defended_pct
-  return (
-    <div className="mx-3 mb-1 px-2.5 py-2 rounded-lg bg-emerald-50 border border-emerald-200">
-      <div className="flex items-baseline justify-between gap-2">
-        <span className="text-[10px] font-semibold uppercase tracking-wide text-emerald-700">防衛ライン</span>
-        {isNum(defended) && (
-          <span
-            className="text-[10px] font-semibold text-emerald-700"
-            title="(close/ignition_level−1)×100。小さいほどライン際で死守"
-          >
-            現在 {fmtSignedPct(defended)} で死守中
-          </span>
-        )}
-      </div>
-      <div className="mt-0.5 flex items-baseline gap-1">
-        <span className="font-mono text-base font-bold text-emerald-800 tabular-nums leading-none">
-          {fmtClose(row.ignition_level)}
-        </span>
-        <span className="text-[10px] text-emerald-700">円（点火日始値）</span>
-      </div>
-    </div>
-  )
+// rs (0–100, 高いほど強い)
+function rsColor(v: number | null | undefined): string {
+  if (!isNum(v)) return 'var(--text-muted)'
+  if (v >= 80) return 'var(--positive)'
+  if (v >= 60) return 'var(--accent)'
+  if (v >= 40) return 'var(--text-secondary)'
+  return 'var(--negative)'
 }
 
 export default function SpringSetupCard({ row, hot = false, onAddWatchlist, onAddPosition }: Props) {
@@ -162,18 +137,15 @@ export default function SpringSetupCard({ row, hot = false, onAddWatchlist, onAd
         </div>
       </div>
 
-      {/* 防衛ライン（目立たせる） */}
-      <DefenseLine row={row} />
-
-      {/* 共通枠: 固有(防衛ライン=上部) / 52w高 / ADR% / 強さ(126d) */}
+      {/* 共通枠: 52w高 / ADR% / 強さ(RS) */}
       <div className="px-3 grid grid-cols-2 gap-2">
         <Metric label="52w高" value={fmtSignedPct(row.dist_from_high_pct)} title="52週高値からの距離(%)" />
         <Metric label="ADR%" value={fmt(row.adr_pct)} title="平均日中変動率(%) = ボラの目安" />
         <Metric
-          label="126d"
-          value={fmtSignedPct(row.m126, 0)}
-          color={isNum(row.m126) && row.m126 >= 0 ? 'var(--positive)' : 'var(--negative)'}
-          title="126日上昇率(%)。なぜリーダー判定されたか（長期モメンタム）"
+          label="RS"
+          value={fmt(row.rs_topix_avg, 0)}
+          color={rsColor(row.rs_topix_avg)}
+          title="対TOPIX 相対強さ（21/63/126平均, 0–100）"
         />
       </div>
 

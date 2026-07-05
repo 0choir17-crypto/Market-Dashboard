@@ -62,8 +62,7 @@ const SORTS: SortDef[] = [
       return ascBy(r => r.defended_pct)(a, b)
     },
   },
-  { key: 'defended', label: '防衛ライン際 死守順（近い順）', compare: ascBy(r => r.defended_pct) },
-  { key: 'm126', label: '126日モメンタム 高い順', compare: descBy(r => r.m126) },
+  { key: 'rs', label: 'RS 高い順', compare: descBy(r => r.rs_topix_avg) },
   { key: 'adr', label: 'ADR 高い順', compare: descBy(r => r.adr_pct) },
 ]
 
@@ -110,6 +109,7 @@ export default function SpringSetupsSection({ rows, hotSectors, title, subtitle 
       company_name: r.co_name ?? undefined,
       sector_s33: r.sector_s33 ?? undefined,
       screen_tag: 'Spring Setup',
+      rs_composite: r.rs_topix_avg ?? undefined,
       adr_pct: r.adr_pct ?? undefined,
       signal_price: r.close ?? undefined,
     }
@@ -121,6 +121,7 @@ export default function SpringSetupsSection({ rows, hotSectors, title, subtitle 
       company_name: r.co_name ?? undefined,
       sector_s33: r.sector_s33 ?? undefined,
       screen_name: 'Spring Setup',
+      rs_at_entry: r.rs_topix_avg ?? undefined,
     }
   }
 
