@@ -47,19 +47,19 @@ export type SpringTypeMeta = {
 
 export const SPRING_TYPE_META: Record<SpringType, SpringTypeMeta> = {
   ignition_open: {
-    label: '① 点火ライン',
+    label: 'ignition_open',
     palette: { bg: '#dbeafe', fg: '#1e40af', border: '#93c5fd' },
-    title: '① ignition_open: 点火日（大陽線）の始値ラインを死守',
+    title: 'ignition_open: 点火日（大陽線）の始値ラインを死守',
   },
   swing_low: {
-    label: '③ 安値リクレイム',
+    label: 'swing_low',
     palette: { bg: '#ede9fe', fg: '#6d28d9', border: '#c4b5fd' },
-    title: '③ swing_low: 直近10日安値をアンダーカット&リクレイム',
+    title: 'swing_low: 直近10日安値をアンダーカット&リクレイム',
   },
   both: {
-    label: '★ 両方',
+    label: 'both',
     palette: { bg: '#dcfce7', fg: '#166534', border: '#86efac' },
-    title: 'both: ①点火ライン死守 と ③安値リクレイム の両方が成立',
+    title: 'both: ignition_open と swing_low の両方が成立',
   },
 }
 
