@@ -11,9 +11,9 @@ import LoginModal from '@/components/auth/LoginModal'
 const NAV_ITEMS: { href: string; label: string }[] = [
   { href: '/', label: 'Market' },
   { href: '/sectors33', label: 'Sectors-33' },
-  { href: '/earnings', label: 'Earnings' },
   { href: '/leaders', label: 'Leaders' },
   { href: '/momentum', label: 'Momentum' },
+  { href: '/earnings', label: 'Earnings' },
   { href: '/today', label: 'Daily Watch' },
   { href: '/watchlist', label: 'Watchlist' },
   { href: '/journal', label: 'Trading' },

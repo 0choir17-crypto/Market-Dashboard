@@ -27,16 +27,26 @@ function distColor(v: number | null | undefined): string {
   return 'var(--text-secondary)'
 }
 
+// 短期/中期/長期の重複数で名前の背景色を変える: 2窓=黄 / 3窓=オレンジ。
+function dupBg(count: number | undefined): string | undefined {
+  if (count === undefined) return undefined
+  if (count >= 3) return '#fdba74' // 3窓重複 = オレンジ (orange-300)
+  if (count === 2) return '#fef08a' // 2窓重複 = 黄色 (yellow-200)
+  return undefined
+}
+
 type Props = {
   horizon: Horizon
   rows: MomentumLeader[]
   query: string
   newOnly: boolean
+  // code → 出現窓数（21/63/126 のうちいくつに登場したか）。重複強調に使う。
+  dupCount: Map<string, number>
 }
 
 // 1 窓（21/63/126）の ranking 列。rank 昇順（=渡された順）でそのまま縦に並べる。
 // 3 窓を横並びにして「同じ銘柄が別窓でどこにいるか」を縦に見比べる。
-export default function MomentumColumn({ horizon, rows, query, newOnly }: Props) {
+export default function MomentumColumn({ horizon, rows, query, newOnly, dupCount }: Props) {
   const label = HORIZON_LABEL[horizon]
 
   const filtered = useMemo(() => {
@@ -102,15 +112,26 @@ export default function MomentumColumn({ horizon, rows, query, newOnly }: Props)
                   >
                     {r.code}
                   </a>
-                  <a
-                    href={shikihoUrl(r.code)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs font-medium text-[var(--text-primary)] hover:underline truncate"
-                    title={`${r.co_name ?? '—'}（四季報を開く）`}
-                  >
-                    {r.co_name ?? '—'}
-                  </a>
+                  {(() => {
+                    const dup = dupCount.get(r.code)
+                    const bg = dupBg(dup)
+                    return (
+                      <a
+                        href={shikihoUrl(r.code)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`text-xs font-medium text-[var(--text-primary)] hover:underline truncate ${bg ? 'rounded px-1' : ''}`}
+                        style={bg ? { backgroundColor: bg } : undefined}
+                        title={
+                          dup && dup >= 2
+                            ? `${r.co_name ?? '—'}（四季報）｜${dup}窓で重複`
+                            : `${r.co_name ?? '—'}（四季報を開く）`
+                        }
+                      >
+                        {r.co_name ?? '—'}
+                      </a>
+                    )
+                  })()}
                 </div>
                 <div className="mt-0.5 text-[10px] text-[var(--text-secondary)] truncate" title={r.sector_s33 ?? ''}>
                   {r.sector_s33 ?? '—'}
