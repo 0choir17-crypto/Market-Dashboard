@@ -14,6 +14,8 @@ type Props = {
   hotSectors: string[]
   title: string
   subtitle: string
+  // 複数スキャナー重複銘柄の code 集合（背景を黄色で強調）
+  multiHitCodes: Set<string>
 }
 
 function isNum(v: number | null | undefined): v is number {
@@ -66,7 +68,7 @@ const SORTS: SortDef[] = [
   { key: 'adr', label: 'ADR 高い順', compare: descBy(r => r.adr_pct) },
 ]
 
-export default function SpringSetupsSection({ rows, hotSectors, title, subtitle }: Props) {
+export default function SpringSetupsSection({ rows, hotSectors, title, subtitle, multiHitCodes }: Props) {
   const [type, setType] = useState<'all' | SpringType>('all')
   const [sector, setSector] = useState<string>('all')
   const [sortKey, setSortKey] = useState<string>(SORTS[0].key)
@@ -190,6 +192,7 @@ export default function SpringSetupsSection({ rows, hotSectors, title, subtitle 
               key={`${r.code}-${i}`}
               row={r}
               hot={r.sector_s33 != null && hotSet.has(r.sector_s33)}
+              multiHit={multiHitCodes.has(r.code)}
               onAddWatchlist={row => setWatchTarget(toWatch(row))}
               onAddPosition={row => setPositionTarget(toPosition(row))}
             />

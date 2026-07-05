@@ -8,6 +8,7 @@ import { tradingViewUrl, shikihoUrl } from '@/lib/tickerLinks'
 type Props = {
   row: SpringSetupRow
   hot?: boolean
+  multiHit?: boolean
   onAddWatchlist?: (row: SpringSetupRow) => void
   onAddPosition?: (row: SpringSetupRow) => void
 }
@@ -81,15 +82,15 @@ function rsColor(v: number | null | undefined): string {
   return 'var(--negative)'
 }
 
-export default function SpringSetupCard({ row, hot = false, onAddWatchlist, onAddPosition }: Props) {
+export default function SpringSetupCard({ row, hot = false, multiHit = false, onAddWatchlist, onAddPosition }: Props) {
   const meta = springTypeMeta(row.type)
 
   return (
     <div
       className="bg-white rounded-lg border shadow-sm hover:shadow-md transition-shadow flex flex-col"
       style={{
-        borderColor: hot ? '#86efac' : '#e8eaed',
-        backgroundColor: hot ? '#f0fdf4' : '#ffffff',
+        borderColor: multiHit ? '#fbbf24' : hot ? '#86efac' : '#e8eaed',
+        backgroundColor: multiHit ? '#fef9c3' : hot ? '#f0fdf4' : '#ffffff',
       }}
     >
       {/* バッジ行 */}

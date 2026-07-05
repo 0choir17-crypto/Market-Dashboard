@@ -13,6 +13,8 @@ type CommonProps = {
   title: string
   subtitle: string
   hotSectors: string[]
+  // 複数スキャナー重複銘柄の code 集合（背景を黄色で強調）
+  multiHitCodes: Set<string>
 }
 
 type Props =
@@ -42,7 +44,7 @@ const MA_SORTS: SortDef[] = [
 ]
 
 export default function PullbackSetupsSection(props: Props) {
-  const { kind, rows, title, subtitle, hotSectors } = props
+  const { kind, rows, title, subtitle, hotSectors, multiHitCodes } = props
   const sorts = kind === 'coil' ? COIL_SORTS : MA_SORTS
 
   const [sector, setSector] = useState<string>('all')
@@ -162,6 +164,7 @@ export default function PullbackSetupsSection(props: Props) {
                   kind="coil"
                   row={r}
                   hot={r.sector_s33 != null && hotSet.has(r.sector_s33)}
+                  multiHit={multiHitCodes.has(r.code)}
                   onAddWatchlist={row => setWatchTarget(toWatch(row))}
                   onAddPosition={row => setPositionTarget(toPosition(row))}
                 />
@@ -172,6 +175,7 @@ export default function PullbackSetupsSection(props: Props) {
                   kind="ma"
                   row={r}
                   hot={r.sector_s33 != null && hotSet.has(r.sector_s33)}
+                  multiHit={multiHitCodes.has(r.code)}
                   onAddWatchlist={row => setWatchTarget(toWatch(row))}
                   onAddPosition={row => setPositionTarget(toPosition(row))}
                 />
