@@ -1,14 +1,16 @@
 import { supabase } from '@/lib/supabase'
 import type { CoilPullbackRow, MaPullbackRow } from '@/types/pullbackSetups'
 import type { VolumeIgnitionRow } from '@/types/volumeIgnition'
+import type { SpringSetupRow } from '@/types/springSetups'
 
-// Daily Watch — 押し目"候補"ウォッチ。新2テーブルを最新 date 中心に読む。
+// Daily Watch — 押し目"候補"ウォッチ。新テーブル群を最新 date 中心に読む。
 // jquants-scanner が毎日・平日引け後 (~18:00 JST) に当日分を upsert（冪等）。
 // 旧 scan_results 依存は撤去済み（structure/thrust 系シグナルは本番ごと撤去）。
 
 const COIL_TABLE = 'coil_pullback_setups'
 const MA_TABLE = 'ma_pullback_setups'
 const VOLUME_IGNITION_TABLE = 'volume_ignition'
+const SPRING_TABLE = 'spring_setups'
 
 export type TodayResponse = {
   coilDate: string | null
@@ -17,6 +19,8 @@ export type TodayResponse = {
   ma: MaPullbackRow[]
   igniteDate: string | null
   ignite: VolumeIgnitionRow[]
+  springDate: string | null
+  spring: SpringSetupRow[]
   hotSectors: string[]
   // 取得失敗の詳細（null なら全クエリ成功）。「0 件」と「取得失敗」を UI で区別するため。
   error: string | null
@@ -126,14 +130,15 @@ async function fetchHotSectors(
 export async function fetchToday(opts: { date?: string }): Promise<TodayResponse> {
   const requested = opts.date ?? null
 
-  const [coilRes, maRes, igniteRes, hotRes] = await Promise.all([
+  const [coilRes, maRes, igniteRes, springRes, hotRes] = await Promise.all([
     fetchSetups<CoilPullbackRow>(COIL_TABLE, requested),
     fetchSetups<MaPullbackRow>(MA_TABLE, requested),
     fetchSetups<VolumeIgnitionRow>(VOLUME_IGNITION_TABLE, requested),
+    fetchSetups<SpringSetupRow>(SPRING_TABLE, requested),
     fetchHotSectors(requested),
   ])
 
-  const errors = [coilRes.error, maRes.error, igniteRes.error, hotRes.error].filter(
+  const errors = [coilRes.error, maRes.error, igniteRes.error, springRes.error, hotRes.error].filter(
     (e): e is string => !!e,
   )
 
@@ -144,6 +149,8 @@ export async function fetchToday(opts: { date?: string }): Promise<TodayResponse
     ma: maRes.rows,
     igniteDate: igniteRes.date,
     ignite: igniteRes.rows,
+    springDate: springRes.date,
+    spring: springRes.rows,
     hotSectors: hotRes.sectors,
     error: errors.length > 0 ? errors.join(' / ') : null,
   }

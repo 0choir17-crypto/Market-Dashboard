@@ -5,6 +5,7 @@ import { useDate } from '@/contexts/DateContext'
 import { fetchToday, type TodayResponse } from '@/lib/todayFetch'
 import PullbackSetupsSection from '@/components/today/PullbackSetupsSection'
 import VolumeIgnitionSection from '@/components/today/VolumeIgnitionSection'
+import SpringSetupsSection from '@/components/today/SpringSetupsSection'
 import ErrorBanner from '@/components/shared/ErrorBanner'
 import PageHeader from '@/components/shared/PageHeader'
 
@@ -17,6 +18,8 @@ export default function TodayPage() {
     ma: [],
     igniteDate: null,
     ignite: [],
+    springDate: null,
+    spring: [],
     hotSectors: [],
     error: null,
   })
@@ -40,8 +43,8 @@ export default function TodayPage() {
     fetchData()
   }, [fetchData])
 
-  const displayDate = data.coilDate ?? data.maDate ?? data.igniteDate ?? selectedDate
-  const total = data.coil.length + data.ma.length + data.ignite.length
+  const displayDate = data.coilDate ?? data.maDate ?? data.igniteDate ?? data.springDate ?? selectedDate
+  const total = data.coil.length + data.ma.length + data.ignite.length + data.spring.length
 
   return (
     <main className="min-h-screen p-6" style={{ backgroundColor: 'var(--bg-primary)' }}>
@@ -95,6 +98,12 @@ export default function TodayPage() {
             hotSectors={data.hotSectors}
             title="出来高イグニッション — 枯れ→点火の初動"
             subtitle="上昇トレンド中に出来高が枯れた後、上昇日に出来高2倍で再点火した初動。高ADRの瞬発系（直近5営業日以内に点火）。"
+          />
+          <SpringSetupsSection
+            rows={data.spring}
+            hotSectors={data.hotSectors}
+            title="Spring — 押し目・踏ん張りタイミング"
+            subtitle="モメンタムリーダーが下側の基準線を防衛して短期の押しから踏ん張った局面（①点火ライン死守 / ③安値リクレイム）。防衛ライン割れがストップ。"
           />
         </div>
       )}
