@@ -117,16 +117,6 @@ export default function VolumeIgnitionSection({ rows, hotSectors, title, subtitl
       </div>
       <p className="text-xs text-[var(--text-secondary)] mb-2">{subtitle}</p>
 
-      {/* 管理ルール注記（瞬発トレード用ウォッチ） */}
-      <div className="mb-3 px-3 py-2 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-[11px] leading-relaxed flex items-start gap-2">
-        <span aria-hidden>⚡</span>
-        <span>
-          <strong>瞬発トレード用ウォッチ（push型シグナルではありません）。</strong>
-          即利確（到達中央 ~10日）／ <strong>−15% ストップ</strong>／ 持ち切り厳禁（63日中央 −8%）。
-          <span className="text-rose-900 font-semibold">⚠ ADR&gt;12（adr_extreme）は大負け多発帯＝減サイズ。</span>
-        </span>
-      </div>
-
       {/* フィルタ / ソート */}
       <div className="flex flex-wrap items-center gap-2 mb-4">
         <select

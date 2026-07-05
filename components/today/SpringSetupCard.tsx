@@ -48,18 +48,6 @@ function Chip({
   )
 }
 
-function FreshChip() {
-  return (
-    <span
-      className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold uppercase tracking-wide"
-      style={{ backgroundColor: 'var(--neutral-bg)', color: 'var(--neutral-color)', border: '1px solid #fcd34d' }}
-      title="直近5営業日に本シグナルが無かった＝新規点灯"
-    >
-      ★ fresh
-    </span>
-  )
-}
-
 function Metric({
   label,
   value,
@@ -133,14 +121,6 @@ export default function SpringSetupCard({ row, hot = false, onAddWatchlist, onAd
       {/* バッジ行 */}
       <div className="px-3 py-2 border-b border-[#f0f2f4] flex items-center gap-1.5 flex-wrap">
         <Chip text={meta.label} palette={meta.palette} title={meta.title} />
-        {isNum(row.ignition_age) && (
-          <Chip
-            text={`点火 ${row.ignition_age}日前`}
-            palette={{ bg: '#f3f4f6', fg: '#475569', border: '#cbd5e1' }}
-            title="点火日からの経過営業日（3〜30）"
-          />
-        )}
-        {fresh && <FreshChip />}
       </div>
 
       {/* 銘柄 */}

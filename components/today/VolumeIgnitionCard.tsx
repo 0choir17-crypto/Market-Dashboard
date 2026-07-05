@@ -72,30 +72,6 @@ function Chip({
   )
 }
 
-// 鮮度バッジ。0=当日点火を強調、1〜5は経過日数。
-function DaysBadge({ days, entryDate }: { days: number | null; entryDate: string | null }) {
-  const fresh = days === 0
-  const title = `点火日: ${entryDate ?? '—'}（スキャン日との営業日差 = ${isNum(days) ? days : '—'}）`
-  if (fresh) {
-    return (
-      <span
-        className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold uppercase tracking-wide"
-        style={{ backgroundColor: 'var(--neutral-bg)', color: 'var(--neutral-color)', border: '1px solid #fcd34d' }}
-        title={title}
-      >
-        🔥 当日点火
-      </span>
-    )
-  }
-  return (
-    <Chip
-      text={isNum(days) ? `${days}日前` : '—'}
-      palette={{ bg: '#f3f4f6', fg: '#475569', border: '#cbd5e1' }}
-      title={title}
-    />
-  )
-}
-
 // ADR>12 = 大負け多発帯。減サイズ警告（赤）。
 function AdrExtremeChip() {
   return (
@@ -144,12 +120,13 @@ export default function VolumeIgnitionCard({ row, hot = false, onAddWatchlist, o
       className="bg-white rounded-lg border shadow-sm hover:shadow-md transition-shadow flex flex-col"
       style={{ borderColor, backgroundColor }}
     >
-      {/* バッジ行 */}
-      <div className="px-3 py-2 border-b border-[#f0f2f4] flex items-center gap-1.5 flex-wrap">
-        <DaysBadge days={row.days_since_entry} entryDate={row.entry_date} />
-        {extreme && <AdrExtremeChip />}
-        {row.mkt && <span className="ml-auto text-[10px] text-[var(--text-muted)] font-mono">{row.mkt}</span>}
-      </div>
+      {/* バッジ行（内容がある時のみ表示） */}
+      {(extreme || row.mkt) && (
+        <div className="px-3 py-2 border-b border-[#f0f2f4] flex items-center gap-1.5 flex-wrap">
+          {extreme && <AdrExtremeChip />}
+          {row.mkt && <span className="ml-auto text-[10px] text-[var(--text-muted)] font-mono">{row.mkt}</span>}
+        </div>
+      )}
 
       {/* 銘柄 */}
       <div className="px-3 py-2 flex items-start justify-between gap-2">

@@ -79,18 +79,6 @@ function Chip({
   )
 }
 
-function FreshChip() {
-  return (
-    <span
-      className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold uppercase tracking-wide"
-      style={{ backgroundColor: 'var(--neutral-bg)', color: 'var(--neutral-color)', border: '1px solid #fcd34d' }}
-      title="直近5営業日に未出現＝新規"
-    >
-      ★ fresh
-    </span>
-  )
-}
-
 function Metric({
   label,
   value,
@@ -130,7 +118,6 @@ export default function PullbackSetupCard(props: Props) {
       {/* バッジ行 */}
       <div className="px-3 py-2 border-b border-[#f0f2f4] flex items-center gap-1.5 flex-wrap">
         {kind === 'ma' && <MaGradeBadges row={props.row} />}
-        {fresh && <FreshChip />}
         {row.mkt && <span className="ml-auto text-[10px] text-[var(--text-muted)] font-mono">{row.mkt}</span>}
       </div>
 

@@ -52,7 +52,7 @@ const TYPE_ORDER: Record<SpringType, number> = { both: 0, ignition_open: 1, swin
 const SORTS: SortDef[] = [
   {
     key: 'type',
-    label: 'シグナル種別（両方→①→③）',
+    label: 'シグナル種別（both→ignition_open→swing_low）',
     compare: (a, b) => {
       const at = TYPE_ORDER[a.type] ?? 9
       const bt = TYPE_ORDER[b.type] ?? 9
@@ -145,16 +145,6 @@ export default function SpringSetupsSection({ rows, hotSectors, title, subtitle 
         </span>
       </div>
       <p className="text-xs text-[var(--text-secondary)] mb-2">{subtitle}</p>
-
-      {/* 管理ルール注記（ウォッチリスト） */}
-      <div className="mb-3 px-3 py-2 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] leading-relaxed flex items-start gap-2">
-        <span aria-hidden>🪤</span>
-        <span>
-          <strong>押し目・踏ん張りタイミングのウォッチリスト（買い持ちシグナルではありません）。</strong>
-          モメンタムリーダーが下側の基準線を防衛して踏ん張った局面。
-          <strong>執行はストップ=ライン割れ＋段階利確が前提。</strong>
-        </span>
-      </div>
 
       {/* フィルタ / ソート */}
       <div className="flex flex-wrap items-center gap-2 mb-4">
