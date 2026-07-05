@@ -69,7 +69,6 @@ const SORTS: SortDef[] = [
 export default function SpringSetupsSection({ rows, hotSectors, title, subtitle }: Props) {
   const [type, setType] = useState<'all' | SpringType>('all')
   const [sector, setSector] = useState<string>('all')
-  const [freshOnly, setFreshOnly] = useState(false)
   const [sortKey, setSortKey] = useState<string>(SORTS[0].key)
 
   const hotSet = useMemo(() => new Set(hotSectors), [hotSectors])
@@ -88,28 +87,17 @@ export default function SpringSetupsSection({ rows, hotSectors, title, subtitle 
     return [...set].sort((a, b) => a.localeCompare(b, 'ja'))
   }, [rows])
 
-  const freshCount = useMemo(() => rows.filter(r => r.fresh === true).length, [rows])
-
   const filtered = useMemo(() => {
     return rows.filter(r => {
       if (type !== 'all' && r.type !== type) return false
       if (sector !== 'all' && (r.sector_s33 ?? '') !== sector) return false
-      if (freshOnly && r.fresh !== true) return false
       return true
     })
-  }, [rows, type, sector, freshOnly])
+  }, [rows, type, sector])
 
   const sorted = useMemo(() => {
     const def = SORTS.find(s => s.key === sortKey) ?? SORTS[0]
-    const arr = [...filtered]
-    arr.sort((a, b) => {
-      // fresh を常に優先（強調）
-      const af = a.fresh === true ? 0 : 1
-      const bf = b.fresh === true ? 0 : 1
-      if (af !== bf) return af - bf
-      return def.compare(a, b)
-    })
-    return arr
+    return [...filtered].sort((a, b) => def.compare(a, b))
   }, [filtered, sortKey])
 
   const [watchTarget, setWatchTarget] = useState<Partial<WatchlistItem> | null>(null)
@@ -141,7 +129,6 @@ export default function SpringSetupsSection({ rows, hotSectors, title, subtitle 
         <h2 className="text-sm font-semibold text-[var(--text-primary)]">{title}</h2>
         <span className="text-xs text-[var(--text-muted)]">
           <span className="font-mono">{sorted.length} / {rows.length}</span> 件
-          {freshCount > 0 && <span className="ml-1 text-amber-600">（★新規点灯 <span className="font-mono">{freshCount}</span>）</span>}
         </span>
       </div>
       <p className="text-xs text-[var(--text-secondary)] mb-2">{subtitle}</p>
@@ -173,18 +160,6 @@ export default function SpringSetupsSection({ rows, hotSectors, title, subtitle 
             </option>
           ))}
         </select>
-
-        <button
-          onClick={() => setFreshOnly(v => !v)}
-          className={`text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors ${
-            freshOnly
-              ? 'bg-amber-400 text-white border-amber-400'
-              : 'bg-white text-amber-700 border-amber-200 hover:bg-amber-50'
-          }`}
-          title="直近5営業日に本シグナルが無かった＝新規点灯のみ表示"
-        >
-          ★ 新規点灯のみ
-        </button>
 
         <span className="ml-auto flex items-center gap-1.5">
           <span className="text-[11px] text-[var(--text-muted)]">並び:</span>

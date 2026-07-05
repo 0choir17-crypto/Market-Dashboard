@@ -1,7 +1,6 @@
 'use client'
 
 import type { VolumeIgnitionRow } from '@/types/volumeIgnition'
-import { isFreshIgnition } from '@/types/volumeIgnition'
 import { formatPct } from '@/lib/format'
 import { tradingViewUrl, shikihoUrl } from '@/lib/tickerLinks'
 
@@ -108,12 +107,11 @@ function Metric({
 }
 
 export default function VolumeIgnitionCard({ row, hot = false, onAddWatchlist, onAddPosition }: Props) {
-  const fresh = isFreshIgnition(row)
   const extreme = row.adr_extreme === true
 
-  // 枠/背景: ⚠ADR極端 を最優先（赤）→ 当日点火（橙）→ hotセクター（緑）
-  const borderColor = extreme ? '#fca5a5' : fresh ? '#fcd34d' : hot ? '#86efac' : '#e8eaed'
-  const backgroundColor = extreme ? '#fffafa' : fresh ? '#fffdf5' : hot ? '#f0fdf4' : '#ffffff'
+  // 枠/背景: ⚠ADR極端 を最優先（赤）→ hotセクター（緑）
+  const borderColor = extreme ? '#fca5a5' : hot ? '#86efac' : '#e8eaed'
+  const backgroundColor = extreme ? '#fffafa' : hot ? '#f0fdf4' : '#ffffff'
 
   return (
     <div

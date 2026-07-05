@@ -105,14 +105,13 @@ function Metric({
 
 export default function PullbackSetupCard(props: Props) {
   const { kind, row, hot = false } = props
-  const fresh = row.fresh === true
 
   return (
     <div
       className="bg-white rounded-lg border shadow-sm hover:shadow-md transition-shadow flex flex-col"
       style={{
-        borderColor: fresh ? '#fcd34d' : hot ? '#86efac' : '#e8eaed',
-        backgroundColor: fresh ? '#fffdf5' : hot ? '#f0fdf4' : '#ffffff',
+        borderColor: hot ? '#86efac' : '#e8eaed',
+        backgroundColor: hot ? '#f0fdf4' : '#ffffff',
       }}
     >
       {/* バッジ行 */}

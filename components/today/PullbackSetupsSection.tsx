@@ -47,7 +47,6 @@ export default function PullbackSetupsSection(props: Props) {
   const sorts = kind === 'coil' ? COIL_SORTS : MA_SORTS
 
   const [sector, setSector] = useState<string>('all')
-  const [freshOnly, setFreshOnly] = useState(false)
   const [sortKey, setSortKey] = useState<string>(sorts[0].key)
 
   const hotSet = useMemo(() => new Set(hotSectors), [hotSectors])
@@ -58,25 +57,18 @@ export default function PullbackSetupsSection(props: Props) {
     return [...set].sort((a, b) => a.localeCompare(b, 'ja'))
   }, [rows])
 
-  const freshCount = useMemo(() => rows.filter(r => r.fresh === true).length, [rows])
-
   const filtered = useMemo(() => {
     return rows.filter(r => {
       if (sector !== 'all' && (r.sector_s33 ?? '') !== sector) return false
-      if (freshOnly && r.fresh !== true) return false
       return true
     })
-  }, [rows, sector, freshOnly])
+  }, [rows, sector])
 
   const sorted = useMemo(() => {
     const def = sorts.find(s => s.key === sortKey) ?? sorts[0]
     const dir = def.dir === 'asc' ? 1 : -1
     const arr = [...filtered]
     arr.sort((a, b) => {
-      // fresh を常に優先（強調）
-      const af = a.fresh === true ? 0 : 1
-      const bf = b.fresh === true ? 0 : 1
-      if (af !== bf) return af - bf
       const av = def.value(a)
       const bv = def.value(b)
       if (!isNum(av) && !isNum(bv)) return 0
@@ -123,7 +115,6 @@ export default function PullbackSetupsSection(props: Props) {
         <h2 className="text-sm font-semibold text-[var(--text-primary)]">{title}</h2>
         <span className="text-xs text-[var(--text-muted)]">
           <span className="font-mono">{sorted.length} / {rows.length}</span> 件
-          {freshCount > 0 && <span className="ml-1 text-amber-600">（★fresh <span className="font-mono">{freshCount}</span>）</span>}
         </span>
       </div>
       <p className="text-xs text-[var(--text-secondary)] mb-3">{subtitle}</p>
@@ -142,17 +133,6 @@ export default function PullbackSetupsSection(props: Props) {
             </option>
           ))}
         </select>
-
-        <button
-          onClick={() => setFreshOnly(v => !v)}
-          className={`text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors ${
-            freshOnly
-              ? 'bg-amber-400 text-white border-amber-400'
-              : 'bg-white text-amber-700 border-amber-200 hover:bg-amber-50'
-          }`}
-        >
-          ★ fresh のみ
-        </button>
 
         <span className="ml-auto flex items-center gap-1.5">
           <span className="text-[11px] text-[var(--text-muted)]">並び:</span>

@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from 'react'
 import type { VolumeIgnitionRow } from '@/types/volumeIgnition'
-import { isFreshIgnition } from '@/types/volumeIgnition'
 import type { WatchlistItem } from '@/types/portfolio'
 import type { Trade } from '@/types/trades'
 import VolumeIgnitionCard from './VolumeIgnitionCard'
@@ -54,7 +53,6 @@ const SORTS: SortDef[] = [
 
 export default function VolumeIgnitionSection({ rows, hotSectors, title, subtitle }: Props) {
   const [sector, setSector] = useState<string>('all')
-  const [freshOnly, setFreshOnly] = useState(false)
   const [sortKey, setSortKey] = useState<string>(SORTS[0].key)
 
   const hotSet = useMemo(() => new Set(hotSectors), [hotSectors])
@@ -65,15 +63,12 @@ export default function VolumeIgnitionSection({ rows, hotSectors, title, subtitl
     return [...set].sort((a, b) => a.localeCompare(b, 'ja'))
   }, [rows])
 
-  const freshCount = useMemo(() => rows.filter(isFreshIgnition).length, [rows])
-
   const filtered = useMemo(() => {
     return rows.filter(r => {
       if (sector !== 'all' && (r.sector_s33 ?? '') !== sector) return false
-      if (freshOnly && !isFreshIgnition(r)) return false
       return true
     })
-  }, [rows, sector, freshOnly])
+  }, [rows, sector])
 
   const sorted = useMemo(() => {
     const def = SORTS.find(s => s.key === sortKey) ?? SORTS[0]
@@ -112,7 +107,6 @@ export default function VolumeIgnitionSection({ rows, hotSectors, title, subtitl
         <h2 className="text-sm font-semibold text-[var(--text-primary)]">{title}</h2>
         <span className="text-xs text-[var(--text-muted)]">
           <span className="font-mono">{sorted.length} / {rows.length}</span> 件
-          {freshCount > 0 && <span className="ml-1 text-amber-600">（🔥当日 <span className="font-mono">{freshCount}</span>）</span>}
         </span>
       </div>
       <p className="text-xs text-[var(--text-secondary)] mb-2">{subtitle}</p>
@@ -131,17 +125,6 @@ export default function VolumeIgnitionSection({ rows, hotSectors, title, subtitl
             </option>
           ))}
         </select>
-
-        <button
-          onClick={() => setFreshOnly(v => !v)}
-          className={`text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors ${
-            freshOnly
-              ? 'bg-amber-400 text-white border-amber-400'
-              : 'bg-white text-amber-700 border-amber-200 hover:bg-amber-50'
-          }`}
-        >
-          🔥 当日点火のみ
-        </button>
 
         <span className="ml-auto flex items-center gap-1.5">
           <span className="text-[11px] text-[var(--text-muted)]">並び:</span>
