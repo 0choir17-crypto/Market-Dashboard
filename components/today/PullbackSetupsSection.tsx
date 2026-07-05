@@ -46,21 +46,11 @@ export default function PullbackSetupsSection(props: Props) {
   const { kind, rows, title, subtitle, hotSectors } = props
   const sorts = kind === 'coil' ? COIL_SORTS : MA_SORTS
 
-  const [scale, setScale] = useState<string>('all')
   const [sector, setSector] = useState<string>('all')
   const [freshOnly, setFreshOnly] = useState(false)
   const [sortKey, setSortKey] = useState<string>(sorts[0].key)
 
   const hotSet = useMemo(() => new Set(hotSectors), [hotSectors])
-
-  const scaleOptions = useMemo(() => {
-    const counts = new Map<string, number>()
-    for (const r of rows) {
-      const k = r.scale_cat ?? '—'
-      counts.set(k, (counts.get(k) ?? 0) + 1)
-    }
-    return [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([key, count]) => ({ key, count }))
-  }, [rows])
 
   const sectorOptions = useMemo(() => {
     const set = new Set<string>()
@@ -72,12 +62,11 @@ export default function PullbackSetupsSection(props: Props) {
 
   const filtered = useMemo(() => {
     return rows.filter(r => {
-      if (scale !== 'all' && (r.scale_cat ?? '—') !== scale) return false
       if (sector !== 'all' && (r.sector_s33 ?? '') !== sector) return false
       if (freshOnly && r.fresh !== true) return false
       return true
     })
-  }, [rows, scale, sector, freshOnly])
+  }, [rows, sector, freshOnly])
 
   const sorted = useMemo(() => {
     const def = sorts.find(s => s.key === sortKey) ?? sorts[0]
@@ -141,19 +130,6 @@ export default function PullbackSetupsSection(props: Props) {
 
       {/* フィルタ / ソート */}
       <div className="flex flex-wrap items-center gap-2 mb-4">
-        <FilterChip label="All" count={rows.length} active={scale === 'all'} onClick={() => setScale('all')} />
-        {scaleOptions.map(opt => (
-          <FilterChip
-            key={opt.key}
-            label={opt.key}
-            count={opt.count}
-            active={scale === opt.key}
-            onClick={() => setScale(opt.key)}
-          />
-        ))}
-
-        <span className="mx-1 h-4 w-px bg-gray-200" />
-
         <select
           value={sector}
           onChange={e => setSector(e.target.value)}
@@ -237,31 +213,5 @@ export default function PullbackSetupsSection(props: Props) {
         initial={positionTarget ?? undefined}
       />
     </section>
-  )
-}
-
-function FilterChip({
-  label,
-  count,
-  active,
-  onClick,
-}: {
-  label: string
-  count: number
-  active: boolean
-  onClick: () => void
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={`text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors ${
-        active
-          ? 'bg-[var(--accent)] text-white border-[var(--accent)]'
-          : 'bg-white text-gray-700 border-[var(--border)] hover:bg-gray-50'
-      }`}
-    >
-      <span className="uppercase tracking-wide">{label}</span>
-      <span className={`ml-1.5 text-[10px] ${active ? 'opacity-90' : 'text-gray-400'}`}>{count}</span>
-    </button>
   )
 }

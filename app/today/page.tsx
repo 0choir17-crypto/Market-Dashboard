@@ -83,26 +83,26 @@ export default function TodayPage() {
             kind="coil"
             rows={data.coil}
             hotSectors={data.hotSectors}
-            title="Coil — 高値圏の静かなベース（収縮）"
+            title="Coil Pullback"
             subtitle="高値圏で値幅が収縮（iqr5 小）した銘柄。ブレイク前の蓄積。小さいほどタイト。"
           />
           <PullbackSetupsSection
             kind="ma"
             rows={data.ma}
             hotSectors={data.hotSectors}
-            title="MA — 高値圏 momentum の押し目"
+            title="MA Pullback"
             subtitle="走行中の強い銘柄が移動平均まで押した局面。バッジ＝深さ(MA)×位置(52週高値)。A(50)×A++ が最上位。"
           />
           <VolumeIgnitionSection
             rows={data.ignite}
             hotSectors={data.hotSectors}
-            title="出来高イグニッション — 枯れ→点火の初動"
+            title="Volume Ignition"
             subtitle="上昇トレンド中に出来高が枯れた後、上昇日に出来高2倍で再点火した初動。高ADRの瞬発系（直近5営業日以内に点火）。"
           />
           <SpringSetupsSection
             rows={data.spring}
             hotSectors={data.hotSectors}
-            title="Spring — 押し目・踏ん張りタイミング"
+            title="Momentum Spring"
             subtitle="モメンタムリーダーが下側の基準線を防衛して短期の押しから踏ん張った局面（①点火ライン死守 / ③安値リクレイム）。防衛ライン割れがストップ。"
           />
         </div>

@@ -147,13 +147,6 @@ export default function VolumeIgnitionCard({ row, hot = false, onAddWatchlist, o
       {/* バッジ行 */}
       <div className="px-3 py-2 border-b border-[#f0f2f4] flex items-center gap-1.5 flex-wrap">
         <DaysBadge days={row.days_since_entry} entryDate={row.entry_date} />
-        {row.scale_cat && row.scale_cat !== '-' && (
-          <Chip
-            text={row.scale_cat}
-            palette={{ bg: '#eef2ff', fg: '#3730a3', border: '#c7d2fe' }}
-            title="時価規模"
-          />
-        )}
         {extreme && <AdrExtremeChip />}
         {row.mkt && <span className="ml-auto text-[10px] text-[var(--text-muted)] font-mono">{row.mkt}</span>}
       </div>
