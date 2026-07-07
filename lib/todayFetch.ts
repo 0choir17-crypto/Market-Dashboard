@@ -26,39 +26,75 @@ export type TodayResponse = {
   error: string | null
 }
 
-// 「2日以上連続してヒットする銘柄は当日分に表記しない」— resolved の直前営業日にも
-// 同テーブルに出ていたコード集合を返す。当日〈新規/再登場〉のみに絞り、Daily Watch が
-// 同じ銘柄で毎日埋まる混雑を解消する（走行中の銘柄は初日だけ出て、2日目以降は隠れる）。
-// 取得失敗時は空集合を返し、除外せず全件表示にフォールバックする（安全側）。
-async function fetchPrevDayCodes(table: string, resolvedDate: string): Promise<Set<string>> {
-  const { data: prev, error: prevErr } = await supabase
+// date より前の直近営業日（当該テーブルに行が存在する日）を1つ返す。無ければ null。
+async function prevBusinessDate(table: string, date: string): Promise<string | null> {
+  const { data, error } = await supabase
     .from(table)
     .select('date')
-    .lt('date', resolvedDate)
+    .lt('date', date)
     .order('date', { ascending: false })
     .limit(1)
     .maybeSingle()
-  if (prevErr) {
-    console.error(`[${table}] prev date error`, prevErr)
-    return new Set()
-  }
-  const prevDate = (prev?.date as string | undefined) ?? null
-  if (!prevDate) return new Set()
-
-  const { data, error } = await supabase.from(table).select('code').eq('date', prevDate)
   if (error) {
-    console.error(`[${table}] prev codes error`, error)
-    return new Set()
+    console.error(`[${table}] prev date error`, error)
+    return null
+  }
+  return (data?.date as string | undefined) ?? null
+}
+
+// 指定日に当該テーブルへ出ていた code 集合。取得失敗時は null。
+async function codesOnDate(table: string, date: string): Promise<Set<string> | null> {
+  const { data, error } = await supabase.from(table).select('code').eq('date', date)
+  if (error) {
+    console.error(`[${table}] codes on ${date} error`, error)
+    return null
   }
   return new Set((data ?? []).map(r => (r as { code: string }).code))
 }
 
+// 「連続ヒットが上限日数を超えた銘柄は当日分に表記しない」除外用のコード集合を返す。
+// resolved の直前 maxDisplayDays 営業日“すべて”に連続で出ていた code（＝当日を足すと
+// maxDisplayDays+1 日以上連続になる銘柄）を積集合として返す。当日はこれらを落とすことで
+// 「新規〜連続 maxDisplayDays 日目まで」だけを表示し、Daily Watch が同じ銘柄で毎日
+// 埋まる混雑を解消する。
+//   maxDisplayDays=1 → 初日だけ表示（2日目以降を隠す）… coil pullback
+//   maxDisplayDays=2 → 2日連続まで表示（3日目以降を隠す）… ma / ignite / spring
+// 履歴不足（直前 maxDisplayDays 営業日が揃わない）や取得失敗時は空集合を返し、除外せず
+// 全件表示にフォールバックする（安全側）。
+async function fetchConsecutiveHitCodes(
+  table: string,
+  resolvedDate: string,
+  maxDisplayDays: number,
+): Promise<Set<string>> {
+  let cursor = resolvedDate
+  let intersection: Set<string> | null = null
+
+  for (let i = 0; i < maxDisplayDays; i++) {
+    const prevDate = await prevBusinessDate(table, cursor)
+    if (!prevDate) return new Set() // 履歴が上限日数に満たない → 除外しない
+    const codes = await codesOnDate(table, prevDate)
+    if (codes === null) return new Set() // 取得失敗 → 除外しない
+
+    if (intersection === null) {
+      intersection = codes
+    } else {
+      const prev: Set<string> = intersection
+      intersection = new Set(Array.from(prev).filter(c => codes.has(c)))
+    }
+    if (intersection.size === 0) return new Set() // これ以上絞っても空
+    cursor = prevDate
+  }
+
+  return intersection ?? new Set()
+}
+
 // 指定日（省略時は最新）の候補一覧。select('*') で供給側のスキーマ増減に耐性。
 // スナップショット日が当該テーブルに無い場合は直近 ≤ requested の日へフォールバック。
-// 直前営業日にも出ていた銘柄（=2日以上連続ヒット）は除外し、当日分だけに絞る。
+// 連続ヒットが maxDisplayDays を超えた銘柄は除外し、新規〜連続上限日目までに絞る。
 async function fetchSetups<T>(
   table: string,
   date: string | null,
+  maxDisplayDays: number,
 ): Promise<{ date: string | null; rows: T[]; error: string | null }> {
   let targetDate = date
 
@@ -114,11 +150,12 @@ async function fetchSetups<T>(
 
   let rows = (data ?? []) as unknown as T[]
 
-  // 2日以上連続ヒットの除外: 直前営業日にも出ていたコードを落とす（当日分のみ表示）。
+  // 連続ヒットの除外: 直前 maxDisplayDays 営業日すべてに出ていたコード（＝連続上限を
+  // 超える銘柄）を落とす。新規〜連続 maxDisplayDays 日目までのみ表示。
   if (rows.length > 0) {
-    const prevCodes = await fetchPrevDayCodes(table, resolved)
-    if (prevCodes.size > 0) {
-      rows = rows.filter(r => !prevCodes.has((r as unknown as { code: string }).code))
+    const staleCodes = await fetchConsecutiveHitCodes(table, resolved, maxDisplayDays)
+    if (staleCodes.size > 0) {
+      rows = rows.filter(r => !staleCodes.has((r as unknown as { code: string }).code))
     }
   }
 
@@ -168,11 +205,12 @@ async function fetchHotSectors(
 export async function fetchToday(opts: { date?: string }): Promise<TodayResponse> {
   const requested = opts.date ?? null
 
+  // coil は初日のみ（maxDisplayDays=1）。それ以外は2日連続まで表示（maxDisplayDays=2）。
   const [coilRes, maRes, igniteRes, springRes, hotRes] = await Promise.all([
-    fetchSetups<CoilPullbackRow>(COIL_TABLE, requested),
-    fetchSetups<MaPullbackRow>(MA_TABLE, requested),
-    fetchSetups<VolumeIgnitionRow>(VOLUME_IGNITION_TABLE, requested),
-    fetchSetups<SpringSetupRow>(SPRING_TABLE, requested),
+    fetchSetups<CoilPullbackRow>(COIL_TABLE, requested, 1),
+    fetchSetups<MaPullbackRow>(MA_TABLE, requested, 2),
+    fetchSetups<VolumeIgnitionRow>(VOLUME_IGNITION_TABLE, requested, 2),
+    fetchSetups<SpringSetupRow>(SPRING_TABLE, requested, 2),
     fetchHotSectors(requested),
   ])
 
