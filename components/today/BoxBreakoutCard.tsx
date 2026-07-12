@@ -43,6 +43,17 @@ function fmtMd(v: string | null | undefined): string {
   return m ? `${m[2]}-${m[3]}` : v
 }
 
+// 箱形成 → ブレイクまでの営業日数。フル箱長(base_len) と 実効ベース長(eff_base_len) を
+// 「フル→実効」で併記する（両方あれば base→eff、片方だけならその値）。
+function fmtFormationDays(base: number | null | undefined, eff: number | null | undefined): string {
+  const b = isNum(base) ? Math.round(base) : null
+  const e = isNum(eff) ? Math.round(eff) : null
+  if (b !== null && e !== null) return b === e ? `${b}日` : `${b}→${e}日`
+  if (b !== null) return `${b}日`
+  if (e !== null) return `${e}日`
+  return '—'
+}
+
 // rs (0–100 目安, 高いほど強い)。box では選抜未使用の注釈値。
 function rsColor(v: number | null | undefined): string {
   if (!isNum(v)) return 'var(--text-muted)'
@@ -202,18 +213,27 @@ export default function BoxBreakoutCard({ row, hot = false, multiHit = false, on
         />
       </div>
 
-      {/* 参考: 実効ベースの高さ / 熟成日数 / 売買代金 / 跳ね返され回数。
-          base_len ≫ eff_base_len はジリ上げトレンド途中の踊り場（質の見分け用）。 */}
+      {/* 参考: 実効ベースの高さ / 箱形成→ブレイクまでの営業日数 / 売買代金 / 跳ね返され回数。
+          形成日数はフル箱長(base_len)→実効ベース長(eff_base_len)。base_len ≫ eff_base_len は
+          ジリ上げトレンド途中の踊り場（質の見分け用）。 */}
       <div
         className="px-3 mt-2 text-[10px] text-[var(--text-secondary)] tabular-nums flex items-center gap-x-2 gap-y-0.5 flex-wrap"
-        title={`実効ベース高 ${fmt(row.eff_height_pct)}% / 実効熟成 ${fmt(row.eff_base_len, 0)}日 / フル箱長 ${fmt(
+        title={`実効ベース高 ${fmt(row.eff_height_pct)}% / 箱形成→ブレイク: フル箱 ${fmt(
           row.base_len,
           0,
-        )}日 / 20日平均代金 ${fmtOku(row.turnover_oku)} / 失敗 ${fmt(row.n_fail, 0)}回`}
+        )}営業日（成立 ${row.armed_date ?? '—'}）→ 実効ベース ${fmt(
+          row.eff_base_len,
+          0,
+        )}営業日（起点 ${row.eff_low_date ?? '—'}）/ 20日平均代金 ${fmtOku(row.turnover_oku)} / 失敗 ${fmt(
+          row.n_fail,
+          0,
+        )}回`}
       >
         <span>高 {fmt(row.eff_height_pct)}%</span>
         <span className="text-[var(--text-muted)]">·</span>
-        <span>熟成 {fmt(row.eff_base_len, 0)}日</span>
+        <span title="箱形成→ブレイクまでの営業日数（フル箱長→実効ベース長）">
+          形成 {fmtFormationDays(row.base_len, row.eff_base_len)}
+        </span>
         <span className="text-[var(--text-muted)]">·</span>
         <span>{fmtOku(row.turnover_oku)}</span>
         {isNum(row.n_fail) && row.n_fail > 0 && (
