@@ -211,10 +211,20 @@ async function fetchHotSectors(
   }
 }
 
+// テーブル未存在（PostgREST の schema cache に無い）エラーか判定する。box_breakout_events は
+// 外部 jquants-scanner が作る配信テーブルで、未デプロイの環境では PGRST205 が返る。これを
+// 「取得失敗」ではなく「未配備＝0件」として穏当に扱い、他スキャナーやバナーを巻き込まない。
+function isMissingTableError(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false
+  if (error.code === 'PGRST205' || error.code === '42P01') return true
+  return /Could not find the table|schema cache/i.test(error.message ?? '')
+}
+
 // ベース上抜けイベント（box_breakout_events）を「直近 BOX_WINDOW_DAYS 営業日ぶんの窓」で読む。
 // 他スキャナーと違い date は仮ブレイク日で動かず、旧い CONFIRMED/FAILED 行が累積するため、
 // 単一 date ではなく直近の distinct な仮ブレイク日 N 本にウィンドウする（＝「いま生きている
-// ウォッチリスト」）。FAILED（速報の約6割）は既定で除外し PENDING / CONFIRMED のみ配信する。
+// ウォッチリスト」）。ダッシュボードでは PENDING（確認中の仮ブレイク）のみ配信する
+// （CONFIRMED / FAILED は表示しない）。
 async function fetchBoxBreakouts(
   date: string | null,
 ): Promise<{ date: string | null; rows: BoxBreakoutRow[]; error: string | null }> {
@@ -228,6 +238,10 @@ async function fetchBoxBreakouts(
       .limit(1)
       .maybeSingle()
     if (error) {
+      if (isMissingTableError(error)) {
+        console.warn(`[${BOX_BREAKOUT_TABLE}] table not deployed yet — skipping`)
+        return { date: null, rows: [], error: null }
+      }
       console.error(`[${BOX_BREAKOUT_TABLE}] latest date error`, error)
       return { date: null, rows: [], error: `${BOX_BREAKOUT_TABLE}: ${error.message}` }
     }
@@ -243,6 +257,10 @@ async function fetchBoxBreakouts(
     .order('date', { ascending: false })
     .limit(1000)
   if (dateErr) {
+    if (isMissingTableError(dateErr)) {
+      console.warn(`[${BOX_BREAKOUT_TABLE}] table not deployed yet — skipping`)
+      return { date: null, rows: [], error: null }
+    }
     console.error(`[${BOX_BREAKOUT_TABLE}] window dates error`, dateErr)
     return { date: upper, rows: [], error: `${BOX_BREAKOUT_TABLE}: ${dateErr.message}` }
   }
@@ -264,8 +282,12 @@ async function fetchBoxBreakouts(
     .select('*')
     .gte('date', windowStart)
     .lte('date', upper)
-    .neq('status', 'FAILED')
+    .eq('status', 'PENDING')
   if (error) {
+    if (isMissingTableError(error)) {
+      console.warn(`[${BOX_BREAKOUT_TABLE}] table not deployed yet — skipping`)
+      return { date: null, rows: [], error: null }
+    }
     console.error(`[${BOX_BREAKOUT_TABLE}] fetch error`, error)
     return { date: anchor, rows: [], error: `${BOX_BREAKOUT_TABLE}: ${error.message}` }
   }

@@ -109,7 +109,7 @@ export default function TodayPage() {
             hotSectors={data.hotSectors}
             multiHitCodes={multiHitCodes}
             title="Box Breakout"
-            subtitle="20営業日以上のベース（揉み合い箱）を上抜けた候補。速報(PENDING)は確認中で、5営業日 天井の上に留まれば確定(CONFIRMED)。上抜線(pivot)と防衛線(eff_box_low)をチャートに引く。売買シグナルではなくウォッチリスト（失敗は非表示）。"
+            subtitle="20営業日以上のベース（揉み合い箱）を上抜けた候補。表示は確認中(PENDING)のみ。レジスタンス(pivot)とサポート(eff_box_low)をチャートに引く。売買シグナルではなくウォッチリスト。"
           />
           <PullbackSetupsSection
             kind="coil"
