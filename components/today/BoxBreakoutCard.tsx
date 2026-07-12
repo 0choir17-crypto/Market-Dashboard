@@ -36,6 +36,16 @@ function fmtMd(v: string | null | undefined): string {
   return m ? `${m[2]}-${m[3]}` : v
 }
 
+// ベースの長さ表記。主表示は eff_base_len（今見えている直近ベース）、スパン（箱追跡全体の
+// base_len）が異なる場合のみ「(全○日)」で括弧併記する。例「21日(全84日)」。
+function fmtBaseLen(eff: number | null | undefined, span: number | null | undefined): string {
+  const e = isNum(eff) ? Math.round(eff) : null
+  const s = isNum(span) ? Math.round(span) : null
+  if (e === null) return s !== null ? `全${s}日` : '—'
+  if (s === null || s === e) return `${e}日`
+  return `${e}日(全${s}日)`
+}
+
 // rs (0–100 目安, 高いほど強い)。box では選抜未使用の注釈値。
 function rsColor(v: number | null | undefined): string {
   if (!isNum(v)) return 'var(--text-muted)'
@@ -126,6 +136,14 @@ export default function BoxBreakoutCard({ row, hot = false, multiHit = false, on
   // テスト回数（このベース内で天井に跳ね返された回数）。
   const testCount = isNum(row.n_fail) ? Math.round(row.n_fail) : null
 
+  // 間延び: スパン(base_len) がベース(eff_base_len) より大きく開く＝じわ上げトレンド途中の
+  // 踊り場の目印。綺麗なベースでは両者ほぼ同じ。
+  const drawnOut =
+    isNum(row.base_len) &&
+    isNum(row.eff_base_len) &&
+    row.base_len >= row.eff_base_len * 2 &&
+    row.base_len - row.eff_base_len >= 20
+
   // 枠/背景: 複数シグナル重複（黄）を最優先 → hotセクター（緑）。既存カードと同方針。
   const borderColor = multiHit ? '#fbbf24' : hot ? '#86efac' : '#e8eaed'
   const backgroundColor = multiHit ? '#fef9c3' : hot ? '#f0fdf4' : '#ffffff'
@@ -135,13 +153,20 @@ export default function BoxBreakoutCard({ row, hot = false, multiHit = false, on
       className="bg-white rounded-lg border shadow-sm hover:shadow-md transition-shadow flex flex-col"
       style={{ borderColor, backgroundColor }}
     >
-      {/* バッジ行: テスト回数 / 上抜日 */}
+      {/* バッジ行: テスト回数 / 間延び / 上抜日 */}
       <div className="px-3 py-2 border-b border-[#f0f2f4] flex items-center gap-1.5 flex-wrap">
         <Chip
           text={`テスト ${testCount ?? '—'}`}
           palette={{ bg: '#f3f4f6', fg: '#4b5563', border: '#d1d5db' }}
           title="このベース内で天井（レジスタンス）に跳ね返された回数（テスト回数）"
         />
+        {drawnOut && (
+          <Chip
+            text="間延び"
+            palette={{ bg: '#fef3c7', fg: '#92400e', border: '#fcd34d' }}
+            title="スパン（箱追跡全体）がベース（直近の揉み合い）より大きく開いている＝じわ上げトレンド途中の踊り場の目印"
+          />
+        )}
         <span
           className="ml-auto text-[10px] text-[var(--text-muted)] font-mono"
           title="仮ブレイク日（この日にレジスタンスを上抜けた）"
@@ -201,9 +226,9 @@ export default function BoxBreakoutCard({ row, hot = false, multiHit = false, on
         />
         <Metric label="52w高" value={fmtSignedPct(row.dist_from_high_pct)} title="52週高値からの距離(%)。0付近=新高値接近（上場1年未満は null）" />
         <DualMetric
-          a={{ k: 'length', v: `${fmt(row.base_len, 0)}日` }}
-          b={{ k: 'armed', v: row.armed_date ?? '—' }}
-          title="length: フル箱の長さ（営業日数, base_len）。armed: 箱が成立した日（フル箱の起点, armed_date）"
+          a={{ k: '起点', v: row.eff_low_date ?? '—' }}
+          b={{ k: 'ベース', v: fmtBaseLen(row.eff_base_len, row.base_len) }}
+          title="起点: 今見えている直近ベースの起点＝直近40本の安値を付けた日（eff_low_date）。ベース: そのベースの長さ（eff_base_len 営業日）。括弧内はスパン＝箱追跡全体の長さ（base_len）"
         />
         <Metric
           label="RS"
