@@ -1,8 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import type { BoxBreakoutRow, BoxBreakoutStatus } from '@/types/boxBreakout'
-import { BOX_STATUS_META } from '@/types/boxBreakout'
+import type { BoxBreakoutRow } from '@/types/boxBreakout'
 import type { WatchlistItem } from '@/types/portfolio'
 import type { Trade } from '@/types/trades'
 import BoxBreakoutCard from './BoxBreakoutCard'
@@ -41,22 +40,8 @@ function dateDesc(a: BoxBreakoutRow, b: BoxBreakoutRow): number {
 
 type SortDef = { key: string; label: string; compare: (a: BoxBreakoutRow, b: BoxBreakoutRow) => number }
 
-// 既定は handoff 推奨: PENDING（速報）を先頭 → 仮ブレイク日 降順 → 売買代金 降順。
-const STATUS_ORDER: Record<BoxBreakoutStatus, number> = { PENDING: 0, CONFIRMED: 1, FAILED: 2 }
-
+// PENDING のみ表示するため、既定は「上抜けが新しい順」→ 売買代金 降順。
 const SORTS: SortDef[] = [
-  {
-    key: 'watch',
-    label: '注目順（速報→新しい→代金）',
-    compare: (a, b) => {
-      const as = STATUS_ORDER[a.status] ?? 9
-      const bs = STATUS_ORDER[b.status] ?? 9
-      if (as !== bs) return as - bs
-      const d = dateDesc(a, b)
-      if (d !== 0) return d
-      return descBy(r => r.turnover_oku)(a, b)
-    },
-  },
   { key: 'date', label: '上抜けが新しい順', compare: (a, b) => dateDesc(a, b) || descBy(r => r.turnover_oku)(a, b) },
   { key: 'turnover', label: '売買代金 大きい順', compare: descBy(r => r.turnover_oku) },
   { key: 'high', label: '52週高値に近い順', compare: descBy(r => r.dist_from_high_pct) },
@@ -65,19 +50,10 @@ const SORTS: SortDef[] = [
 ]
 
 export default function BoxBreakoutSection({ rows, hotSectors, title, subtitle, multiHitCodes }: Props) {
-  const [status, setStatus] = useState<'all' | BoxBreakoutStatus>('all')
   const [sector, setSector] = useState<string>('all')
   const [sortKey, setSortKey] = useState<string>(SORTS[0].key)
 
   const hotSet = useMemo(() => new Set(hotSectors), [hotSectors])
-
-  const statusOptions = useMemo(() => {
-    const counts = new Map<BoxBreakoutStatus, number>()
-    for (const r of rows) counts.set(r.status, (counts.get(r.status) ?? 0) + 1)
-    return (['PENDING', 'CONFIRMED', 'FAILED'] as BoxBreakoutStatus[])
-      .filter(s => counts.has(s))
-      .map(s => ({ key: s, count: counts.get(s) ?? 0 }))
-  }, [rows])
 
   const sectorOptions = useMemo(() => {
     const set = new Set<string>()
@@ -87,11 +63,10 @@ export default function BoxBreakoutSection({ rows, hotSectors, title, subtitle, 
 
   const filtered = useMemo(() => {
     return rows.filter(r => {
-      if (status !== 'all' && r.status !== status) return false
       if (sector !== 'all' && (r.sector_s33 ?? '') !== sector) return false
       return true
     })
-  }, [rows, status, sector])
+  }, [rows, sector])
 
   const sorted = useMemo(() => {
     const def = SORTS.find(s => s.key === sortKey) ?? SORTS[0]
@@ -135,19 +110,6 @@ export default function BoxBreakoutSection({ rows, hotSectors, title, subtitle, 
 
       {/* フィルタ / ソート */}
       <div className="flex flex-wrap items-center gap-2 mb-4">
-        <FilterChip label="All" count={rows.length} active={status === 'all'} onClick={() => setStatus('all')} />
-        {statusOptions.map(opt => (
-          <FilterChip
-            key={opt.key}
-            label={BOX_STATUS_META[opt.key].label}
-            count={opt.count}
-            active={status === opt.key}
-            onClick={() => setStatus(opt.key)}
-          />
-        ))}
-
-        <span className="mx-1 h-4 w-px bg-gray-200" />
-
         <select
           value={sector}
           onChange={e => setSector(e.target.value)}
@@ -209,31 +171,5 @@ export default function BoxBreakoutSection({ rows, hotSectors, title, subtitle, 
         initial={positionTarget ?? undefined}
       />
     </section>
-  )
-}
-
-function FilterChip({
-  label,
-  count,
-  active,
-  onClick,
-}: {
-  label: string
-  count: number
-  active: boolean
-  onClick: () => void
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={`text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors ${
-        active
-          ? 'bg-[var(--accent)] text-white border-[var(--accent)]'
-          : 'bg-white text-gray-700 border-[var(--border)] hover:bg-gray-50'
-      }`}
-    >
-      <span className="tracking-wide">{label}</span>
-      <span className={`ml-1.5 text-[10px] ${active ? 'opacity-90' : 'text-gray-400'}`}>{count}</span>
-    </button>
   )
 }

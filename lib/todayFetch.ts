@@ -223,7 +223,8 @@ function isMissingTableError(error: { code?: string; message?: string } | null):
 // ベース上抜けイベント（box_breakout_events）を「直近 BOX_WINDOW_DAYS 営業日ぶんの窓」で読む。
 // 他スキャナーと違い date は仮ブレイク日で動かず、旧い CONFIRMED/FAILED 行が累積するため、
 // 単一 date ではなく直近の distinct な仮ブレイク日 N 本にウィンドウする（＝「いま生きている
-// ウォッチリスト」）。FAILED（速報の約6割）は既定で除外し PENDING / CONFIRMED のみ配信する。
+// ウォッチリスト」）。ダッシュボードでは PENDING（確認中の仮ブレイク）のみ配信する
+// （CONFIRMED / FAILED は表示しない）。
 async function fetchBoxBreakouts(
   date: string | null,
 ): Promise<{ date: string | null; rows: BoxBreakoutRow[]; error: string | null }> {
@@ -281,7 +282,7 @@ async function fetchBoxBreakouts(
     .select('*')
     .gte('date', windowStart)
     .lte('date', upper)
-    .neq('status', 'FAILED')
+    .eq('status', 'PENDING')
   if (error) {
     if (isMissingTableError(error)) {
       console.warn(`[${BOX_BREAKOUT_TABLE}] table not deployed yet — skipping`)
