@@ -6,6 +6,7 @@ import { fetchToday, type TodayResponse } from '@/lib/todayFetch'
 import PullbackSetupsSection from '@/components/today/PullbackSetupsSection'
 import VolumeIgnitionSection from '@/components/today/VolumeIgnitionSection'
 import SpringSetupsSection from '@/components/today/SpringSetupsSection'
+import BoxBreakoutSection from '@/components/today/BoxBreakoutSection'
 import ErrorBanner from '@/components/shared/ErrorBanner'
 import PageHeader from '@/components/shared/PageHeader'
 
@@ -20,6 +21,8 @@ export default function TodayPage() {
     ignite: [],
     springDate: null,
     spring: [],
+    boxDate: null,
+    box: [],
     hotSectors: [],
     error: null,
   })
@@ -43,8 +46,9 @@ export default function TodayPage() {
     fetchData()
   }, [fetchData])
 
-  const displayDate = data.coilDate ?? data.maDate ?? data.igniteDate ?? data.springDate ?? selectedDate
-  const total = data.coil.length + data.ma.length + data.ignite.length + data.spring.length
+  const displayDate =
+    data.boxDate ?? data.coilDate ?? data.maDate ?? data.igniteDate ?? data.springDate ?? selectedDate
+  const total = data.coil.length + data.ma.length + data.ignite.length + data.spring.length + data.box.length
 
   // 複数シグナル重複: 同一 code が 2 つ以上のスキャナーに当日出た銘柄。
   // 各スキャナーのカード背景を黄色で強調するために code の集合を作る。
@@ -62,6 +66,7 @@ export default function TodayPage() {
     addList(data.ma)
     addList(data.ignite)
     addList(data.spring)
+    addList(data.box)
     const set = new Set<string>()
     for (const [code, n] of counts) if (n >= 2) set.add(code)
     return set
@@ -99,6 +104,13 @@ export default function TodayPage() {
         </div>
       ) : (
         <div className="flex flex-col gap-6">
+          <BoxBreakoutSection
+            rows={data.box}
+            hotSectors={data.hotSectors}
+            multiHitCodes={multiHitCodes}
+            title="Box Breakout"
+            subtitle="20営業日以上のベース（揉み合い箱）を上抜けた候補。速報(PENDING)は確認中で、5営業日 天井の上に留まれば確定(CONFIRMED)。上抜線(pivot)と防衛線(eff_box_low)をチャートに引く。売買シグナルではなくウォッチリスト（失敗は非表示）。"
+          />
           <PullbackSetupsSection
             kind="coil"
             rows={data.coil}

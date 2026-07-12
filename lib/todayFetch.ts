@@ -2,6 +2,7 @@ import { supabase } from '@/lib/supabase'
 import type { CoilPullbackRow, MaPullbackRow } from '@/types/pullbackSetups'
 import type { VolumeIgnitionRow } from '@/types/volumeIgnition'
 import type { SpringSetupRow } from '@/types/springSetups'
+import type { BoxBreakoutRow } from '@/types/boxBreakout'
 
 // Daily Watch — 押し目"候補"ウォッチ。新テーブル群を最新 date 中心に読む。
 // jquants-scanner が毎日・平日引け後 (~18:00 JST) に当日分を upsert（冪等）。
@@ -11,6 +12,12 @@ const COIL_TABLE = 'coil_pullback_setups'
 const MA_TABLE = 'ma_pullback_setups'
 const VOLUME_IGNITION_TABLE = 'volume_ignition'
 const SPRING_TABLE = 'spring_setups'
+const BOX_BREAKOUT_TABLE = 'box_breakout_events'
+
+// box_breakout_events は単一 date ではなく「直近ブレイク窓」を読む。仮ブレイク日(date)は
+// 動かず status が後日 CONFIRMED/FAILED に更新されるテーブルなので、直近 N 営業日ぶんの
+// イベントをまとめて表示する（他スキャナーの「最新 date のみ」とはモデルが異なる）。
+const BOX_WINDOW_DAYS = 10
 
 export type TodayResponse = {
   coilDate: string | null
@@ -21,6 +28,8 @@ export type TodayResponse = {
   ignite: VolumeIgnitionRow[]
   springDate: string | null
   spring: SpringSetupRow[]
+  boxDate: string | null
+  box: BoxBreakoutRow[]
   hotSectors: string[]
   // 取得失敗の詳細（null なら全クエリ成功）。「0 件」と「取得失敗」を UI で区別するため。
   error: string | null
@@ -202,21 +211,90 @@ async function fetchHotSectors(
   }
 }
 
+// ベース上抜けイベント（box_breakout_events）を「直近 BOX_WINDOW_DAYS 営業日ぶんの窓」で読む。
+// 他スキャナーと違い date は仮ブレイク日で動かず、旧い CONFIRMED/FAILED 行が累積するため、
+// 単一 date ではなく直近の distinct な仮ブレイク日 N 本にウィンドウする（＝「いま生きている
+// ウォッチリスト」）。FAILED（速報の約6割）は既定で除外し PENDING / CONFIRMED のみ配信する。
+async function fetchBoxBreakouts(
+  date: string | null,
+): Promise<{ date: string | null; rows: BoxBreakoutRow[]; error: string | null }> {
+  // 上限日（過去スナップショット閲覧時はその日まで）を決める。省略時は全体の最新仮ブレイク日。
+  let upper = date
+  if (!upper) {
+    const { data: latest, error } = await supabase
+      .from(BOX_BREAKOUT_TABLE)
+      .select('date')
+      .order('date', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    if (error) {
+      console.error(`[${BOX_BREAKOUT_TABLE}] latest date error`, error)
+      return { date: null, rows: [], error: `${BOX_BREAKOUT_TABLE}: ${error.message}` }
+    }
+    upper = (latest?.date as string | undefined) ?? null
+  }
+  if (!upper) return { date: null, rows: [], error: null }
+
+  // upper 以前の distinct な仮ブレイク日を新しい順に集め、N 本目を窓の下端にする。
+  const { data: dateRows, error: dateErr } = await supabase
+    .from(BOX_BREAKOUT_TABLE)
+    .select('date')
+    .lte('date', upper)
+    .order('date', { ascending: false })
+    .limit(1000)
+  if (dateErr) {
+    console.error(`[${BOX_BREAKOUT_TABLE}] window dates error`, dateErr)
+    return { date: upper, rows: [], error: `${BOX_BREAKOUT_TABLE}: ${dateErr.message}` }
+  }
+  const distinctDates: string[] = []
+  const seen = new Set<string>()
+  for (const r of dateRows ?? []) {
+    const d = (r as { date: string }).date
+    if (d && !seen.has(d)) {
+      seen.add(d)
+      distinctDates.push(d)
+    }
+  }
+  if (distinctDates.length === 0) return { date: upper, rows: [], error: null }
+  const anchor = distinctDates[0]
+  const windowStart = distinctDates[Math.min(BOX_WINDOW_DAYS - 1, distinctDates.length - 1)]
+
+  const { data, error } = await supabase
+    .from(BOX_BREAKOUT_TABLE)
+    .select('*')
+    .gte('date', windowStart)
+    .lte('date', upper)
+    .neq('status', 'FAILED')
+  if (error) {
+    console.error(`[${BOX_BREAKOUT_TABLE}] fetch error`, error)
+    return { date: anchor, rows: [], error: `${BOX_BREAKOUT_TABLE}: ${error.message}` }
+  }
+
+  return { date: anchor, rows: (data ?? []) as unknown as BoxBreakoutRow[], error: null }
+}
+
 export async function fetchToday(opts: { date?: string }): Promise<TodayResponse> {
   const requested = opts.date ?? null
 
   // coil は初日のみ（maxDisplayDays=1）。それ以外は2日連続まで表示（maxDisplayDays=2）。
-  const [coilRes, maRes, igniteRes, springRes, hotRes] = await Promise.all([
+  // box は直近ブレイク窓（専用フェッチ）。
+  const [coilRes, maRes, igniteRes, springRes, boxRes, hotRes] = await Promise.all([
     fetchSetups<CoilPullbackRow>(COIL_TABLE, requested, 1),
     fetchSetups<MaPullbackRow>(MA_TABLE, requested, 2),
     fetchSetups<VolumeIgnitionRow>(VOLUME_IGNITION_TABLE, requested, 2),
     fetchSetups<SpringSetupRow>(SPRING_TABLE, requested, 2),
+    fetchBoxBreakouts(requested),
     fetchHotSectors(requested),
   ])
 
-  const errors = [coilRes.error, maRes.error, igniteRes.error, springRes.error, hotRes.error].filter(
-    (e): e is string => !!e,
-  )
+  const errors = [
+    coilRes.error,
+    maRes.error,
+    igniteRes.error,
+    springRes.error,
+    boxRes.error,
+    hotRes.error,
+  ].filter((e): e is string => !!e)
 
   return {
     coilDate: coilRes.date,
@@ -227,6 +305,8 @@ export async function fetchToday(opts: { date?: string }): Promise<TodayResponse
     ignite: igniteRes.rows,
     springDate: springRes.date,
     spring: springRes.rows,
+    boxDate: boxRes.date,
+    box: boxRes.rows,
     hotSectors: hotRes.sectors,
     error: errors.length > 0 ? errors.join(' / ') : null,
   }
