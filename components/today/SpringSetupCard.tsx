@@ -5,6 +5,7 @@ import { springTypeMeta } from '@/types/springSetups'
 import { formatPct } from '@/lib/format'
 import { tradingViewUrl, shikihoUrl } from '@/lib/tickerLinks'
 import ChartButton from '@/components/today/ChartButton'
+import LazyChart from '@/components/today/LazyChart'
 
 type Props = {
   row: SpringSetupRow
@@ -150,6 +151,11 @@ export default function SpringSetupCard({ row, hot = false, multiHit = false, on
           color={rsColor(row.rs_topix_avg)}
           title="対TOPIX 相対強さ（21/63/126平均, 0–100）"
         />
+      </div>
+
+      {/* インライン・チャート（遅延読込・操作不要） */}
+      <div className="px-3 pt-2">
+        <LazyChart code={row.code} />
       </div>
 
       {/* アクション */}
