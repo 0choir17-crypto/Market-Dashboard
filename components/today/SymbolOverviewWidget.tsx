@@ -33,21 +33,22 @@ function SymbolOverviewWidget({ symbol }: Props) {
     script.type = 'text/javascript'
     script.async = true
     script.innerHTML = JSON.stringify({
-      symbols: [[symbol, `${symbol}|6M`]],
+      // 第2要素は "SYMBOL|INTERVAL"。INTERVAL は足種（1D=日足）。
+      // ここに範囲（6M 等）を書くとシンボルが解決できずゴースト表示になる。
+      symbols: [[symbol, `${symbol}|1D`]],
       chartOnly: true, // ヘッダ/気配を隠してチャートだけ（カード向けにコンパクト）
+      chartType: 'area',
       locale: 'ja',
       colorTheme: 'light',
       autosize: true,
       isTransparent: true,
       showVolume: false,
       showMA: false,
-      dateRanges: ['3m|1D', '6m|1D', '12m|1D'],
+      // 表示範囲ボタン。先頭が既定＝約6カ月の日足を表示。
+      dateRanges: ['6m|1D', '12m|1D', '60m|1W', 'all|1M'],
       lineWidth: 2,
       lineType: 0,
       timezone: 'Asia/Tokyo',
-      // 上昇/下降で色分け（緑/赤）。既存チャートの配色に合わせる。
-      colorUp: '#16a34a',
-      colorDown: '#dc2626',
       gridLineColor: 'rgba(148,163,184,0.10)',
       fontColor: '#475569',
       support_host: 'https://www.tradingview.com',
