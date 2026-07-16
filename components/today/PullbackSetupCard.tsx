@@ -4,6 +4,7 @@ import type { CoilPullbackRow, MaPullbackRow } from '@/types/pullbackSetups'
 import { maGrade, type MaPositionGrade, type MaDepthGrade } from '@/types/pullbackSetups'
 import { formatPct } from '@/lib/format'
 import { tradingViewUrl, shikihoUrl } from '@/lib/tickerLinks'
+import ChartButton from '@/components/today/ChartButton'
 
 type Props =
   | {
@@ -144,6 +145,7 @@ export default function PullbackSetupCard(props: Props) {
             >
               {row.code}
             </a>
+            <ChartButton code={row.code} name={row.co_name} />
           </div>
           <div
             className="mt-0.5 text-[11px] truncate"
