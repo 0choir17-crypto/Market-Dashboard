@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import TradingViewWidget from '@/components/today/TradingViewWidget'
+import SymbolOverviewWidget from '@/components/today/SymbolOverviewWidget'
 
 type Props = {
   code: string
@@ -48,7 +48,7 @@ export default function LazyChart({ code, height = 240 }: Props) {
       style={{ height }}
     >
       {shown ? (
-        <TradingViewWidget symbol={`TSE:${code}`} compact />
+        <SymbolOverviewWidget symbol={`TSE:${code}`} />
       ) : (
         <div className="w-full h-full flex items-center justify-center text-[11px] text-[var(--text-muted)]">
           チャートを準備中…
