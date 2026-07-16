@@ -6,15 +6,14 @@ type Props = {
   // TradingView シンボル。日本株は "TSE:8624" 形式（lib/tickerLinks と同じ規約）。
   symbol: string
   interval?: string
-  // compact: カード内インライン用の軽量表示（サイドツールバー等を隠す）。
-  // 既定 false = モーダル用のフル機能表示。
-  compact?: boolean
 }
 
 // TradingView 公式の Advanced Real-Time Chart ウィジェットを埋め込む。
 // 画像（四季報オンライン）と同系統のフル機能チャート。データ・銘柄は TradingView 側。
 // 描画は各ユーザーのブラウザで s3.tradingview.com のスクリプトが行う（静的 export でも動作）。
-function TradingViewWidget({ symbol, interval = 'D', compact = false }: Props) {
+// モーダル内で 1 枚ずつ表示する用途（カードへの多数タイル表示は TradingView 側の
+// スロットリングで不可のため行わない）。
+function TradingViewWidget({ symbol, interval = 'D' }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -43,12 +42,9 @@ function TradingViewWidget({ symbol, interval = 'D', compact = false }: Props) {
       theme: 'light',
       style: '1',
       autosize: true,
-      // compact（カード内）はツールバー類を隠して軽く・小さく。
-      allow_symbol_change: !compact,
-      hide_side_toolbar: compact,
-      hide_top_toolbar: compact,
-      hide_legend: compact,
-      withdateranges: !compact,
+      allow_symbol_change: true,
+      hide_side_toolbar: false,
+      withdateranges: true,
       support_host: 'https://www.tradingview.com',
     })
     container.appendChild(script)
@@ -56,7 +52,7 @@ function TradingViewWidget({ symbol, interval = 'D', compact = false }: Props) {
     return () => {
       container.innerHTML = ''
     }
-  }, [symbol, interval, compact])
+  }, [symbol, interval])
 
   return (
     <div
