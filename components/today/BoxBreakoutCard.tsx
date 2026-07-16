@@ -4,7 +4,6 @@ import type { BoxBreakoutRow } from '@/types/boxBreakout'
 import { formatPct } from '@/lib/format'
 import { tradingViewUrl, shikihoUrl } from '@/lib/tickerLinks'
 import ChartButton from '@/components/today/ChartButton'
-import LazyChart from '@/components/today/LazyChart'
 
 type Props = {
   row: BoxBreakoutRow
@@ -239,11 +238,6 @@ export default function BoxBreakoutCard({ row, hot = false, multiHit = false, on
           color={rsColor(row.rs_topix_avg)}
           title="対TOPIX 相対強度（50=市場並み）。box では選抜に未使用の注釈値"
         />
-      </div>
-
-      {/* インライン・チャート（遅延読込・操作不要） */}
-      <div className="px-3 pt-2">
-        <LazyChart code={row.code} />
       </div>
 
       {/* アクション */}

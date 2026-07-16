@@ -5,7 +5,6 @@ import { maGrade, type MaPositionGrade, type MaDepthGrade } from '@/types/pullba
 import { formatPct } from '@/lib/format'
 import { tradingViewUrl, shikihoUrl } from '@/lib/tickerLinks'
 import ChartButton from '@/components/today/ChartButton'
-import LazyChart from '@/components/today/LazyChart'
 
 type Props =
   | {
@@ -168,11 +167,6 @@ export default function PullbackSetupCard(props: Props) {
       {/* 指標（最低限）*/}
       <div className="px-3 grid grid-cols-2 gap-2">
         {kind === 'coil' ? <CoilMetrics row={props.row} /> : <MaMetrics row={props.row} />}
-      </div>
-
-      {/* インライン・チャート（遅延読込・操作不要） */}
-      <div className="px-3 pt-2">
-        <LazyChart code={row.code} />
       </div>
 
       {/* アクション */}
