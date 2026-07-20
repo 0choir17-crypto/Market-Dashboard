@@ -121,7 +121,7 @@ export default function TodayPage() {
             hotSectors={data.hotSectors}
             multiHitCodes={multiHitCodes}
             title="Structure Pivot"
-            subtitle="押し安値切り上がり（HL）から作る構造の 1st（建玉ライン=HL+0.618戻し）/ 2nd（スイングハイ）ヒット。直近10営業日窓・銘柄ごとに最新ヒットへ集約。終了済み（TP2/Stop）は除外。買い指示ではなくウォッチリスト（執行は手動チャート判断）。"
+            subtitle="押し安値切り上がり（HL）から作る構造の 1st（建玉ライン=HL+0.618戻し）/ 2nd（スイングハイ）ヒット。本日ヒットした銘柄のみ表示し、各カードに『前回ヒットが何営業日前か』を併記。終了済み（TP2/Stop）は除外。買い指示ではなくウォッチリスト（執行は手動チャート判断）。"
           />
           <BoxBreakoutSection
             rows={data.box}

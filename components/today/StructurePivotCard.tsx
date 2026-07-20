@@ -1,7 +1,6 @@
 'use client'
 
 import type { StructurePivotCardRow } from '@/types/structurePivotEvents'
-import { signalMeta, statusMeta } from '@/types/structurePivotEvents'
 import { formatPct } from '@/lib/format'
 import { tradingViewUrl, shikihoUrl } from '@/lib/tickerLinks'
 import ChartButton from '@/components/today/ChartButton'
@@ -39,39 +38,11 @@ function rsColor(v: number | null): string {
   return 'var(--negative)'
 }
 
-// 直近ヒットからの営業日数。新しい（0 に近い）ほど強調。
-function daysColor(v: number | null): string {
-  if (!isNum(v)) return 'var(--text-muted)'
-  if (v <= 0) return 'var(--positive)'
-  if (v <= 2) return 'var(--accent)'
-  if (v <= 5) return 'var(--text-primary)'
-  return 'var(--text-secondary)'
-}
-
-function daysLabel(v: number | null): string {
-  if (!isNum(v)) return '—'
-  if (v <= 0) return '本日'
-  return `${v}営業日前`
-}
-
-function Chip({
-  text,
-  palette,
-  title,
-}: {
-  text: string
-  palette: { bg: string; fg: string; border: string }
-  title?: string
-}) {
-  return (
-    <span
-      className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold tabular-nums"
-      style={{ backgroundColor: palette.bg, color: palette.fg, border: `1px solid ${palette.border}` }}
-      title={title}
-    >
-      {text}
-    </span>
-  )
+// MM/DD 表示（前回ヒット日が窓外＝営業日数不明のときのフォールバック）。
+function fmtMMDD(d: string | null): string {
+  if (!d) return '—'
+  const m = /^\d{4}-(\d{2})-(\d{2})$/.exec(d)
+  return m ? `${m[1]}/${m[2]}` : d
 }
 
 function Metric({
@@ -105,16 +76,21 @@ export default function StructurePivotCard({
   onAddWatchlist,
   onAddPosition,
 }: Props) {
-  const sMeta = signalMeta(row.recent_hit_signal)
-  const stMeta = statusMeta(row.status)
-
-  // 1st→2nd 進行: 直近で 1st と 2nd を両方ヒット済み（別日）＝構造が前進中。
-  const progressed =
-    !!row.last_1st_date && !!row.last_2nd_date && row.last_2nd_date >= row.last_1st_date
-
   // 枠/背景: 複数シグナル重複（黄）を最優先 → hotセクター（緑）→ 既定。
   const borderColor = multiHit ? '#fbbf24' : hot ? '#86efac' : '#e8eaed'
   const backgroundColor = multiHit ? '#fef9c3' : hot ? '#f0fdf4' : '#ffffff'
+
+  // 前回ヒット表示: 窓内なら「N営業日前」、窓外（日数不明）なら日付にフォールバック。無ければ「初」。
+  const prevLabel = isNum(row.prev_days_ago)
+    ? `${row.prev_days_ago}営業日前`
+    : row.prev_hit_date
+      ? fmtMMDD(row.prev_hit_date)
+      : '初'
+  const prevTitle = row.prev_hit_date
+    ? `前回ヒット: ${row.prev_hit_date}${row.prev_hit_signal ? `（${row.prev_hit_signal}）` : ''}${
+        isNum(row.prev_days_ago) ? `／本日から ${row.prev_days_ago} 営業日前` : '／窓（10営業日）より前'
+      }`
+    : '本日が窓内で初ヒット（前回ヒットなし）'
 
   // 建玉ライン / 2nd / TP をチャート判断用にツールチップへまとめる。
   const levelsTitle = [
@@ -132,19 +108,6 @@ export default function StructurePivotCard({
       className="bg-white rounded-lg border shadow-sm hover:shadow-md transition-shadow flex flex-col"
       style={{ borderColor, backgroundColor }}
     >
-      {/* バッジ行: signal（1st/2nd）+ status + 1st→2nd 進行 */}
-      <div className="px-3 py-2 border-b border-[#f0f2f4] flex items-center gap-1.5 flex-wrap">
-        <Chip text={sMeta.label} palette={sMeta.palette} title={sMeta.title} />
-        <Chip text={stMeta.label} palette={stMeta.palette} title={stMeta.title} />
-        {progressed && (
-          <Chip
-            text="1st→2nd"
-            palette={{ bg: '#faf5ff', fg: '#7e22ce', border: '#e9d5ff' }}
-            title={`1st(${row.last_1st_date}) → 2nd(${row.last_2nd_date}) と構造が前進中。`}
-          />
-        )}
-      </div>
-
       {/* 銘柄 */}
       <div className="px-3 py-2 flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
@@ -189,13 +152,12 @@ export default function StructurePivotCard({
         </div>
       </div>
 
-      {/* 共通4枠: 直近ヒット(何営業日前) / RS / 52w高 / ADR% */}
-      <div className="px-3 grid grid-cols-2 gap-2">
+      {/* 共通4枠: 前回ヒット(何営業日前) / RS / 52w高 / ADR% */}
+      <div className="px-3 pt-2 grid grid-cols-2 gap-2">
         <Metric
-          label="直近ヒット"
-          value={daysLabel(row.days_since_hit)}
-          color={daysColor(row.days_since_hit)}
-          title={`直近で ${row.recent_hit_signal} をヒットした日: ${row.recent_hit_date}（窓内の営業日で換算）`}
+          label="前回ヒット"
+          value={prevLabel}
+          title={prevTitle}
         />
         <Metric
           label="RS"
