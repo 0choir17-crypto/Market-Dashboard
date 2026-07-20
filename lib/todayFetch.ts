@@ -313,11 +313,11 @@ async function fetchBoxBreakouts(
 // なく直近 STRUCTURE_WINDOW_DAYS 本の distinct なヒット日にウィンドウする。
 //
 // 表示方針（ダッシュ側裁量。0choir17 と確認済み）:
-//   - 1st / 2nd 両方を表示（signal バッジで区別）。
-//   - 銘柄ごとに1枚へ集約（同一銘柄の複数ヒット/構造は最新ヒット行にまとめる）。
+//   - 本日（anchor 日）にヒットした銘柄のみ表示。
+//   - 銘柄ごとに1枚へ集約（同日 1st/2nd 両方なら 2nd を採用）。
 //   - 終了済み（is_active=false ＝ TP2 到達 or STOPPED）はライブなウォッチではないので除外。
-//   - 「直近で何営業日前にヒットしたか」は窓内の distinct ヒット日（＝営業日カレンダー）を
-//     基準に算出（0=最新営業日）。
+//   - カードには「その銘柄が本日より前に直近でいつヒットしたか（前回ヒット）」を出す。
+//     窓内の distinct ヒット日（＝営業日カレンダー）を基準に「何営業日前か」を算出。
 async function fetchStructurePivotEvents(
   date: string | null,
 ): Promise<{ date: string | null; rows: StructurePivotCardRow[]; error: string | null }> {
@@ -388,53 +388,68 @@ async function fetchStructurePivotEvents(
   const raw = (data ?? []) as unknown as StructurePivotEventRow[]
 
   // 窓内の distinct ヒット日（降順）→「何営業日前か」を index で引く。anchor=0。
-  // 窓外（>N営業日前で凍結）の日付が recent_hit_date に来た場合は、降順リストで自分より
-  // 新しい営業日を数えて近似する（窓端で 0 件になるのを避ける安全側）。
+  // 窓外（>N営業日前で凍結）で index に無い日付は、正確な営業日数が不明なので null を返す
+  //（カード側は日付表示にフォールバックし、誤った日数を出さない）。
   const dayIndex = new Map<string, number>()
   distinctDatesDesc.forEach((d, i) => dayIndex.set(d, i))
   const businessDaysAgo = (d: string | null): number | null => {
     if (!d) return null
     const hit = dayIndex.get(d)
-    if (hit !== undefined) return hit
-    let n = 0
-    for (const dd of distinctDatesDesc) {
-      if (dd > d) n++
-      else break // 降順なので dd <= d に入ったら以降も全て d 以下
-    }
-    return n
+    return hit === undefined ? null : hit
   }
 
   // ライブなウォッチのみ: 終了済み（is_active=false ＝ TP2 or STOPPED）を落とす。
   const live = raw.filter(r => r.is_active !== false)
 
-  // 銘柄ごとに1枚へ集約: date 降順、同日なら 2nd を優先（進行段階が新しい）。先頭を採用。
+  // 本日ヒットした銘柄の code 集合（anchor 日に行がある銘柄）。
+  const hitTodayCodes = new Set<string>()
+  for (const r of live) if (r.date === anchor) hitTodayCodes.add(r.code)
+
+  // 銘柄ごとに、その銘柄の全ヒット日（窓内の各行 date ＋ per-code の last_1st/last_2nd）を集める。
+  // 前回ヒット＝anchor より前で最も新しいヒット日を出すのに使う。
+  const hitDatesByCode = new Map<string, Set<string>>()
+  const addHitDate = (code: string, d: string | null | undefined) => {
+    if (!d) return
+    let set = hitDatesByCode.get(code)
+    if (!set) hitDatesByCode.set(code, (set = new Set()))
+    set.add(d)
+  }
+  for (const r of live) {
+    addHitDate(r.code, r.date)
+    addHitDate(r.code, r.last_1st_date)
+    addHitDate(r.code, r.last_2nd_date)
+  }
+
+  // 本日ヒット行を集約: 同一銘柄で 1st/2nd 両方あるなら 2nd（進行が新しい）を採用。
   const signalRank: Record<string, number> = { '2nd': 0, '1st': 1 }
-  live.sort((a, b) => {
-    const d = (b.date ?? '').localeCompare(a.date ?? '')
-    if (d !== 0) return d
-    return (signalRank[a.signal] ?? 9) - (signalRank[b.signal] ?? 9)
-  })
+  const todayRows = live
+    .filter(r => r.date === anchor && hitTodayCodes.has(r.code))
+    .sort((a, b) => (signalRank[a.signal] ?? 9) - (signalRank[b.signal] ?? 9))
 
   const byCode = new Map<string, StructurePivotCardRow>()
-  for (const r of live) {
-    if (byCode.has(r.code)) continue // 既に最新（date 降順先頭）を採用済み
-    // 直近ヒット日 = 全構造横断の per-code 最新（last_1st/last_2nd）と行 date の最大。
-    const candidates = [r.last_1st_date, r.last_2nd_date, r.date].filter(
-      (d): d is string => !!d,
-    )
-    const recentHitDate = candidates.reduce((a, b) => (a > b ? a : b), r.date)
-    // その直近ヒットが 1st / 2nd どちらか: 日付が新しい方。同日なら 2nd（進行が新しい）。
-    let recentSignal: StructurePivotSignal = r.signal
-    const l1 = r.last_1st_date
-    const l2 = r.last_2nd_date
-    if (l1 && l2) recentSignal = l2 >= l1 ? '2nd' : '1st'
-    else if (l2) recentSignal = '2nd'
-    else if (l1) recentSignal = '1st'
+  for (const r of todayRows) {
+    if (byCode.has(r.code)) continue // 既に優先シグナル（先頭）を採用済み
+
+    // 前回ヒット＝anchor より前で最も新しいヒット日。
+    let prevHitDate: string | null = null
+    for (const d of hitDatesByCode.get(r.code) ?? []) {
+      if (d < anchor && (prevHitDate === null || d > prevHitDate)) prevHitDate = d
+    }
+    // 前回ヒットが 1st / 2nd どちらか（last_1st/last_2nd の一致で判定。両一致なら不定→null）。
+    let prevSignal: StructurePivotSignal | null = null
+    if (prevHitDate) {
+      const isL1 = prevHitDate === r.last_1st_date
+      const isL2 = prevHitDate === r.last_2nd_date
+      if (isL1 && !isL2) prevSignal = '1st'
+      else if (isL2 && !isL1) prevSignal = '2nd'
+    }
+
     byCode.set(r.code, {
       ...r,
-      recent_hit_date: recentHitDate,
-      recent_hit_signal: recentSignal,
-      days_since_hit: businessDaysAgo(recentHitDate),
+      today_signal: r.signal,
+      prev_hit_date: prevHitDate,
+      prev_hit_signal: prevSignal,
+      prev_days_ago: businessDaysAgo(prevHitDate),
     })
   }
 

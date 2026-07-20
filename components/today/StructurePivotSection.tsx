@@ -47,14 +47,14 @@ function ascBy(value: (r: StructurePivotCardRow) => number | null) {
 
 type SortDef = { key: string; label: string; compare: (a: StructurePivotCardRow, b: StructurePivotCardRow) => number }
 
-// 既定は「ヒットが新しい順」（＝直近営業日にヒットしたものを先頭）→ RS 降順で同着を割る。
+// 全件が本日ヒットなので、既定は RS 高い順。前回ヒットが近い順（1st→2nd 進行など）も用意。
 const SORTS: SortDef[] = [
+  { key: 'rs', label: 'RS 高い順', compare: (a, b) => descBy(r => r.rs_topix_avg)(a, b) },
   {
-    key: 'recent',
-    label: 'ヒットが新しい順',
-    compare: (a, b) => ascBy(r => r.days_since_hit)(a, b) || descBy(r => r.rs_topix_avg)(a, b),
+    key: 'prev',
+    label: '前回ヒットが新しい順',
+    compare: (a, b) => ascBy(r => r.prev_days_ago)(a, b) || descBy(r => r.rs_topix_avg)(a, b),
   },
-  { key: 'rs', label: 'RS 高い順', compare: descBy(r => r.rs_topix_avg) },
   { key: 'high', label: '52週高値に近い順', compare: descBy(r => r.dist_from_high_pct) },
   { key: 'turnover', label: '売買代金 大きい順', compare: descBy(r => r.turnover_oku) },
 ]
@@ -78,8 +78,8 @@ export default function StructurePivotSection({ rows, hotSectors, title, subtitl
   const filtered = useMemo(() => {
     return rows.filter(r => {
       if (sector !== 'all' && (r.sector_s33 ?? '') !== sector) return false
-      // signal フィルタは「直近ヒットのシグナル」で判定。
-      if (signal !== 'all' && r.recent_hit_signal !== signal) return false
+      // signal フィルタは「本日ヒットのシグナル」で判定。
+      if (signal !== 'all' && r.today_signal !== signal) return false
       return true
     })
   }, [rows, sector, signal])
@@ -170,7 +170,7 @@ export default function StructurePivotSection({ rows, hotSectors, title, subtitl
       {sorted.length === 0 ? (
         <div className="py-8 text-center text-sm text-[var(--text-muted)]">
           {rows.length === 0
-            ? '直近の Structure Pivot ヒットは 0 件です。'
+            ? '本日の Structure Pivot ヒットは 0 件です。'
             : '該当する銘柄がありません。'}
         </div>
       ) : (

@@ -220,8 +220,8 @@ export default function GuidePage() {
             <li>
               <strong className="text-gray-900">Structure Pivot（構造ピボット・最上段）</strong> — 押し安値切り上がり
               （<span className="font-mono">HL</span>）から作る構造の <strong>1st</strong>（建玉ライン＝HL+0.618 戻し） /
-              <strong> 2nd</strong>（スイングハイ）ヒット。直近 10 営業日窓・銘柄ごとに最新ヒットへ集約し、
-              <strong>直近で何営業日前にヒットしたか</strong> と RS・52週高値乖離・status を表示。
+              <strong> 2nd</strong>（スイングハイ）ヒット。<strong>本日ヒットした銘柄のみ</strong>表示し、各カードに
+              <strong>前回ヒットが何営業日前か</strong>・RS・52週高値乖離・ADR% を表示。
               終了済み（<span className="font-mono">TP2 / Stop</span>）は除外。
               <span className="text-gray-500">買い指示ではなくウォッチリスト（執行は手動チャート判断）。</span>
             </li>
