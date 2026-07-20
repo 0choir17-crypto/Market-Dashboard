@@ -68,13 +68,15 @@ export type StructurePivotEventRow = {
 }
 
 // 本日ヒット銘柄を1枚へ集約したカード用の派生行。fetch 側で算出して付与する。
-// 表示は「本日（anchor 日）にヒットした銘柄のみ」で、カードには『その銘柄が本日より前に
-// 直近でいつヒットしたか（前回ヒット）』を出す。
+// 表示は「本日（anchor 日）にヒットした銘柄のみ」。カードには 1st / 2nd それぞれの
+// 直近ヒットを営業日前で並べ、本日ヒットしたシグナルは 0 営業日前（=本日）として強調する。
 export type StructurePivotCardRow = StructurePivotEventRow & {
-  today_signal: StructurePivotSignal // 本日ヒットのシグナル（1st / 2nd。両方なら 2nd を採用）
-  prev_hit_date: string | null // 本日より前の直近ヒット日（無ければ null＝窓内で初出）
-  prev_hit_signal: StructurePivotSignal | null // 前回ヒットが 1st / 2nd どちらか（判れば）
-  prev_days_ago: number | null // 前回ヒットが本日から何営業日前か（窓外で不明なら null）
+  today_1st: boolean // 本日 1st にヒットしたか
+  today_2nd: boolean // 本日 2nd にヒットしたか
+  // 直近の 1st / 2nd ヒットが本日から何営業日前か（0=本日, null=判定範囲外 or 未ヒット）。
+  // 全て営業日ベース（テーブルに存在するヒット日＝営業日カレンダーの index）で数える。
+  last_1st_ago: number | null
+  last_2nd_ago: number | null
 }
 
 // signal バッジ（1st=建玉ライン / 2nd=ブレイク進行）の表示定義。
