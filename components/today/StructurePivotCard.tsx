@@ -38,11 +38,63 @@ function rsColor(v: number | null): string {
   return 'var(--negative)'
 }
 
-// MM/DD 表示（前回ヒット日が窓外＝営業日数不明のときのフォールバック）。
-function fmtMMDD(d: string | null): string {
-  if (!d) return '—'
-  const m = /^\d{4}-(\d{2})-(\d{2})$/.exec(d)
-  return m ? `${m[1]}/${m[2]}` : d
+// 営業日前ラベル（カード表面は営業日ベースで統一。日付は tooltip 側にのみ出す）。
+//   0        → 本日
+//   1,2,…    → N営業日前
+//   null     → —（未ヒット、または判定範囲外で日数不明）
+function fmtAgoFace(ago: number | null): string {
+  if (ago === null || ago === undefined || !Number.isFinite(ago)) return '—'
+  if (ago <= 0) return '本日'
+  return `${ago}営業日前`
+}
+
+// tooltip 用の詳細（日付を添える）。
+function agoTitle(sig: '1st' | '2nd', ago: number | null, date: string | null): string {
+  const head = `直近 ${sig} ヒット`
+  if (date && Number.isFinite(ago as number)) {
+    return ago === 0 ? `${head}: ${date}（本日）` : `${head}: ${date}（${ago}営業日前）`
+  }
+  if (date) return `${head}: ${date}（営業日数は判定範囲外）`
+  return `${head}: なし`
+}
+
+// signal ラベル色（1st=建玉ライン=インディゴ / 2nd=ブレイク=ブルー）。
+const SIG_COLOR: Record<'1st' | '2nd', string> = { '1st': '#4f46e5', '2nd': '#2563eb' }
+
+// 1st / 2nd それぞれの直近ヒットを1マスで表示。本日ヒット（ago=0）は緑で強調。
+function HitCell({
+  sig,
+  ago,
+  date,
+  today,
+}: {
+  sig: '1st' | '2nd'
+  ago: number | null
+  date: string | null
+  today: boolean
+}) {
+  const value = fmtAgoFace(ago)
+  return (
+    <div
+      className="rounded px-1.5 py-1 border"
+      style={{
+        backgroundColor: today ? 'var(--positive-bg, #ecfdf5)' : 'transparent',
+        borderColor: today ? '#86efac' : '#f0f2f4',
+      }}
+      title={agoTitle(sig, ago, date)}
+    >
+      <span className="text-[10px] font-bold" style={{ color: SIG_COLOR[sig] }}>
+        {sig}
+      </span>
+      <span
+        className="ml-1 font-mono text-xs font-semibold tabular-nums"
+        style={{ color: today ? 'var(--positive)' : 'var(--text-primary)' }}
+      >
+        {value}
+      </span>
+      {today && <span className="ml-1 text-[9px] font-bold" style={{ color: 'var(--positive)' }}>●</span>}
+    </div>
+  )
 }
 
 function Metric({
@@ -80,17 +132,10 @@ export default function StructurePivotCard({
   const borderColor = multiHit ? '#fbbf24' : hot ? '#86efac' : '#e8eaed'
   const backgroundColor = multiHit ? '#fef9c3' : hot ? '#f0fdf4' : '#ffffff'
 
-  // 前回ヒット表示: 窓内なら「N営業日前」、窓外（日数不明）なら日付にフォールバック。無ければ「初」。
-  const prevLabel = isNum(row.prev_days_ago)
-    ? `${row.prev_days_ago}営業日前`
-    : row.prev_hit_date
-      ? fmtMMDD(row.prev_hit_date)
-      : '初'
-  const prevTitle = row.prev_hit_date
-    ? `前回ヒット: ${row.prev_hit_date}${row.prev_hit_signal ? `（${row.prev_hit_signal}）` : ''}${
-        isNum(row.prev_days_ago) ? `／本日から ${row.prev_days_ago} 営業日前` : '／窓（10営業日）より前'
-      }`
-    : '本日が窓内で初ヒット（前回ヒットなし）'
+  // 本日ヒットしたシグナルのラベル（複数可）。カード上部に明示する。
+  const todayTags: ('1st' | '2nd')[] = []
+  if (row.today_1st) todayTags.push('1st')
+  if (row.today_2nd) todayTags.push('2nd')
 
   // 建玉ライン / 2nd / TP をチャート判断用にツールチップへまとめる。
   const levelsTitle = [
@@ -131,6 +176,18 @@ export default function StructurePivotCard({
               {row.code}
             </a>
             <ChartButton code={row.code} name={row.co_name} />
+            {/* 本日どのシグナルにヒットしたか（1st / 2nd）を明示 */}
+            <span className="flex items-center gap-1 flex-shrink-0" title="本日ヒットしたシグナル">
+              {todayTags.map(sig => (
+                <span
+                  key={sig}
+                  className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold leading-none"
+                  style={{ backgroundColor: '#ecfdf5', color: SIG_COLOR[sig], border: `1px solid ${SIG_COLOR[sig]}33` }}
+                >
+                  本日{sig}
+                </span>
+              ))}
+            </span>
           </div>
           <div
             className="mt-0.5 text-[11px] truncate"
@@ -152,13 +209,21 @@ export default function StructurePivotCard({
         </div>
       </div>
 
-      {/* 共通4枠: 前回ヒット(何営業日前) / RS / 52w高 / ADR% */}
+      {/* 直近ヒット: 1st / 2nd それぞれ何営業日前か（本日ヒットは緑で強調） */}
+      <div className="px-3 pt-2">
+        <div className="rounded bg-[var(--bg-card-hover)] border border-[#f0f2f4] px-2 py-1.5">
+          <p className="text-[9px] font-medium uppercase tracking-wide text-[var(--text-secondary)] leading-tight">
+            直近ヒット（営業日前）
+          </p>
+          <div className="mt-1 grid grid-cols-2 gap-1.5">
+            <HitCell sig="1st" ago={row.last_1st_ago} date={row.last_1st_date} today={row.today_1st} />
+            <HitCell sig="2nd" ago={row.last_2nd_ago} date={row.last_2nd_date} today={row.today_2nd} />
+          </div>
+        </div>
+      </div>
+
+      {/* 共通指標: RS / 52w高 / ADR% / 出来高比 */}
       <div className="px-3 pt-2 grid grid-cols-2 gap-2">
-        <Metric
-          label="前回ヒット"
-          value={prevLabel}
-          title={prevTitle}
-        />
         <Metric
           label="RS"
           value={fmt(row.rs_topix_avg, 0)}
@@ -174,6 +239,11 @@ export default function StructurePivotCard({
           label="ADR%"
           value={fmt(row.adr_pct)}
           title="ADR%（20日）。日中ボラ容量"
+        />
+        <Metric
+          label="出来高比"
+          value={isNum(row.vol_ratio) ? `${fmt(row.vol_ratio, 1)}x` : '—'}
+          title="ヒット日 出来高/平均。大きいほど需要が強い"
         />
       </div>
 

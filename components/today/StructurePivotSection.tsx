@@ -47,16 +47,17 @@ function ascBy(value: (r: StructurePivotCardRow) => number | null) {
 
 type SortDef = { key: string; label: string; compare: (a: StructurePivotCardRow, b: StructurePivotCardRow) => number }
 
-// 全件が本日ヒットなので、既定は RS 高い順。前回ヒットが近い順（1st→2nd 進行など）も用意。
+// 全件が本日ヒットなので既定は RS 高い順。「1st の直近が新しい順」は 2nd ブレイク直前に
+// 1st を最近付けた（＝1st→2nd 進行中）銘柄を上位に出す補助ソート。
 const SORTS: SortDef[] = [
   { key: 'rs', label: 'RS 高い順', compare: (a, b) => descBy(r => r.rs_topix_avg)(a, b) },
-  {
-    key: 'prev',
-    label: '前回ヒットが新しい順',
-    compare: (a, b) => ascBy(r => r.prev_days_ago)(a, b) || descBy(r => r.rs_topix_avg)(a, b),
-  },
   { key: 'high', label: '52週高値に近い順', compare: descBy(r => r.dist_from_high_pct) },
   { key: 'turnover', label: '売買代金 大きい順', compare: descBy(r => r.turnover_oku) },
+  {
+    key: 'prog',
+    label: '1st の直近が新しい順',
+    compare: (a, b) => ascBy(r => r.last_1st_ago)(a, b) || descBy(r => r.rs_topix_avg)(a, b),
+  },
 ]
 
 // signal フィルタ（1st / 2nd / 全部）。両方を既定表示。
@@ -78,8 +79,9 @@ export default function StructurePivotSection({ rows, hotSectors, title, subtitl
   const filtered = useMemo(() => {
     return rows.filter(r => {
       if (sector !== 'all' && (r.sector_s33 ?? '') !== sector) return false
-      // signal フィルタは「本日ヒットのシグナル」で判定。
-      if (signal !== 'all' && r.today_signal !== signal) return false
+      // signal フィルタは「本日ヒットしたシグナル」で判定（本日 1st / 本日 2nd）。
+      if (signal === '1st' && !r.today_1st) return false
+      if (signal === '2nd' && !r.today_2nd) return false
       return true
     })
   }, [rows, sector, signal])
@@ -146,9 +148,9 @@ export default function StructurePivotSection({ rows, hotSectors, title, subtitl
           onChange={e => setSignal(e.target.value as SignalFilter)}
           className="text-xs px-2 py-1.5 rounded-lg border border-[var(--border)] bg-white text-gray-700 cursor-pointer"
         >
-          <option value="all">1st + 2nd</option>
-          <option value="1st">1st のみ（建玉ライン）</option>
-          <option value="2nd">2nd のみ（ブレイク進行）</option>
+          <option value="all">本日 1st + 2nd</option>
+          <option value="1st">本日 1st ヒット</option>
+          <option value="2nd">本日 2nd ヒット</option>
         </select>
 
         <span className="ml-auto flex items-center gap-1.5">

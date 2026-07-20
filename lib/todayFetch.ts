@@ -6,7 +6,6 @@ import type { BoxBreakoutRow } from '@/types/boxBreakout'
 import type {
   StructurePivotCardRow,
   StructurePivotEventRow,
-  StructurePivotSignal,
 } from '@/types/structurePivotEvents'
 
 // Daily Watch — 押し目"候補"ウォッチ。新テーブル群を最新 date 中心に読む。
@@ -314,10 +313,11 @@ async function fetchBoxBreakouts(
 //
 // 表示方針（ダッシュ側裁量。0choir17 と確認済み）:
 //   - 本日（anchor 日）にヒットした銘柄のみ表示。
-//   - 銘柄ごとに1枚へ集約（同日 1st/2nd 両方なら 2nd を採用）。
+//   - 銘柄ごとに1枚へ集約（代表行は同日 1st/2nd 両方なら 2nd を採用。本日の 1st/2nd 有無は別途保持）。
 //   - 終了済み（is_active=false ＝ TP2 到達 or STOPPED）はライブなウォッチではないので除外。
-//   - カードには「その銘柄が本日より前に直近でいつヒットしたか（前回ヒット）」を出す。
-//     窓内の distinct ヒット日（＝営業日カレンダー）を基準に「何営業日前か」を算出。
+//   - カードには 1st / 2nd それぞれの直近ヒットを「何営業日前か」で並べる。本日ヒットした
+//     シグナルは 0 営業日前（=本日）になる。全て営業日ベース（テーブルに存在するヒット日＝
+//     営業日カレンダーの index）で数え、日付とは混在させない。
 async function fetchStructurePivotEvents(
   date: string | null,
 ): Promise<{ date: string | null; rows: StructurePivotCardRow[]; error: string | null }> {
@@ -342,13 +342,15 @@ async function fetchStructurePivotEvents(
   }
   if (!upper) return { date: null, rows: [], error: null }
 
-  // upper 以前の distinct なヒット日を新しい順に集め、N 本目を窓の下端にする。
+  // upper 以前の distinct なヒット日を新しい順に集める。表示窓の下端算出に使うほか、
+  // 「前回ヒットが何営業日前か」を営業日ベースで数える index にも使う。前回ヒットは数ヶ月
+  // 遡ることがあるので、営業日カレンダーを十分に確保する（~42行/日 × 8000行 ≈ 半年弱）。
   const { data: dateRows, error: dateErr } = await supabase
     .from(STRUCTURE_PIVOT_TABLE)
     .select('date')
     .lte('date', upper)
     .order('date', { ascending: false })
-    .limit(2000)
+    .limit(8000)
   if (dateErr) {
     if (isMissingTableError(dateErr)) {
       console.warn(`[${STRUCTURE_PIVOT_TABLE}] table not deployed yet — skipping`)
@@ -401,55 +403,32 @@ async function fetchStructurePivotEvents(
   // ライブなウォッチのみ: 終了済み（is_active=false ＝ TP2 or STOPPED）を落とす。
   const live = raw.filter(r => r.is_active !== false)
 
-  // 本日ヒットした銘柄の code 集合（anchor 日に行がある銘柄）。
-  const hitTodayCodes = new Set<string>()
-  for (const r of live) if (r.date === anchor) hitTodayCodes.add(r.code)
-
-  // 銘柄ごとに、その銘柄の全ヒット日（窓内の各行 date ＋ per-code の last_1st/last_2nd）を集める。
-  // 前回ヒット＝anchor より前で最も新しいヒット日を出すのに使う。
-  const hitDatesByCode = new Map<string, Set<string>>()
-  const addHitDate = (code: string, d: string | null | undefined) => {
-    if (!d) return
-    let set = hitDatesByCode.get(code)
-    if (!set) hitDatesByCode.set(code, (set = new Set()))
-    set.add(d)
-  }
+  // 本日（anchor 日）にヒットした銘柄について、1st / 2nd それぞれ本日ヒットしたかを集計。
+  const today1st = new Set<string>()
+  const today2nd = new Set<string>()
   for (const r of live) {
-    addHitDate(r.code, r.date)
-    addHitDate(r.code, r.last_1st_date)
-    addHitDate(r.code, r.last_2nd_date)
+    if (r.date !== anchor) continue
+    if (r.signal === '1st') today1st.add(r.code)
+    else if (r.signal === '2nd') today2nd.add(r.code)
   }
 
-  // 本日ヒット行を集約: 同一銘柄で 1st/2nd 両方あるなら 2nd（進行が新しい）を採用。
+  // 本日ヒット行を集約: 同一銘柄で 1st/2nd 両方あるなら 2nd（進行が新しい）を代表行に採用。
   const signalRank: Record<string, number> = { '2nd': 0, '1st': 1 }
   const todayRows = live
-    .filter(r => r.date === anchor && hitTodayCodes.has(r.code))
+    .filter(r => r.date === anchor)
     .sort((a, b) => (signalRank[a.signal] ?? 9) - (signalRank[b.signal] ?? 9))
 
   const byCode = new Map<string, StructurePivotCardRow>()
   for (const r of todayRows) {
-    if (byCode.has(r.code)) continue // 既に優先シグナル（先頭）を採用済み
-
-    // 前回ヒット＝anchor より前で最も新しいヒット日。
-    let prevHitDate: string | null = null
-    for (const d of hitDatesByCode.get(r.code) ?? []) {
-      if (d < anchor && (prevHitDate === null || d > prevHitDate)) prevHitDate = d
-    }
-    // 前回ヒットが 1st / 2nd どちらか（last_1st/last_2nd の一致で判定。両一致なら不定→null）。
-    let prevSignal: StructurePivotSignal | null = null
-    if (prevHitDate) {
-      const isL1 = prevHitDate === r.last_1st_date
-      const isL2 = prevHitDate === r.last_2nd_date
-      if (isL1 && !isL2) prevSignal = '1st'
-      else if (isL2 && !isL1) prevSignal = '2nd'
-    }
-
+    if (byCode.has(r.code)) continue // 既に代表シグナル（先頭）を採用済み
     byCode.set(r.code, {
       ...r,
-      today_signal: r.signal,
-      prev_hit_date: prevHitDate,
-      prev_hit_signal: prevSignal,
-      prev_days_ago: businessDaysAgo(prevHitDate),
+      today_1st: today1st.has(r.code),
+      today_2nd: today2nd.has(r.code),
+      // 直近の 1st / 2nd ヒット（per-code の last_1st_date / last_2nd_date）を営業日前へ。
+      // 本日ヒットしたシグナルは last_*_date=anchor なので 0 営業日前（=本日）になる。
+      last_1st_ago: businessDaysAgo(r.last_1st_date),
+      last_2nd_ago: businessDaysAgo(r.last_2nd_date),
     })
   }
 
