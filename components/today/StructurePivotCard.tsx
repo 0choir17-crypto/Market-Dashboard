@@ -38,42 +38,29 @@ function rsColor(v: number | null): string {
   return 'var(--negative)'
 }
 
-// 営業日前ラベル（カード表面は営業日ベースで統一。日付は tooltip 側にのみ出す）。
-//   0        → 本日
-//   1,2,…    → N営業日前
-//   null     → —（未ヒット、または判定範囲外で日数不明）
-function fmtAgoFace(ago: number | null): string {
-  if (ago === null || ago === undefined || !Number.isFinite(ago)) return '—'
-  if (ago <= 0) return '本日'
-  return `${ago}営業日前`
-}
-
-// tooltip 用の詳細（日付を添える）。
-function agoTitle(sig: '1st' | '2nd', ago: number | null, date: string | null): string {
-  const head = `直近 ${sig} ヒット`
-  if (date && Number.isFinite(ago as number)) {
-    return ago === 0 ? `${head}: ${date}（本日）` : `${head}: ${date}（${ago}営業日前）`
-  }
-  if (date) return `${head}: ${date}（営業日数は判定範囲外）`
-  return `${head}: なし`
+// ヒット日を MM/DD に整形（カード表面）。tooltip では YYYY-MM-DD をそのまま出す。
+function fmtHitDate(d: string | null): string {
+  if (!d) return '—'
+  const m = /^\d{4}-(\d{2})-(\d{2})$/.exec(d)
+  return m ? `${m[1]}/${m[2]}` : d
 }
 
 // signal ラベル色（1st=建玉ライン=インディゴ / 2nd=ブレイク=ブルー）。
 const SIG_COLOR: Record<'1st' | '2nd', string> = { '1st': '#4f46e5', '2nd': '#2563eb' }
 
-// 1st / 2nd それぞれの直近ヒットを1マスで表示。本日ヒット（ago=0）は緑で強調。
+// 1st / 2nd それぞれの直近ヒット日を1マスで表示。本日ヒットは緑で強調。
 function HitCell({
   sig,
-  ago,
   date,
   today,
 }: {
   sig: '1st' | '2nd'
-  ago: number | null
   date: string | null
   today: boolean
 }) {
-  const value = fmtAgoFace(ago)
+  const title = date
+    ? `直近 ${sig} ヒット日: ${date}${today ? '（本日）' : ''}`
+    : `直近 ${sig} ヒット: なし`
   return (
     <div
       className="rounded px-1.5 py-1 border"
@@ -81,7 +68,7 @@ function HitCell({
         backgroundColor: today ? 'var(--positive-bg, #ecfdf5)' : 'transparent',
         borderColor: today ? '#86efac' : '#f0f2f4',
       }}
-      title={agoTitle(sig, ago, date)}
+      title={title}
     >
       <span className="text-[10px] font-bold" style={{ color: SIG_COLOR[sig] }}>
         {sig}
@@ -90,7 +77,7 @@ function HitCell({
         className="ml-1 font-mono text-xs font-semibold tabular-nums"
         style={{ color: today ? 'var(--positive)' : 'var(--text-primary)' }}
       >
-        {value}
+        {fmtHitDate(date)}
       </span>
       {today && <span className="ml-1 text-[9px] font-bold" style={{ color: 'var(--positive)' }}>●</span>}
     </div>
@@ -209,15 +196,15 @@ export default function StructurePivotCard({
         </div>
       </div>
 
-      {/* 直近ヒット: 1st / 2nd それぞれ何営業日前か（本日ヒットは緑で強調） */}
+      {/* 直近ヒット日: 1st / 2nd それぞれのヒット日（本日ヒットは緑で強調） */}
       <div className="px-3 pt-2">
         <div className="rounded bg-[var(--bg-card-hover)] border border-[#f0f2f4] px-2 py-1.5">
           <p className="text-[9px] font-medium uppercase tracking-wide text-[var(--text-secondary)] leading-tight">
-            直近ヒット（営業日前）
+            直近ヒット日
           </p>
           <div className="mt-1 grid grid-cols-2 gap-1.5">
-            <HitCell sig="1st" ago={row.last_1st_ago} date={row.last_1st_date} today={row.today_1st} />
-            <HitCell sig="2nd" ago={row.last_2nd_ago} date={row.last_2nd_date} today={row.today_2nd} />
+            <HitCell sig="1st" date={row.last_1st_date} today={row.today_1st} />
+            <HitCell sig="2nd" date={row.last_2nd_date} today={row.today_2nd} />
           </div>
         </div>
       </div>

@@ -33,15 +33,15 @@ function descBy(value: (r: StructurePivotCardRow) => number | null) {
   }
 }
 
-// 小さい値ほど先頭になる昇順コンパレータ（null は末尾）
-function ascBy(value: (r: StructurePivotCardRow) => number | null) {
+// 日付文字列（YYYY-MM-DD）を新しい順に。null は末尾。
+function dateDesc(value: (r: StructurePivotCardRow) => string | null) {
   return (a: StructurePivotCardRow, b: StructurePivotCardRow) => {
     const av = value(a)
     const bv = value(b)
-    if (!isNum(av) && !isNum(bv)) return 0
-    if (!isNum(av)) return 1
-    if (!isNum(bv)) return -1
-    return av - bv
+    if (!av && !bv) return 0
+    if (!av) return 1
+    if (!bv) return -1
+    return bv.localeCompare(av)
   }
 }
 
@@ -55,8 +55,8 @@ const SORTS: SortDef[] = [
   { key: 'turnover', label: '売買代金 大きい順', compare: descBy(r => r.turnover_oku) },
   {
     key: 'prog',
-    label: '1st の直近が新しい順',
-    compare: (a, b) => ascBy(r => r.last_1st_ago)(a, b) || descBy(r => r.rs_topix_avg)(a, b),
+    label: '1st のヒット日が新しい順',
+    compare: (a, b) => dateDesc(r => r.last_1st_date)(a, b) || descBy(r => r.rs_topix_avg)(a, b),
   },
 ]
 
