@@ -3,6 +3,11 @@ import type { CoilPullbackRow, MaPullbackRow } from '@/types/pullbackSetups'
 import type { VolumeIgnitionRow } from '@/types/volumeIgnition'
 import type { SpringSetupRow } from '@/types/springSetups'
 import type { BoxBreakoutRow } from '@/types/boxBreakout'
+import type {
+  StructurePivotCardRow,
+  StructurePivotEventRow,
+  StructurePivotSignal,
+} from '@/types/structurePivotEvents'
 
 // Daily Watch — 押し目"候補"ウォッチ。新テーブル群を最新 date 中心に読む。
 // jquants-scanner が毎日・平日引け後 (~18:00 JST) に当日分を upsert（冪等）。
@@ -13,11 +18,16 @@ const MA_TABLE = 'ma_pullback_setups'
 const VOLUME_IGNITION_TABLE = 'volume_ignition'
 const SPRING_TABLE = 'spring_setups'
 const BOX_BREAKOUT_TABLE = 'box_breakout_events'
+const STRUCTURE_PIVOT_TABLE = 'structure_pivot_events'
 
 // box_breakout_events は単一 date ではなく「直近ブレイク窓」を読む。仮ブレイク日(date)は
 // 動かず status が後日 CONFIRMED/FAILED に更新されるテーブルなので、直近 N 営業日ぶんの
 // イベントをまとめて表示する（他スキャナーの「最新 date のみ」とはモデルが異なる）。
 const BOX_WINDOW_DAYS = 10
+
+// structure_pivot_events も同じ「直近ヒット窓」モデル。upsert は直近10営業日ぶんなので
+// それに合わせて窓を10営業日に取る。
+const STRUCTURE_WINDOW_DAYS = 10
 
 export type TodayResponse = {
   coilDate: string | null
@@ -30,6 +40,8 @@ export type TodayResponse = {
   spring: SpringSetupRow[]
   boxDate: string | null
   box: BoxBreakoutRow[]
+  structDate: string | null
+  struct: StructurePivotCardRow[]
   hotSectors: string[]
   // 取得失敗の詳細（null なら全クエリ成功）。「0 件」と「取得失敗」を UI で区別するため。
   error: string | null
@@ -295,17 +307,152 @@ async function fetchBoxBreakouts(
   return { date: anchor, rows: (data ?? []) as unknown as BoxBreakoutRow[], error: null }
 }
 
+// Advanced Structure Pivot（1st / 2nd ヒット）を「直近ヒット窓」で読む。
+// box_breakout_events と同型のモデル: date（ヒット日）は動かず status/各 hit_date が後日
+// 後追い更新され、10営業日窓から外れた行は凍結してテーブルに残り続ける。よって単一 date では
+// なく直近 STRUCTURE_WINDOW_DAYS 本の distinct なヒット日にウィンドウする。
+//
+// 表示方針（ダッシュ側裁量。0choir17 と確認済み）:
+//   - 1st / 2nd 両方を表示（signal バッジで区別）。
+//   - 銘柄ごとに1枚へ集約（同一銘柄の複数ヒット/構造は最新ヒット行にまとめる）。
+//   - 終了済み（is_active=false ＝ TP2 到達 or STOPPED）はライブなウォッチではないので除外。
+//   - 「直近で何営業日前にヒットしたか」は窓内の distinct ヒット日（＝営業日カレンダー）を
+//     基準に算出（0=最新営業日）。
+async function fetchStructurePivotEvents(
+  date: string | null,
+): Promise<{ date: string | null; rows: StructurePivotCardRow[]; error: string | null }> {
+  // 上限日（過去スナップショット閲覧時はその日まで）。省略時は全体の最新ヒット日。
+  let upper = date
+  if (!upper) {
+    const { data: latest, error } = await supabase
+      .from(STRUCTURE_PIVOT_TABLE)
+      .select('date')
+      .order('date', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    if (error) {
+      if (isMissingTableError(error)) {
+        console.warn(`[${STRUCTURE_PIVOT_TABLE}] table not deployed yet — skipping`)
+        return { date: null, rows: [], error: null }
+      }
+      console.error(`[${STRUCTURE_PIVOT_TABLE}] latest date error`, error)
+      return { date: null, rows: [], error: `${STRUCTURE_PIVOT_TABLE}: ${error.message}` }
+    }
+    upper = (latest?.date as string | undefined) ?? null
+  }
+  if (!upper) return { date: null, rows: [], error: null }
+
+  // upper 以前の distinct なヒット日を新しい順に集め、N 本目を窓の下端にする。
+  const { data: dateRows, error: dateErr } = await supabase
+    .from(STRUCTURE_PIVOT_TABLE)
+    .select('date')
+    .lte('date', upper)
+    .order('date', { ascending: false })
+    .limit(2000)
+  if (dateErr) {
+    if (isMissingTableError(dateErr)) {
+      console.warn(`[${STRUCTURE_PIVOT_TABLE}] table not deployed yet — skipping`)
+      return { date: null, rows: [], error: null }
+    }
+    console.error(`[${STRUCTURE_PIVOT_TABLE}] window dates error`, dateErr)
+    return { date: upper, rows: [], error: `${STRUCTURE_PIVOT_TABLE}: ${dateErr.message}` }
+  }
+  const distinctDatesDesc: string[] = []
+  const seen = new Set<string>()
+  for (const r of dateRows ?? []) {
+    const d = (r as { date: string }).date
+    if (d && !seen.has(d)) {
+      seen.add(d)
+      distinctDatesDesc.push(d)
+    }
+  }
+  if (distinctDatesDesc.length === 0) return { date: upper, rows: [], error: null }
+  const anchor = distinctDatesDesc[0]
+  const windowStart =
+    distinctDatesDesc[Math.min(STRUCTURE_WINDOW_DAYS - 1, distinctDatesDesc.length - 1)]
+
+  const { data, error } = await supabase
+    .from(STRUCTURE_PIVOT_TABLE)
+    .select('*')
+    .gte('date', windowStart)
+    .lte('date', upper)
+  if (error) {
+    if (isMissingTableError(error)) {
+      console.warn(`[${STRUCTURE_PIVOT_TABLE}] table not deployed yet — skipping`)
+      return { date: null, rows: [], error: null }
+    }
+    console.error(`[${STRUCTURE_PIVOT_TABLE}] fetch error`, error)
+    return { date: anchor, rows: [], error: `${STRUCTURE_PIVOT_TABLE}: ${error.message}` }
+  }
+
+  const raw = (data ?? []) as unknown as StructurePivotEventRow[]
+
+  // 窓内の distinct ヒット日（降順）→「何営業日前か」を index で引く。anchor=0。
+  // 窓外（>N営業日前で凍結）の日付が recent_hit_date に来た場合は、降順リストで自分より
+  // 新しい営業日を数えて近似する（窓端で 0 件になるのを避ける安全側）。
+  const dayIndex = new Map<string, number>()
+  distinctDatesDesc.forEach((d, i) => dayIndex.set(d, i))
+  const businessDaysAgo = (d: string | null): number | null => {
+    if (!d) return null
+    const hit = dayIndex.get(d)
+    if (hit !== undefined) return hit
+    let n = 0
+    for (const dd of distinctDatesDesc) {
+      if (dd > d) n++
+      else break // 降順なので dd <= d に入ったら以降も全て d 以下
+    }
+    return n
+  }
+
+  // ライブなウォッチのみ: 終了済み（is_active=false ＝ TP2 or STOPPED）を落とす。
+  const live = raw.filter(r => r.is_active !== false)
+
+  // 銘柄ごとに1枚へ集約: date 降順、同日なら 2nd を優先（進行段階が新しい）。先頭を採用。
+  const signalRank: Record<string, number> = { '2nd': 0, '1st': 1 }
+  live.sort((a, b) => {
+    const d = (b.date ?? '').localeCompare(a.date ?? '')
+    if (d !== 0) return d
+    return (signalRank[a.signal] ?? 9) - (signalRank[b.signal] ?? 9)
+  })
+
+  const byCode = new Map<string, StructurePivotCardRow>()
+  for (const r of live) {
+    if (byCode.has(r.code)) continue // 既に最新（date 降順先頭）を採用済み
+    // 直近ヒット日 = 全構造横断の per-code 最新（last_1st/last_2nd）と行 date の最大。
+    const candidates = [r.last_1st_date, r.last_2nd_date, r.date].filter(
+      (d): d is string => !!d,
+    )
+    const recentHitDate = candidates.reduce((a, b) => (a > b ? a : b), r.date)
+    // その直近ヒットが 1st / 2nd どちらか: 日付が新しい方。同日なら 2nd（進行が新しい）。
+    let recentSignal: StructurePivotSignal = r.signal
+    const l1 = r.last_1st_date
+    const l2 = r.last_2nd_date
+    if (l1 && l2) recentSignal = l2 >= l1 ? '2nd' : '1st'
+    else if (l2) recentSignal = '2nd'
+    else if (l1) recentSignal = '1st'
+    byCode.set(r.code, {
+      ...r,
+      recent_hit_date: recentHitDate,
+      recent_hit_signal: recentSignal,
+      days_since_hit: businessDaysAgo(recentHitDate),
+    })
+  }
+
+  return { date: anchor, rows: [...byCode.values()], error: null }
+}
+
 export async function fetchToday(opts: { date?: string }): Promise<TodayResponse> {
   const requested = opts.date ?? null
 
   // coil は初日のみ（maxDisplayDays=1）。それ以外は2日連続まで表示（maxDisplayDays=2）。
   // box は直近ブレイク窓（専用フェッチ）。
-  const [coilRes, maRes, igniteRes, springRes, boxRes, hotRes] = await Promise.all([
+  const [coilRes, maRes, igniteRes, springRes, boxRes, structRes, hotRes] = await Promise.all([
     fetchSetups<CoilPullbackRow>(COIL_TABLE, requested, 1),
     fetchSetups<MaPullbackRow>(MA_TABLE, requested, 2),
     fetchSetups<VolumeIgnitionRow>(VOLUME_IGNITION_TABLE, requested, 2),
     fetchSetups<SpringSetupRow>(SPRING_TABLE, requested, 2),
     fetchBoxBreakouts(requested),
+    fetchStructurePivotEvents(requested),
     fetchHotSectors(requested),
   ])
 
@@ -315,6 +462,7 @@ export async function fetchToday(opts: { date?: string }): Promise<TodayResponse
     igniteRes.error,
     springRes.error,
     boxRes.error,
+    structRes.error,
     hotRes.error,
   ].filter((e): e is string => !!e)
 
@@ -329,6 +477,8 @@ export async function fetchToday(opts: { date?: string }): Promise<TodayResponse
     spring: springRes.rows,
     boxDate: boxRes.date,
     box: boxRes.rows,
+    structDate: structRes.date,
+    struct: structRes.rows,
     hotSectors: hotRes.sectors,
     error: errors.length > 0 ? errors.join(' / ') : null,
   }

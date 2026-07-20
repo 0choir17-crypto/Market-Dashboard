@@ -218,6 +218,14 @@ export default function GuidePage() {
           </p>
           <ul className="list-disc pl-5 space-y-1.5">
             <li>
+              <strong className="text-gray-900">Structure Pivot（構造ピボット・最上段）</strong> — 押し安値切り上がり
+              （<span className="font-mono">HL</span>）から作る構造の <strong>1st</strong>（建玉ライン＝HL+0.618 戻し） /
+              <strong> 2nd</strong>（スイングハイ）ヒット。直近 10 営業日窓・銘柄ごとに最新ヒットへ集約し、
+              <strong>直近で何営業日前にヒットしたか</strong> と RS・52週高値乖離・status を表示。
+              終了済み（<span className="font-mono">TP2 / Stop</span>）は除外。
+              <span className="text-gray-500">買い指示ではなくウォッチリスト（執行は手動チャート判断）。</span>
+            </li>
+            <li>
               <strong className="text-gray-900">Coil（静かなベース）</strong> — 高値圏で値幅が収縮した銘柄。
               <code className="bg-gray-100 px-1 rounded">iqr5</code> が小さいほどタイト（ブレイク前の蓄積）。
             </li>
