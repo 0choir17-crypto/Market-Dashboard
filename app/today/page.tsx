@@ -7,6 +7,7 @@ import PullbackSetupsSection from '@/components/today/PullbackSetupsSection'
 import VolumeIgnitionSection from '@/components/today/VolumeIgnitionSection'
 import SpringSetupsSection from '@/components/today/SpringSetupsSection'
 import BoxBreakoutSection from '@/components/today/BoxBreakoutSection'
+import StructurePivotSection from '@/components/today/StructurePivotSection'
 import ErrorBanner from '@/components/shared/ErrorBanner'
 import PageHeader from '@/components/shared/PageHeader'
 import { ChartModalProvider } from '@/contexts/ChartModalContext'
@@ -24,6 +25,8 @@ export default function TodayPage() {
     spring: [],
     boxDate: null,
     box: [],
+    structDate: null,
+    struct: [],
     hotSectors: [],
     error: null,
   })
@@ -48,8 +51,14 @@ export default function TodayPage() {
   }, [fetchData])
 
   const displayDate =
-    data.boxDate ?? data.coilDate ?? data.maDate ?? data.igniteDate ?? data.springDate ?? selectedDate
-  const total = data.coil.length + data.ma.length + data.ignite.length + data.spring.length + data.box.length
+    data.structDate ?? data.boxDate ?? data.coilDate ?? data.maDate ?? data.igniteDate ?? data.springDate ?? selectedDate
+  const total =
+    data.coil.length +
+    data.ma.length +
+    data.ignite.length +
+    data.spring.length +
+    data.box.length +
+    data.struct.length
 
   // 複数シグナル重複: 同一 code が 2 つ以上のスキャナーに当日出た銘柄。
   // 各スキャナーのカード背景を黄色で強調するために code の集合を作る。
@@ -68,6 +77,7 @@ export default function TodayPage() {
     addList(data.ignite)
     addList(data.spring)
     addList(data.box)
+    addList(data.struct)
     const set = new Set<string>()
     for (const [code, n] of counts) if (n >= 2) set.add(code)
     return set
@@ -106,6 +116,13 @@ export default function TodayPage() {
         </div>
       ) : (
         <div className="flex flex-col gap-6">
+          <StructurePivotSection
+            rows={data.struct}
+            hotSectors={data.hotSectors}
+            multiHitCodes={multiHitCodes}
+            title="Structure Pivot"
+            subtitle="押し安値切り上がり（HL）から作る構造の 1st（建玉ライン=HL+0.618戻し）/ 2nd（スイングハイ）ヒット。直近10営業日窓・銘柄ごとに最新ヒットへ集約。終了済み（TP2/Stop）は除外。買い指示ではなくウォッチリスト（執行は手動チャート判断）。"
+          />
           <BoxBreakoutSection
             rows={data.box}
             hotSectors={data.hotSectors}
