@@ -315,9 +315,8 @@ async function fetchBoxBreakouts(
 //   - 本日（anchor 日）にヒットした銘柄のみ表示。
 //   - 銘柄ごとに1枚へ集約（代表行は同日 1st/2nd 両方なら 2nd を採用。本日の 1st/2nd 有無は別途保持）。
 //   - 終了済み（is_active=false ＝ TP2 到達 or STOPPED）はライブなウォッチではないので除外。
-//   - カードには 1st / 2nd それぞれの直近ヒットを「何営業日前か」で並べる。本日ヒットした
-//     シグナルは 0 営業日前（=本日）になる。全て営業日ベース（テーブルに存在するヒット日＝
-//     営業日カレンダーの index）で数え、日付とは混在させない。
+//   - カードには 1st / 2nd それぞれの直近ヒット日（last_1st_date / last_2nd_date）を並べる。
+//     本日ヒットしたシグナルの日付は anchor（本日）になる。
 async function fetchStructurePivotEvents(
   date: string | null,
 ): Promise<{ date: string | null; rows: StructurePivotCardRow[]; error: string | null }> {
@@ -342,15 +341,13 @@ async function fetchStructurePivotEvents(
   }
   if (!upper) return { date: null, rows: [], error: null }
 
-  // upper 以前の distinct なヒット日を新しい順に集める。表示窓の下端算出に使うほか、
-  // 「前回ヒットが何営業日前か」を営業日ベースで数える index にも使う。前回ヒットは数ヶ月
-  // 遡ることがあるので、営業日カレンダーを十分に確保する（~42行/日 × 8000行 ≈ 半年弱）。
+  // upper 以前の distinct なヒット日を新しい順に集め、N 本目を表示窓の下端にする。
   const { data: dateRows, error: dateErr } = await supabase
     .from(STRUCTURE_PIVOT_TABLE)
     .select('date')
     .lte('date', upper)
     .order('date', { ascending: false })
-    .limit(8000)
+    .limit(2000)
   if (dateErr) {
     if (isMissingTableError(dateErr)) {
       console.warn(`[${STRUCTURE_PIVOT_TABLE}] table not deployed yet — skipping`)
@@ -389,17 +386,6 @@ async function fetchStructurePivotEvents(
 
   const raw = (data ?? []) as unknown as StructurePivotEventRow[]
 
-  // 窓内の distinct ヒット日（降順）→「何営業日前か」を index で引く。anchor=0。
-  // 窓外（>N営業日前で凍結）で index に無い日付は、正確な営業日数が不明なので null を返す
-  //（カード側は日付表示にフォールバックし、誤った日数を出さない）。
-  const dayIndex = new Map<string, number>()
-  distinctDatesDesc.forEach((d, i) => dayIndex.set(d, i))
-  const businessDaysAgo = (d: string | null): number | null => {
-    if (!d) return null
-    const hit = dayIndex.get(d)
-    return hit === undefined ? null : hit
-  }
-
   // ライブなウォッチのみ: 終了済み（is_active=false ＝ TP2 or STOPPED）を落とす。
   const live = raw.filter(r => r.is_active !== false)
 
@@ -425,10 +411,6 @@ async function fetchStructurePivotEvents(
       ...r,
       today_1st: today1st.has(r.code),
       today_2nd: today2nd.has(r.code),
-      // 直近の 1st / 2nd ヒット（per-code の last_1st_date / last_2nd_date）を営業日前へ。
-      // 本日ヒットしたシグナルは last_*_date=anchor なので 0 営業日前（=本日）になる。
-      last_1st_ago: businessDaysAgo(r.last_1st_date),
-      last_2nd_ago: businessDaysAgo(r.last_2nd_date),
     })
   }
 
