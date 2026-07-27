@@ -4,8 +4,6 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { MarketConditions } from '@/types/market'
 import { useDate } from '@/contexts/DateContext'
-import EntryGateCard from '@/components/market/EntryGateCard'
-import IndexCard from '@/components/market/IndexCard'
 import BreadthPanel from '@/components/market/BreadthPanel'
 import PageHeader from '@/components/shared/PageHeader'
 
@@ -96,22 +94,8 @@ export default function Page() {
       )}
 
       {market && (
-        <>
-          {/* ② Entry Gate カード（左） / 指数カード（右） */}
-          <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr] gap-6 mb-8 items-stretch">
-            {/* 左: Entry Gate（旧 MC v4 スコアカードの位置） */}
-            <EntryGateCard market={market} />
-            {/* 右: 指数カード縦3枚 */}
-            <div className="flex flex-col gap-4 h-full">
-              <IndexCard label="Nikkei 225"  prefix="nikkei" data={market} className="flex-1" />
-              <IndexCard label="TOPIX"       prefix="topix"  data={market} className="flex-1" />
-              <IndexCard label="Growth 250"  prefix="growth" data={market} className="flex-1" />
-            </div>
-          </div>
-
-          {/* ③ Market Breadth */}
-          <BreadthPanel market={market} />
-        </>
+        /* Market Breadth をダッシュボードのメインとして大きく表示 */
+        <BreadthPanel market={market} />
       )}
 
     </main>

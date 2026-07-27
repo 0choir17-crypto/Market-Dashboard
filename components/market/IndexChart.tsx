@@ -10,6 +10,7 @@ import {
 } from 'lightweight-charts'
 import { supabase } from '@/lib/supabase'
 import { useDate } from '@/contexts/DateContext'
+import { monthlyTickMarkFormatter } from './TimeSeriesChart'
 
 type Prefix = 'topix' | 'nikkei' | 'growth'
 
@@ -103,6 +104,7 @@ export function IndexChart({ prefix, displayName, height = 260, lookbackDays = 1
       timeScale: {
         timeVisible: false,
         borderColor: '#cbd5e1',
+        tickMarkFormatter: monthlyTickMarkFormatter,
       },
       rightPriceScale: {
         borderColor: '#cbd5e1',

@@ -1,4 +1,5 @@
 import { MarketConditions } from '@/types/market'
+import { AdvDecChart } from './AdvDecChart'
 import { AdvDecRatioChart } from './AdvDecRatioChart'
 import { NhNlDiffChart } from './NhNlDiffChart'
 import { PctAboveSmaChart } from './PctAboveSmaChart'
@@ -33,6 +34,25 @@ function ProgressBar({ pct, color }: { pct: number | null | undefined; color: st
   )
 }
 
+// 各指標をカード化して余白を確保することで、内部のチャートが横幅を広く取れる。
+// （狭い 4 列レイアウトだと月ラベルが間引かれて見づらかったため 2 列に変更）
+function BreadthCard({
+  title,
+  children,
+}: {
+  title: string
+  children: React.ReactNode
+}) {
+  return (
+    <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card-hover)] p-5">
+      <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-3">
+        {title}
+      </p>
+      {children}
+    </div>
+  )
+}
+
 export default function BreadthPanel({ market }: Props) {
   const adRatio10Color = AdRatioColor(market?.ad_ratio_10)
   const adRatio25Color = AdRatioColor(market?.ad_ratio_25)
@@ -42,114 +62,100 @@ export default function BreadthPanel({ market }: Props) {
 
   return (
     <div className="card p-6">
-      <h3 className="text-sm font-medium text-[var(--text-secondary)] mb-5">
-        Market Breadth
-      </h3>
+      <div className="flex items-baseline justify-between mb-5">
+        <h2 className="text-lg font-semibold text-[var(--text-primary)]">
+          Market Breadth
+        </h2>
+        <span className="text-xs text-[var(--text-muted)]">
+          市場の内部状態（騰落・新高安・移動平均上）
+        </span>
+      </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
-        {/* Adv/Dec */}
-        <div>
-          <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-3">
-            Adv / Dec
-          </p>
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-[var(--text-secondary)]">Advances</span>
-              <span className="font-mono font-semibold text-[var(--positive)]">
+        {/* Adv / Dec */}
+        <BreadthCard title="Adv / Dec">
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <p className="text-xs text-[var(--text-muted)] mb-0.5">Advances</p>
+              <p className="font-mono text-lg font-semibold text-[var(--positive)]">
                 {fmtInt(market?.advances)}
-              </span>
+              </p>
             </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-[var(--text-secondary)]">Declines</span>
-              <span className="font-mono font-semibold text-[var(--negative)]">
+            <div>
+              <p className="text-xs text-[var(--text-muted)] mb-0.5">Declines</p>
+              <p className="font-mono text-lg font-semibold text-[var(--negative)]">
                 {fmtInt(market?.declines)}
-              </span>
+              </p>
             </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-[var(--text-secondary)]">Adv%</span>
-              <span className="font-mono font-semibold text-[var(--text-primary)]">
+            <div>
+              <p className="text-xs text-[var(--text-muted)] mb-0.5">Adv%</p>
+              <p className="font-mono text-lg font-semibold text-[var(--text-primary)]">
                 {fmt(market?.advance_pct)}%
-              </span>
+              </p>
             </div>
           </div>
-        </div>
+          <AdvDecChart height={200} />
+        </BreadthCard>
 
         {/* Adv/Dec Ratio */}
-        <div>
-          <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-3">
-            Adv/Dec Ratio
-          </p>
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-[var(--text-secondary)]">10D</span>
-              <span
-                className="font-mono font-semibold"
-                style={{ color: adRatio10Color }}
-              >
+        <BreadthCard title="Adv/Dec Ratio">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <p className="text-xs text-[var(--text-muted)] mb-0.5">10D</p>
+              <p className="font-mono text-lg font-semibold" style={{ color: adRatio10Color }}>
                 {fmt(market?.ad_ratio_10)}
-              </span>
+              </p>
             </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-[var(--text-secondary)]">25D</span>
-              <span
-                className="font-mono font-semibold"
-                style={{ color: adRatio25Color }}
-              >
+            <div>
+              <p className="text-xs text-[var(--text-muted)] mb-0.5">25D</p>
+              <p className="font-mono text-lg font-semibold" style={{ color: adRatio25Color }}>
                 {fmt(market?.ad_ratio_25)}
-              </span>
+              </p>
             </div>
-            <p className="text-xs text-[var(--text-muted)] mt-1">
-              &lt;70: oversold　&gt;120: overbought
-            </p>
           </div>
-          <AdvDecRatioChart height={180} />
-        </div>
+          <p className="text-xs text-[var(--text-muted)] mt-2">
+            &lt;70: oversold　&gt;120: overbought
+          </p>
+          <AdvDecRatioChart height={200} />
+        </BreadthCard>
 
         {/* New Highs / Lows */}
-        <div>
-          <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-3">
-            New Highs / Lows
-          </p>
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-[var(--text-secondary)]">New High (NH)</span>
-              <span className="font-mono font-semibold text-[var(--positive)]">
+        <BreadthCard title="New Highs / Lows">
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <p className="text-xs text-[var(--text-muted)] mb-0.5">New High</p>
+              <p className="font-mono text-lg font-semibold text-[var(--positive)]">
                 {fmtInt(market?.new_highs)}
-              </span>
+              </p>
             </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-[var(--text-secondary)]">New Low (NL)</span>
-              <span className="font-mono font-semibold text-[var(--negative)]">
+            <div>
+              <p className="text-xs text-[var(--text-muted)] mb-0.5">New Low</p>
+              <p className="font-mono text-lg font-semibold text-[var(--negative)]">
                 {fmtInt(market?.new_lows)}
-              </span>
+              </p>
             </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-[var(--text-secondary)]">NH-NL Diff</span>
-              <span
-                className="font-mono font-semibold"
+            <div>
+              <p className="text-xs text-[var(--text-muted)] mb-0.5">NH-NL</p>
+              <p
+                className="font-mono text-lg font-semibold"
                 style={{
                   color:
-                    (market?.nh_nl_diff ?? 0) >= 0
-                      ? 'var(--positive)'
-                      : 'var(--negative)',
+                    (market?.nh_nl_diff ?? 0) >= 0 ? 'var(--positive)' : 'var(--negative)',
                 }}
               >
                 {market?.nh_nl_diff !== null && market?.nh_nl_diff !== undefined
                   ? (market.nh_nl_diff >= 0 ? '+' : '') + fmtInt(market.nh_nl_diff)
                   : '—'}
-              </span>
+              </p>
             </div>
           </div>
-          <NhNlDiffChart height={180} />
-        </div>
+          <NhNlDiffChart height={200} />
+        </BreadthCard>
 
         {/* % Above SMA */}
-        <div>
-          <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-3">
-            % Above SMA
-          </p>
-          <div className="space-y-4">
+        <BreadthCard title="% Above SMA">
+          <div className="space-y-3">
             <div>
               <div className="flex justify-between text-sm mb-1">
                 <span className="text-[var(--text-secondary)]">SMA50</span>
@@ -181,8 +187,8 @@ export default function BreadthPanel({ market }: Props) {
               />
             </div>
           </div>
-          <PctAboveSmaChart height={180} />
-        </div>
+          <PctAboveSmaChart height={200} />
+        </BreadthCard>
 
       </div>
     </div>
