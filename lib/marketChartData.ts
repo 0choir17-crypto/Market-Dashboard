@@ -60,6 +60,42 @@ export async function fetchAdvDecRatioTimeSeries(
     .filter((p) => Number.isFinite(p.value))
 }
 
+export async function fetchAdvancesDeclinesTimeSeries(
+  lookbackDays: number = DEFAULT_LOOKBACK_DAYS,
+  endDate?: string,
+): Promise<{ advances: TimeSeriesPoint[]; declines: TimeSeriesPoint[] }> {
+  let query = supabase
+    .from('market_conditions')
+    .select('date, advances, declines')
+    .gte('date', startDateStr(lookbackDays, endDate))
+    .order('date', { ascending: true })
+
+  if (endDate) {
+    query = query.lte('date', endDate)
+  }
+
+  const { data, error } = await query
+
+  if (error || !data) return { advances: [], declines: [] }
+
+  const rows = data as {
+    date: string
+    advances: number | null
+    declines: number | null
+  }[]
+
+  return {
+    advances: rows
+      .filter((r) => r.advances != null)
+      .map((r) => ({ time: r.date, value: Number(r.advances) }))
+      .filter((p) => Number.isFinite(p.value)),
+    declines: rows
+      .filter((r) => r.declines != null)
+      .map((r) => ({ time: r.date, value: Number(r.declines) }))
+      .filter((p) => Number.isFinite(p.value)),
+  }
+}
+
 export async function fetchNhNlDiffTimeSeries(
   lookbackDays: number = DEFAULT_LOOKBACK_DAYS,
   endDate?: string,

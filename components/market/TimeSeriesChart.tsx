@@ -5,11 +5,43 @@ import {
   LineSeries,
   ColorType,
   LineStyle,
+  TickMarkType,
   IChartApi,
   ISeriesApi,
   IPriceLine,
+  type Time,
 } from 'lightweight-charts'
 import { useEffect, useRef, useState } from 'react'
+
+// 月ラベルを毎月表示させるための共通フォーマッタ。
+// lightweight-charts のデフォルトは横幅が狭いと月を間引く（2ヶ月ごと等）ため、
+// Month ティックを「M月」、年境界を「YYYY年」、日は「M/D」で明示的に整形する。
+export function monthlyTickMarkFormatter(
+  time: Time,
+  tickMarkType: TickMarkType,
+): string {
+  let year: number
+  let month: number
+  let day: number
+  if (typeof time === 'object' && time !== null && 'year' in time) {
+    year = time.year
+    month = time.month
+    day = time.day
+  } else {
+    const dt = new Date(time as string)
+    year = dt.getUTCFullYear()
+    month = dt.getUTCMonth() + 1
+    day = dt.getUTCDate()
+  }
+  switch (tickMarkType) {
+    case TickMarkType.Year:
+      return `${year}年`
+    case TickMarkType.Month:
+      return `${month}月`
+    default:
+      return `${month}/${day}`
+  }
+}
 
 export interface TimeSeriesPoint {
   time: string
@@ -85,6 +117,7 @@ export function TimeSeriesChart({
       timeScale: {
         timeVisible: false,
         borderColor: '#cbd5e1',
+        tickMarkFormatter: monthlyTickMarkFormatter,
       },
       rightPriceScale: {
         borderColor: '#cbd5e1',
