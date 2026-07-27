@@ -12,7 +12,6 @@ import {
   SectorMomentum,
 } from '@/types/sectorSelection'
 import Tooltip from '@/components/shared/Tooltip'
-import SectorPriceChart from './SectorPriceChart'
 
 type SortKey = 'rank' | 'sector_name_s33' | 'composite_score' | ComponentKey | 'sector_stock_count_s33'
 type SortDir = 'asc' | 'desc'
@@ -243,27 +242,6 @@ function DrilldownRow({ row, colSpan }: { row: SectorSelectionRow; colSpan: numb
             期間リターン / TOPIX超過
           </p>
           <ReturnsBlock row={row} />
-        </div>
-
-        {/* 業種指数チャート（ローソク足 + EMA 10/21/75/150） */}
-        <div className="mt-5">
-          <div className="flex items-baseline justify-between mb-2">
-            <p className="text-xs font-semibold text-gray-600">
-              業種指数チャート
-              {isNum(row.sector_index_close_s33) && (
-                <span className="ml-2 font-mono text-gray-500">
-                  {row.sector_index_close_s33!.toLocaleString('ja-JP', {
-                    maximumFractionDigits: 2,
-                  })}
-                  <span className="text-gray-400 ml-1">pt</span>
-                </span>
-              )}
-            </p>
-            <span className="text-[10px] text-gray-400">
-              指数ポイント・出来高なし / 直近150営業日
-            </span>
-          </div>
-          <SectorPriceChart sector={row.sector_name_s33} height={320} />
         </div>
 
         {/* 空売り内訳（当日） */}

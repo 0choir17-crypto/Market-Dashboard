@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import {
   CandlestickSeries,
   ColorType,
@@ -9,24 +9,23 @@ import {
   createChart,
 } from 'lightweight-charts'
 import type { OhlcvBar } from '@/types/chart'
-import { ema, toSeries } from '@/lib/indicators'
+import { ema, toSeries, type SeriesPoint } from '@/lib/indicators'
 import { monthlyTickMarkFormatter } from '@/components/market/TimeSeriesChart'
-import { fetchSectorPriceHistory } from '@/lib/sectorPriceFetch'
 
 const UP = '#16a34a'
 const DOWN = '#dc2626'
 
 // EMA 期間と色は 21EMA Cockpit+（TradingView）の指定に合わせる。
-const MA_CONFIG: { length: number; color: string; label: string }[] = [
+export const MA_CONFIG: { length: number; color: string; label: string }[] = [
   { length: 10, color: '#eab308', label: 'EMA10' }, // ゴールド/イエロー
   { length: 21, color: '#a855f7', label: 'EMA21' }, // パープル
   { length: 75, color: '#3b82f6', label: 'EMA75' }, // ブルー
   { length: 150, color: '#22c55e', label: 'EMA150' }, // グリーン
 ]
 
-function Legend() {
+export function MaLegend({ className = '' }: { className?: string }) {
   return (
-    <div className="flex items-center gap-3 flex-wrap text-[11px] mb-1.5">
+    <div className={`flex items-center gap-3 flex-wrap text-[11px] ${className}`}>
       {MA_CONFIG.map((m) => (
         <span key={m.length} className="flex items-center gap-1">
           <span
@@ -40,7 +39,20 @@ function Legend() {
   )
 }
 
-function Chart({ bars, height }: { bars: OhlcvBar[]; height: number }) {
+export type MetricOverlay = {
+  points: SeriesPoint[]
+  label: string
+  color: string
+}
+
+type Props = {
+  bars: OhlcvBar[]
+  /** 0-100 のスコア系指標をローソク足の下部に重ねる（任意） */
+  metric?: MetricOverlay | null
+  height?: number
+}
+
+export default function SectorCandleChart({ bars, metric, height = 300 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
 
@@ -64,7 +76,11 @@ function Chart({ bars, height }: { bars: OhlcvBar[]; height: number }) {
         borderColor: '#cbd5e1',
         tickMarkFormatter: monthlyTickMarkFormatter,
       },
-      rightPriceScale: { borderColor: '#cbd5e1' },
+      rightPriceScale: {
+        borderColor: '#cbd5e1',
+        // 指標オーバーレイを置くときは価格を上寄せして描画域を分ける
+        scaleMargins: metric ? { top: 0.05, bottom: 0.34 } : { top: 0.08, bottom: 0.08 },
+      },
       crosshair: { mode: 1 },
       autoSize: true,
     })
@@ -102,6 +118,26 @@ function Chart({ bars, height }: { bars: OhlcvBar[]; height: number }) {
       })),
     )
 
+    // 指標オーバーレイ: 0-100 固定の独立スケールで下部 30% に描く
+    if (metric && metric.points.length > 0) {
+      const metricSeries = chart.addSeries(LineSeries, {
+        color: metric.color,
+        lineWidth: 2,
+        priceScaleId: 'metric',
+        priceLineVisible: false,
+        lastValueVisible: true,
+        crosshairMarkerVisible: true,
+        title: metric.label,
+        autoscaleInfoProvider: () => ({
+          priceRange: { minValue: 0, maxValue: 100 },
+        }),
+      })
+      metricSeries.setData(metric.points)
+      chart.priceScale('metric').applyOptions({
+        scaleMargins: { top: 0.7, bottom: 0 },
+      })
+    }
+
     chart.timeScale().fitContent()
     chartRef.current = chart
 
@@ -117,63 +153,7 @@ function Chart({ bars, height }: { bars: OhlcvBar[]; height: number }) {
       chart.remove()
       chartRef.current = null
     }
-  }, [bars, height])
-
-  return (
-    <div
-      ref={containerRef}
-      className="w-full rounded-md border border-[var(--border)] bg-white"
-      style={{ height, minHeight: height }}
-    />
-  )
-}
-
-export default function SectorPriceChart({
-  sector,
-  height = 320,
-}: {
-  sector: string
-  height?: number
-}) {
-  const [bars, setBars] = useState<OhlcvBar[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    let cancelled = false
-    setLoading(true)
-    fetchSectorPriceHistory(sector).then((res) => {
-      if (cancelled) return
-      setBars(res.bars)
-      setError(res.error)
-      setLoading(false)
-    })
-    return () => {
-      cancelled = true
-    }
-  }, [sector])
-
-  if (loading) {
-    return (
-      <div
-        className="flex items-center justify-center bg-[var(--bg-card-hover)] rounded-md text-sm text-[var(--text-muted)]"
-        style={{ height }}
-      >
-        指数チャート読み込み中…
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div
-        className="flex items-center justify-center bg-red-50 rounded-md text-sm text-red-700 px-4 text-center"
-        style={{ height }}
-      >
-        指数チャート取得エラー: {error}
-      </div>
-    )
-  }
+  }, [bars, metric, height])
 
   if (bars.length === 0) {
     return (
@@ -181,15 +161,16 @@ export default function SectorPriceChart({
         className="flex items-center justify-center bg-[var(--bg-card-hover)] rounded-md text-sm text-[var(--text-muted)]"
         style={{ height }}
       >
-        この業種の指数データがありません（直近150営業日のみ対応）
+        指数データがありません
       </div>
     )
   }
 
   return (
-    <div>
-      <Legend />
-      <Chart bars={bars} height={height} />
-    </div>
+    <div
+      ref={containerRef}
+      className="w-full rounded-md border border-[var(--border)] bg-white"
+      style={{ height, minHeight: height }}
+    />
   )
 }
