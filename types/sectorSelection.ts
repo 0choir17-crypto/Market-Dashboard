@@ -38,6 +38,29 @@ export type SectorSelectionRow = {
   sector_short_sell_ratio_bd_s33: number | null
   sector_stock_count_s33: number | null
   confidence_low: number | null
+
+  // ── ② 業種別指数の生 OHLC + リターン（指数ポイント。出来高なし）───────────
+  // 直近150営業日のみ非null。それ以前は NULL（表示側で「—」にする）。
+  sector_index_open_s33?: number | null
+  sector_index_high_s33?: number | null
+  sector_index_low_s33?: number | null
+  sector_index_close_s33?: number | null
+  // 期間リターン（倍率−1。0.067 = +6.7%。表示は ×100 で%化）
+  sector_index_ret_5d_s33?: number | null
+  sector_index_ret_21d_s33?: number | null
+  sector_index_ret_63d_s33?: number | null
+  sector_index_ret_126d_s33?: number | null
+  // TOPIX超過リターン（生値。既存 sector_rs_*d_s33 はこれをランク化したもの）
+  sector_index_excess_5d_s33?: number | null
+  sector_index_excess_21d_s33?: number | null
+  sector_index_excess_63d_s33?: number | null
+  sector_index_excess_126d_s33?: number | null
+
+  // ── ③ 業種別空売りの生内訳（short_selling 由来）──────────────────────────
+  sector_sell_ex_short_va_s33?: number | null   // 空売り以外の実注文 売り代金（円）
+  sector_shrt_with_res_va_s33?: number | null   // 価格規制有りの空売り代金（円）
+  sector_shrt_no_res_va_s33?: number | null     // 価格規制無しの空売り代金（円）
+  sector_short_va_ratio_s33?: number | null     // 当日の空売り比率（0〜1。×100 で%化）
 }
 
 // Composite score weights — 4 成分に再正規化 (Flow 廃止)。DB 側の計算と一致させること。
