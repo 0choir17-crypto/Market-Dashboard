@@ -111,6 +111,20 @@ export function IndexChart({ prefix, displayName, height = 260, lookbackDays = 1
       },
       crosshair: { mode: 1 },
       autoSize: true,
+      // ページを下にスクロールしたときにチャートが拡大縮小しないよう
+      // ホイール操作は無効化する（ドラッグ/ピンチでの操作は残す）。
+      handleScroll: {
+        mouseWheel: false,
+        pressedMouseMove: true,
+        horzTouchDrag: true,
+        vertTouchDrag: false,
+      },
+      handleScale: {
+        mouseWheel: false,
+        pinch: true,
+        axisPressedMouseMove: true,
+        axisDoubleClickReset: true,
+      },
     })
 
     const series = chart.addSeries(LineSeries, {

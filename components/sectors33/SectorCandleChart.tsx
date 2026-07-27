@@ -23,16 +23,25 @@ export const MA_CONFIG: { length: number; color: string; label: string }[] = [
   { length: 150, color: '#22c55e', label: 'EMA150' }, // グリーン
 ]
 
+// チャート内の細い線だけでは EMA の色が判別しづらいため、
+// セクションヘッダー直下に置く独立した凡例ストリップとして見せる。
 export function MaLegend({ className = '' }: { className?: string }) {
   return (
-    <div className={`flex items-center gap-3 flex-wrap text-[11px] ${className}`}>
+    <div
+      className={`inline-flex items-center gap-3 flex-wrap rounded-lg border border-[var(--border)] bg-[var(--bg-card-hover)] px-3 py-1.5 ${className}`}
+    >
+      <span className="text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+        EMA
+      </span>
       {MA_CONFIG.map((m) => (
-        <span key={m.length} className="flex items-center gap-1">
+        <span key={m.length} className="flex items-center gap-1.5">
           <span
-            className="inline-block w-3 h-[2px] rounded-full"
+            className="inline-block w-6 h-[3px] rounded-full"
             style={{ backgroundColor: m.color }}
           />
-          <span style={{ color: 'var(--text-secondary)' }}>{m.label}</span>
+          <span className="text-xs font-semibold font-mono" style={{ color: m.color }}>
+            {m.length}
+          </span>
         </span>
       ))}
     </div>
@@ -83,6 +92,20 @@ export default function SectorCandleChart({ bars, metric, height = 300 }: Props)
       },
       crosshair: { mode: 1 },
       autoSize: true,
+      // ページを下にスクロールしたときにチャートが拡大縮小しないよう
+      // ホイール操作は無効化する（ドラッグ/ピンチでの操作は残す）。
+      handleScroll: {
+        mouseWheel: false,
+        pressedMouseMove: true,
+        horzTouchDrag: true,
+        vertTouchDrag: false,
+      },
+      handleScale: {
+        mouseWheel: false,
+        pinch: true,
+        axisPressedMouseMove: true,
+        axisDoubleClickReset: true,
+      },
     })
 
     const closes = bars.map((b) => b.close)
