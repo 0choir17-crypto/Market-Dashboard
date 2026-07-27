@@ -50,7 +50,6 @@ export function MaLegend({ className = '' }: { className?: string }) {
 
 export type MetricOverlay = {
   points: SeriesPoint[]
-  label: string
   color: string
 }
 
@@ -109,7 +108,9 @@ export default function SectorCandleChart({ bars, metric, height = 300 }: Props)
     })
 
     const closes = bars.map((b) => b.close)
-    // MA は candlestick の背後に来るよう先に追加する
+    // MA は candlestick の背後に来るよう先に追加する。
+    // title を付けると価格軸に EMA10/21/75/150 のバッジが積み上がって
+    // 値動きを隠すため付けない（色の対応はヘッダーの MaLegend で示す）。
     for (const m of MA_CONFIG) {
       const line = chart.addSeries(LineSeries, {
         color: m.color,
@@ -117,7 +118,6 @@ export default function SectorCandleChart({ bars, metric, height = 300 }: Props)
         priceLineVisible: false,
         lastValueVisible: false,
         crosshairMarkerVisible: false,
-        title: m.label,
       })
       line.setData(toSeries(bars, ema(closes, m.length)))
     }
@@ -143,14 +143,14 @@ export default function SectorCandleChart({ bars, metric, height = 300 }: Props)
 
     // 指標オーバーレイ: 0-100 固定の独立スケールで下部 30% に描く
     if (metric && metric.points.length > 0) {
+      // 現在値はチャート下のセルに出ているので、軸バッジは出さない。
       const metricSeries = chart.addSeries(LineSeries, {
         color: metric.color,
         lineWidth: 2,
         priceScaleId: 'metric',
         priceLineVisible: false,
-        lastValueVisible: true,
+        lastValueVisible: false,
         crosshairMarkerVisible: true,
-        title: metric.label,
         autoscaleInfoProvider: () => ({
           priceRange: { minValue: 0, maxValue: 100 },
         }),

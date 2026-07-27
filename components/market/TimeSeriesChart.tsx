@@ -140,12 +140,13 @@ export function TimeSeriesChart({
       },
     })
 
+    // title / lastValue を出すと価格軸にバッジが積み上がって値動きを隠すため、
+    // 系列の識別はチャート上の HTML 凡例（下の Legend）に任せる。
     const mainSeries = chart.addSeries(LineSeries, {
       color,
       lineWidth: 2,
       priceLineVisible: false,
-      lastValueVisible: true,
-      title: name,
+      lastValueVisible: false,
     })
 
     if (yMax !== undefined && yMin !== undefined) {
@@ -187,14 +188,10 @@ export function TimeSeriesChart({
           color: secondaryColor,
           lineWidth: 2,
           priceLineVisible: false,
-          lastValueVisible: true,
-          title: secondaryName,
+          lastValueVisible: false,
         })
       } else {
-        secSeriesRef.current.applyOptions({
-          color: secondaryColor,
-          title: secondaryName,
-        })
+        secSeriesRef.current.applyOptions({ color: secondaryColor })
       }
       secSeriesRef.current.setData(secondaryData)
     } else if (secSeriesRef.current) {
@@ -209,7 +206,9 @@ export function TimeSeriesChart({
         color: line.color,
         lineWidth: 1,
         lineStyle: line.lineStyle ?? LineStyle.Dashed,
-        axisLabelVisible: line.axisLabelVisible ?? true,
+        // 軸バッジ（120.00 / 70.00 …）は積み上がって邪魔なので既定で出さない。
+        // 閾値はチャート内の線とその title で読める。
+        axisLabelVisible: line.axisLabelVisible ?? false,
         title: line.title ?? '',
       }),
     )
@@ -228,11 +227,38 @@ export function TimeSeriesChart({
     )
   }
 
+  const hasSecondary = Boolean(secondaryData && secondaryData.length > 0)
+
   return (
-    <div
-      ref={containerRef}
-      className="w-full rounded-md"
-      style={{ height, minHeight: height }}
-    />
+    <div>
+      {/* 系列凡例: 価格軸のバッジを廃したぶん、色の対応をここで示す */}
+      {(name || (hasSecondary && secondaryName)) && (
+        <div className="flex items-center gap-3 flex-wrap text-[11px] mb-1">
+          {name && (
+            <span className="flex items-center gap-1">
+              <span
+                className="inline-block w-3.5 h-[2px] rounded-full"
+                style={{ backgroundColor: color }}
+              />
+              <span style={{ color: 'var(--text-secondary)' }}>{name}</span>
+            </span>
+          )}
+          {hasSecondary && secondaryName && (
+            <span className="flex items-center gap-1">
+              <span
+                className="inline-block w-3.5 h-[2px] rounded-full"
+                style={{ backgroundColor: secondaryColor }}
+              />
+              <span style={{ color: 'var(--text-secondary)' }}>{secondaryName}</span>
+            </span>
+          )}
+        </div>
+      )}
+      <div
+        ref={containerRef}
+        className="w-full rounded-md"
+        style={{ height, minHeight: height }}
+      />
+    </div>
   )
 }
