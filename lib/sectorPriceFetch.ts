@@ -47,31 +47,60 @@ function num(v: unknown): number | null {
   return Number.isFinite(n) ? n : null
 }
 
+/** チャートに出したい本数（この範囲を初期表示する） */
+export const VISIBLE_BARS = 150
+/**
+ * 最長 EMA(150) の助走ぶん。EMA は先頭 length 本を seed に使うため、
+ * 150本しか無いと EMA150 は最終足の 1 点しか描けない。表示したい本数に
+ * 加えてこの本数を余分に取得する。
+ */
+const WARMUP_BARS = 150
+const DEFAULT_LOOKBACK = VISIBLE_BARS + WARMUP_BARS
+
 /**
  * 全業種ぶんの指数 OHLC + スコア系指標をまとめて取得する。
  *
- * 新カラム (sector_index_*_s33) は直近150営業日のみ非null。33業種 × 150日 ≈
- * 4,950 行で Supabase の 1000 行上限を超えるため、安定順序 (date, sector) で
- * ページングする。1業種ずつ 33 回叩くより往復が少ない。
+ * 33業種 × 300日 ≈ 9,900 行で Supabase の 1000 行上限を超えるため、
+ * 安定順序 (date, sector) でページングする。1業種ずつ 33 回叩くより往復が少ない。
+ *
+ * @param referenceSector 境界日の算出に使う代表業種。渡すと Phase 1 が
+ *   1 リクエストで済む（全業種を舐めると 33 倍の行を読むことになる）。
  */
 export async function fetchAllSectorPriceHistory(
-  lookbackDays = 150,
+  lookbackDays = DEFAULT_LOOKBACK,
+  referenceSector?: string,
 ): Promise<AllSectorPriceResponse> {
-  // Phase 1: 直近 N 営業日の境界日を求める（日付だけを新しい順に読む）
-  const { rows: dateRows, error: dateErr } = await fetchAllPaged<{ date: string }>(
-    (from, to) =>
-      supabase
-        .from(TABLE)
-        .select('date')
-        .order('date', { ascending: false })
-        .order('sector_name_s33', { ascending: true })
-        .range(from, to),
-    lookbackDays * 40, // 33業種 + 余裕
-  )
-
-  if (dateErr) {
-    console.error('[sector_selection_s33 price/dates]', dateErr)
-    return { bySector: {}, error: dateErr }
+  // Phase 1: 直近 N 営業日の境界日を求める（日付だけを新しい順に読む）。
+  // 代表業種が分かっていれば 1 日 1 行なので limit だけで足りる。
+  let dateRows: { date: string }[]
+  if (referenceSector) {
+    const { data, error } = await supabase
+      .from(TABLE)
+      .select('date')
+      .eq('sector_name_s33', referenceSector)
+      .order('date', { ascending: false })
+      .limit(lookbackDays)
+    if (error) {
+      console.error('[sector_selection_s33 price/dates]', error)
+      return { bySector: {}, error: error.message }
+    }
+    dateRows = (data ?? []) as { date: string }[]
+  } else {
+    const { rows, error: dateErr } = await fetchAllPaged<{ date: string }>(
+      (from, to) =>
+        supabase
+          .from(TABLE)
+          .select('date')
+          .order('date', { ascending: false })
+          .order('sector_name_s33', { ascending: true })
+          .range(from, to),
+      lookbackDays * 40, // 33業種 + 余裕
+    )
+    if (dateErr) {
+      console.error('[sector_selection_s33 price/dates]', dateErr)
+      return { bySector: {}, error: dateErr }
+    }
+    dateRows = rows
   }
 
   const uniqueDates = [...new Set(dateRows.map((r) => r.date))].sort((a, b) =>
