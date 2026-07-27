@@ -38,16 +38,23 @@ function ProgressBar({ pct, color }: { pct: number | null | undefined; color: st
 // （狭い 4 列レイアウトだと月ラベルが間引かれて見づらかったため 2 列に変更）
 function BreadthCard({
   title,
+  subtitle,
   children,
 }: {
   title: string
+  subtitle?: string
   children: React.ReactNode
 }) {
   return (
     <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card-hover)] p-5">
-      <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-3">
-        {title}
-      </p>
+      <div className="flex items-baseline justify-between mb-3">
+        <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">
+          {title}
+        </p>
+        {subtitle && (
+          <p className="text-xs text-[var(--text-muted)]">{subtitle}</p>
+        )}
+      </div>
       {children}
     </div>
   )
@@ -74,7 +81,7 @@ export default function BreadthPanel({ market }: Props) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
         {/* Adv / Dec */}
-        <BreadthCard title="Adv / Dec">
+        <BreadthCard title="Adv / Dec" subtitle="値上がり比率(Adv%)の推移">
           <div className="grid grid-cols-3 gap-3">
             <div>
               <p className="text-xs text-[var(--text-muted)] mb-0.5">Advances</p>
@@ -99,7 +106,7 @@ export default function BreadthPanel({ market }: Props) {
         </BreadthCard>
 
         {/* Adv/Dec Ratio */}
-        <BreadthCard title="Adv/Dec Ratio">
+        <BreadthCard title="Adv/Dec Ratio" subtitle="騰落レシオ（過熱度）">
           <div className="grid grid-cols-2 gap-3">
             <div>
               <p className="text-xs text-[var(--text-muted)] mb-0.5">10D</p>
