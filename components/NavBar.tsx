@@ -9,8 +9,9 @@ import LoginModal from '@/components/auth/LoginModal'
 
 // ナビの並びは「読む → 選ぶ → 執行する → 振り返る」のワークフロー順。
 const NAV_ITEMS: { href: string; label: string }[] = [
+  // Sectors-33 は Market ダッシュボード (/) に統合したためタブから除外。
+  // /sectors33 ルート自体は既存リンク用に残している。
   { href: '/', label: 'Market' },
-  { href: '/sectors33', label: 'Sectors-33' },
   { href: '/leaders', label: 'Leaders' },
   { href: '/momentum', label: 'Momentum' },
   { href: '/earnings', label: 'Earnings' },

@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { MarketConditions } from '@/types/market'
 import { useDate } from '@/contexts/DateContext'
 import BreadthPanel from '@/components/market/BreadthPanel'
+import SectorSection from '@/components/sectors33/SectorSection'
 import PageHeader from '@/components/shared/PageHeader'
 
 export default function Page() {
@@ -97,6 +98,12 @@ export default function Page() {
         /* Market Breadth をダッシュボードのメインとして大きく表示 */
         <BreadthPanel market={market} />
       )}
+
+      {/* Sectors-33 タブを統合: Market Breadth の下にセクターチャートを配置。
+          市況 (Breadth) → どのセクターか、の順で 1 ページで読めるようにする。 */}
+      <div className="mt-10">
+        <SectorSection />
+      </div>
 
     </main>
   )

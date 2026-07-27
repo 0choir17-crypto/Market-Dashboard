@@ -14,7 +14,7 @@ import {
   type OverlayMetricKey,
   type SectorChartEntry,
 } from '@/lib/sectorPriceFetch'
-import SectorCandleChart, { MaLegend } from './SectorCandleChart'
+import SectorCandleChart from './SectorCandleChart'
 import Tooltip from '@/components/shared/Tooltip'
 
 type Props = { rows: SectorSelectionRow[] }
@@ -246,12 +246,9 @@ export default function SectorChartGallery({ rows }: Props) {
           )}
         </label>
 
-        <div className="ml-auto flex items-center gap-4">
-          <MaLegend />
-          <span className="text-xs text-[var(--text-muted)]">
-            <span className="font-mono">{sorted.length}</span> セクター
-          </span>
-        </div>
+        <span className="ml-auto text-xs text-[var(--text-muted)]">
+          <span className="font-mono">{sorted.length}</span> セクター
+        </span>
       </div>
 
       {error && (
