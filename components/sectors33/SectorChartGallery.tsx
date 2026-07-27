@@ -83,7 +83,7 @@ function SectorCard({
     const cfg = OVERLAY_METRICS[metricKey]
     const points = entry.metrics[metricKey]
     if (!points || points.length === 0) return null
-    return { points, label: cfg.label, color: cfg.color }
+    return { points, color: cfg.color }
   }, [entry, metricKey])
 
   return (
