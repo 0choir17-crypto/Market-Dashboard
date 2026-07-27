@@ -12,6 +12,7 @@ import {
   SectorMomentum,
 } from '@/types/sectorSelection'
 import Tooltip from '@/components/shared/Tooltip'
+import SectorPriceChart from './SectorPriceChart'
 
 type SortKey = 'rank' | 'sector_name_s33' | 'composite_score' | ComponentKey | 'sector_stock_count_s33'
 type SortDir = 'asc' | 'desc'
@@ -22,6 +23,62 @@ function isNum(v: number | null | undefined): v is number {
 
 function fmt(v: number | null | undefined, decimals = 1): string {
   return isNum(v) ? v.toFixed(decimals) : '—'
+}
+
+// リターン/超過は DB が倍率−1（0.067 = +6.7%）なので ×100 で%化。
+function fmtSignedPct(v: number | null | undefined, decimals = 1): string {
+  if (!isNum(v)) return '—'
+  const p = v * 100
+  return `${p >= 0 ? '+' : ''}${p.toFixed(decimals)}%`
+}
+
+// 空売り比率は 0〜1 の割合なので ×100 で%化（符号なし）。
+function fmtRatioPct(v: number | null | undefined, decimals = 1): string {
+  return isNum(v) ? `${(v * 100).toFixed(decimals)}%` : '—'
+}
+
+// 売り代金（円）を億円で読みやすく。
+function fmtOku(v: number | null | undefined): string {
+  if (!isNum(v)) return '—'
+  return `${(v / 1e8).toLocaleString('ja-JP', { maximumFractionDigits: 1 })}億`
+}
+
+function pctColor(v: number | null | undefined): string {
+  if (!isNum(v) || v === 0) return 'var(--text-muted)'
+  return v > 0 ? 'var(--positive)' : 'var(--negative)'
+}
+
+// 4期間（5/21/63/126d）× リターン/TOPIX超過 のミニ表
+function ReturnsBlock({ row }: { row: SectorSelectionRow }) {
+  const periods: {
+    label: string
+    ret: number | null | undefined
+    exc: number | null | undefined
+  }[] = [
+    { label: '5d', ret: row.sector_index_ret_5d_s33, exc: row.sector_index_excess_5d_s33 },
+    { label: '21d', ret: row.sector_index_ret_21d_s33, exc: row.sector_index_excess_21d_s33 },
+    { label: '63d', ret: row.sector_index_ret_63d_s33, exc: row.sector_index_excess_63d_s33 },
+    { label: '126d', ret: row.sector_index_ret_126d_s33, exc: row.sector_index_excess_126d_s33 },
+  ]
+  return (
+    <div className="grid grid-cols-4 gap-2">
+      {periods.map((p) => (
+        <div
+          key={p.label}
+          className="rounded-md border border-[var(--border)] bg-white px-2 py-1.5 text-center"
+        >
+          <p className="text-[10px] text-[var(--text-muted)] font-mono">{p.label}</p>
+          <p className="text-sm font-mono font-semibold tabular-nums" style={{ color: pctColor(p.ret) }}>
+            {fmtSignedPct(p.ret)}
+          </p>
+          <p className="text-[10px] font-mono tabular-nums" style={{ color: pctColor(p.exc) }}>
+            <span className="text-gray-400">vs TPX </span>
+            {fmtSignedPct(p.exc)}
+          </p>
+        </div>
+      ))}
+    </div>
+  )
 }
 
 function MiniBar({ value }: { value: number | null | undefined }) {
@@ -177,6 +234,56 @@ function DrilldownRow({ row, colSpan }: { row: SectorSelectionRow; colSpan: numb
             <Stat label="VCS中央" value={fmt(row.sector_vcs_median_s33, 1)} />
             <Stat label="空売り比率 5d" value={fmt(row.sector_short_va_ratio_5d_s33, 3)} />
             <Stat label="銘柄数" value={fmt(row.sector_stock_count_s33, 0)} />
+          </div>
+        </div>
+
+        {/* 期間リターン / TOPIX超過 */}
+        <div className="mt-5">
+          <p className="text-xs font-semibold text-gray-600 mb-2">
+            期間リターン / TOPIX超過
+          </p>
+          <ReturnsBlock row={row} />
+        </div>
+
+        {/* 業種指数チャート（ローソク足 + EMA 10/21/75/150） */}
+        <div className="mt-5">
+          <div className="flex items-baseline justify-between mb-2">
+            <p className="text-xs font-semibold text-gray-600">
+              業種指数チャート
+              {isNum(row.sector_index_close_s33) && (
+                <span className="ml-2 font-mono text-gray-500">
+                  {row.sector_index_close_s33!.toLocaleString('ja-JP', {
+                    maximumFractionDigits: 2,
+                  })}
+                  <span className="text-gray-400 ml-1">pt</span>
+                </span>
+              )}
+            </p>
+            <span className="text-[10px] text-gray-400">
+              指数ポイント・出来高なし / 直近150営業日
+            </span>
+          </div>
+          <SectorPriceChart sector={row.sector_name_s33} height={320} />
+        </div>
+
+        {/* 空売り内訳（当日） */}
+        <div className="mt-5">
+          <div className="flex items-baseline gap-3 mb-2">
+            <p className="text-xs font-semibold text-gray-600">空売り内訳（当日）</p>
+            <p className="text-xs text-gray-500">
+              比率{' '}
+              <span className="font-mono font-bold text-gray-700">
+                {fmtRatioPct(row.sector_short_va_ratio_s33)}
+              </span>
+              <span className="ml-2 text-gray-400">
+                （5日平均 {fmtRatioPct(row.sector_short_va_ratio_5d_s33)}）
+              </span>
+            </p>
+          </div>
+          <div className="grid grid-cols-3 gap-2 text-xs">
+            <Stat label="空売り以外(円)" value={fmtOku(row.sector_sell_ex_short_va_s33)} />
+            <Stat label="規制有 空売り(円)" value={fmtOku(row.sector_shrt_with_res_va_s33)} />
+            <Stat label="規制無 空売り(円)" value={fmtOku(row.sector_shrt_no_res_va_s33)} />
           </div>
         </div>
       </td>
