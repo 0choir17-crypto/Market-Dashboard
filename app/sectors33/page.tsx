@@ -8,12 +8,14 @@ import {
 } from '@/lib/sectorSelectionHistoryFetch'
 import { SectorSelectionRow } from '@/types/sectorSelection'
 import SectorSelectionTable from '@/components/sectors33/SectorSelectionTable'
+import SectorChartGallery from '@/components/sectors33/SectorChartGallery'
 import SectorRRG33 from '@/components/sectors33/SectorRRG33'
 import SectorBarChart33 from '@/components/sectors33/SectorBarChart33'
 import ErrorBanner from '@/components/shared/ErrorBanner'
 import PageHeader from '@/components/shared/PageHeader'
 
 type View = 'bar' | 'rrg'
+type MainView = 'chart' | 'table'
 
 export default function SectorSelectionPage() {
   const [rows, setRows] = useState<SectorSelectionRow[]>([])
@@ -24,6 +26,7 @@ export default function SectorSelectionPage() {
     sectorsRanked: [],
   })
   const [view, setView] = useState<View>('bar')
+  const [mainView, setMainView] = useState<MainView>('chart')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -80,7 +83,35 @@ export default function SectorSelectionPage() {
         </div>
       ) : rows.length > 0 && (
         <>
-          <SectorSelectionTable rows={rows} />
+          {/* メイン表示: チャート（スコア順・横2列） / 詳細テーブル */}
+          <div className="flex justify-end mb-3">
+            <div className="inline-flex rounded-lg border border-[var(--border)] overflow-hidden text-xs">
+              {(
+                [
+                  { v: 'chart' as const, label: 'チャート' },
+                  { v: 'table' as const, label: 'テーブル' },
+                ]
+              ).map((opt, i) => (
+                <button
+                  key={opt.v}
+                  onClick={() => setMainView(opt.v)}
+                  className={`px-3 py-1.5 font-medium ${
+                    mainView === opt.v
+                      ? 'bg-[var(--accent)] text-white'
+                      : 'bg-white text-[var(--text-secondary)] hover:bg-gray-50'
+                  } ${i > 0 ? 'border-l border-[var(--border)]' : ''}`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {mainView === 'chart' ? (
+            <SectorChartGallery rows={rows} />
+          ) : (
+            <SectorSelectionTable rows={rows} />
+          )}
 
           {/* ── 21営業日推移ビジュアル ─────────────────────────────────── */}
           <section className="mt-8">
