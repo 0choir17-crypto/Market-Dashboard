@@ -60,13 +60,15 @@ export async function fetchAdvDecRatioTimeSeries(
     .filter((p) => Number.isFinite(p.value))
 }
 
-export async function fetchAdvancesDeclinesTimeSeries(
+export async function fetchAdvancePctTimeSeries(
   lookbackDays: number = DEFAULT_LOOKBACK_DAYS,
   endDate?: string,
-): Promise<{ advances: TimeSeriesPoint[]; declines: TimeSeriesPoint[] }> {
+): Promise<TimeSeriesPoint[]> {
+  // 値上がり比率 (Adv%) の推移。advance_pct 列を優先し、無ければ
+  // advances / (advances + declines) から算出する。
   let query = supabase
     .from('market_conditions')
-    .select('date, advances, declines')
+    .select('date, advance_pct, advances, declines')
     .gte('date', startDateStr(lookbackDays, endDate))
     .order('date', { ascending: true })
 
@@ -76,24 +78,25 @@ export async function fetchAdvancesDeclinesTimeSeries(
 
   const { data, error } = await query
 
-  if (error || !data) return { advances: [], declines: [] }
+  if (error || !data) return []
 
   const rows = data as {
     date: string
+    advance_pct: number | null
     advances: number | null
     declines: number | null
   }[]
 
-  return {
-    advances: rows
-      .filter((r) => r.advances != null)
-      .map((r) => ({ time: r.date, value: Number(r.advances) }))
-      .filter((p) => Number.isFinite(p.value)),
-    declines: rows
-      .filter((r) => r.declines != null)
-      .map((r) => ({ time: r.date, value: Number(r.declines) }))
-      .filter((p) => Number.isFinite(p.value)),
-  }
+  return rows
+    .map((r) => {
+      let pct = r.advance_pct
+      if (pct == null && r.advances != null && r.declines != null) {
+        const total = r.advances + r.declines
+        pct = total > 0 ? (r.advances / total) * 100 : null
+      }
+      return { time: r.date, value: pct == null ? NaN : Number(pct) }
+    })
+    .filter((p) => Number.isFinite(p.value))
 }
 
 export async function fetchNhNlDiffTimeSeries(
