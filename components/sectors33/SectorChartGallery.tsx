@@ -11,6 +11,7 @@ import {
 import {
   fetchAllSectorPriceHistory,
   OVERLAY_METRICS,
+  VISIBLE_BARS,
   type OverlayMetricKey,
   type SectorChartEntry,
 } from '@/lib/sectorPriceFetch'
@@ -124,13 +125,18 @@ function SectorCard({
 
       {/* チャート */}
       {entry && entry.bars.length > 0 ? (
-        <SectorCandleChart bars={entry.bars} metric={metric} height={260} />
+        <SectorCandleChart
+          bars={entry.bars}
+          metric={metric}
+          height={260}
+          visibleBars={VISIBLE_BARS}
+        />
       ) : (
         <div
           className="flex items-center justify-center bg-[var(--bg-card-hover)] rounded-md text-xs text-[var(--text-muted)] text-center px-3"
           style={{ height: 260 }}
         >
-          指数データがありません（直近150営業日のみ対応）
+          指数データがありません
         </div>
       )}
 
@@ -175,9 +181,13 @@ export default function SectorChartGallery({ rows }: Props) {
   const [metricKey, setMetricKey] = useState<MetricSelection>('composite_score')
   const [hideLowConf, setHideLowConf] = useState(false)
 
+  // 境界日の算出に使う代表業種（どの業種も 1 日 1 行なのでどれでもよい）
+  const referenceSector = rows[0]?.sector_name_s33
+
   useEffect(() => {
+    if (!referenceSector) return
     let cancelled = false
-    fetchAllSectorPriceHistory(150).then((res) => {
+    fetchAllSectorPriceHistory(undefined, referenceSector).then((res) => {
       if (cancelled) return
       setBySector(res.bySector)
       setError(res.error)
@@ -186,7 +196,7 @@ export default function SectorChartGallery({ rows }: Props) {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [referenceSector])
 
   // スコア降順に並べる（欠損は末尾）
   const sorted = useMemo(() => {

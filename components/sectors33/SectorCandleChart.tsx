@@ -58,9 +58,20 @@ type Props = {
   /** 0-100 のスコア系指標をローソク足の下部に重ねる（任意） */
   metric?: MetricOverlay | null
   height?: number
+  /**
+   * 初期表示する足数。EMA150 の助走ぶんを含めて bars を渡し、
+   * ここで直近 N 本だけを表示する（助走部分は画面外に置く）。
+   * 省略時は全期間を表示。
+   */
+  visibleBars?: number
 }
 
-export default function SectorCandleChart({ bars, metric, height = 300 }: Props) {
+export default function SectorCandleChart({
+  bars,
+  metric,
+  height = 300,
+  visibleBars,
+}: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
 
@@ -161,7 +172,15 @@ export default function SectorCandleChart({ bars, metric, height = 300 }: Props)
       })
     }
 
-    chart.timeScale().fitContent()
+    // 助走ぶんを画面外に置き、直近 visibleBars 本だけを表示する。
+    // EMA は全期間で計算済みなので、表示範囲の左端から EMA150 が引かれる。
+    if (visibleBars && bars.length > visibleBars) {
+      chart
+        .timeScale()
+        .setVisibleLogicalRange({ from: bars.length - visibleBars, to: bars.length - 1 })
+    } else {
+      chart.timeScale().fitContent()
+    }
     chartRef.current = chart
 
     const handleResize = () => {
@@ -176,7 +195,7 @@ export default function SectorCandleChart({ bars, metric, height = 300 }: Props)
       chart.remove()
       chartRef.current = null
     }
-  }, [bars, metric, height])
+  }, [bars, metric, height, visibleBars])
 
   if (bars.length === 0) {
     return (
