@@ -156,7 +156,10 @@ export default function PullbackSetupsSection(props: Props) {
           {rows.length === 0 ? '本日の候補は 0 件です。' : '該当する候補がありません。'}
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-2.5">
+        <div
+          className="grid gap-2.5"
+          style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))' }}
+        >
           {kind === 'coil'
             ? (sorted as CoilPullbackRow[]).map((r, i) => (
                 <PullbackSetupCard

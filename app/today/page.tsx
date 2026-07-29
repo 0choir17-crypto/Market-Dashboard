@@ -10,7 +10,6 @@ import BoxBreakoutSection from '@/components/today/BoxBreakoutSection'
 import StructurePivotSection from '@/components/today/StructurePivotSection'
 import ErrorBanner from '@/components/shared/ErrorBanner'
 import PageHeader from '@/components/shared/PageHeader'
-import { ChartModalProvider } from '@/contexts/ChartModalContext'
 
 export default function TodayPage() {
   const { selectedDate, isLatest } = useDate()
@@ -84,7 +83,6 @@ export default function TodayPage() {
   }, [data])
 
   return (
-    <ChartModalProvider>
     <main className="min-h-screen p-6" style={{ backgroundColor: 'var(--bg-primary)' }}>
       <PageHeader
         title="Daily Watch"
@@ -163,6 +161,5 @@ export default function TodayPage() {
         </div>
       )}
     </main>
-    </ChartModalProvider>
   )
 }

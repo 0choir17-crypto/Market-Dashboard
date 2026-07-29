@@ -138,7 +138,10 @@ export default function VolumeIgnitionSection({ rows, hotSectors, title, subtitl
           {rows.length === 0 ? '本日の点火銘柄は 0 件です。' : '該当する銘柄がありません。'}
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-2.5">
+        <div
+          className="grid gap-2.5"
+          style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))' }}
+        >
           {sorted.map((r, i) => (
             <VolumeIgnitionCard
               key={`${r.code}-${i}`}

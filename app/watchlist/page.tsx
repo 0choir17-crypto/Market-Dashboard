@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
 import { WatchlistItem } from '@/types/portfolio'
 import { Trade } from '@/types/trades'
@@ -8,8 +8,6 @@ import WatchlistModal from '@/components/watchlist/WatchlistModal'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import ErrorBanner from '@/components/shared/ErrorBanner'
 import PositionModal from '@/components/portfolio/PositionModal'
-import StockGrid, { GridEntry } from '@/components/chart/StockGrid'
-import StockChartView from '@/components/chart/StockChartView'
 import PageHeader from '@/components/shared/PageHeader'
 import { formatYen } from '@/lib/format'
 
@@ -37,10 +35,6 @@ export default function WatchlistPage() {
   const [deleteItem, setDeleteItem] = useState<WatchlistItem | null>(null)
   const [promoteItem, setPromoteItem] = useState<WatchlistItem | null>(null)
 
-  // Chart selection (for inline detail panel below the cards)
-  const [selectedCode, setSelectedCode] = useState<string | null>(null)
-  const detailRef = useRef<HTMLDivElement | null>(null)
-
   const load = useCallback(async () => {
     setLoading(true)
     const { data, error: err } = await supabase
@@ -65,8 +59,6 @@ export default function WatchlistPage() {
     else { setSortKey(key); setSortDir('desc') }
   }
 
-  // useMemo 必須: 毎レンダーで新配列を作ると下流の cardEntries も毎回変わり、
-  // StockGrid の表示件数 (shown) が操作のたびに 12 件へリセットされてしまう。
   const sorted = useMemo(() => {
     return [...items].sort((a, b) => {
       const av = a[sortKey] ?? ''
@@ -75,38 +67,6 @@ export default function WatchlistPage() {
       return sortDir === 'asc' ? cmp : -cmp
     })
   }, [items, sortKey, sortDir])
-
-  // Cards: only Japanese 4-digit tickers can hit `chart_ohlcv_cache`.
-  const cardEntries: GridEntry[] = useMemo(
-    () =>
-      sorted
-        .filter(it => /^\d{4}$/.test(it.ticker))
-        .map(it => ({
-          code: it.ticker,
-          name: it.company_name,
-          sector: it.sector_s33,
-          overrides: {
-            rs: it.rs_composite ?? null,
-            adrPct: it.adr_pct ?? null,
-          },
-        })),
-    [sorted],
-  )
-
-  const selectedItem = useMemo(
-    () => items.find(it => it.ticker === selectedCode) ?? null,
-    [items, selectedCode],
-  )
-
-  useEffect(() => {
-    if (selectedCode && detailRef.current) {
-      detailRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    }
-  }, [selectedCode])
-
-  const handleSelect = (code: string) => {
-    setSelectedCode(prev => (prev === code ? null : code))
-  }
 
   async function handleDelete() {
     if (!deleteItem) return
@@ -161,41 +121,6 @@ export default function WatchlistPage() {
       </PageHeader>
 
       {error && <ErrorBanner detail={error} onRetry={load} />}
-
-      {/* Cards (Japanese tickers only) */}
-      {cardEntries.length > 0 && (
-        <section className="mb-6">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-2">
-            Charts ({cardEntries.length})
-          </h2>
-          <StockGrid
-            entries={cardEntries}
-            selectedCode={selectedCode}
-            onSelect={handleSelect}
-          />
-        </section>
-      )}
-
-      {selectedCode && (
-        <section ref={detailRef} className="mb-6">
-          <div className="flex items-center justify-between mb-2">
-            <h2 className="text-sm font-semibold text-[var(--text-secondary)] uppercase tracking-wide">
-              Detail — {selectedCode}
-            </h2>
-            <button
-              onClick={() => setSelectedCode(null)}
-              className="text-xs px-2 py-1 rounded border border-[var(--border)] bg-white hover:bg-gray-50 text-[var(--text-secondary)]"
-            >
-              閉じる ✕
-            </button>
-          </div>
-          <StockChartView
-            code={selectedCode}
-            name={selectedItem?.company_name ?? null}
-            sector={selectedItem?.sector_s33 ?? null}
-          />
-        </section>
-      )}
 
       {/* Desktop Table */}
       <div className="bg-white rounded-xl border border-[#e8eaed] shadow-sm overflow-x-auto hidden sm:block">
