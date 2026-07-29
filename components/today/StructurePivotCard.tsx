@@ -3,7 +3,6 @@
 import type { StructurePivotCardRow } from '@/types/structurePivotEvents'
 import { formatPct } from '@/lib/format'
 import { tradingViewUrl, shikihoUrl } from '@/lib/tickerLinks'
-import ChartButton from '@/components/today/ChartButton'
 
 type Props = {
   row: StructurePivotCardRow
@@ -143,12 +142,14 @@ export default function StructurePivotCard({
       {/* 銘柄 */}
       <div className="px-3 py-2 flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
+          {/* 1行目は銘柄名にできるだけ幅を割く（コードのみ右に固定）。
+              バッジ類は2行目へ逃がさないと名前が数文字で切れる。 */}
           <div className="flex items-baseline gap-2 min-w-0">
             <a
               href={shikihoUrl(row.code)}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm font-semibold text-[var(--text-primary)] hover:underline truncate"
+              className="text-sm font-semibold text-[var(--text-primary)] hover:underline truncate min-w-0 flex-1"
               title={`${row.co_name ?? '—'}（四季報を開く）`}
             >
               {row.co_name ?? '—'}
@@ -162,7 +163,16 @@ export default function StructurePivotCard({
             >
               {row.code}
             </a>
-            <ChartButton code={row.code} name={row.co_name} />
+          </div>
+          <div className="mt-0.5 flex items-center gap-1.5 min-w-0">
+            <span
+              className="text-[11px] truncate min-w-0"
+              style={{ color: hot ? 'var(--positive)' : 'var(--text-secondary)' }}
+              title={row.sector_s33 ?? ''}
+            >
+              {hot ? '🟢 ' : ''}
+              {row.sector_s33 ?? '—'}
+            </span>
             {/* 本日どのシグナルにヒットしたか（1st / 2nd）を明示 */}
             <span className="flex items-center gap-1 flex-shrink-0" title="本日ヒットしたシグナル">
               {todayTags.map(sig => (
@@ -175,14 +185,6 @@ export default function StructurePivotCard({
                 </span>
               ))}
             </span>
-          </div>
-          <div
-            className="mt-0.5 text-[11px] truncate"
-            style={{ color: hot ? 'var(--positive)' : 'var(--text-secondary)' }}
-            title={row.sector_s33 ?? ''}
-          >
-            {hot ? '🟢 ' : ''}
-            {row.sector_s33 ?? '—'}
           </div>
         </div>
         <div className="flex-shrink-0 text-right">

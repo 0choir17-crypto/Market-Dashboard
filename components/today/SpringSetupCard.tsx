@@ -4,7 +4,6 @@ import type { SpringSetupRow } from '@/types/springSetups'
 import { springTypeMeta } from '@/types/springSetups'
 import { formatPct } from '@/lib/format'
 import { tradingViewUrl, shikihoUrl } from '@/lib/tickerLinks'
-import ChartButton from '@/components/today/ChartButton'
 
 type Props = {
   row: SpringSetupRow
@@ -107,7 +106,7 @@ export default function SpringSetupCard({ row, hot = false, multiHit = false, on
               href={shikihoUrl(row.code)}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm font-semibold text-[var(--text-primary)] hover:underline truncate"
+              className="text-sm font-semibold text-[var(--text-primary)] hover:underline truncate min-w-0 flex-1"
               title={`${row.co_name ?? '—'}（四季報を開く）`}
             >
               {row.co_name ?? '—'}
@@ -121,7 +120,6 @@ export default function SpringSetupCard({ row, hot = false, multiHit = false, on
             >
               {row.code}
             </a>
-            <ChartButton code={row.code} name={row.co_name} />
           </div>
           <div
             className="mt-0.5 text-[11px] truncate"
