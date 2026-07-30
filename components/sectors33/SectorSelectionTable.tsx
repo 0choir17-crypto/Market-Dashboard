@@ -12,6 +12,8 @@ import {
   SectorMomentum,
 } from '@/types/sectorSelection'
 import Tooltip from '@/components/shared/Tooltip'
+import { SectorChangeInline } from './SectorChangeCells'
+import type { SectorIndexChangeEntry } from '@/lib/sectorIndexChangeFetch'
 
 type SortKey = 'rank' | 'sector_name_s33' | 'composite_score' | ComponentKey | 'sector_stock_count_s33'
 type SortDir = 'asc' | 'desc'
@@ -130,6 +132,7 @@ function CompositeCell({ score }: { score: number | null | undefined }) {
 function SortTh({
   label,
   tooltip,
+  hint,
   sortKey,
   currentKey,
   currentDir,
@@ -139,6 +142,8 @@ function SortTh({
 }: {
   label: string
   tooltip?: string
+  /** ラベルの右に添える補足（並び替え対象ではない列内の中身の説明など） */
+  hint?: React.ReactNode
   sortKey: SortKey
   currentKey: SortKey
   currentDir: SortDir
@@ -160,6 +165,7 @@ function SortTh({
     >
       {inner}
       <span className="text-[10px] opacity-50">{indicator}</span>
+      {hint}
     </th>
   )
 }
@@ -279,7 +285,14 @@ function Stat({ label, value }: { label: string; value: string }) {
 }
 
 // ── Main component ──────────────────────────────────────────────────────────
-export default function SectorSelectionTable({ rows }: { rows: SectorSelectionRow[] }) {
+export default function SectorSelectionTable({
+  rows,
+  changes = {},
+}: {
+  rows: SectorSelectionRow[]
+  /** sector_name_s33 → 1日/1カ月/半年/1年の騰落率（後着でもよい） */
+  changes?: Record<string, SectorIndexChangeEntry>
+}) {
   const [sortKey, setSortKey] = useState<SortKey>('composite_score')
   const [sortDir, setSortDir] = useState<SortDir>('desc')
   const [expanded, setExpanded] = useState<string | null>(null)
@@ -353,7 +366,18 @@ export default function SectorSelectionTable({ rows }: { rows: SectorSelectionRo
         <thead>
           <tr className="bg-gray-50 border-y border-[#e8eaed]">
             <SortTh label="#"        tooltip="composite_score_rank — 当日ランク (1=トップ)" sortKey="rank"               {...sp} align="center" className="w-12" />
-            <SortTh label="Sector"   tooltip="TOPIX-33 業種名"                              sortKey="sector_name_s33"    {...sp} align="left" />
+            <SortTh
+              label="Sector"
+              tooltip="TOPIX-33 業種名"
+              sortKey="sector_name_s33"
+              hint={
+                <span className="ml-3 float-right font-normal normal-case tracking-normal text-[10px] text-[var(--text-muted)]">
+                  業種指数 騰落率 1D / 1M / 6M / 1Y
+                </span>
+              }
+              {...sp}
+              align="left"
+            />
             <SortTh label="Score"    tooltip="composite_score 0-100 (赤<30 / 黄30-60 / 緑≥60)" sortKey="composite_score"    {...sp} align="center" />
             <th className="px-3 py-2.5 text-xs font-medium uppercase tracking-wide whitespace-nowrap text-left text-[var(--text-secondary)]">Trend</th>
             {COMPONENT_META.map(m => (
@@ -388,13 +412,19 @@ export default function SectorSelectionTable({ rows }: { rows: SectorSelectionRo
                     {row.composite_score_rank ?? '—'}
                   </td>
                   <td className="px-3 py-2 whitespace-nowrap text-xs font-medium text-gray-800">
-                    <span className="inline-flex items-center gap-1.5">
-                      <span className="text-gray-400 text-[10px] w-3 inline-block">
-                        {isOpen ? '▾' : '▸'}
+                    <div className="flex items-center gap-4">
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className="text-gray-400 text-[10px] w-3 inline-block">
+                          {isOpen ? '▾' : '▸'}
+                        </span>
+                        {row.sector_name_s33}
+                        {isLow && <span title="信頼度低">⚠️</span>}
                       </span>
-                      {row.sector_name_s33}
-                      {isLow && <span title="信頼度低">⚠️</span>}
-                    </span>
+                      {/* 業種名の余白に業種指数の騰落率を並べる */}
+                      <span className="ml-auto">
+                        <SectorChangeInline entry={changes[rowKey]} />
+                      </span>
+                    </div>
                   </td>
                   <td className="px-3 py-2 text-center whitespace-nowrap">
                     <CompositeCell score={row.composite_score} />
