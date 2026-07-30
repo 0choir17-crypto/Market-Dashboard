@@ -37,7 +37,7 @@ export default function SectorSection({
     bySector: {},
     sectorsRanked: [],
   })
-  // 業種指数の 1日 / 1カ月 / 半年 / 1年 騰落率（ランキング本体より後に届く）
+  // 業種指数の騰落率 (1D / 1M / 6M / 1Y)（ランキング本体より後に届く）
   const [changes, setChanges] = useState<Record<string, SectorIndexChangeEntry>>({})
   const [view, setView] = useState<View>('bar')
   const [mainView, setMainView] = useState<MainView>('chart')

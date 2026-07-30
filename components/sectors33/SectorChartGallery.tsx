@@ -22,7 +22,7 @@ import Tooltip from '@/components/shared/Tooltip'
 
 type Props = {
   rows: SectorSelectionRow[]
-  /** sector_name_s33 → 1日/1カ月/半年/1年の騰落率（後着でもよい） */
+  /** sector_name_s33 → 1D / 1M / 6M / 1Y の騰落率（後着でもよい） */
   changes?: Record<string, SectorIndexChangeEntry>
 }
 
@@ -131,7 +131,7 @@ function SectorCard({
         </span>
       </div>
 
-      {/* 業種指数の騰落率: 1日 / 1カ月 / 半年 / 1年前比 */}
+      {/* 業種指数の騰落率: 1D / 1M / 6M / 1Y */}
       <div className="mb-2">
         <SectorChangeStrip entry={change} />
       </div>

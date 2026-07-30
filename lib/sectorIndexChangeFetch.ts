@@ -4,16 +4,16 @@ import { fetchAllPaged } from '@/lib/pagedFetch'
 const TABLE = 'sector_selection_s33'
 
 /**
- * 業種指数の騰落率（1日 / 1カ月 / 半年 / 1年前比）。
+ * 業種指数の騰落率（1D / 1M / 6M / 1Y）。
  *
- * 営業日オフセットで比較する（1カ月=21営業日, 半年=126営業日, 1年=252営業日）。
+ * 営業日オフセットで比較する（1M=21営業日, 6M=126営業日, 1Y=252営業日）。
  * sector_selection_s33 は 1業種1日1行なので、日付リストの N 番目 = N営業日前。
  */
 export const CHANGE_PERIODS = [
-  { key: '1d', label: '1日', short: '1D', tradingDays: 1 },
-  { key: '1m', label: '1カ月', short: '1M', tradingDays: 21 },
-  { key: '6m', label: '半年', short: '6M', tradingDays: 126 },
-  { key: '1y', label: '1年', short: '1Y', tradingDays: 252 },
+  { key: '1d', label: '1D', tradingDays: 1 },
+  { key: '1m', label: '1M', tradingDays: 21 },
+  { key: '6m', label: '6M', tradingDays: 126 },
+  { key: '1y', label: '1Y', tradingDays: 252 },
 ] as const
 
 export type ChangePeriodKey = (typeof CHANGE_PERIODS)[number]['key']
@@ -62,7 +62,7 @@ function emptyChanges(): Record<ChangePeriodKey, SectorChange> {
 }
 
 /**
- * 全業種の「1日 / 1カ月 / 半年 / 1年」騰落率をまとめて取得する。
+ * 全業種の 1D / 1M / 6M / 1Y 騰落率をまとめて取得する。
  *
  * 252営業日ぶんの全行（33業種 × 252日 ≈ 8,300 行）を読むのは無駄なので、
  * ①日付リストだけを引いて必要な営業日を決め、②その数日ぶんの行だけを取る。

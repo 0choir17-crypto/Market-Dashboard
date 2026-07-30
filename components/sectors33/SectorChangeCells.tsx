@@ -29,13 +29,13 @@ function tooltipFor(
   key: (typeof CHANGE_PERIODS)[number]['key'],
 ): string {
   const c = entry?.changes[key]
-  const base = `${label}前比（${tradingDays}営業日前の業種指数終値との比較）`
+  const base = `${label} 騰落率（${tradingDays}営業日前の業種指数終値との比較）`
   if (!c || !isNum(c.pct)) return `${base} — 指数データなし`
   return `${base}: ${c.fromDate} → ${entry?.baseDate ?? ''}`
 }
 
 /**
- * 1日 / 1カ月 / 半年 / 1年前との騰落率をインラインで並べる（テーブルの業種名の横用）。
+ * 1D / 1M / 6M / 1Y の騰落率をインラインで並べる（テーブルの業種名の横用）。
  */
 export function SectorChangeInline({
   entry,
@@ -49,7 +49,7 @@ export function SectorChangeInline({
         return (
           <Tooltip key={p.key} content={tooltipFor(p.label, p.tradingDays, entry, p.key)}>
             <span className="inline-flex items-baseline gap-1 whitespace-nowrap">
-              <span className="text-[10px] text-[var(--text-muted)] font-mono">{p.short}</span>
+              <span className="text-[10px] text-[var(--text-muted)] font-mono">{p.label}</span>
               <span
                 className="font-mono text-[11px] font-semibold tabular-nums"
                 style={{ color: pctColor(c?.pct) }}
@@ -83,7 +83,7 @@ export function SectorChangeStrip({
           >
             <Tooltip content={tooltipFor(p.label, p.tradingDays, entry, p.key)}>
               <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wide">
-                {p.short}
+                {p.label}
               </p>
             </Tooltip>
             <p

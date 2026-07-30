@@ -290,7 +290,7 @@ export default function SectorSelectionTable({
   changes = {},
 }: {
   rows: SectorSelectionRow[]
-  /** sector_name_s33 → 1日/1カ月/半年/1年の騰落率（後着でもよい） */
+  /** sector_name_s33 → 1D / 1M / 6M / 1Y の騰落率（後着でもよい） */
   changes?: Record<string, SectorIndexChangeEntry>
 }) {
   const [sortKey, setSortKey] = useState<SortKey>('composite_score')
