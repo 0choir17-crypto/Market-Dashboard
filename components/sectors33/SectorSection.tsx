@@ -6,6 +6,10 @@ import {
   fetchSectorSelectionHistory,
   type SectorHistoryResponse,
 } from '@/lib/sectorSelectionHistoryFetch'
+import {
+  fetchSectorIndexChanges,
+  type SectorIndexChangeEntry,
+} from '@/lib/sectorIndexChangeFetch'
 import { SectorSelectionRow } from '@/types/sectorSelection'
 import SectorSelectionTable from './SectorSelectionTable'
 import SectorChartGallery from './SectorChartGallery'
@@ -33,6 +37,8 @@ export default function SectorSection({
     bySector: {},
     sectorsRanked: [],
   })
+  // 業種指数の騰落率 (1D / 1M / 6M / 1Y)（ランキング本体より後に届く）
+  const [changes, setChanges] = useState<Record<string, SectorIndexChangeEntry>>({})
   const [view, setView] = useState<View>('bar')
   const [mainView, setMainView] = useState<MainView>('chart')
   const [loading, setLoading] = useState(true)
@@ -55,6 +61,18 @@ export default function SectorSection({
     // ランキング本体と履歴、どちらの失敗も「0件」と区別して表示する
     setError([latest.error, hist.error].filter(Boolean).join(' / ') || null)
     setLoading(false)
+
+    // 騰落率は営業日リストを 1業種ぶんだけ引いてから取りたいので、ランキング取得後に。
+    // 表の描画は待たせず、届いた時点で「—」から実値に差し替える。
+    const reference = latest.rows[0]?.sector_name_s33
+    if (!reference) {
+      setChanges({})
+      return
+    }
+    const chg = await fetchSectorIndexChanges(reference)
+    if (reqId !== requestIdRef.current) return
+    setChanges(chg.bySector)
+    if (chg.error) setError(prev => [prev, chg.error].filter(Boolean).join(' / '))
   }, [])
 
   useEffect(() => { fetchData() }, [fetchData])
@@ -126,9 +144,9 @@ export default function SectorSection({
       ) : rows.length > 0 && (
         <>
           {mainView === 'chart' ? (
-            <SectorChartGallery rows={rows} />
+            <SectorChartGallery rows={rows} changes={changes} />
           ) : (
-            <SectorSelectionTable rows={rows} />
+            <SectorSelectionTable rows={rows} changes={changes} />
           )}
 
           {/* ── 推移ビジュアル ────────────────────────────────────────────

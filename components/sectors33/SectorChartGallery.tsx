@@ -15,10 +15,16 @@ import {
   type OverlayMetricKey,
   type SectorChartEntry,
 } from '@/lib/sectorPriceFetch'
+import type { SectorIndexChangeEntry } from '@/lib/sectorIndexChangeFetch'
 import SectorCandleChart from './SectorCandleChart'
+import { SectorChangeStrip } from './SectorChangeCells'
 import Tooltip from '@/components/shared/Tooltip'
 
-type Props = { rows: SectorSelectionRow[] }
+type Props = {
+  rows: SectorSelectionRow[]
+  /** sector_name_s33 → 1D / 1M / 6M / 1Y の騰落率（後着でもよい） */
+  changes?: Record<string, SectorIndexChangeEntry>
+}
 
 type MetricSelection = OverlayMetricKey | 'none'
 
@@ -68,10 +74,12 @@ function MetricCell({
 function SectorCard({
   row,
   entry,
+  change,
   metricKey,
 }: {
   row: SectorSelectionRow
   entry: SectorChartEntry | undefined
+  change: SectorIndexChangeEntry | undefined
   metricKey: MetricSelection
 }) {
   const { bg, text } = compositeColor(row.composite_score)
@@ -121,6 +129,11 @@ function SectorCard({
         >
           {isNum(row.composite_score) ? row.composite_score.toFixed(1) : '—'}
         </span>
+      </div>
+
+      {/* 業種指数の騰落率: 1D / 1M / 6M / 1Y */}
+      <div className="mb-2">
+        <SectorChangeStrip entry={change} />
       </div>
 
       {/* チャート */}
@@ -174,7 +187,7 @@ function SectorCard({
   )
 }
 
-export default function SectorChartGallery({ rows }: Props) {
+export default function SectorChartGallery({ rows, changes = {} }: Props) {
   const [bySector, setBySector] = useState<Record<string, SectorChartEntry>>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -279,6 +292,7 @@ export default function SectorChartGallery({ rows }: Props) {
               key={row.sector_name_s33}
               row={row}
               entry={bySector[row.sector_name_s33]}
+              change={changes[row.sector_name_s33]}
               metricKey={metricKey}
             />
           ))}
