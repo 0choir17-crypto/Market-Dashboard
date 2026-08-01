@@ -4,13 +4,15 @@ import { fetchAllPaged } from '@/lib/pagedFetch'
 const TABLE = 'sector_selection_s33'
 
 /**
- * 業種指数の騰落率（1D / 1M / 6M / 1Y）。
+ * 業種指数の騰落率（1D / 1W / 1M / 6M / 1Y）。
  *
- * 営業日オフセットで比較する（1M=21営業日, 6M=126営業日, 1Y=252営業日）。
- * sector_selection_s33 は 1業種1日1行なので、日付リストの N 番目 = N営業日前。
+ * 営業日オフセットで比較する（1W=5営業日, 1M=21営業日, 6M=126営業日,
+ * 1Y=252営業日）。sector_selection_s33 は 1業種1日1行なので、日付リストの
+ * N 番目 = N営業日前。
  */
 export const CHANGE_PERIODS = [
   { key: '1d', label: '1D', tradingDays: 1 },
+  { key: '1w', label: '1W', tradingDays: 5 },
   { key: '1m', label: '1M', tradingDays: 21 },
   { key: '6m', label: '6M', tradingDays: 126 },
   { key: '1y', label: '1Y', tradingDays: 252 },
@@ -44,7 +46,7 @@ export type SectorIndexChangeResponse = {
  */
 const NEIGHBOR_OFFSETS = [0, 1, -1, 2, -2, 3, -3]
 
-const MAX_TRADING_DAYS = CHANGE_PERIODS[CHANGE_PERIODS.length - 1].tradingDays
+const MAX_TRADING_DAYS = Math.max(...CHANGE_PERIODS.map(p => p.tradingDays))
 
 function num(v: unknown): number | null {
   if (v === null || v === undefined) return null
@@ -53,16 +55,13 @@ function num(v: unknown): number | null {
 }
 
 function emptyChanges(): Record<ChangePeriodKey, SectorChange> {
-  return {
-    '1d': { pct: null, fromDate: null },
-    '1m': { pct: null, fromDate: null },
-    '6m': { pct: null, fromDate: null },
-    '1y': { pct: null, fromDate: null },
-  }
+  return Object.fromEntries(
+    CHANGE_PERIODS.map(p => [p.key, { pct: null, fromDate: null }]),
+  ) as Record<ChangePeriodKey, SectorChange>
 }
 
 /**
- * 全業種の 1D / 1M / 6M / 1Y 騰落率をまとめて取得する。
+ * 全業種の 1D / 1W / 1M / 6M / 1Y 騰落率をまとめて取得する。
  *
  * 252営業日ぶんの全行（33業種 × 252日 ≈ 8,300 行）を読むのは無駄なので、
  * ①日付リストだけを引いて必要な営業日を決め、②その数日ぶんの行だけを取る。
