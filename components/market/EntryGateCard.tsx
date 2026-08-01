@@ -72,7 +72,7 @@ function ScoreGauge({ score, color }: { score: number | null; color: string }) {
       <path
         d={`M ${bgStart.x} ${bgStart.y} A ${r} ${r} 0 1 1 ${bgEnd.x} ${bgEnd.y}`}
         fill="none"
-        stroke="#e8eaed"
+        stroke="#e6dcc0"
         strokeWidth={strokeWidth}
         strokeLinecap="round"
       />
@@ -159,7 +159,7 @@ export default function EntryGateCard({ market }: { market: MarketConditions | n
   const aboveSma50 = market?.topix_above_sma50
 
   return (
-    <div className="bg-white rounded-xl border border-[#e8eaed] shadow-sm p-6 flex flex-col h-full">
+    <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-6 flex flex-col h-full">
       <div className="flex items-center justify-between mb-4">
         <p className="text-sm font-semibold text-[var(--text-primary)]">
           Entry Gate <span className="font-normal text-[var(--text-muted)]">— エントリー可否</span>
@@ -198,7 +198,7 @@ export default function EntryGateCard({ market }: { market: MarketConditions | n
       <div
         className="mt-4 flex items-center justify-between px-4 py-2.5 rounded-lg border"
         style={{
-          borderColor: aboveSma50 == null ? '#e8eaed' : aboveSma50 ? '#63992240' : '#e24b4a40',
+          borderColor: aboveSma50 == null ? 'var(--border)' : aboveSma50 ? '#63992240' : '#e24b4a40',
           backgroundColor: aboveSma50 == null ? '#f8fafc' : aboveSma50 ? '#63992212' : '#e24b4a12',
         }}
       >
@@ -227,7 +227,7 @@ export default function EntryGateCard({ market }: { market: MarketConditions | n
       </div>
 
       {/* Optional trend */}
-      <hr className="my-4 border-[#e8eaed]" />
+      <hr className="my-4 border-[var(--border)]" />
       <p className="text-xs font-semibold text-[var(--text-secondary)] mb-2">
         gate_score <span className="font-normal text-[var(--text-muted)]">— 直近 120 営業日</span>
       </p>

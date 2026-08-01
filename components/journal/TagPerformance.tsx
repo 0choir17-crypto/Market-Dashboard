@@ -97,8 +97,8 @@ export default function TagPerformance({ trades }: Props) {
 
   if (closed.length === 0 || allRows.length === 0) {
     return (
-      <div className="mb-6 bg-white rounded-xl border border-[#e8eaed] shadow-sm">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-[#f0f2f4]">
+      <div className="mb-6 bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border-subtle)]">
           <h3 className="text-sm font-semibold text-gray-700">
             Tag Performance
             <span className="ml-2 text-xs font-normal text-gray-400">
@@ -115,8 +115,8 @@ export default function TagPerformance({ trades }: Props) {
   }
 
   return (
-    <div className="mb-6 bg-white rounded-xl border border-[#e8eaed] shadow-sm">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-[#f0f2f4]">
+    <div className="mb-6 bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border-subtle)]">
         <h3 className="text-sm font-semibold text-gray-700">
           Tag Performance
           <span className="ml-2 text-xs font-normal text-gray-400">
@@ -128,7 +128,7 @@ export default function TagPerformance({ trades }: Props) {
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-gray-50 border-b border-[#f0f2f4]">
+            <tr className="bg-[var(--bg-card-hover)] border-b border-[var(--border-subtle)]">
               <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-[var(--text-secondary)]">Tag</th>
               <th className="px-3 py-2 text-right text-xs font-medium uppercase tracking-wide text-[var(--text-secondary)]">Trades</th>
               <th className="px-3 py-2 text-right text-xs font-medium uppercase tracking-wide text-[var(--text-secondary)]">W·L</th>
@@ -147,7 +147,7 @@ export default function TagPerformance({ trades }: Props) {
               if (rows.length === 0) return null
               return (
                 <Fragment key={cat}>
-                  <tr className="bg-gray-50/60">
+                  <tr className="bg-[var(--bg-card-hover)]/60">
                     <td
                       colSpan={8}
                       className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-gray-500"
@@ -161,7 +161,7 @@ export default function TagPerformance({ trades }: Props) {
                     return (
                       <tr
                         key={r.tag.id}
-                        className="border-b border-[#f0f2f4] hover:bg-[var(--bg-card-hover)]"
+                        className="border-b border-[var(--border-subtle)] hover:bg-[var(--bg-card-hover)]"
                       >
                         <td
                           className="px-3 py-2 text-gray-800"
@@ -224,7 +224,7 @@ export default function TagPerformance({ trades }: Props) {
           </tbody>
         </table>
       </div>
-      <p className="px-4 py-2 text-[11px] text-gray-400 border-t border-[#f0f2f4]">
+      <p className="px-4 py-2 text-[11px] text-gray-400 border-t border-[var(--border-subtle)]">
         ※ 1 トレードに複数タグが付くため、各行の Trades 合計は CLOSED 総数と一致しません。
         勝率は breakeven を母数から除外。
       </p>

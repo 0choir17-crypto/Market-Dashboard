@@ -79,7 +79,7 @@ export function SectorChangeStrip({
         return (
           <div
             key={p.key}
-            className="rounded-md border border-[var(--border)] bg-white px-1.5 py-1 text-center"
+            className="rounded-md border border-[var(--border)] bg-[var(--bg-card)] px-1.5 py-1 text-center"
           >
             <Tooltip content={tooltipFor(p.label, p.tradingDays, entry, p.key)}>
               <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wide">

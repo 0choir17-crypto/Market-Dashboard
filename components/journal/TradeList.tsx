@@ -121,7 +121,7 @@ export default function TradeList({
           <div className="space-y-3">
             {openTrades.map(t => (
               <div key={t.id} className="space-y-2">
-                <div className="bg-white rounded-lg border border-gray-200 px-4 py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3 hover:shadow-sm transition-shadow">
+                <div className="bg-[var(--bg-card)] rounded-lg border border-gray-200 px-4 py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3 hover:shadow-sm transition-shadow">
                   <div className="space-y-1 min-w-0 flex-1">
                     {/* 1行目: 最重要 */}
                     <div className="flex flex-wrap items-center gap-2">
@@ -224,7 +224,7 @@ export default function TradeList({
                       return (
                         <div
                           key={t.id}
-                          className={`bg-white rounded-lg border border-gray-200 hover:shadow-sm transition-shadow ${
+                          className={`bg-[var(--bg-card)] rounded-lg border border-gray-200 hover:shadow-sm transition-shadow ${
                             expanded ? 'lg:col-span-3 md:col-span-2' : ''
                           }`}
                         >

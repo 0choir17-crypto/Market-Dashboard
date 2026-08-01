@@ -107,7 +107,7 @@ export default function TodayPage() {
 
       {loading && total === 0 ? (
         <div
-          className="bg-white rounded-xl border border-[#e8eaed] shadow-sm p-8 text-center"
+          className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-8 text-center"
           style={{ color: 'var(--text-muted)' }}
         >
           <p className="text-lg font-medium">読み込み中…</p>

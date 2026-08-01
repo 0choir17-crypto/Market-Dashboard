@@ -137,7 +137,7 @@ export default function CloseTradeModal({ open, onClose, onSaved, trade }: Props
         )}
 
         {/* トレード情報 */}
-        <div className="bg-gray-50 rounded-lg px-4 py-3 space-y-1">
+        <div className="bg-[var(--bg-card-hover)] rounded-lg px-4 py-3 space-y-1">
           <p className="text-sm font-semibold text-gray-900">
             {trade.ticker} {trade.company_name ?? ''}
           </p>
@@ -183,7 +183,7 @@ export default function CloseTradeModal({ open, onClose, onSaved, trade }: Props
             <select
               value={exitReason}
               onChange={e => setExitReason(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 bg-[var(--bg-card)]"
             >
               {EXIT_REASONS.map(r => (
                 <option key={r} value={r}>{r}</option>
@@ -196,7 +196,7 @@ export default function CloseTradeModal({ open, onClose, onSaved, trade }: Props
         {preview && (() => {
           const bg = preview.result === 'WIN' ? 'bg-emerald-50'
             : preview.result === 'LOSS' ? 'bg-red-50'
-            : 'bg-gray-50'
+            : 'bg-[var(--bg-card-hover)]'
           const fgStrong = preview.result === 'WIN' ? 'text-emerald-700'
             : preview.result === 'LOSS' ? 'text-red-700'
             : 'text-gray-700'
@@ -220,7 +220,7 @@ export default function CloseTradeModal({ open, onClose, onSaved, trade }: Props
         <div className="flex justify-end gap-3 pt-2">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors min-h-[44px]"
+            className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-[var(--bg-card-hover)] transition-colors min-h-[44px]"
           >
             キャンセル
           </button>

@@ -99,8 +99,8 @@ export default function ReasonPerformance({ trades }: Props) {
   if (rows.length === 0) return null
 
   return (
-    <div className="mb-6 bg-white rounded-xl border border-[#e8eaed] shadow-sm">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-[#f0f2f4]">
+    <div className="mb-6 bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border-subtle)]">
         <h3 className="text-sm font-semibold text-gray-700">
           Exit Reason Performance
           <span className="ml-2 text-xs font-normal text-gray-400">
@@ -112,7 +112,7 @@ export default function ReasonPerformance({ trades }: Props) {
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-gray-50 border-b border-[#f0f2f4]">
+            <tr className="bg-[var(--bg-card-hover)] border-b border-[var(--border-subtle)]">
               <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-[var(--text-secondary)]">Reason</th>
               <th className="px-3 py-2 text-right text-xs font-medium uppercase tracking-wide text-[var(--text-secondary)]">Trades</th>
               <th className="px-3 py-2 text-right text-xs font-medium uppercase tracking-wide text-[var(--text-secondary)]">W·L</th>
@@ -133,7 +133,7 @@ export default function ReasonPerformance({ trades }: Props) {
               return (
                 <tr
                   key={r.reason}
-                  className="border-b border-[#f0f2f4] hover:bg-[var(--bg-card-hover)]"
+                  className="border-b border-[var(--border-subtle)] hover:bg-[var(--bg-card-hover)]"
                 >
                   <td
                     className={`px-3 py-2 ${muted ? 'text-gray-400 italic' : 'text-gray-800 font-medium'}`}
@@ -192,7 +192,7 @@ export default function ReasonPerformance({ trades }: Props) {
           </tbody>
         </table>
       </div>
-      <p className="px-4 py-2 text-[11px] text-gray-400 border-t border-[#f0f2f4]">
+      <p className="px-4 py-2 text-[11px] text-gray-400 border-t border-[var(--border-subtle)]">
         ※ 各トレードは 1 理由のみで集計されるため Trades 合計 = CLOSED 総数。
         CSV import 分は exit_reason が無いため「未設定」に入る。
       </p>

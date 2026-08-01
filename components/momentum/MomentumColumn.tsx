@@ -63,9 +63,9 @@ export default function MomentumColumn({ horizon, rows, query, newOnly, dupCount
   }, [rows, query, newOnly])
 
   return (
-    <section className="flex-1 min-w-[300px] bg-white rounded-xl border border-[#e8eaed] shadow-sm flex flex-col">
+    <section className="flex-1 min-w-[300px] bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm flex flex-col">
       {/* 列ヘッダー */}
-      <div className="px-4 pt-4 pb-3 border-b border-[#e8eaed]">
+      <div className="px-4 pt-4 pb-3 border-b border-[var(--border)]">
         <div className="flex items-baseline gap-2">
           <h2 className="text-base font-bold text-[var(--text-primary)]">{label.title}</h2>
           <span className="text-[11px] text-[var(--text-muted)]">{label.note}</span>
@@ -82,11 +82,11 @@ export default function MomentumColumn({ horizon, rows, query, newOnly, dupCount
           {rows.length === 0 ? 'データがありません' : '該当銘柄なし'}
         </div>
       ) : (
-        <ol className="divide-y divide-[#f0f2f4] overflow-y-auto max-h-[72vh]">
+        <ol className="divide-y divide-[var(--border-subtle)] overflow-y-auto max-h-[72vh]">
           {filtered.map(r => (
             <li
               key={r.code}
-              className={`px-3 py-2 flex items-center gap-2 hover:bg-gray-50 transition-colors ${
+              className={`px-3 py-2 flex items-center gap-2 hover:bg-[var(--bg-card-hover)] transition-colors ${
                 r.rank_change === null ? 'bg-rose-50/40' : ''
               }`}
             >

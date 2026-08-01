@@ -193,7 +193,7 @@ export default function TradeChart({ trade }: Props) {
 
   if (!loading && data.length === 0) {
     return (
-      <div className="text-xs text-gray-500 bg-white border border-gray-200 rounded-lg px-3 py-2">
+      <div className="text-xs text-gray-500 bg-[var(--bg-card)] border border-gray-200 rounded-lg px-3 py-2">
         📈 チャートデータなし（daily_signalsに該当期間のデータがありません）
       </div>
     )
@@ -241,13 +241,13 @@ export default function TradeChart({ trade }: Props) {
       </div>
 
       {loading ? (
-        <div className="h-80 flex items-center justify-center bg-white border border-gray-200 rounded-lg">
+        <div className="h-80 flex items-center justify-center bg-[var(--bg-card)] border border-gray-200 rounded-lg">
           <div className="text-sm text-gray-500">📈 チャート読み込み中…</div>
         </div>
       ) : (
         <div
           ref={containerRef}
-          className="w-full bg-white border border-gray-200 rounded-lg"
+          className="w-full bg-[var(--bg-card)] border border-gray-200 rounded-lg"
           style={{ height: 320 }}
         />
       )}

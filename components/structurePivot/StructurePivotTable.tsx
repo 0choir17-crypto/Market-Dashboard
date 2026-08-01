@@ -398,7 +398,7 @@ export default function StructurePivotTable({
     <div className="card overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
-          <tr className="bg-gray-50 border-b border-[#e8eaed]">
+          <tr className="bg-[var(--bg-card-hover)] border-b border-[var(--border)]">
             <SortTh label="Code" sortKey="code" {...sp} align="left" />
             <th className="px-2 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 whitespace-nowrap">
               Name
@@ -487,12 +487,12 @@ export default function StructurePivotTable({
               <tr
                 key={`${r.code}-${i}`}
                 onClick={() => onSelect(r.code)}
-                className={`border-b border-[#f0f2f4] transition-colors cursor-pointer ${
+                className={`border-b border-[var(--border-subtle)] transition-colors cursor-pointer ${
                   isSelected
                     ? 'bg-amber-50 hover:bg-amber-100'
                     : i % 2 === 0
-                      ? 'bg-white hover:bg-gray-50'
-                      : 'bg-[#fafafa] hover:bg-gray-100'
+                      ? 'bg-[var(--bg-card)] hover:bg-[var(--bg-card-hover)]'
+                      : 'bg-[var(--bg-card-hover)] hover:bg-gray-100'
                 } ${
                   r.signal_type === 'HL_BREAK'
                     ? 'border-l-2 border-l-blue-400'

@@ -38,7 +38,7 @@ function ExitBadge({ reason }: { reason: string | null }) {
     'トレール損切': 'bg-orange-50 text-orange-700 border-orange-200',
     '目標達成': 'bg-blue-50 text-blue-700 border-blue-200',
   }
-  const cls = colors[reason] ?? 'bg-gray-50 text-gray-600 border-gray-200'
+  const cls = colors[reason] ?? 'bg-[var(--bg-card-hover)] text-gray-600 border-gray-200'
   return (
     <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium border ${cls}`}>{reason}</span>
   )
@@ -78,7 +78,7 @@ export default function HistoryTab({ history }: Props) {
           { label: 'Profit Factor', value: profitFactor != null ? profitFactor.toFixed(2) : '—', color: profitFactor != null && profitFactor >= 1.5 ? 'text-[var(--positive)]' : 'text-gray-700' },
           { label: 'Total PnL', value: trades.length > 0 ? formatYen(totalPnl, { sign: true }) : '—', color: pnlColorClass(totalPnl) },
         ].map(({ label, value, color }) => (
-          <div key={label} className="bg-white rounded-xl border border-[#e8eaed] shadow-sm px-4 py-3">
+          <div key={label} className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm px-4 py-3">
             <p className="text-[11px] font-medium uppercase tracking-wide text-[var(--text-muted)] mb-1">{label}</p>
             <p className={`text-lg font-bold font-mono ${color}`}>{value}</p>
           </div>
@@ -94,7 +94,7 @@ export default function HistoryTab({ history }: Props) {
           { label: 'Max Win', value: formatYen(maxWin, { sign: true }) },
           { label: 'Max Loss', value: formatYen(maxLoss, { sign: true }) },
         ].map(({ label, value }) => (
-          <div key={label} className="bg-white rounded-xl border border-[#e8eaed] shadow-sm px-4 py-3">
+          <div key={label} className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm px-4 py-3">
             <p className="text-[11px] font-medium uppercase tracking-wide text-[var(--text-muted)] mb-1">{label}</p>
             <p className="text-sm font-semibold text-gray-700 font-mono">{value}</p>
           </div>
@@ -102,10 +102,10 @@ export default function HistoryTab({ history }: Props) {
       </div>
 
       {/* Desktop table */}
-      <div className="bg-white rounded-xl border border-[#e8eaed] shadow-sm overflow-x-auto hidden sm:block">
+      <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm overflow-x-auto hidden sm:block">
         <table className="w-full min-w-[900px] text-sm">
           <thead>
-            <tr className="bg-gray-50 border-b border-t border-[#e8eaed]">
+            <tr className="bg-[var(--bg-card-hover)] border-b border-t border-[var(--border)]">
               {['Ticker','Name','Entry Date','Exit Date','Entry','Exit','Shares','PnL','R','Exit Reason','Memo'].map(h => (
                 <th key={h} className={`px-3 py-2.5 text-xs font-medium text-[var(--text-secondary)] uppercase tracking-wide whitespace-nowrap ${h === 'Ticker' || h === 'Name' || h === 'Memo' ? 'text-left' : 'text-right'}`}>
                   {h}
@@ -115,7 +115,7 @@ export default function HistoryTab({ history }: Props) {
           </thead>
           <tbody>
             {history.map((h, i) => (
-              <tr key={h.id} className={`border-b border-[#f0f2f4] hover:bg-[var(--bg-card-hover)] transition-colors ${i % 2 === 0 ? 'bg-white' : 'bg-[#fafafa]'}`}>
+              <tr key={h.id} className={`border-b border-[var(--border-subtle)] hover:bg-[var(--bg-card-hover)] transition-colors ${i % 2 === 0 ? 'bg-[var(--bg-card)]' : 'bg-[var(--bg-card-hover)]'}`}>
                 <td className="px-3 py-2.5 whitespace-nowrap">
                   <a href={`https://jp.tradingview.com/chart/?symbol=TSE:${h.ticker}`} target="_blank" rel="noreferrer"
                      className="font-mono font-bold text-blue-600 hover:underline text-xs">{h.ticker}</a>
@@ -145,7 +145,7 @@ export default function HistoryTab({ history }: Props) {
       <div className="block sm:hidden space-y-3">
         {history.length === 0 && <p className="text-center text-gray-400 text-sm py-8">No trade history</p>}
         {history.map(h => (
-          <div key={h.id} className="bg-white rounded-xl border border-[#e8eaed] shadow-sm p-4">
+          <div key={h.id} className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-4">
             <div className="flex justify-between items-start mb-2">
               <div>
                 <a href={`https://jp.tradingview.com/chart/?symbol=TSE:${h.ticker}`} target="_blank" rel="noreferrer"

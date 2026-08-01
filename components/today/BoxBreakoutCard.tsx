@@ -87,7 +87,7 @@ function Metric({
   title?: string
 }) {
   return (
-    <div className="rounded bg-[var(--bg-card-hover)] border border-[#f0f2f4] px-2 py-1.5" title={title}>
+    <div className="rounded bg-[var(--bg-card-hover)] border border-[var(--border-subtle)] px-2 py-1.5" title={title}>
       <p className="text-[9px] font-medium uppercase tracking-wide text-[var(--text-secondary)] leading-tight">{label}</p>
       <p
         className="mt-0.5 font-mono text-sm font-semibold leading-tight tabular-nums"
@@ -110,7 +110,7 @@ function DualMetric({
   title?: string
 }) {
   return (
-    <div className="rounded bg-[var(--bg-card-hover)] border border-[#f0f2f4] px-2 py-1.5" title={title}>
+    <div className="rounded bg-[var(--bg-card-hover)] border border-[var(--border-subtle)] px-2 py-1.5" title={title}>
       {[a, b].map((r, i) => (
         <div key={i} className={i === 0 ? '' : 'mt-1'}>
           <p className="text-[9px] font-medium uppercase tracking-wide text-[var(--text-secondary)] leading-tight">{r.k}</p>
@@ -145,16 +145,16 @@ export default function BoxBreakoutCard({ row, hot = false, multiHit = false, on
     row.base_len - row.eff_base_len >= 20
 
   // 枠/背景: 複数シグナル重複（黄）を最優先 → hotセクター（緑）。既存カードと同方針。
-  const borderColor = multiHit ? '#fbbf24' : hot ? '#86efac' : '#e8eaed'
-  const backgroundColor = multiHit ? '#fef9c3' : hot ? '#f0fdf4' : '#ffffff'
+  const borderColor = multiHit ? '#fbbf24' : hot ? '#86efac' : 'var(--border)'
+  const backgroundColor = multiHit ? '#fef9c3' : hot ? '#f0fdf4' : 'var(--bg-card)'
 
   return (
     <div
-      className="bg-white rounded-lg border shadow-sm hover:shadow-md transition-shadow flex flex-col"
+      className="bg-[var(--bg-card)] rounded-lg border shadow-sm hover:shadow-md transition-shadow flex flex-col"
       style={{ borderColor, backgroundColor }}
     >
       {/* バッジ行: テスト回数 / 間延び / 上抜日 */}
-      <div className="px-3 py-2 border-b border-[#f0f2f4] flex items-center gap-1.5 flex-wrap">
+      <div className="px-3 py-2 border-b border-[var(--border-subtle)] flex items-center gap-1.5 flex-wrap">
         <Chip
           text={`テスト ${testCount ?? '—'}`}
           palette={{ bg: '#f3f4f6', fg: '#4b5563', border: '#d1d5db' }}
@@ -240,7 +240,7 @@ export default function BoxBreakoutCard({ row, hot = false, multiHit = false, on
 
       {/* アクション */}
       {(onAddWatchlist || onAddPosition) && (
-        <div className="px-3 pt-2 pb-2 mt-2 border-t border-[#f0f2f4] flex items-center justify-end gap-1.5">
+        <div className="px-3 pt-2 pb-2 mt-2 border-t border-[var(--border-subtle)] flex items-center justify-end gap-1.5">
           {onAddWatchlist && (
             <button
               onClick={() => onAddWatchlist(row)}

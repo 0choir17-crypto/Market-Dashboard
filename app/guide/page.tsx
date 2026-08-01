@@ -211,7 +211,7 @@ export default function GuidePage() {
         <h2 className="text-lg font-bold mb-3" style={{ color: 'var(--text-primary)' }}>
           Daily Watch — 押し目ウォッチ
         </h2>
-        <div className="bg-white rounded-xl border border-[#e8eaed] shadow-sm p-5 text-sm text-gray-700 space-y-3">
+        <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-5 text-sm text-gray-700 space-y-3">
           <p>
             高値圏の押し目<strong>&quot;候補&quot;</strong>を毎日（平日引け後 ~18:00 JST）に更新。最新日が「今日の候補」です。
             <span className="text-gray-500">買いシグナルではなく、実エントリーはトリガー＋管理を別途想定。</span>
@@ -235,7 +235,7 @@ export default function GuidePage() {
               （EMA10 / EMA21 / SMA50）まで押した局面。
             </li>
           </ul>
-          <div className="bg-gray-50 rounded-lg p-3">
+          <div className="bg-[var(--bg-card-hover)] rounded-lg p-3">
             <p className="font-semibold text-gray-800 mb-1.5">MA の 2 軸グレード（ダッシュ側で算出）</p>
             <ul className="list-disc pl-5 space-y-1">
               <li>
@@ -261,7 +261,7 @@ export default function GuidePage() {
         <h2 className="text-lg font-bold mb-3" style={{ color: 'var(--text-primary)' }}>
           Trading — トレード記録
         </h2>
-        <div className="bg-white rounded-xl border border-[#e8eaed] shadow-sm p-5 text-sm text-gray-700 space-y-3">
+        <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-5 text-sm text-gray-700 space-y-3">
           <p>
             <strong>Positions</strong>（保有中） / <strong>Journal</strong>（確定トレード＋分析） /
             <strong>Risk</strong>（連敗・リスク設定）の 3 タブ。記録はヘッダーの
@@ -289,10 +289,10 @@ export default function GuidePage() {
         <h2 className="text-lg font-bold mb-3" style={{ color: 'var(--text-primary)' }}>
           Screens
         </h2>
-        <div className="bg-white rounded-xl border border-[#e8eaed] shadow-sm overflow-x-auto">
+        <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-gray-50 border-b border-[#e8eaed]">
+              <tr className="bg-[var(--bg-card-hover)] border-b border-[var(--border)]">
                 <GuideSortTh label="#"         sortKey="rank"     {...sp} />
                 <GuideSortTh label="Screen"    sortKey="name"     {...sp} />
                 <GuideSortTh label="Type"      sortKey="type"     {...sp} />
@@ -311,7 +311,7 @@ export default function GuidePage() {
               {sorted.map((s, i) => (
                 <tr
                   key={s.dbName}
-                  className={`border-b border-[#f0f2f4] hover:bg-gray-50 transition-colors ${i % 2 === 0 ? 'bg-white' : 'bg-[#fafafa]'}`}
+                  className={`border-b border-[var(--border-subtle)] hover:bg-[var(--bg-card-hover)] transition-colors ${i % 2 === 0 ? 'bg-[var(--bg-card)]' : 'bg-[var(--bg-card-hover)]'}`}
                 >
                   <td className="px-3 py-2.5 font-mono text-xs text-gray-500 text-center">{s.rank}</td>
                   <td className="px-3 py-2.5 font-bold text-sm whitespace-nowrap">{s.name}</td>
@@ -355,7 +355,7 @@ export default function GuidePage() {
         <h2 className="text-lg font-bold mb-3" style={{ color: 'var(--text-primary)' }}>
           Market Condition (MC)
         </h2>
-        <div className="bg-white rounded-xl border border-[#e8eaed] shadow-sm p-5">
+        <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-5">
           <p className="text-sm text-gray-600 mb-3">
             画面上部のバッジはマーケット全体の状態を示します。MC v4 は 8 ファクター加重平均で市場環境を 0〜100 点で評価します
             （v4 未集計の古い日付は v3 にフォールバック）。
@@ -366,7 +366,7 @@ export default function GuidePage() {
             <li><strong className="text-gray-900">Breadth</strong> — 値上がり銘柄比率の強度（Strong / Normal / Weak）</li>
             <li><strong className="text-gray-900">Divergence</strong> — 指数↑ × Breadth↓ の天井警告フラグ（v4 では現状無効化中。効果検証で統計的有意性なしのため）</li>
           </ul>
-          <div className="mt-4 rounded-lg bg-gray-50 border border-[#e8eaed] p-4">
+          <div className="mt-4 rounded-lg bg-[var(--bg-card-hover)] border border-[var(--border)] p-4">
             <p className="text-xs font-semibold text-gray-700 mb-2">Screen Activation Category</p>
             <ul className="space-y-1.5 text-xs text-gray-600">
               <li><span className="inline-block w-16 font-semibold text-blue-600">Always-on</span>MC スコアに関係なく常に発動（4本）</li>
@@ -385,7 +385,7 @@ export default function GuidePage() {
         <h2 className="text-lg font-bold mb-3" style={{ color: 'var(--text-primary)' }}>
           8 Factors (v4) — 各ファクターの中身
         </h2>
-        <div className="bg-white rounded-xl border border-[#e8eaed] shadow-sm p-5">
+        <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-5">
           <p className="text-sm text-gray-600 mb-4">
             FactorGrid に表示される 8 ファクターは TOPIX / 日経225 / グロース250 の 3 指数と全銘柄ブレッド・需給データを源に計算され、
             それぞれ過去 252 営業日の自分の分布に対する <strong className="text-gray-900">パーセンタイルランク (0-100)</strong> として表示されます。
@@ -395,7 +395,7 @@ export default function GuidePage() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-gray-50 border-b border-[#e8eaed]">
+                <tr className="bg-[var(--bg-card-hover)] border-b border-[var(--border)]">
                   <th className="text-left px-3 py-2 font-semibold text-gray-700">ID</th>
                   <th className="text-left px-3 py-2 font-semibold text-gray-700">名称</th>
                   <th className="text-right px-3 py-2 font-semibold text-gray-700">重み</th>
@@ -403,7 +403,7 @@ export default function GuidePage() {
                   <th className="text-left px-3 py-2 font-semibold text-gray-700">入力</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#e8eaed]">
+              <tbody className="divide-y divide-[var(--border)]">
                 <tr className="bg-emerald-50/30">
                   <td className="px-3 py-2 font-mono font-bold text-emerald-700">M1</td>
                   <td className="px-3 py-2 text-gray-800 font-semibold">短期モメンタム</td>
@@ -497,7 +497,7 @@ export default function GuidePage() {
             </table>
           </div>
 
-          <div className="mt-4 rounded-lg bg-gray-50 border border-[#e8eaed] p-4">
+          <div className="mt-4 rounded-lg bg-[var(--bg-card-hover)] border border-[var(--border)] p-4">
             <p className="text-xs font-semibold text-gray-700 mb-2">Tier 構造</p>
             <ul className="space-y-1 text-xs text-gray-600">
               <li><span className="inline-block w-32 font-semibold text-emerald-700">Tier 1 (50%)</span>Core Price Action — M1 + M2 + M3</li>
@@ -506,10 +506,10 @@ export default function GuidePage() {
               <li><span className="inline-block w-32 font-semibold text-violet-700">Tier 4 (30%)</span>Sentiment & Risk — S1 + S2 + S3</li>
             </ul>
             <p className="text-xs text-gray-500 mt-3">
-              スコアの色は <code className="bg-white px-1 rounded">≥80</code> 緑 (strong_bull) /{' '}
-              <code className="bg-white px-1 rounded">≥60</code> 薄緑 (bull) /{' '}
-              <code className="bg-white px-1 rounded">40-59</code> グレー (neutral) /{' '}
-              <code className="bg-white px-1 rounded">≤39</code> 赤系 (bear) で MC v4 の regime 境界に整合。
+              スコアの色は <code className="bg-[var(--bg-card)] px-1 rounded">≥80</code> 緑 (strong_bull) /{' '}
+              <code className="bg-[var(--bg-card)] px-1 rounded">≥60</code> 薄緑 (bull) /{' '}
+              <code className="bg-[var(--bg-card)] px-1 rounded">40-59</code> グレー (neutral) /{' '}
+              <code className="bg-[var(--bg-card)] px-1 rounded">≤39</code> 赤系 (bear) で MC v4 の regime 境界に整合。
             </p>
             <p className="text-xs text-gray-500 mt-2">
               <strong>valid_weight</strong>: 各日に有効だったファクターの重み合計。
@@ -525,7 +525,7 @@ export default function GuidePage() {
         <h2 className="text-lg font-bold mb-3" style={{ color: 'var(--text-primary)' }}>
           Dynamics (v4) — Velocity / Duration / Shock
         </h2>
-        <div className="bg-white rounded-xl border border-[#e8eaed] shadow-sm p-5">
+        <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-5">
           <p className="text-sm text-gray-600 mb-4">
             8 Factors が「現在の市場が <strong className="text-gray-900">どこにいるか</strong>」を測るのに対し、
             Dynamics は「<strong className="text-gray-900">どう動いているか</strong>」を 3 軸 13 列で捉えます。
@@ -536,14 +536,14 @@ export default function GuidePage() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-gray-50 border-b border-[#e8eaed]">
+                <tr className="bg-[var(--bg-card-hover)] border-b border-[var(--border)]">
                   <th className="text-left px-3 py-2 font-semibold text-gray-700">軸</th>
                   <th className="text-left px-3 py-2 font-semibold text-gray-700">列名</th>
                   <th className="text-left px-3 py-2 font-semibold text-gray-700">単位</th>
                   <th className="text-left px-3 py-2 font-semibold text-gray-700">何を測っているか</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#e8eaed]">
+              <tbody className="divide-y divide-[var(--border)]">
                 <tr className="bg-emerald-50/30">
                   <td className="px-3 py-2 font-mono font-bold text-emerald-700" rowSpan={4}>Velocity</td>
                   <td className="px-3 py-2 font-mono text-xs text-gray-700">mc_v4_delta_1d</td>
@@ -616,7 +616,7 @@ export default function GuidePage() {
             </table>
           </div>
 
-          <div className="mt-4 rounded-lg bg-gray-50 border border-[#e8eaed] p-4">
+          <div className="mt-4 rounded-lg bg-[var(--bg-card-hover)] border border-[var(--border)] p-4">
             <p className="text-xs font-semibold text-gray-700 mb-2">読み方</p>
             <ul className="space-y-1.5 text-xs text-gray-600">
               <li>
@@ -644,10 +644,10 @@ export default function GuidePage() {
         <h2 className="text-lg font-bold mb-3" style={{ color: 'var(--text-primary)' }}>
           Glossary
         </h2>
-        <div className="bg-white rounded-xl border border-[#e8eaed] shadow-sm overflow-x-auto">
+        <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-gray-50 border-b border-[#e8eaed]">
+              <tr className="bg-[var(--bg-card-hover)] border-b border-[var(--border)]">
                 <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 w-[140px]">Term</th>
                 <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Description</th>
               </tr>
@@ -656,7 +656,7 @@ export default function GuidePage() {
               {GLOSSARY.map((g, i) => (
                 <tr
                   key={g.term}
-                  className={`border-b border-[#f0f2f4] ${i % 2 === 0 ? 'bg-white' : 'bg-[#fafafa]'}`}
+                  className={`border-b border-[var(--border-subtle)] ${i % 2 === 0 ? 'bg-[var(--bg-card)]' : 'bg-[var(--bg-card-hover)]'}`}
                 >
                   <td className="px-4 py-2 font-mono text-xs font-bold text-gray-900">{g.term}</td>
                   <td className="px-4 py-2 text-xs text-gray-600">{g.desc}</td>

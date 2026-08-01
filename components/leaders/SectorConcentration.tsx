@@ -37,14 +37,14 @@ export default function SectorConcentration({ rows }: Props) {
 
   if (buckets.length === 0) {
     return (
-      <div className="bg-white rounded-xl border border-[#e8eaed] shadow-sm p-8 text-center text-gray-400">
+      <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-8 text-center text-gray-400">
         <p className="text-sm">セクターデータなし</p>
       </div>
     )
   }
 
   return (
-    <div className="bg-white rounded-xl border border-[#e8eaed] shadow-sm p-5">
+    <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-5">
       <div className="flex items-center justify-between mb-4">
         <div>
           <p className="text-sm font-semibold text-gray-700">セクター集中度 — 資金フロー観測</p>
@@ -64,7 +64,7 @@ export default function SectorConcentration({ rows }: Props) {
               <span className="w-36 text-right text-gray-700 truncate" title={b.sector}>
                 {b.sector}
               </span>
-              <div className="flex-1 h-5 bg-gray-50 rounded relative overflow-hidden">
+              <div className="flex-1 h-5 bg-[var(--bg-card-hover)] rounded relative overflow-hidden">
                 <div
                   className="h-full rounded transition-all"
                   style={{

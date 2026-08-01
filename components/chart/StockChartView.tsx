@@ -144,7 +144,7 @@ export default function StockChartView({ code, name, sector }: Props) {
                 className={`text-xs px-2 py-1 rounded border transition-colors ${
                   lookback === k
                     ? 'bg-[var(--accent)] text-white border-[var(--accent)]'
-                    : 'bg-white text-[var(--text-secondary)] border-[var(--border)] hover:bg-[var(--bg-card-hover)]'
+                    : 'bg-[var(--bg-card)] text-[var(--text-secondary)] border-[var(--border)] hover:bg-[var(--bg-card-hover)]'
                 }`}
               >
                 {k}

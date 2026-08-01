@@ -187,8 +187,8 @@ function Row({ row }: { row: EarningsQualityRow }) {
 
   return (
     <tr
-      className={`border-b border-[#f0f2f4] transition-colors hover:bg-[var(--bg-card-hover)] ${
-        isPerfect ? 'bg-emerald-50/60' : 'bg-white'
+      className={`border-b border-[var(--border-subtle)] transition-colors hover:bg-[var(--bg-card-hover)] ${
+        isPerfect ? 'bg-emerald-50/60' : 'bg-[var(--bg-card)]'
       }`}
     >
       <td className="px-2 py-2 text-center font-mono text-xs text-gray-500 tabular-nums">
@@ -301,7 +301,7 @@ function ChipFilter({
       className={`text-[11px] px-2 py-1 rounded border transition-colors ${
         selected
           ? 'bg-[var(--accent)] text-white border-[var(--accent)]'
-          : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+          : 'bg-[var(--bg-card)] text-gray-600 border-gray-200 hover:bg-[var(--bg-card-hover)]'
       }`}
     >
       {label}
@@ -408,7 +408,7 @@ export default function EarningsQualitySection({
 
       {/* ── フィルタ UI（セクターのみ）──────────────────────────── */}
       {sectorOptions.length > 0 && (
-        <div className="bg-white rounded-xl border border-[#e8eaed] shadow-sm p-4 mb-5">
+        <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-4 mb-5">
           <div className="flex flex-wrap items-start gap-2">
             <span className="text-[11px] font-semibold text-gray-500 uppercase w-14 shrink-0 mt-1">
               セクター
@@ -436,7 +436,7 @@ export default function EarningsQualitySection({
       )}
 
       {/* ── テーブル ────────────────────────────────────────────── */}
-      <div className="bg-white rounded-xl border border-[#e8eaed] shadow-sm overflow-x-auto">
+      <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm overflow-x-auto">
         <div className="flex items-center gap-3 px-4 pt-4 pb-3">
           <p className="text-sm font-semibold text-[var(--text-primary)]">品質スコア ランキング</p>
           <span className="ml-auto text-xs text-[var(--text-muted)]">
@@ -446,7 +446,7 @@ export default function EarningsQualitySection({
 
         <table className="w-full min-w-[1500px] text-sm">
           <thead>
-            <tr className="bg-gray-50 border-y border-[#e8eaed]">
+            <tr className="bg-[var(--bg-card-hover)] border-y border-[var(--border)]">
               <SortTh label="順位" tooltip="rank_in_day — score3 降順順位 (1=トップ)" sortKey="rank_in_day" {...sp} align="center" className="w-14" />
               <SortTh label="Score" tooltip="score3 = s_div + s_eps + s_sales (0-7, Q1 は最大 5)" sortKey="score3" {...sp} align="center" className="w-20" />
               <th className="px-2 py-2.5 text-xs font-medium uppercase tracking-wide text-left text-[var(--text-secondary)]">Verdict</th>
@@ -479,7 +479,7 @@ export default function EarningsQualitySection({
         )}
 
         {/* Legend */}
-        <div className="flex items-center justify-center gap-4 py-3 text-[11px] border-t border-[#f0f2f4] flex-wrap">
+        <div className="flex items-center justify-center gap-4 py-3 text-[11px] border-t border-[var(--border-subtle)] flex-wrap">
           <span className="text-[var(--text-secondary)]">Score:</span>
           <span className="flex items-center gap-1">
             <span className="inline-block w-2.5 h-2.5 rounded" style={{ backgroundColor: '#86efac' }} />
@@ -531,7 +531,7 @@ function StatCard({
           ? 'text-[var(--neutral-color)]'
           : 'text-[var(--text-primary)]'
   return (
-    <div className="bg-white rounded-xl border border-[#e8eaed] shadow-sm p-3">
+    <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-3">
       <p className="text-[10px] text-[var(--text-secondary)] uppercase tracking-wide font-medium">{label}</p>
       <p className={`text-2xl font-bold font-mono tabular-nums mt-1 ${accentColor}`}>{value}</p>
       {sub && <p className="text-[10px] text-[var(--text-muted)] mt-0.5 truncate" title={sub}>{sub}</p>}

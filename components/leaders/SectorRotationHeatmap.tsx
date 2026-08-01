@@ -35,7 +35,7 @@ export default function SectorRotationHeatmap({ rotation, loading }: Props) {
 
   if (loading && weeks.length === 0) {
     return (
-      <div className="bg-white rounded-xl border border-[#e8eaed] shadow-sm p-8 text-center text-gray-400">
+      <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-8 text-center text-gray-400">
         <p className="text-sm">Loading...</p>
       </div>
     )
@@ -43,7 +43,7 @@ export default function SectorRotationHeatmap({ rotation, loading }: Props) {
 
   if (weeks.length === 0) {
     return (
-      <div className="bg-white rounded-xl border border-[#e8eaed] shadow-sm p-8 text-center text-gray-400">
+      <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-8 text-center text-gray-400">
         <p className="text-sm">ヒートマップ用データなし</p>
       </div>
     )
@@ -54,7 +54,7 @@ export default function SectorRotationHeatmap({ rotation, loading }: Props) {
   for (const v of cells.values()) if (v > globalMax) globalMax = v
 
   return (
-    <div className="bg-white rounded-xl border border-[#e8eaed] shadow-sm p-5 overflow-x-auto">
+    <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-5 overflow-x-auto">
       <div className="mb-4">
         <p className="text-sm font-semibold text-gray-700">セクターローテーション タイムライン</p>
         <p className="text-xs text-gray-500 mt-0.5">
@@ -67,7 +67,7 @@ export default function SectorRotationHeatmap({ rotation, loading }: Props) {
         <table className="border-separate" style={{ borderSpacing: '2px' }}>
           <thead>
             <tr>
-              <th className="text-left text-[11px] font-semibold text-gray-500 px-2 py-1 sticky left-0 bg-white z-10">
+              <th className="text-left text-[11px] font-semibold text-gray-500 px-2 py-1 sticky left-0 bg-[var(--bg-card)] z-10">
                 Sector
               </th>
               {weeks.map(w => (
@@ -84,7 +84,7 @@ export default function SectorRotationHeatmap({ rotation, loading }: Props) {
           <tbody>
             {sectors.map(s => (
               <tr key={s}>
-                <td className="text-xs text-gray-700 px-2 py-1 sticky left-0 bg-white whitespace-nowrap font-medium">
+                <td className="text-xs text-gray-700 px-2 py-1 sticky left-0 bg-[var(--bg-card)] whitespace-nowrap font-medium">
                   {s}
                 </td>
                 {weeks.map(w => {

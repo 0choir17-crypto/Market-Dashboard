@@ -289,7 +289,7 @@ export default function LeadersTable({ rows, hitsMap, query }: Props) {
   const sp = { currentKey: sortKey, currentDir: sortDir, onSort: handleSort }
 
   return (
-    <div className="bg-white rounded-xl border border-[#e8eaed] shadow-sm overflow-x-auto">
+    <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm overflow-x-auto">
       <div className="flex items-center gap-3 px-4 pt-4 pb-3 flex-wrap">
         <p className="text-sm font-semibold text-[var(--text-primary)]">市場リーダー Top 50</p>
         <span className="text-[11px] text-[var(--text-muted)]">
@@ -302,7 +302,7 @@ export default function LeadersTable({ rows, hitsMap, query }: Props) {
 
       <table className="w-full min-w-[1360px] text-sm">
         <thead>
-          <tr className="bg-gray-50 border-y border-[#e8eaed]">
+          <tr className="bg-[var(--bg-card-hover)] border-y border-[var(--border)]">
             <SortTh label="#" tooltip="market_rank — 当日の市場ランク (1=トップ)" sortKey="market_rank" {...sp} align="center" className="w-10" />
             <SortTh label="ヒット数" tooltip="Top50 に入った通算営業日数 (実数, 表示日まで)" sortKey="hits" {...sp} align="center" className="w-20" />
             <SortTh label="連続/直近" tooltip="現在の連続 Top50 日数 (実数, 全履歴)。連続=1 の銘柄は直近の前回ヒット日 (前回 M/D)、全履歴で初登場は NEW。" sortKey="streak" {...sp} align="center" className="w-24" />
@@ -326,8 +326,8 @@ export default function LeadersTable({ rows, hitsMap, query }: Props) {
             return (
               <tr
                 key={r.code}
-                className={`border-b border-[#f0f2f4] transition-colors ${
-                  i % 2 === 0 ? 'bg-white' : 'bg-[#fafafa]'
+                className={`border-b border-[var(--border-subtle)] transition-colors ${
+                  i % 2 === 0 ? 'bg-[var(--bg-card)]' : 'bg-[var(--bg-card-hover)]'
                 } hover:bg-gray-100`}
               >
                 <td className="px-2 py-1.5 text-center font-mono text-xs text-gray-700 tabular-nums font-semibold">
@@ -402,7 +402,7 @@ export default function LeadersTable({ rows, hitsMap, query }: Props) {
       )}
 
       {/* Legend */}
-      <div className="flex items-center justify-center gap-4 py-3 text-[11px] border-t border-[#f0f2f4] flex-wrap">
+      <div className="flex items-center justify-center gap-4 py-3 text-[11px] border-t border-[var(--border-subtle)] flex-wrap">
         <span className="text-[var(--text-secondary)]">初動 (emerging):</span>
         <span className="flex items-center gap-1">
           <span className="inline-block w-2.5 h-2.5 rounded" style={{ backgroundColor: '#16a34a' }} />

@@ -40,7 +40,7 @@ function Stat({
     labelSpan
   )
   return (
-    <div className="bg-white rounded-xl border border-[var(--border)] shadow-sm px-4 py-3">
+    <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm px-4 py-3">
       <div className="mb-1">{labelEl}</div>
       <p className={`text-lg font-bold font-mono leading-tight ${valueClass ?? 'text-[var(--text-primary)]'}`}>
         {value}

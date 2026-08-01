@@ -79,14 +79,14 @@ export default function SectorBarChart33({ history }: Props) {
 
   if (seriesList.length === 0) {
     return (
-      <div className="bg-white rounded-xl border border-[#e8eaed] shadow-sm p-8 text-center text-[var(--text-muted)]">
+      <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-8 text-center text-[var(--text-muted)]">
         <p className="text-sm">Bar Chart 用のデータがありません</p>
       </div>
     )
   }
 
   return (
-    <div className="bg-white rounded-xl border border-[#e8eaed] shadow-sm p-5">
+    <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-5">
       <div className="flex flex-wrap items-center gap-3 mb-3">
         <p className="text-sm font-semibold text-[var(--text-primary)] mr-auto">
           RS Bar Chart{' '}
@@ -108,7 +108,7 @@ export default function SectorBarChart33({ history }: Props) {
               className={`px-2 py-0.5 rounded border text-xs ${
                 sortKey === o.k
                   ? 'bg-[var(--accent-bg)] border-[var(--accent)] text-[var(--accent)] font-semibold'
-                  : 'bg-white border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)]'
+                  : 'bg-[var(--bg-card)] border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)]'
               }`}
             >
               {o.label}
@@ -130,7 +130,7 @@ export default function SectorBarChart33({ history }: Props) {
           return (
             <div
               key={card.sector}
-              className="bg-white rounded-lg border border-[#e8eaed] shadow-sm px-3 py-2.5 flex flex-col gap-1.5"
+              className="bg-[var(--bg-card)] rounded-lg border border-[var(--border)] shadow-sm px-3 py-2.5 flex flex-col gap-1.5"
               style={{ borderTop: `3px solid ${borderColor}` }}
             >
               <div className="flex items-center justify-between">

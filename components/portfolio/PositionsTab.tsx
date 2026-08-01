@@ -92,10 +92,10 @@ export default function TradesTab({ positions, onRefresh }: Props) {
       </div>
 
       {/* Desktop table */}
-      <div className="bg-white rounded-xl border border-[#e8eaed] shadow-sm overflow-x-auto hidden sm:block">
+      <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm overflow-x-auto hidden sm:block">
         <table className="w-full min-w-[1200px] text-sm">
           <thead>
-            <tr className="bg-gray-50 border-b border-t border-[#e8eaed]">
+            <tr className="bg-[var(--bg-card-hover)] border-b border-t border-[var(--border)]">
               {['Ticker','Name','Sector','Entry Date','Entry Price','Shares','Stop Price','InitRisk%','Current','Unrealized ¥','Unrealized %','Target Price','Actions'].map(h => (
                 <th key={h} className={`px-3 py-2.5 text-xs font-medium text-[var(--text-secondary)] uppercase tracking-wide whitespace-nowrap ${h === 'Actions' ? 'text-right' : h === 'Ticker' || h === 'Name' || h === 'Sector' ? 'text-left' : 'text-right'}`}>
                   {h}
@@ -111,7 +111,7 @@ export default function TradesTab({ positions, onRefresh }: Props) {
               return (
                 <tr
                   key={pos.id}
-                  className={`border-b border-[#f0f2f4] hover:bg-[var(--bg-card-hover)] transition-colors ${i % 2 === 0 ? 'bg-white' : 'bg-[#fafafa]'}`}
+                  className={`border-b border-[var(--border-subtle)] hover:bg-[var(--bg-card-hover)] transition-colors ${i % 2 === 0 ? 'bg-[var(--bg-card)]' : 'bg-[var(--bg-card-hover)]'}`}
                 >
                   <td className="px-3 py-2.5 whitespace-nowrap">
                     <a href={`https://jp.tradingview.com/chart/?symbol=TSE:${pos.ticker}`} target="_blank" rel="noreferrer"
@@ -177,7 +177,7 @@ export default function TradesTab({ positions, onRefresh }: Props) {
           const unrealizedPnl = curPrice != null ? (curPrice - pos.entry_price) * pos.shares : null
           const unrealizedPct = curPrice != null ? (curPrice - pos.entry_price) / pos.entry_price * 100 : null
           return (
-            <div key={pos.id} className="bg-white rounded-xl border border-[#e8eaed] shadow-sm p-4">
+            <div key={pos.id} className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-4">
               <div className="flex justify-between items-start mb-3">
                 <div>
                   <a href={`https://jp.tradingview.com/chart/?symbol=TSE:${pos.ticker}`} target="_blank" rel="noreferrer"

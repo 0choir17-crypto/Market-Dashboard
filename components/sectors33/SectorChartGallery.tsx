@@ -58,7 +58,7 @@ function MetricCell({
   return (
     <div
       className={`rounded-md border px-1.5 py-1 text-center transition-colors ${
-        active ? 'border-[var(--accent)] bg-[var(--accent-bg)]' : 'border-[var(--border)] bg-white'
+        active ? 'border-[var(--accent)] bg-[var(--accent-bg)]' : 'border-[var(--border)] bg-[var(--bg-card)]'
       }`}
     >
       <Tooltip content={tooltip}>
@@ -97,7 +97,7 @@ function SectorCard({
 
   return (
     <div
-      className={`bg-white rounded-xl border border-[#e8eaed] shadow-sm p-4 ${
+      className={`bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-4 ${
         isLow ? 'opacity-70' : ''
       }`}
     >
@@ -174,7 +174,7 @@ function SectorCard({
             />
           )
         })}
-        <div className="rounded-md border border-[var(--border)] bg-white px-1.5 py-1 text-center">
+        <div className="rounded-md border border-[var(--border)] bg-[var(--bg-card)] px-1.5 py-1 text-center">
           <Tooltip content="セクター内銘柄数">
             <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wide">N</p>
           </Tooltip>
@@ -222,7 +222,7 @@ export default function SectorChartGallery({ rows, changes = {} }: Props) {
   const lowConfCount = rows.filter((r) => r.confidence_low === 1).length
 
   return (
-    <div className="bg-white rounded-xl border border-[#e8eaed] shadow-sm p-5">
+    <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-5">
       {/* ツールバー */}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-4">
         <p className="text-sm font-semibold text-[var(--text-primary)]">
@@ -246,7 +246,7 @@ export default function SectorChartGallery({ rows, changes = {} }: Props) {
               className={`px-2 py-0.5 rounded border text-xs ${
                 metricKey === o.k
                   ? 'bg-[var(--accent-bg)] border-[var(--accent)] text-[var(--accent)] font-semibold'
-                  : 'bg-white border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)]'
+                  : 'bg-[var(--bg-card)] border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)]'
               }`}
             >
               {o.label}

@@ -118,14 +118,14 @@ export default function SectorRRG33({ history }: Props) {
 
   if (dots.length === 0) {
     return (
-      <div className="bg-white rounded-xl border border-[#e8eaed] shadow-sm p-8 text-center text-[var(--text-muted)]">
+      <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-8 text-center text-[var(--text-muted)]">
         <p className="text-sm">RRG 表示用のデータが不足しています</p>
       </div>
     )
   }
 
   return (
-    <div className="bg-white rounded-xl border border-[#e8eaed] shadow-sm p-5">
+    <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-5">
       <div className="flex flex-wrap items-center gap-3 mb-3">
         <p className="text-sm font-semibold text-[var(--text-primary)] mr-auto">
           Sector RRG{' '}
@@ -142,7 +142,7 @@ export default function SectorRRG33({ history }: Props) {
               className={`px-2 py-0.5 rounded border text-xs ${
                 showTrailFor === opt
                   ? 'bg-[var(--accent-bg)] border-[var(--accent)] text-[var(--accent)] font-semibold'
-                  : 'bg-white border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)]'
+                  : 'bg-[var(--bg-card)] border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)]'
               }`}
             >
               {opt === 'top6' ? '上位6' : opt === 'top12' ? '上位12' : opt === 'all' ? '全て' : 'なし'}
@@ -158,7 +158,7 @@ export default function SectorRRG33({ history }: Props) {
               className={`px-2 py-0.5 rounded border text-xs ${
                 trailLen === n
                   ? 'bg-[var(--accent-bg)] border-[var(--accent)] text-[var(--accent)] font-semibold'
-                  : 'bg-white border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)]'
+                  : 'bg-[var(--bg-card)] border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)]'
               }`}
             >
               {n}d

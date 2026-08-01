@@ -20,7 +20,7 @@ interface Props {
   height?: number
 }
 
-const CHART_BG = '#ffffff'
+const CHART_BG = '#fdf6e3'
 const UP = '#16a34a'
 const DOWN = '#dc2626'
 const VOL_UP = 'rgba(22, 163, 74, 0.45)'
@@ -219,7 +219,7 @@ export default function PriceChart({
   return (
     <div
       ref={containerRef}
-      className="w-full rounded-md border border-[var(--border)] bg-white"
+      className="w-full rounded-md border border-[var(--border)] bg-[var(--bg-card)]"
       style={{ height, minHeight: height }}
     />
   )

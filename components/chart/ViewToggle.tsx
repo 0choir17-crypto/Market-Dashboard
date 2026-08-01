@@ -19,7 +19,7 @@ export default function ViewToggle({
         className={`px-3 py-1.5 transition-colors ${
           mode === 'cards'
             ? 'bg-[var(--accent)] text-white'
-            : 'bg-white text-[var(--text-secondary)] hover:bg-gray-50'
+            : 'bg-[var(--bg-card)] text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)]'
         }`}
       >
         Cards
@@ -29,7 +29,7 @@ export default function ViewToggle({
         className={`px-3 py-1.5 transition-colors border-l ${
           mode === 'table'
             ? 'bg-[var(--accent)] text-white border-[var(--accent)]'
-            : 'bg-white text-[var(--text-secondary)] border-[var(--border)] hover:bg-gray-50'
+            : 'bg-[var(--bg-card)] text-[var(--text-secondary)] border-[var(--border)] hover:bg-[var(--bg-card-hover)]'
         }`}
       >
         Table

@@ -70,7 +70,7 @@ export default function LeadersPage() {
             onChange={e => loadSnapshot(e.target.value)}
             className={`text-xs font-mono px-2 py-1 rounded border cursor-pointer ${
               isLatest
-                ? 'border-gray-200 bg-white text-gray-700'
+                ? 'border-gray-200 bg-[var(--bg-card)] text-gray-700'
                 : 'border-amber-400 bg-amber-100 text-amber-800 font-semibold'
             }`}
           >
@@ -94,7 +94,7 @@ export default function LeadersPage() {
           value={query}
           onChange={e => setQuery(e.target.value)}
           placeholder="検索: 銘柄コード / 銘柄名"
-          className="text-xs px-3 py-1.5 rounded-lg border border-[var(--border)] bg-white w-56 focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+          className="text-xs px-3 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg-card)] w-56 focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
         />
       </PageHeader>
 
@@ -110,7 +110,7 @@ export default function LeadersPage() {
 
       {loading && snapshot.rows.length === 0 && (
         <div
-          className="bg-white rounded-xl border border-[#e8eaed] shadow-sm p-8 text-center"
+          className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-8 text-center"
           style={{ color: 'var(--text-muted)' }}
         >
           <p className="text-lg font-medium">読み込み中…</p>
@@ -119,7 +119,7 @@ export default function LeadersPage() {
 
       {!loading && snapshot.rows.length === 0 ? (
         <div
-          className="bg-white rounded-xl border border-[#e8eaed] shadow-sm p-8 text-center"
+          className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-8 text-center"
           style={{ color: 'var(--text-muted)' }}
         >
           <p className="text-lg font-medium mb-2">データが見つかりません</p>

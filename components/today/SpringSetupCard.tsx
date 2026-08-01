@@ -61,7 +61,7 @@ function Metric({
   title?: string
 }) {
   return (
-    <div className="rounded bg-[var(--bg-card-hover)] border border-[#f0f2f4] px-2 py-1.5" title={title}>
+    <div className="rounded bg-[var(--bg-card-hover)] border border-[var(--border-subtle)] px-2 py-1.5" title={title}>
       <p className="text-[9px] font-medium uppercase tracking-wide text-[var(--text-secondary)] leading-tight">{label}</p>
       <p
         className="mt-0.5 font-mono text-sm font-semibold leading-tight tabular-nums"
@@ -87,14 +87,14 @@ export default function SpringSetupCard({ row, hot = false, multiHit = false, on
 
   return (
     <div
-      className="bg-white rounded-lg border shadow-sm hover:shadow-md transition-shadow flex flex-col"
+      className="bg-[var(--bg-card)] rounded-lg border shadow-sm hover:shadow-md transition-shadow flex flex-col"
       style={{
-        borderColor: multiHit ? '#fbbf24' : hot ? '#86efac' : '#e8eaed',
-        backgroundColor: multiHit ? '#fef9c3' : hot ? '#f0fdf4' : '#ffffff',
+        borderColor: multiHit ? '#fbbf24' : hot ? '#86efac' : 'var(--border)',
+        backgroundColor: multiHit ? '#fef9c3' : hot ? '#f0fdf4' : 'var(--bg-card)',
       }}
     >
       {/* バッジ行 */}
-      <div className="px-3 py-2 border-b border-[#f0f2f4] flex items-center gap-1.5 flex-wrap">
+      <div className="px-3 py-2 border-b border-[var(--border-subtle)] flex items-center gap-1.5 flex-wrap">
         <Chip text={meta.label} palette={meta.palette} title={meta.title} />
       </div>
 
@@ -152,7 +152,7 @@ export default function SpringSetupCard({ row, hot = false, multiHit = false, on
 
       {/* アクション */}
       {(onAddWatchlist || onAddPosition) && (
-        <div className="px-3 pt-2 pb-2 mt-2 border-t border-[#f0f2f4] flex items-center justify-end gap-1.5">
+        <div className="px-3 pt-2 pb-2 mt-2 border-t border-[var(--border-subtle)] flex items-center justify-end gap-1.5">
           {onAddWatchlist && (
             <button
               onClick={() => onAddWatchlist(row)}

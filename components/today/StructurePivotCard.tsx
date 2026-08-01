@@ -65,7 +65,7 @@ function HitCell({
       className="rounded px-1.5 py-1 border"
       style={{
         backgroundColor: today ? 'var(--positive-bg, #ecfdf5)' : 'transparent',
-        borderColor: today ? '#86efac' : '#f0f2f4',
+        borderColor: today ? '#86efac' : 'var(--border-subtle)',
       }}
       title={title}
     >
@@ -95,7 +95,7 @@ function Metric({
   title?: string
 }) {
   return (
-    <div className="rounded bg-[var(--bg-card-hover)] border border-[#f0f2f4] px-2 py-1.5" title={title}>
+    <div className="rounded bg-[var(--bg-card-hover)] border border-[var(--border-subtle)] px-2 py-1.5" title={title}>
       <p className="text-[9px] font-medium uppercase tracking-wide text-[var(--text-secondary)] leading-tight">{label}</p>
       <p
         className="mt-0.5 font-mono text-sm font-semibold leading-tight tabular-nums"
@@ -115,8 +115,8 @@ export default function StructurePivotCard({
   onAddPosition,
 }: Props) {
   // 枠/背景: 複数シグナル重複（黄）を最優先 → hotセクター（緑）→ 既定。
-  const borderColor = multiHit ? '#fbbf24' : hot ? '#86efac' : '#e8eaed'
-  const backgroundColor = multiHit ? '#fef9c3' : hot ? '#f0fdf4' : '#ffffff'
+  const borderColor = multiHit ? '#fbbf24' : hot ? '#86efac' : 'var(--border)'
+  const backgroundColor = multiHit ? '#fef9c3' : hot ? '#f0fdf4' : 'var(--bg-card)'
 
   // 本日ヒットしたシグナルのラベル（複数可）。カード上部に明示する。
   const todayTags: ('1st' | '2nd')[] = []
@@ -136,7 +136,7 @@ export default function StructurePivotCard({
 
   return (
     <div
-      className="bg-white rounded-lg border shadow-sm hover:shadow-md transition-shadow flex flex-col"
+      className="bg-[var(--bg-card)] rounded-lg border shadow-sm hover:shadow-md transition-shadow flex flex-col"
       style={{ borderColor, backgroundColor }}
     >
       {/* 銘柄 */}
@@ -200,7 +200,7 @@ export default function StructurePivotCard({
 
       {/* 直近ヒット日: 1st / 2nd それぞれのヒット日（本日ヒットは緑で強調） */}
       <div className="px-3 pt-2">
-        <div className="rounded bg-[var(--bg-card-hover)] border border-[#f0f2f4] px-2 py-1.5">
+        <div className="rounded bg-[var(--bg-card-hover)] border border-[var(--border-subtle)] px-2 py-1.5">
           <p className="text-[9px] font-medium uppercase tracking-wide text-[var(--text-secondary)] leading-tight">
             直近ヒット日
           </p>
@@ -238,7 +238,7 @@ export default function StructurePivotCard({
 
       {/* アクション */}
       {(onAddWatchlist || onAddPosition) && (
-        <div className="px-3 pt-2 pb-2 mt-2 border-t border-[#f0f2f4] flex items-center justify-end gap-1.5">
+        <div className="px-3 pt-2 pb-2 mt-2 border-t border-[var(--border-subtle)] flex items-center justify-end gap-1.5">
           {onAddWatchlist && (
             <button
               onClick={() => onAddWatchlist(row)}
