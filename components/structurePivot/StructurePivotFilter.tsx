@@ -103,7 +103,7 @@ function ButtonGroup<T extends string>({
             className={`text-xs font-medium px-2.5 py-1.5 rounded-lg border transition-colors ${
               active
                 ? 'bg-[var(--accent)] text-white border-[var(--accent)]'
-                : 'bg-white text-gray-700 border-[var(--border)] hover:bg-gray-50'
+                : 'bg-[var(--bg-card)] text-gray-700 border-[var(--border)] hover:bg-[var(--bg-card-hover)]'
             }`}
           >
             {opt.label}

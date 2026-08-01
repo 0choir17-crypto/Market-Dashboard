@@ -123,11 +123,11 @@ export default function WatchlistPage() {
       {error && <ErrorBanner detail={error} onRetry={load} />}
 
       {/* Desktop Table */}
-      <div className="bg-white rounded-xl border border-[#e8eaed] shadow-sm overflow-x-auto hidden sm:block">
+      <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm overflow-x-auto hidden sm:block">
         <div className="px-4 pt-4 pb-2 text-xs text-gray-400">{items.length} 件</div>
         <table className="w-full min-w-[1200px] text-sm">
           <thead>
-            <tr className="bg-gray-50 border-b border-t border-[#e8eaed]">
+            <tr className="bg-[var(--bg-card-hover)] border-b border-t border-[var(--border)]">
               <th className={`${thClass('ticker')} text-left`} onClick={() => handleSort('ticker')}>
                 Ticker{indicator('ticker')}
               </th>
@@ -154,7 +154,7 @@ export default function WatchlistPage() {
             {sorted.map((item, i) => (
               <tr
                 key={item.id}
-                className={`border-b border-[#f0f2f4] hover:bg-gray-50 transition-colors ${i % 2 === 0 ? 'bg-white' : 'bg-[#fafafa]'}`}
+                className={`border-b border-[var(--border-subtle)] hover:bg-[var(--bg-card-hover)] transition-colors ${i % 2 === 0 ? 'bg-[var(--bg-card)]' : 'bg-[var(--bg-card-hover)]'}`}
               >
                 <td className="px-3 py-2.5 whitespace-nowrap">
                   <a
@@ -241,7 +241,7 @@ export default function WatchlistPage() {
           <p className="text-center text-gray-400 text-sm py-8">ウォッチリストは空です。</p>
         )}
         {sorted.map(item => (
-          <div key={item.id} className="bg-white rounded-xl border border-[#e8eaed] shadow-sm p-4">
+          <div key={item.id} className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-4">
             <div className="flex justify-between items-start mb-2">
               <div>
                 <a

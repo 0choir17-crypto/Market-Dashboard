@@ -30,7 +30,7 @@ export default function ErrorBanner({ detail, message, onRetry }: Props) {
       {onRetry && (
         <button
           onClick={onRetry}
-          className="shrink-0 px-2.5 py-1 rounded-md text-xs font-medium border border-red-300 bg-white text-red-700 hover:bg-red-100 transition-colors"
+          className="shrink-0 px-2.5 py-1 rounded-md text-xs font-medium border border-red-300 bg-[var(--bg-card)] text-red-700 hover:bg-red-100 transition-colors"
         >
           再試行
         </button>

@@ -35,12 +35,12 @@ export default function NavBar() {
   const linkClass = (path: string) =>
     pathname === path
       ? 'text-sm font-semibold text-[var(--accent)] bg-[var(--accent-bg)] px-2.5 py-1 rounded-md'
-      : 'text-sm font-medium text-gray-500 hover:text-[var(--text-primary)] hover:bg-gray-50 px-2.5 py-1 rounded-md transition-colors'
+      : 'text-sm font-medium text-gray-500 hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)] px-2.5 py-1 rounded-md transition-colors'
 
   return (
     <nav
       aria-label="メインナビゲーション"
-      className={`flex items-center gap-1.5 sm:gap-2 px-4 sm:px-6 py-2.5 bg-white border-b sticky top-0 z-10 overflow-x-auto whitespace-nowrap ${
+      className={`flex items-center gap-1.5 sm:gap-2 px-4 sm:px-6 py-2.5 bg-[var(--bg-card)] border-b sticky top-0 z-10 overflow-x-auto whitespace-nowrap ${
         !isLatest && showPicker ? 'border-amber-400' : 'border-[var(--border)]'
       }`}
     >
@@ -67,7 +67,7 @@ export default function NavBar() {
             aria-label="表示する営業日"
             className={`text-xs font-mono px-2 py-1 rounded-md border cursor-pointer ${
               isLatest
-                ? 'border-gray-200 bg-white text-gray-600'
+                ? 'border-gray-200 bg-[var(--bg-card)] text-gray-600'
                 : 'border-amber-400 bg-amber-100 text-amber-800 font-semibold'
             }`}
           >

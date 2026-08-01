@@ -187,7 +187,7 @@ export default function EditTradeModal({ open, onClose, onSaved, trade }: Props)
             <select
               value={screenName}
               onChange={e => setScreenName(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 bg-[var(--bg-card)]"
             >
               <option value="">-- Select --</option>
               {SCREEN_OPTIONS.map(o => (
@@ -275,7 +275,7 @@ export default function EditTradeModal({ open, onClose, onSaved, trade }: Props)
             {preview && (() => {
               const bg = preview.result === 'WIN' ? 'bg-emerald-50'
                 : preview.result === 'LOSS' ? 'bg-red-50'
-                : 'bg-gray-50'
+                : 'bg-[var(--bg-card-hover)]'
               const fgStrong = preview.result === 'WIN' ? 'text-emerald-700'
                 : preview.result === 'LOSS' ? 'text-red-700'
                 : 'text-gray-700'
@@ -403,7 +403,7 @@ export default function EditTradeModal({ open, onClose, onSaved, trade }: Props)
         <div className="flex justify-end gap-3 pt-2">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors min-h-[44px]"
+            className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-[var(--bg-card-hover)] transition-colors min-h-[44px]"
           >
             キャンセル
           </button>

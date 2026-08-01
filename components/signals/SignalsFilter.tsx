@@ -48,9 +48,9 @@ export default function SignalsFilter({ signals, marketRegime, scorecardRegime }
       return 'px-3 py-1.5 rounded-lg text-sm font-medium bg-blue-600 text-white border border-blue-600 transition-colors'
     }
     if (rec) {
-      return 'px-3 py-1.5 rounded-lg text-sm font-medium bg-white text-amber-700 border border-amber-400 hover:bg-amber-50 transition-colors'
+      return 'px-3 py-1.5 rounded-lg text-sm font-medium bg-[var(--bg-card)] text-amber-700 border border-amber-400 hover:bg-amber-50 transition-colors'
     }
-    return 'px-3 py-1.5 rounded-lg text-sm font-medium bg-white text-gray-600 border border-[#e8eaed] hover:bg-gray-50 transition-colors'
+    return 'px-3 py-1.5 rounded-lg text-sm font-medium bg-[var(--bg-card)] text-gray-600 border border-[var(--border)] hover:bg-[var(--bg-card-hover)] transition-colors'
   }
 
   return (

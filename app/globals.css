@@ -11,9 +11,10 @@
 
 :root {
   --bg-primary: #fdf6e3;
-  --bg-card: #ffffff;
-  --bg-card-hover: #fafafa;
-  --border: #e8eaed;
+  --bg-card: #fdf6e3;
+  --bg-card-hover: #f5ecd5;
+  --border: #e6dcc0;
+  --border-subtle: #efe6cf;
   --text-primary: #1a1d23;
   --text-secondary: #6b7280;
   --text-muted: #9ca3af;

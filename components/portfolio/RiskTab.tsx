@@ -96,14 +96,14 @@ export default function RiskTab({ riskSettings, history, onRefresh }: Props) {
 
   const inputClass = "w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
   const labelClass = "block text-xs font-medium text-gray-600 mb-1"
-  const roClass = "w-full border border-gray-200 bg-gray-50 rounded-lg px-3 py-2.5 text-base font-mono text-gray-700"
+  const roClass = "w-full border border-gray-200 bg-[var(--bg-card-hover)] rounded-lg px-3 py-2.5 text-base font-mono text-gray-700"
 
   return (
     <div className="space-y-5 max-w-2xl">
       {error && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
 
       {/* === Capital & Risk Settings === */}
-      <div className="bg-white rounded-xl border border-[#e8eaed] shadow-sm p-5">
+      <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-5">
         <h3 className="text-sm font-bold text-gray-800 mb-4">💰 Capital & Risk Settings</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
@@ -136,7 +136,7 @@ export default function RiskTab({ riskSettings, history, onRefresh }: Props) {
       </div>
 
       {/* === Drawdown Rules === */}
-      <div className="bg-white rounded-xl border border-[#e8eaed] shadow-sm p-5">
+      <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-5">
         <h3 className="text-sm font-bold text-gray-800 mb-4">📉 Drawdown Rules</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
@@ -188,7 +188,7 @@ export default function RiskTab({ riskSettings, history, onRefresh }: Props) {
       </div>
 
       {/* === Losing Streak === */}
-      <div className={`rounded-xl border shadow-sm p-5 ${isHalfRisk ? 'bg-yellow-50 border-yellow-300' : 'bg-white border-[#e8eaed]'}`}>
+      <div className={`rounded-xl border shadow-sm p-5 ${isHalfRisk ? 'bg-yellow-50 border-yellow-300' : 'bg-[var(--bg-card)] border-[var(--border)]'}`}>
         <div className="flex items-center gap-2 mb-4">
           <h3 className="text-sm font-bold text-gray-800">🔄 Losing Streak</h3>
           {isHalfRisk && (
@@ -212,7 +212,7 @@ export default function RiskTab({ riskSettings, history, onRefresh }: Props) {
       </div>
 
       {/* Memo */}
-      <div className="bg-white rounded-xl border border-[#e8eaed] shadow-sm p-5">
+      <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-5">
         <label className={labelClass}>Memo</label>
         <textarea value={memo} onChange={e => setMemo(e.target.value)} rows={3}
           className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"

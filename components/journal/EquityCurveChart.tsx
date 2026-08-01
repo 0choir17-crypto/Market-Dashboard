@@ -53,7 +53,7 @@ export default function EquityCurveChart({ trades }: Props) {
 
   if (data.length < 2) {
     return (
-      <div className="mb-6 bg-white rounded-xl border border-[#e8eaed] shadow-sm p-6 text-center text-sm text-gray-400">
+      <div className="mb-6 bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-6 text-center text-sm text-gray-400">
         資産推移チャートを表示するには 2 件以上のクローズ済みトレードが必要です。
       </div>
     )
@@ -86,7 +86,7 @@ export default function EquityCurveChart({ trades }: Props) {
   const zeroOffset = range > 0 ? yMax / range : peak >= 0 ? 1 : 0
 
   return (
-    <div className="mb-6 bg-white rounded-xl border border-[#e8eaed] shadow-sm p-4">
+    <div className="mb-6 bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-3 mb-3">
         <h3 className="text-sm font-semibold text-gray-700">
           Equity Curve <span className="text-xs font-normal text-gray-400">(累積 PnL)</span>
@@ -129,7 +129,7 @@ export default function EquityCurveChart({ trades }: Props) {
                 <stop offset="100%" stopColor={RED} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f0f2f4" />
+            <CartesianGrid strokeDasharray="3 3" stroke="#efe6cf" />
             <ReferenceLine y={0} stroke="#9ca3af" strokeDasharray="2 2" />
             <XAxis
               dataKey="date"
@@ -145,7 +145,7 @@ export default function EquityCurveChart({ trades }: Props) {
               contentStyle={{
                 fontSize: 12,
                 borderRadius: 8,
-                border: '1px solid #e8eaed',
+                border: '1px solid var(--border)',
               }}
               formatter={(value, name) => {
                 const v = typeof value === 'number' ? value : Number(value)

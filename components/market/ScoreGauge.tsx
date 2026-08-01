@@ -79,7 +79,7 @@ export default function ScoreGauge({
         <path
           d={`M ${bgStart.x} ${bgStart.y} A ${r} ${r} 0 1 1 ${bgEnd.x} ${bgEnd.y}`}
           fill="none"
-          stroke="#e8eaed"
+          stroke="#e6dcc0"
           strokeWidth={strokeWidth}
           strokeLinecap="round"
         />
@@ -162,8 +162,8 @@ export default function ScoreGauge({
         <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">
           Sub-regimes
         </p>
-        <div className="rounded-lg border border-[#e8eaed] overflow-hidden text-sm">
-          <div className="flex items-center justify-between px-4 py-2 border-b border-[#e8eaed]">
+        <div className="rounded-lg border border-[var(--border)] overflow-hidden text-sm">
+          <div className="flex items-center justify-between px-4 py-2 border-b border-[var(--border)]">
             <span className="text-gray-500 font-medium">Index Trend</span>
             <span className="flex items-center gap-1.5 font-semibold" style={{ color: trendColor }}>
               {'\u25CF'} {marketRegimeLabel}

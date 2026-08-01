@@ -66,7 +66,7 @@ export default function IndexCard({ label, prefix, data, className }: Props) {
   const aboveSma200= data?.[p('above_sma200')] as boolean | null
 
   return (
-    <div className={`bg-white rounded-xl border border-[#e8eaed] shadow-sm p-4 ${className ?? ''}`}>
+    <div className={`bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-4 ${className ?? ''}`}>
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-semibold text-[var(--text-secondary)]">{label}</h3>
         <div className="flex gap-1">

@@ -99,7 +99,7 @@ export default function JournalPage() {
 
       {/* Tab navigation */}
       <div className="overflow-x-auto whitespace-nowrap mb-6 -mx-4 sm:mx-0 px-4 sm:px-0">
-        <div className="inline-flex gap-1 bg-white rounded-xl border border-[#e8eaed] shadow-sm p-1">
+        <div className="inline-flex gap-1 bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-1">
           {TABS.map(tab => (
             <button
               key={tab.key}
@@ -107,7 +107,7 @@ export default function JournalPage() {
               className={`px-4 py-3 min-w-fit text-sm font-semibold rounded-lg transition-colors ${
                 activeTab === tab.key
                   ? 'bg-blue-600 text-white'
-                  : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
+                  : 'text-gray-600 hover:text-gray-800 hover:bg-[var(--bg-card-hover)]'
               }`}
             >
               {tab.label}

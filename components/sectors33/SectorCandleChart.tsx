@@ -211,7 +211,7 @@ export default function SectorCandleChart({
   return (
     <div
       ref={containerRef}
-      className="w-full rounded-md border border-[var(--border)] bg-white"
+      className="w-full rounded-md border border-[var(--border)] bg-[var(--bg-card)]"
       style={{ height, minHeight: height }}
     />
   )

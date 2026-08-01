@@ -36,14 +36,14 @@ export default function Modal({ open, onClose, children, title }: Props) {
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="relative bg-white rounded-xl shadow-xl w-full max-w-lg mx-4 overflow-y-auto max-h-[90vh]"
+        className="relative bg-[var(--bg-card)] rounded-xl shadow-xl w-full max-w-lg mx-4 overflow-y-auto max-h-[90vh]"
       >
         {title && (
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
             <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 transition-colors text-2xl leading-none font-light w-8 h-8 flex items-center justify-center rounded-md hover:bg-gray-50"
+              className="text-gray-400 hover:text-gray-600 transition-colors text-2xl leading-none font-light w-8 h-8 flex items-center justify-center rounded-md hover:bg-[var(--bg-card-hover)]"
               aria-label="閉じる"
             >
               ×

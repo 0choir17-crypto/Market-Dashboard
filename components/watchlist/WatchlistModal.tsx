@@ -89,7 +89,7 @@ export default function WatchlistModal({ open, onClose, onSaved, initial }: Prop
 
         {/* シグナル情報パネル（Signalsページからの場合のみ表示） */}
         {initial?.rs_composite != null && (
-          <div className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3">
+          <div className="bg-[var(--bg-card-hover)] border border-gray-200 rounded-lg px-4 py-3">
             <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Signal data (auto-filled)</p>
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-x-4 gap-y-1 text-xs">
               <span className="text-gray-500">RS: <strong className="text-gray-800">{initial.rs_composite?.toFixed(1)}</strong></span>
@@ -136,7 +136,7 @@ export default function WatchlistModal({ open, onClose, onSaved, initial }: Prop
           {/* Watch Date（追加日は自動入力） */}
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Added Date</label>
-            <div className="w-full border border-gray-200 bg-gray-50 rounded-lg px-3 py-2.5 text-base text-gray-600 font-mono">
+            <div className="w-full border border-gray-200 bg-[var(--bg-card-hover)] rounded-lg px-3 py-2.5 text-base text-gray-600 font-mono">
               {isEdit ? watchDate : today()}
               <span className="ml-2 text-[10px] text-gray-400">自動</span>
             </div>
@@ -210,7 +210,7 @@ export default function WatchlistModal({ open, onClose, onSaved, initial }: Prop
         <div className="flex justify-end gap-3 pt-2">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors min-h-[44px]"
+            className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-[var(--bg-card-hover)] transition-colors min-h-[44px]"
           >
             キャンセル
           </button>

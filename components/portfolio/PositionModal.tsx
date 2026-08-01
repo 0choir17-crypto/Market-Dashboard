@@ -249,7 +249,7 @@ export default function PositionModal({ open, onClose, onSaved, initial }: Props
             <select
               value={sector}
               onChange={e => setSector(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 bg-[var(--bg-card)]"
             >
               <option value="">-- Select --</option>
               {/* 既存値が一覧に無い場合も選択を保持 */}
@@ -268,7 +268,7 @@ export default function PositionModal({ open, onClose, onSaved, initial }: Props
             <select
               value={screenName}
               onChange={e => setScreenName(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 bg-[var(--bg-card)]"
             >
               <option value="">-- Select --</option>
               {/* 既存値が選択肢に無い場合も保持 */}
@@ -438,7 +438,7 @@ export default function PositionModal({ open, onClose, onSaved, initial }: Props
               <select
                 value={exitReason}
                 onChange={e => setExitReason(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 bg-[var(--bg-card)]"
               >
                 {EXIT_REASONS.map(r => (
                   <option key={r} value={r}>{r}</option>
@@ -467,7 +467,7 @@ export default function PositionModal({ open, onClose, onSaved, initial }: Props
         <div className="flex justify-end gap-3 pt-2">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors min-h-[44px]"
+            className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-[var(--bg-card-hover)] transition-colors min-h-[44px]"
           >
             キャンセル
           </button>

@@ -119,7 +119,7 @@ export default function StructurePivotSection({ rows, hotSectors, title, subtitl
   }
 
   return (
-    <section className="bg-white rounded-xl border border-[#e8eaed] shadow-sm p-4">
+    <section className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-4">
       <div className="flex items-baseline gap-2 flex-wrap mb-1">
         <h2 className="text-lg font-bold text-[var(--text-primary)]">{title}</h2>
         <span className="text-xs text-[var(--text-muted)]">
@@ -133,7 +133,7 @@ export default function StructurePivotSection({ rows, hotSectors, title, subtitl
         <select
           value={sector}
           onChange={e => setSector(e.target.value)}
-          className="text-xs px-2 py-1.5 rounded-lg border border-[var(--border)] bg-white text-gray-700 cursor-pointer"
+          className="text-xs px-2 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg-card)] text-gray-700 cursor-pointer"
         >
           <option value="all">全セクター</option>
           {sectorOptions.map(s => (
@@ -146,7 +146,7 @@ export default function StructurePivotSection({ rows, hotSectors, title, subtitl
         <select
           value={signal}
           onChange={e => setSignal(e.target.value as SignalFilter)}
-          className="text-xs px-2 py-1.5 rounded-lg border border-[var(--border)] bg-white text-gray-700 cursor-pointer"
+          className="text-xs px-2 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg-card)] text-gray-700 cursor-pointer"
         >
           <option value="all">本日 1st + 2nd</option>
           <option value="1st">本日 1st ヒット</option>
@@ -158,7 +158,7 @@ export default function StructurePivotSection({ rows, hotSectors, title, subtitl
           <select
             value={sortKey}
             onChange={e => setSortKey(e.target.value)}
-            className="text-xs px-2 py-1.5 rounded-lg border border-[var(--border)] bg-white text-gray-700 cursor-pointer"
+            className="text-xs px-2 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg-card)] text-gray-700 cursor-pointer"
           >
             {SORTS.map(s => (
               <option key={s.key} value={s.key}>

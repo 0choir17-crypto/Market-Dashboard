@@ -154,7 +154,7 @@ export default function StockGrid({
         <div className="flex justify-center mt-3">
           <button
             onClick={() => setShown(s => Math.min(entries.length, s + pageSize))}
-            className="text-xs font-medium px-4 py-2 rounded-lg border bg-white border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)] transition-colors"
+            className="text-xs font-medium px-4 py-2 rounded-lg border bg-[var(--bg-card)] border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)] transition-colors"
           >
             もっと見る（残り <span className="font-mono">{entries.length - shown}</span> 件）
           </button>

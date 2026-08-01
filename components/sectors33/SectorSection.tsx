@@ -112,7 +112,7 @@ export default function SectorSection({
                 className={`px-3 py-1.5 font-medium ${
                   mainView === opt.v
                     ? 'bg-[var(--accent)] text-white'
-                    : 'bg-white text-[var(--text-secondary)] hover:bg-gray-50'
+                    : 'bg-[var(--bg-card)] text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)]'
                 } ${i > 0 ? 'border-l border-[var(--border)]' : ''}`}
               >
                 {opt.label}
@@ -126,7 +126,7 @@ export default function SectorSection({
 
       {loading && rows.length === 0 && (
         <div
-          className="bg-white rounded-xl border border-[#e8eaed] shadow-sm p-8 text-center"
+          className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-8 text-center"
           style={{ color: 'var(--text-muted)' }}
         >
           <p className="text-lg font-medium">読み込み中…</p>
@@ -135,7 +135,7 @@ export default function SectorSection({
 
       {!loading && rows.length === 0 ? (
         <div
-          className="bg-white rounded-xl border border-[#e8eaed] shadow-sm p-8 text-center"
+          className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-8 text-center"
           style={{ color: 'var(--text-muted)' }}
         >
           <p className="text-lg font-medium mb-2">データが見つかりません</p>
@@ -177,7 +177,7 @@ export default function SectorSection({
                       className={`px-3 py-1.5 font-medium ${
                         view === opt.v
                           ? 'bg-[var(--accent)] text-white'
-                          : 'bg-white text-[var(--text-secondary)] hover:bg-gray-50'
+                          : 'bg-[var(--bg-card)] text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)]'
                       } ${i > 0 ? 'border-l border-[var(--border)]' : ''}`}
                     >
                       {opt.label}
@@ -187,7 +187,7 @@ export default function SectorSection({
               </div>
 
               {history.dates.length === 0 ? (
-                <div className="bg-white rounded-xl border border-[#e8eaed] shadow-sm p-8 text-center text-gray-400 text-sm">
+                <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-8 text-center text-gray-400 text-sm">
                   履歴データを読み込めませんでした
                 </div>
               ) : view === 'bar' ? (

@@ -48,7 +48,7 @@ export default function PageHeader({
           <span
             className={`text-xs font-mono px-2.5 py-1 rounded-full border ${
               isLatest
-                ? 'border-[var(--border)] bg-white text-[var(--text-secondary)]'
+                ? 'border-[var(--border)] bg-[var(--bg-card)] text-[var(--text-secondary)]'
                 : 'border-amber-400 bg-amber-50 text-amber-800 font-semibold'
             }`}
             title={isLatest ? 'データ基準日（最新）' : '過去スナップショットを表示中'}
@@ -61,7 +61,7 @@ export default function PageHeader({
           <button
             onClick={onRefresh}
             disabled={refreshing}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium border border-[var(--border)] bg-white hover:bg-[var(--bg-card-hover)] transition-colors disabled:opacity-50 text-[var(--accent)] min-h-[36px]"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium border border-[var(--border)] bg-[var(--bg-card)] hover:bg-[var(--bg-card-hover)] transition-colors disabled:opacity-50 text-[var(--accent)] min-h-[36px]"
           >
             <svg
               className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`}

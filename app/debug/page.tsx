@@ -97,7 +97,7 @@ function DebugPageInner() {
     <main className="min-h-screen p-6 font-mono text-sm" style={{ backgroundColor: 'var(--bg-primary)' }}>
       <h1 className="text-2xl font-bold mb-4">Supabase Debug</h1>
 
-      <section className="mb-6 p-4 bg-white rounded border">
+      <section className="mb-6 p-4 bg-[var(--bg-card)] rounded border">
         <h2 className="font-semibold mb-2">Env</h2>
         <div>NEXT_PUBLIC_SUPABASE_URL: <span className="text-blue-700 break-all">{envUrl || '(unset)'}</span></div>
         <div>NEXT_PUBLIC_SUPABASE_ANON_KEY: <span className="text-blue-700">{envKeyTail}</span></div>
@@ -108,12 +108,12 @@ function DebugPageInner() {
         </ul>
       </section>
 
-      <section className="mb-6 p-4 bg-white rounded border">
+      <section className="mb-6 p-4 bg-[var(--bg-card)] rounded border">
         <h2 className="font-semibold mb-2">market_conditions latest probe</h2>
         <div className="break-all">{latest || 'querying...'}</div>
       </section>
 
-      <section className="p-4 bg-white rounded border">
+      <section className="p-4 bg-[var(--bg-card)] rounded border">
         <h2 className="font-semibold mb-2">Per-table HEAD count (anon role)</h2>
         <table className="w-full text-left">
           <thead>

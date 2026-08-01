@@ -216,7 +216,7 @@ export default function SignalsTable({ signals, marketRegime, scorecardRegime }:
 
   if (sorted.length === 0) {
     return (
-      <div className="bg-white rounded-xl border border-[#e8eaed] shadow-sm p-8 text-center text-gray-400">
+      <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-8 text-center text-gray-400">
         <p className="text-sm">シグナルが見つかりません</p>
       </div>
     )
@@ -225,10 +225,10 @@ export default function SignalsTable({ signals, marketRegime, scorecardRegime }:
   const sp = { currentKey: sortKey, currentDir: sortDir, onSort: handleSort }
 
   return (
-    <div className="bg-white rounded-xl border border-[#e8eaed] shadow-sm overflow-x-auto">
+    <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
-          <tr className="bg-gray-50 border-b border-[#e8eaed]">
+          <tr className="bg-[var(--bg-card-hover)] border-b border-[var(--border)]">
             <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 whitespace-nowrap">Name</th>
             <SortTh label="Sector"    sortKey="sector_s33"   {...sp} align="left" />
             <SortTh label="RS"        sortKey="rs_composite" tooltip={COLUMN_TOOLTIPS.rs_composite} {...sp} />
@@ -253,9 +253,9 @@ export default function SignalsTable({ signals, marketRegime, scorecardRegime }:
             return (
               <tr
                 key={`${sig.code}-${sig.screen_name}-${i}`}
-                className={`border-b border-[#f0f2f4] hover:bg-gray-50 transition-colors ${
+                className={`border-b border-[var(--border-subtle)] hover:bg-[var(--bg-card-hover)] transition-colors ${
                   rec ? 'border-l-2 border-l-amber-400' : ''
-                } ${i % 2 === 0 ? 'bg-white' : 'bg-[#fafafa]'} ${
+                } ${i % 2 === 0 ? 'bg-[var(--bg-card)]' : 'bg-[var(--bg-card-hover)]'} ${
                   mcNotMet ? 'opacity-50' : ''
                 }`}
               >

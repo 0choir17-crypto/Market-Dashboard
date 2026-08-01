@@ -66,7 +66,7 @@ function ReturnsBlock({ row }: { row: SectorSelectionRow }) {
       {periods.map((p) => (
         <div
           key={p.label}
-          className="rounded-md border border-[var(--border)] bg-white px-2 py-1.5 text-center"
+          className="rounded-md border border-[var(--border)] bg-[var(--bg-card)] px-2 py-1.5 text-center"
         >
           <p className="text-[10px] text-[var(--text-muted)] font-mono">{p.label}</p>
           <p className="text-sm font-mono font-semibold tabular-nums" style={{ color: pctColor(p.ret) }}>
@@ -174,7 +174,7 @@ function SortTh({
 function DrilldownRow({ row, colSpan }: { row: SectorSelectionRow; colSpan: number }) {
   const total = isNum(row.composite_score) ? row.composite_score.toFixed(2) : '—'
   return (
-    <tr className="bg-[#f8fafc] border-b border-[#e8eaed]">
+    <tr className="bg-[#f8fafc] border-b border-[var(--border)]">
       <td colSpan={colSpan} className="px-6 py-4">
         <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-6">
           {/* Left: 5 component bars */}
@@ -341,7 +341,7 @@ export default function SectorSelectionTable({
   const COL_COUNT = 5 + COMPONENT_META.length + 1 // rank, sector, score, momentum, ...5 comp, stock_count
 
   return (
-    <div className="bg-white rounded-xl border border-[#e8eaed] shadow-sm overflow-x-auto">
+    <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm overflow-x-auto">
       {/* Toolbar */}
       <div className="flex items-center gap-3 px-4 pt-4 pb-3 flex-wrap">
         <p className="text-sm font-semibold text-[var(--text-primary)]">セクター選別ランキング</p>
@@ -364,7 +364,7 @@ export default function SectorSelectionTable({
 
       <table className="w-full min-w-[1100px] text-sm">
         <thead>
-          <tr className="bg-gray-50 border-y border-[#e8eaed]">
+          <tr className="bg-[var(--bg-card-hover)] border-y border-[var(--border)]">
             <SortTh label="#"        tooltip="composite_score_rank — 当日ランク (1=トップ)" sortKey="rank"               {...sp} align="center" className="w-12" />
             <SortTh
               label="Sector"
@@ -403,8 +403,8 @@ export default function SectorSelectionTable({
               <Fragment key={rowKey}>
                 <tr
                   onClick={() => setExpanded(isOpen ? null : rowKey)}
-                  className={`border-b border-[#f0f2f4] cursor-pointer transition-colors ${
-                    isOpen ? 'bg-blue-50/40' : i % 2 === 0 ? 'bg-white' : 'bg-[#fafafa]'
+                  className={`border-b border-[var(--border-subtle)] cursor-pointer transition-colors ${
+                    isOpen ? 'bg-blue-50/40' : i % 2 === 0 ? 'bg-[var(--bg-card)]' : 'bg-[var(--bg-card-hover)]'
                   } hover:bg-gray-100 ${isLow ? 'opacity-60' : ''}`}
                   title={isLow ? '信頼度低: 銘柄数が少ないためノイズ大' : undefined}
                 >
@@ -453,7 +453,7 @@ export default function SectorSelectionTable({
       )}
 
       {/* Legend */}
-      <div className="flex items-center justify-center gap-5 py-3 text-[11px] border-t border-[#f0f2f4] flex-wrap">
+      <div className="flex items-center justify-center gap-5 py-3 text-[11px] border-t border-[var(--border-subtle)] flex-wrap">
         <span className="text-[var(--text-secondary)]">Score:</span>
         <span className="flex items-center gap-1">
           <span className="inline-block w-2.5 h-2.5 rounded" style={{ backgroundColor: '#dcfce7' }} />

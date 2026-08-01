@@ -212,7 +212,7 @@ export default function NotesPage() {
 
       {loading ? (
         <div
-          className="bg-white rounded-xl border border-[#e8eaed] shadow-sm p-8 text-center"
+          className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-8 text-center"
           style={{ color: 'var(--text-muted)' }}
         >
           <p className="text-lg font-medium">読み込み中…</p>
@@ -220,10 +220,10 @@ export default function NotesPage() {
       ) : (
         <div className="grid gap-4 md:grid-cols-[300px_1fr]">
           {/* 一覧 */}
-          <aside className="bg-white rounded-xl border border-[#e8eaed] shadow-sm p-3 flex flex-col gap-2 md:max-h-[78vh]">
+          <aside className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-3 flex flex-col gap-2 md:max-h-[78vh]">
             <button
               onClick={handleNew}
-              className="w-full px-3 py-2 rounded-lg text-sm font-medium border border-[var(--border)] bg-white hover:bg-gray-50 transition-colors"
+              className="w-full px-3 py-2 rounded-lg text-sm font-medium border border-[var(--border)] bg-[var(--bg-card)] hover:bg-[var(--bg-card-hover)] transition-colors"
               style={{ color: 'var(--accent)' }}
             >
               ＋ 新規メモ
@@ -242,7 +242,7 @@ export default function NotesPage() {
                           className={`w-full text-left rounded-lg border px-3 py-2 transition-colors ${
                             active
                               ? 'border-[var(--accent)] bg-blue-50'
-                              : 'border-[#eef0f2] bg-white hover:bg-gray-50'
+                              : 'border-[#eef0f2] bg-[var(--bg-card)] hover:bg-[var(--bg-card-hover)]'
                           }`}
                         >
                           <div className="flex items-center gap-1.5 min-w-0">
@@ -263,7 +263,7 @@ export default function NotesPage() {
           </aside>
 
           {/* エディタ */}
-          <section className="bg-white rounded-xl border border-[#e8eaed] shadow-sm p-3">
+          <section className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-3">
             {selectedNote ? (
               <>
                 <div className="flex items-center gap-2 mb-2">
@@ -271,7 +271,7 @@ export default function NotesPage() {
                     value={title}
                     onChange={e => setTitle(e.target.value)}
                     placeholder="タイトル（未入力なら本文先頭が一覧に表示）"
-                    className="flex-1 min-w-0 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="flex-1 min-w-0 rounded-lg border border-gray-200 bg-[var(--bg-card)] px-3 py-2 text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                   <button
                     onClick={togglePin}
@@ -279,7 +279,7 @@ export default function NotesPage() {
                     className={`px-2.5 py-2 rounded-lg border text-sm transition-colors ${
                       selectedNote.pinned
                         ? 'border-amber-300 bg-amber-50 text-amber-700'
-                        : 'border-gray-200 bg-white text-gray-400 hover:bg-gray-50'
+                        : 'border-gray-200 bg-[var(--bg-card)] text-gray-400 hover:bg-[var(--bg-card-hover)]'
                     }`}
                   >
                     📌
@@ -287,7 +287,7 @@ export default function NotesPage() {
                   <button
                     onClick={() => setConfirmDelete(true)}
                     title="このメモを削除"
-                    className="px-2.5 py-2 rounded-lg border border-gray-200 bg-white text-red-500 hover:bg-red-50 transition-colors text-sm"
+                    className="px-2.5 py-2 rounded-lg border border-gray-200 bg-[var(--bg-card)] text-red-500 hover:bg-red-50 transition-colors text-sm"
                   >
                     🗑
                   </button>
@@ -309,7 +309,7 @@ export default function NotesPage() {
                 <p className="mb-3">メモを選択するか、新規作成してください。</p>
                 <button
                   onClick={handleNew}
-                  className="px-3 py-2 rounded-lg text-sm font-medium border border-[var(--border)] bg-white hover:bg-gray-50 transition-colors"
+                  className="px-3 py-2 rounded-lg text-sm font-medium border border-[var(--border)] bg-[var(--bg-card)] hover:bg-[var(--bg-card-hover)] transition-colors"
                   style={{ color: 'var(--accent)' }}
                 >
                   ＋ 新規メモ
