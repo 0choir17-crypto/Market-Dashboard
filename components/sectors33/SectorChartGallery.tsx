@@ -18,12 +18,23 @@ import {
 import type { SectorIndexChangeEntry } from '@/lib/sectorIndexChangeFetch'
 import SectorCandleChart from './SectorCandleChart'
 import { SectorChangeStrip } from './SectorChangeCells'
+import { RankDeltaBadge, MoversOnlyToggle } from './SectorRankDelta'
+import {
+  isBigMove,
+  BIG_MOVE_THRESHOLD,
+  type RankDelta,
+  type RankDeltaMap,
+  type RankDeltaPeriodKey,
+} from '@/lib/sectorRankDelta'
 import Tooltip from '@/components/shared/Tooltip'
 
 type Props = {
   rows: SectorSelectionRow[]
-  /** sector_name_s33 → 1D / 1M / 6M / 1Y の騰落率（後着でもよい） */
+  /** sector_name_s33 → 1D / 1W / 1M / 6M / 1Y の騰落率（後着でもよい） */
   changes?: Record<string, SectorIndexChangeEntry>
+  /** sector_name_s33 → 順位変動（履歴が後着でもよい） */
+  rankDeltas?: RankDeltaMap
+  deltaPeriod: RankDeltaPeriodKey
 }
 
 type MetricSelection = OverlayMetricKey | 'none'
@@ -75,17 +86,31 @@ function SectorCard({
   row,
   entry,
   change,
+  delta,
+  deltaPeriod,
   metricKey,
 }: {
   row: SectorSelectionRow
   entry: SectorChartEntry | undefined
   change: SectorIndexChangeEntry | undefined
+  delta: RankDelta | undefined
+  deltaPeriod: RankDeltaPeriodKey
   metricKey: MetricSelection
 }) {
   const { bg, text } = compositeColor(row.composite_score)
   const isLow = row.confidence_low === 1
   const momentum = row.sector_momentum_s33
   const momentumCfg = momentum ? MOMENTUM_CONFIG[momentum] : null
+
+  // 大きく動いたカードは枠線を色付きにして一覧から拾えるようにする
+  const bigMove = isBigMove(delta)
+  const accent = !bigMove
+    ? null
+    : delta?.isNew
+      ? 'var(--accent)'
+      : (delta?.delta ?? 0) > 0
+        ? 'var(--positive)'
+        : 'var(--negative)'
 
   const metric = useMemo(() => {
     if (metricKey === 'none' || !entry) return null
@@ -97,14 +122,18 @@ function SectorCard({
 
   return (
     <div
-      className={`bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-4 ${
+      className={`bg-[var(--bg-card)] rounded-xl border shadow-sm p-4 ${
         isLow ? 'opacity-70' : ''
-      }`}
+      } ${accent ? 'border-l-4' : 'border-[var(--border)]'}`}
+      style={accent ? { borderColor: 'var(--border)', borderLeftColor: accent } : undefined}
     >
-      {/* ヘッダー: ランク / 業種名 / モメンタム / スコア */}
+      {/* ヘッダー: ランク / 順位変動 / 業種名 / モメンタム / スコア */}
       <div className="flex items-center gap-2 mb-2">
         <span className="font-mono text-xs text-[var(--text-muted)] tabular-nums shrink-0">
           #{row.composite_score_rank ?? '—'}
+        </span>
+        <span className="shrink-0">
+          <RankDeltaBadge delta={delta} period={deltaPeriod} size="md" />
         </span>
         <span
           className="text-sm font-semibold text-[var(--text-primary)] truncate"
@@ -187,12 +216,18 @@ function SectorCard({
   )
 }
 
-export default function SectorChartGallery({ rows, changes = {} }: Props) {
+export default function SectorChartGallery({
+  rows,
+  changes = {},
+  rankDeltas = {},
+  deltaPeriod,
+}: Props) {
   const [bySector, setBySector] = useState<Record<string, SectorChartEntry>>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [metricKey, setMetricKey] = useState<MetricSelection>('composite_score')
   const [hideLowConf, setHideLowConf] = useState(false)
+  const [moversOnly, setMoversOnly] = useState(false)
 
   // 境界日の算出に使う代表業種（どの業種も 1 日 1 行なのでどれでもよい）
   const referenceSector = rows[0]?.sector_name_s33
@@ -213,13 +248,18 @@ export default function SectorChartGallery({ rows, changes = {} }: Props) {
 
   // スコア降順に並べる（欠損は末尾）
   const sorted = useMemo(() => {
-    const arr = hideLowConf ? rows.filter((r) => r.confidence_low !== 1) : [...rows]
-    return arr.sort(
+    let arr = hideLowConf ? rows.filter((r) => r.confidence_low !== 1) : [...rows]
+    if (moversOnly) arr = arr.filter((r) => isBigMove(rankDeltas[r.sector_name_s33]))
+    return [...arr].sort(
       (a, b) => (b.composite_score ?? -Infinity) - (a.composite_score ?? -Infinity),
     )
-  }, [rows, hideLowConf])
+  }, [rows, hideLowConf, moversOnly, rankDeltas])
 
   const lowConfCount = rows.filter((r) => r.confidence_low === 1).length
+  const moverCount = useMemo(
+    () => rows.filter((r) => isBigMove(rankDeltas[r.sector_name_s33])).length,
+    [rows, rankDeltas],
+  )
 
   return (
     <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-5">
@@ -269,6 +309,12 @@ export default function SectorChartGallery({ rows, changes = {} }: Props) {
           )}
         </label>
 
+        <MoversOnlyToggle
+          checked={moversOnly}
+          onChange={setMoversOnly}
+          count={moverCount}
+        />
+
         <span className="ml-auto text-xs text-[var(--text-muted)]">
           <span className="font-mono">{sorted.length}</span> セクター
         </span>
@@ -293,6 +339,8 @@ export default function SectorChartGallery({ rows, changes = {} }: Props) {
               row={row}
               entry={bySector[row.sector_name_s33]}
               change={changes[row.sector_name_s33]}
+              delta={rankDeltas[row.sector_name_s33]}
+              deltaPeriod={deltaPeriod}
               metricKey={metricKey}
             />
           ))}
@@ -301,7 +349,9 @@ export default function SectorChartGallery({ rows, changes = {} }: Props) {
 
       {!loading && sorted.length === 0 && (
         <div className="py-10 text-center text-[var(--text-muted)] text-sm">
-          データがありません
+          {moversOnly
+            ? `${deltaPeriod.toUpperCase()} で ±${BIG_MOVE_THRESHOLD}位以上動いたセクターはありません`
+            : 'データがありません'}
         </div>
       )}
     </div>
