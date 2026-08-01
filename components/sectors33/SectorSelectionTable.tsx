@@ -14,6 +14,13 @@ import {
 import Tooltip from '@/components/shared/Tooltip'
 import { SectorChangeInline } from './SectorChangeCells'
 import type { SectorIndexChangeEntry } from '@/lib/sectorIndexChangeFetch'
+import { RankDeltaBadge, MoversOnlyToggle } from './SectorRankDelta'
+import {
+  isBigMove,
+  BIG_MOVE_THRESHOLD,
+  type RankDeltaMap,
+  type RankDeltaPeriodKey,
+} from '@/lib/sectorRankDelta'
 
 type SortKey = 'rank' | 'sector_name_s33' | 'composite_score' | ComponentKey | 'sector_stock_count_s33'
 type SortDir = 'asc' | 'desc'
@@ -288,15 +295,21 @@ function Stat({ label, value }: { label: string; value: string }) {
 export default function SectorSelectionTable({
   rows,
   changes = {},
+  rankDeltas = {},
+  deltaPeriod,
 }: {
   rows: SectorSelectionRow[]
-  /** sector_name_s33 → 1D / 1M / 6M / 1Y の騰落率（後着でもよい） */
+  /** sector_name_s33 → 1D / 1W / 1M / 6M / 1Y の騰落率（後着でもよい） */
   changes?: Record<string, SectorIndexChangeEntry>
+  /** sector_name_s33 → 順位変動（履歴が後着でもよい） */
+  rankDeltas?: RankDeltaMap
+  deltaPeriod: RankDeltaPeriodKey
 }) {
   const [sortKey, setSortKey] = useState<SortKey>('composite_score')
   const [sortDir, setSortDir] = useState<SortDir>('desc')
   const [expanded, setExpanded] = useState<string | null>(null)
   const [hideLowConf, setHideLowConf] = useState(false)
+  const [moversOnly, setMoversOnly] = useState(false)
 
   function handleSort(key: SortKey) {
     if (sortKey === key) {
@@ -308,10 +321,11 @@ export default function SectorSelectionTable({
     }
   }
 
-  const filtered = useMemo(
-    () => (hideLowConf ? rows.filter(r => r.confidence_low !== 1) : rows),
-    [rows, hideLowConf],
-  )
+  const filtered = useMemo(() => {
+    let arr = hideLowConf ? rows.filter(r => r.confidence_low !== 1) : rows
+    if (moversOnly) arr = arr.filter(r => isBigMove(rankDeltas[r.sector_name_s33]))
+    return arr
+  }, [rows, hideLowConf, moversOnly, rankDeltas])
 
   const sorted = useMemo(() => {
     const arr = [...filtered]
@@ -337,6 +351,10 @@ export default function SectorSelectionTable({
   }, [filtered, sortKey, sortDir])
 
   const lowConfCount = rows.filter(r => r.confidence_low === 1).length
+  const moverCount = useMemo(
+    () => rows.filter(r => isBigMove(rankDeltas[r.sector_name_s33])).length,
+    [rows, rankDeltas],
+  )
   const sp = { currentKey: sortKey, currentDir: sortDir, onSort: handleSort }
   const COL_COUNT = 5 + COMPONENT_META.length + 1 // rank, sector, score, momentum, ...5 comp, stock_count
 
@@ -345,7 +363,14 @@ export default function SectorSelectionTable({
       {/* Toolbar */}
       <div className="flex items-center gap-3 px-4 pt-4 pb-3 flex-wrap">
         <p className="text-sm font-semibold text-[var(--text-primary)]">セクター選別ランキング</p>
-        <label className="ml-auto flex items-center gap-2 text-xs text-gray-600 cursor-pointer select-none">
+        <span className="ml-auto">
+          <MoversOnlyToggle
+            checked={moversOnly}
+            onChange={setMoversOnly}
+            count={moverCount}
+          />
+        </span>
+        <label className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer select-none">
           <input
             type="checkbox"
             checked={hideLowConf}
@@ -365,14 +390,21 @@ export default function SectorSelectionTable({
       <table className="w-full min-w-[1100px] text-sm">
         <thead>
           <tr className="bg-[var(--bg-card-hover)] border-y border-[var(--border)]">
-            <SortTh label="#"        tooltip="composite_score_rank — 当日ランク (1=トップ)" sortKey="rank"               {...sp} align="center" className="w-12" />
+            <SortTh
+              label="#"
+              tooltip={`composite_score_rank — 当日ランク (1=トップ)。右の ▲▼ は ${deltaPeriod.toUpperCase()} 前からの順位変動`}
+              sortKey="rank"
+              {...sp}
+              align="center"
+              className="w-24"
+            />
             <SortTh
               label="Sector"
               tooltip="TOPIX-33 業種名"
               sortKey="sector_name_s33"
               hint={
                 <span className="ml-3 float-right font-normal normal-case tracking-normal text-[10px] text-[var(--text-muted)]">
-                  業種指数 騰落率 1D / 1M / 6M / 1Y
+                  業種指数 騰落率 1D / 1W / 1M / 6M / 1Y
                 </span>
               }
               {...sp}
@@ -399,6 +431,16 @@ export default function SectorSelectionTable({
             const isLow = row.confidence_low === 1
             const isOpen = expanded === row.sector_name_s33
             const rowKey = row.sector_name_s33
+            const delta = rankDeltas[rowKey]
+            const bigMove = isBigMove(delta)
+            // 大きく動いた行は左端に色帯を立てる（上昇=緑 / 下落=赤 / 新規=青）
+            const accent = !bigMove
+              ? undefined
+              : delta?.isNew
+                ? 'var(--accent)'
+                : (delta?.delta ?? 0) > 0
+                  ? 'var(--positive)'
+                  : 'var(--negative)'
             return (
               <Fragment key={rowKey}>
                 <tr
@@ -408,8 +450,14 @@ export default function SectorSelectionTable({
                   } hover:bg-gray-100 ${isLow ? 'opacity-60' : ''}`}
                   title={isLow ? '信頼度低: 銘柄数が少ないためノイズ大' : undefined}
                 >
-                  <td className="px-3 py-2 text-center font-mono text-xs text-gray-500 tabular-nums">
-                    {row.composite_score_rank ?? '—'}
+                  <td
+                    className="px-3 py-2 text-center font-mono text-xs text-gray-500 tabular-nums"
+                    style={accent ? { boxShadow: `inset 3px 0 0 0 ${accent}` } : undefined}
+                  >
+                    <span className="inline-flex items-center gap-1.5">
+                      <span>{row.composite_score_rank ?? '—'}</span>
+                      <RankDeltaBadge delta={delta} period={deltaPeriod} />
+                    </span>
                   </td>
                   <td className="px-3 py-2 whitespace-nowrap text-xs font-medium text-gray-800">
                     <div className="flex items-center gap-4">
@@ -449,7 +497,11 @@ export default function SectorSelectionTable({
       </table>
 
       {sorted.length === 0 && (
-        <div className="py-10 text-center text-[var(--text-muted)] text-sm">データがありません</div>
+        <div className="py-10 text-center text-[var(--text-muted)] text-sm">
+          {moversOnly
+            ? `${deltaPeriod.toUpperCase()} で ±${BIG_MOVE_THRESHOLD}位以上動いたセクターはありません`
+            : 'データがありません'}
+        </div>
       )}
 
       {/* Legend */}
@@ -466,6 +518,12 @@ export default function SectorSelectionTable({
         <span className="flex items-center gap-1">
           <span className="inline-block w-2.5 h-2.5 rounded" style={{ backgroundColor: '#fee2e2' }} />
           <span style={{ color: 'var(--text-secondary)' }}>弱 &lt;30</span>
+        </span>
+        <span className="text-gray-300">|</span>
+        <span className="text-[var(--text-secondary)]">
+          <span className="font-mono" style={{ color: 'var(--positive)' }}>▲</span>
+          <span className="font-mono" style={{ color: 'var(--negative)' }}>▼</span>
+          {` ${deltaPeriod.toUpperCase()} 前からの順位変動（±${BIG_MOVE_THRESHOLD}以上は色付き＋左端の帯）`}
         </span>
         <span className="text-gray-300">|</span>
         <span className="text-[var(--text-secondary)]">⚠️ confidence_low = 銘柄数&lt;10</span>

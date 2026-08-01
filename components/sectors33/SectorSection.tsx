@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { fetchLatestSectorSelection } from '@/lib/sectorSelectionFetch'
 import {
   fetchSectorSelectionHistory,
@@ -10,6 +10,13 @@ import {
   fetchSectorIndexChanges,
   type SectorIndexChangeEntry,
 } from '@/lib/sectorIndexChangeFetch'
+import {
+  buildRankDeltas,
+  DEFAULT_RANK_DELTA_PERIOD,
+  RANK_DELTA_PERIODS,
+  type RankDeltaPeriodKey,
+} from '@/lib/sectorRankDelta'
+import { RankDeltaPeriodToggle } from './SectorRankDelta'
 import { SectorSelectionRow } from '@/types/sectorSelection'
 import SectorSelectionTable from './SectorSelectionTable'
 import SectorChartGallery from './SectorChartGallery'
@@ -41,6 +48,10 @@ export default function SectorSection({
   const [changes, setChanges] = useState<Record<string, SectorIndexChangeEntry>>({})
   const [view, setView] = useState<View>('bar')
   const [mainView, setMainView] = useState<MainView>('chart')
+  // ランク変動の比較期間。テーブルとチャートで共有する
+  const [deltaPeriod, setDeltaPeriod] = useState<RankDeltaPeriodKey>(
+    DEFAULT_RANK_DELTA_PERIOD,
+  )
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -77,6 +88,13 @@ export default function SectorSection({
 
   useEffect(() => { fetchData() }, [fetchData])
 
+  // 順位変動は取得済みの履歴から算出するので追加のフェッチは不要
+  const rankDeltas = useMemo(() => {
+    const days =
+      RANK_DELTA_PERIODS.find(p => p.key === deltaPeriod)?.tradingDays ?? 5
+    return buildRankDeltas(history, days)
+  }, [history, deltaPeriod])
+
   return (
     <section>
       {/* セクションヘッダー + EMA 凡例 */}
@@ -98,6 +116,8 @@ export default function SectorSection({
         <div className="flex items-center gap-3 flex-wrap">
           {/* EMA 凡例: チャート内の細線では色が判別しづらいのでここに大きく置く */}
           {mainView === 'chart' && <MaLegend />}
+
+          <RankDeltaPeriodToggle value={deltaPeriod} onChange={setDeltaPeriod} />
 
           <div className="inline-flex rounded-lg border border-[var(--border)] overflow-hidden text-xs">
             {(
@@ -144,9 +164,19 @@ export default function SectorSection({
       ) : rows.length > 0 && (
         <>
           {mainView === 'chart' ? (
-            <SectorChartGallery rows={rows} changes={changes} />
+            <SectorChartGallery
+              rows={rows}
+              changes={changes}
+              rankDeltas={rankDeltas}
+              deltaPeriod={deltaPeriod}
+            />
           ) : (
-            <SectorSelectionTable rows={rows} changes={changes} />
+            <SectorSelectionTable
+              rows={rows}
+              changes={changes}
+              rankDeltas={rankDeltas}
+              deltaPeriod={deltaPeriod}
+            />
           )}
 
           {/* ── 推移ビジュアル ────────────────────────────────────────────
