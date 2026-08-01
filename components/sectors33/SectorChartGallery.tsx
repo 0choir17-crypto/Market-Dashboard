@@ -131,7 +131,7 @@ function SectorCard({
         </span>
       </div>
 
-      {/* 業種指数の騰落率: 1D / 1M / 6M / 1Y */}
+      {/* 業種指数の騰落率: 1D / 1W / 1M / 6M / 1Y */}
       <div className="mb-2">
         <SectorChangeStrip entry={change} />
       </div>

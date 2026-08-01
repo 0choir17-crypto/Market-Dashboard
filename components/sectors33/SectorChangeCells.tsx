@@ -35,7 +35,7 @@ function tooltipFor(
 }
 
 /**
- * 1D / 1M / 6M / 1Y の騰落率をインラインで並べる（テーブルの業種名の横用）。
+ * 1D / 1W / 1M / 6M / 1Y の騰落率をインラインで並べる（テーブルの業種名の横用）。
  */
 export function SectorChangeInline({
   entry,
@@ -65,7 +65,7 @@ export function SectorChangeInline({
 }
 
 /**
- * 同じ 4 期間を等幅の箱で並べる（チャートカード用）。
+ * 同じ期間を等幅の箱で並べる（チャートカード用）。
  */
 export function SectorChangeStrip({
   entry,
@@ -73,7 +73,7 @@ export function SectorChangeStrip({
   entry: SectorIndexChangeEntry | undefined
 }) {
   return (
-    <div className="grid grid-cols-4 gap-1.5">
+    <div className="grid grid-cols-5 gap-1.5">
       {CHANGE_PERIODS.map(p => {
         const c = entry?.changes[p.key]
         return (
