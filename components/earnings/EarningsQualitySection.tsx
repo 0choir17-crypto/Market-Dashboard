@@ -6,9 +6,13 @@ import {
   PEAK_DAY_THRESHOLD,
   SCORE3_MAX,
   TOP_1PCT_THRESHOLD,
+  classifyScoreData,
   isAfterClose,
+  isLegacyScoreRow,
   maxScoreFor,
   pctColor,
+  qGroupOf,
+  score3Breakdown,
   score3Color,
 } from '@/types/earningsQuality'
 import type { EarningsQualitySnapshot } from '@/lib/earningsQualityFetch'
@@ -43,24 +47,33 @@ function fmtNum(v: number | null | undefined, decimals = 1): string {
 }
 
 // ── Score3 バッジ ──────────────────────────────────────────────────────────
+// title に 4 軸の内訳を出し、列を増やさずに s_guide まで根拠が読めるようにする。
 function Score3Badge({ row }: { row: EarningsQualityRow }) {
   const { bg, text, border } = score3Color(row.score3, row.cur_per_type)
   const max = maxScoreFor(row.cur_per_type)
-  const isPerfect = row.score3 === max
+  const isPerfect = row.score3 >= max
+  const isLegacy = isLegacyScoreRow(row)
+  const headline = isPerfect
+    ? max === SCORE3_MAX
+      ? `パーフェクト (${SCORE3_MAX}/${SCORE3_MAX})`
+      : `Q1 構造的最高 (${max}/${max})`
+    : `${row.score3} / ${max}`
+  const title = [
+    headline,
+    score3Breakdown(row),
+    isLegacy ? '※ 旧スコア (0-7 / 予想軸なし) — 供給側の再計算前の行です' : null,
+  ]
+    .filter(Boolean)
+    .join('\n')
   return (
     <span
       className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full font-mono text-xs font-bold tabular-nums"
       style={{ backgroundColor: bg, color: text, border: `1px solid ${border}` }}
-      title={
-        isPerfect
-          ? max === SCORE3_MAX
-            ? 'パーフェクト (7/7)'
-            : 'Q1 構造的最高 (5/5)'
-          : `${row.score3} / ${max}`
-      }
+      title={title}
     >
       {row.score3}
       <span className="text-[9px] opacity-60">/{max}</span>
+      {isLegacy && <span className="text-[9px] font-normal opacity-70">旧</span>}
     </span>
   )
 }
@@ -182,8 +195,11 @@ function SortTh({
 function Row({ row }: { row: EarningsQualityRow }) {
   const isQ1 = row.cur_per_type === '1Q'
   const max = maxScoreFor(row.cur_per_type)
-  const isPerfect = row.score3 === max && (max === SCORE3_MAX || max === 5)
+  const isPerfect = row.score3 >= max
   const isTop1pct = isNum(row.pct_rank_in_day) && row.pct_rank_in_day <= TOP_1PCT_THRESHOLD
+  const qGroup = qGroupOf(row.cur_per_type)
+  // s_guide >= 1 → 通期予想修正がスコアに効いている行。根拠列 (通期 OP) を強調。
+  const guideScored = isNum(row.s_guide) && row.s_guide >= 1
 
   return (
     <tr
@@ -191,13 +207,24 @@ function Row({ row }: { row: EarningsQualityRow }) {
         isPerfect ? 'bg-emerald-50/60' : 'bg-[var(--bg-card)]'
       }`}
     >
-      <td className="px-2 py-2 text-center font-mono text-xs text-gray-500 tabular-nums">
-        {row.rank_in_day ?? '—'}
-        {isTop1pct && (
-          <span title="当日 Top 1% (検証 end_per_risk 1.509)" className="ml-0.5 text-amber-500">
-            ⭐
+      <td
+        className="px-2 py-2 text-center font-mono text-xs text-gray-500 tabular-nums"
+        title={`当日の ${qGroup} グループ内での順位 (1Q / 2Q3Q は別ランキング)`}
+      >
+        <div className="flex flex-col items-center leading-tight">
+          <span>
+            {row.rank_in_day ?? '—'}
+            {isTop1pct && (
+              <span
+                title="当日 Q別 Top 1% (検証 end_per_risk 1.131 / +20%到達 28.9%)"
+                className="ml-0.5 text-amber-500"
+              >
+                ⭐
+              </span>
+            )}
           </span>
-        )}
+          <span className="text-[9px] text-gray-400">{qGroup}</span>
+        </div>
       </td>
       <td className="px-2 py-2 text-center whitespace-nowrap">
         <Score3Badge row={row} />
@@ -239,8 +266,13 @@ function Row({ row }: { row: EarningsQualityRow }) {
         <DivCell v={row.div_change_pct} />
       </td>
       <td className="px-2 py-2 text-right whitespace-nowrap">
-        <span className="font-mono tabular-nums text-xs" style={{ color: pctColor(row.fop_rev_pct) }}>
+        <span
+          className="font-mono tabular-nums text-xs"
+          style={{ color: pctColor(row.fop_rev_pct), fontWeight: guideScored ? 700 : 500 }}
+          title={guideScored ? `通期予想修正でスコア +${row.s_guide} (s_guide)` : undefined}
+        >
           {fmtPct(row.fop_rev_pct)}
+          {guideScored && <span className="ml-0.5 text-[9px] text-emerald-600">+{row.s_guide}</span>}
         </span>
       </td>
       <td className="px-2 py-2 text-right whitespace-nowrap">
@@ -317,6 +349,7 @@ export default function EarningsQualitySection({
 }) {
   const { rows, latestDate, eventsInDay } = snapshot
   const isPeakDay = eventsInDay >= PEAK_DAY_THRESHOLD
+  const scoreData = useMemo(() => classifyScoreData(rows), [rows])
 
   // ── フィルタ state（セクターのみ）──
   const [sectorSelected, setSectorSelected] = useState<Set<string>>(new Set())
@@ -377,10 +410,14 @@ export default function EarningsQualitySection({
         bv = isNum(bRaw) ? bRaw : Number.NEGATIVE_INFINITY
       }
       if (av === bv) {
-        // tie-break: rank_in_day asc
+        // tie-break: rank_in_day asc → score3 desc → code asc
+        // rank_in_day は Q グループ別なので同値が並ぶ (同じ日に 1 位が 2 行)。
+        // score3 と code まで見て順序を決定的にする。
         const ar = a.rank_in_day ?? Number.POSITIVE_INFINITY
         const br = b.rank_in_day ?? Number.POSITIVE_INFINITY
-        return ar - br
+        if (ar !== br) return ar - br
+        if (a.score3 !== b.score3) return b.score3 - a.score3
+        return a.code.localeCompare(b.code)
       }
       return sortDir === 'asc' ? (av > bv ? 1 : -1) : av < bv ? 1 : -1
     })
@@ -395,6 +432,43 @@ export default function EarningsQualitySection({
       <section className="mb-5 max-w-[200px]">
         <StatCard label="開示件数" value={`${eventsInDay}`} sub={latestDate ?? ''} />
       </section>
+
+      {/* ── 旧スコア (v2 バックフィル前) の注意 ─────────────────────── */}
+      {scoreData.state !== 'ok' && (
+        <div className="mb-5 px-4 py-2.5 rounded-lg bg-amber-50 border border-amber-300 text-amber-900 text-sm flex items-start gap-2">
+          <span className="text-base leading-tight">⚠️</span>
+          <div>
+            {scoreData.state === 'column-missing' ? (
+              <>
+                <p className="font-semibold">スコアの内訳 (s_guide) が取得できません</p>
+                <p className="text-xs text-amber-800 mt-0.5">
+                  Supabase の <code className="font-mono">earnings_quality</code> に{' '}
+                  <code className="font-mono">s_guide</code> 列がありません。
+                  表示中のスコアは旧 0-7 スケールの可能性があります
+                  (<code className="font-mono">ALTER TABLE earnings_quality ADD COLUMN IF NOT EXISTS s_guide INTEGER;</code>)。
+                </p>
+              </>
+            ) : scoreData.state === 'legacy' ? (
+              <>
+                <p className="font-semibold">この日は旧スコア (0-7 / 3軸) のままです</p>
+                <p className="text-xs text-amber-800 mt-0.5">
+                  通期予想修正軸 (s_guide) が未計算のため、満点・色の判定は 0-9 スケールでは正しく出ません。
+                  供給側スキャナーを再実行するとこの日が新スコアに置き換わります。
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="font-semibold">
+                  新旧スコアが混在しています — {rows.length} 件中 {scoreData.legacyCount} 件が旧スコア (0-7 / 3軸)
+                </p>
+                <p className="text-xs text-amber-800 mt-0.5">
+                  「旧」印の付いた行は通期予想修正軸 (s_guide) が未計算のため、他行と同じ土俵で比較できません。
+                </p>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {isPeakDay && (
         <div className="mb-5 px-4 py-2.5 rounded-lg bg-purple-50 border border-purple-200 text-purple-800 text-sm flex items-center gap-2">
@@ -447,8 +521,8 @@ export default function EarningsQualitySection({
         <table className="w-full min-w-[1500px] text-sm">
           <thead>
             <tr className="bg-[var(--bg-card-hover)] border-y border-[var(--border)]">
-              <SortTh label="順位" tooltip="rank_in_day — score3 降順順位 (1=トップ)" sortKey="rank_in_day" {...sp} align="center" className="w-14" />
-              <SortTh label="Score" tooltip="score3 = s_div + s_eps + s_sales (0-7, Q1 は最大 5)" sortKey="score3" {...sp} align="center" className="w-20" />
+              <SortTh label="順位" tooltip="rank_in_day — 当日の 1Q / 2Q3Q それぞれの中での score3 降順順位 (1=トップ)。同じ日に 1 位が 2 行出ます" sortKey="rank_in_day" {...sp} align="center" className="w-16" />
+              <SortTh label="Score" tooltip="score3 = s_div + s_eps + s_sales + s_guide (0-9, Q1 は QoQ 2軸が構造的に無く最大 7)" sortKey="score3" {...sp} align="center" className="w-20" />
               <th className="px-2 py-2.5 text-xs font-medium uppercase tracking-wide text-left text-[var(--text-secondary)]">Verdict</th>
               <th className="px-2 py-2.5 text-xs font-medium uppercase tracking-wide text-left text-[var(--text-secondary)] w-20">Code</th>
               <SortTh label="銘柄名" sortKey="co_name" {...sp} align="left" className="min-w-[180px]" />
@@ -456,7 +530,7 @@ export default function EarningsQualitySection({
               <SortTh label="売上 YoY/QoQ" tooltip="上: sales_yoy_pct (前年同期累計比 %) / 下: sales_qoq_pct (前期単Q比 %)" sortKey="sales_yoy_pct" {...sp} />
               <SortTh label="EPS YoY/QoQ" tooltip="上: eps_yoy_pct / 下: eps_qoq_pct (Q1 は QoQ なし)" sortKey="eps_yoy_pct" {...sp} />
               <SortTh label="増配率" tooltip="div_change_pct — 同 FY 前回 FDivAnn からの増配率 % (>=10 で「大」★)" sortKey="div_change_pct" {...sp} />
-              <SortTh label="通期 OP" tooltip="fop_rev_pct — 通期予想 OP 上方修正率 % (同 FY 前回 FOP 比)" sortKey="fop_rev_pct" {...sp} />
+              <SortTh label="通期 OP" tooltip="fop_rev_pct — 通期予想 OP 上方修正率 % (同 FY 前回 FOP 比)。s_guide 軸の根拠 — 加点された行は太字＋加点数を表示" sortKey="fop_rev_pct" {...sp} />
               <SortTh label="進捗超過" tooltip="progress_excess_pct — 実進捗 − 期待ペース (pt)" sortKey="progress_excess_pct" {...sp} />
               <th className="px-2 py-2.5 text-xs font-medium uppercase tracking-wide text-right text-[var(--text-secondary)]">終値</th>
               <SortTh label="売買代金" tooltip="turnover_oku — 20 日平均売買代金 (億円)" sortKey="turnover_oku" {...sp} />
@@ -487,19 +561,19 @@ export default function EarningsQualitySection({
           </span>
           <span className="flex items-center gap-1">
             <span className="inline-block w-2.5 h-2.5 rounded" style={{ backgroundColor: '#dcfce7' }} />
-            <span style={{ color: 'var(--text-secondary)' }}>強 5-6</span>
+            <span style={{ color: 'var(--text-secondary)' }}>強 7-8</span>
           </span>
           <span className="flex items-center gap-1">
             <span className="inline-block w-2.5 h-2.5 rounded" style={{ backgroundColor: '#fef3c7' }} />
-            <span style={{ color: 'var(--text-secondary)' }}>中 3-4</span>
+            <span style={{ color: 'var(--text-secondary)' }}>中 4-6</span>
           </span>
           <span className="flex items-center gap-1">
             <span className="inline-block w-2.5 h-2.5 rounded" style={{ backgroundColor: '#f3f4f6' }} />
-            <span style={{ color: 'var(--text-secondary)' }}>弱 0-2</span>
+            <span style={{ color: 'var(--text-secondary)' }}>弱 0-3</span>
           </span>
           <span className="text-gray-300">|</span>
           <span className="flex items-center gap-1 text-gray-600">
-            <span className="text-amber-500">⭐</span> 当日 Top 1%
+            <span className="text-amber-500">⭐</span> 当日 Q別 Top 1%
           </span>
           <span className="text-gray-300">|</span>
           <span className="flex items-center gap-1 text-amber-700">
