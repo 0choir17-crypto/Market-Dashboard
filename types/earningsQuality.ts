@@ -2,13 +2,17 @@
 // Source table: earnings_quality
 // PK: (date, code, cur_per_type)
 //
-// score3 = s_div + s_eps + s_sales
+// score3 = s_div + s_eps + s_sales + s_guide   (v2: 3軸 → 4軸, 0-7 → 0-9)
 //   s_div   (0/2/3): +2 if div_change_pct > 0, +1 more if >= 10
 //   s_eps   (0/1/2): +1 if eps_yoy_pct > 0, +1 if eps_qoq_pct > 0
 //   s_sales (0/1/2): +1 if sales_yoy_pct > 0, +1 if sales_qoq_pct > 0
+//   s_guide (0/1/2): 通期予想修正 (fop_rev_pct)
 //
-// Q1 は前 Q 同 FY が無く QoQ 計算不能 → 構造的最大 = 5 (本来 7)
-//   → UI では Q1 を "5/5" 表記で誤解防止
+// Q1 は前 Q 同 FY が無く QoQ 計算不能 (s_eps / s_sales が各 1 点頭打ち)
+//   → 構造的最大 = 7 (本来 9)。UI では Q1 を "7/7" 表記で誤解防止
+//
+// rank_in_day / pct_rank_in_day は v2 から「日 × Q グループ (1Q / 2Q3Q)」単位。
+//   同じ日に rank_in_day = 1 の行が 2 行存在する。
 
 export type CurPerType = '1Q' | '2Q' | '3Q' | string
 
@@ -26,6 +30,7 @@ export type EarningsQualityRow = {
   s_div: number
   s_eps: number
   s_sales: number
+  s_guide: number | null   // 0/1/2 通期予想修正軸 (v2 で追加 — 旧行は NULL)
   verdict: string | null
 
   div_change_pct: number | null
@@ -46,21 +51,33 @@ export type EarningsQualityRow = {
   updated_at: string | null
 }
 
-// Structural maxima
-export const SCORE3_MAX = 7
-export const SCORE3_MAX_Q1 = 5
+// Structural maxima (v2: 4軸化で 7 → 9)
+export const SCORE3_MAX = 9
+export const SCORE3_MAX_Q1 = 7   // 1Q は QoQ 2軸が構造的に NULL
+
+// 色の境界 (0-9 スケール): 満点 / 強 7-8 / 中 4-6 / 弱 0-3
+export const SCORE3_STRONG = 7
+export const SCORE3_MID = 4
 
 // 集中日 (events_in_day >= 100) → 検証で Top の質が高い
 export const PEAK_DAY_THRESHOLD = 100
 
-// 当日 Top 1% → 検証で end_per_risk 1.509 (⭐)
+// 当日 Q別 Top 1% → 検証で end_per_risk 1.131 / +20%到達 28.9% (⭐)
 export const TOP_1PCT_THRESHOLD = 1.0
 
 export function maxScoreFor(curPerType: CurPerType): number {
   return curPerType === '1Q' ? SCORE3_MAX_Q1 : SCORE3_MAX
 }
 
-// score3 バッジ色: 7=濃緑, 5-6=緑, 3-4=黄, 0-2=灰
+// ランキングの粒度: rank_in_day / pct_rank_in_day は日 × この Q グループ単位
+export type QGroup = '1Q' | '2Q3Q'
+
+export function qGroupOf(curPerType: CurPerType): QGroup {
+  return curPerType === '1Q' ? '1Q' : '2Q3Q'
+}
+
+// score3 バッジ色: 満点=濃緑, 7-8=緑, 4-6=黄, 0-3=灰
+// 1Q は max=7 のため 7 が満点扱いになり「強」帯は構造的に発生しない。
 export function score3Color(
   score: number | null | undefined,
   curPerType?: CurPerType,
@@ -69,16 +86,49 @@ export function score3Color(
     return { bg: '#f3f4f6', text: '#9ca3af', border: '#e5e7eb' }
   }
   const max = curPerType ? maxScoreFor(curPerType) : SCORE3_MAX
-  // Q1 で 5 は 7 相当の評価
-  if (score === max && max === SCORE3_MAX) {
-    return { bg: '#86efac', text: '#14532d', border: '#16a34a' }
-  }
-  if (score === max && max === SCORE3_MAX_Q1) {
-    return { bg: '#86efac', text: '#14532d', border: '#16a34a' }
-  }
-  if (score >= 5) return { bg: '#dcfce7', text: '#15803d', border: '#86efac' }
-  if (score >= 3) return { bg: '#fef3c7', text: '#92400e', border: '#fde68a' }
+  if (score >= max) return { bg: '#86efac', text: '#14532d', border: '#16a34a' }
+  if (score >= SCORE3_STRONG) return { bg: '#dcfce7', text: '#15803d', border: '#86efac' }
+  if (score >= SCORE3_MID) return { bg: '#fef3c7', text: '#92400e', border: '#fde68a' }
   return { bg: '#f3f4f6', text: '#6b7280', border: '#e5e7eb' }
+}
+
+// ── スコア内訳 (Score バッジのツールチップ用) ────────────────────────────
+// 軸ごとの最大: s_div 3 / s_eps 2 / s_sales 2 / s_guide 2 = 9
+// 1Q は QoQ が無いため s_eps / s_sales が各 1 点頭打ち → 3+1+1+2 = 7
+export function score3Breakdown(row: EarningsQualityRow): string {
+  const isQ1 = row.cur_per_type === '1Q'
+  const qoqMax = isQ1 ? 1 : 2
+  const part = (label: string, v: number | null | undefined, max: number) =>
+    `${label} ${v == null || !Number.isFinite(v) ? '—' : v}/${max}`
+  return [
+    part('配当', row.s_div, 3),
+    part('EPS', row.s_eps, qoqMax),
+    part('売上', row.s_sales, qoqMax),
+    part('予想', row.s_guide, 2),
+  ].join(' ・ ')
+}
+
+// ── 旧スコア行 (v2 バックフィル前) の判定 ────────────────────────────────
+// 供給側を再実行するまで過去分は旧 0-7 スコアのまま残る。s_guide が NULL の行が
+// それ。select('*') 取得なので、Supabase 側の ALTER TABLE 未実行だと s_guide の
+// キー自体が存在しない → 「全行が旧スコア」と誤検知しないよう区別する。
+export type ScoreDataState = 'ok' | 'mixed' | 'legacy' | 'column-missing'
+
+export function isLegacyScoreRow(row: EarningsQualityRow): boolean {
+  return 's_guide' in row && row.s_guide == null
+}
+
+export function classifyScoreData(rows: EarningsQualityRow[]): {
+  state: ScoreDataState
+  legacyCount: number
+} {
+  if (rows.length === 0) return { state: 'ok', legacyCount: 0 }
+  if (!rows.some(r => 's_guide' in r)) {
+    return { state: 'column-missing', legacyCount: rows.length }
+  }
+  const legacyCount = rows.filter(isLegacyScoreRow).length
+  if (legacyCount === 0) return { state: 'ok', legacyCount }
+  return { state: legacyCount === rows.length ? 'legacy' : 'mixed', legacyCount }
 }
 
 // +%/-%/0 の色: 増配・YoY・QoQ・OP修正 共通

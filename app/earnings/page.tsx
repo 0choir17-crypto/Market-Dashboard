@@ -70,7 +70,7 @@ export default function EarningsPage() {
     <main className="min-h-screen p-6" style={{ backgroundColor: 'var(--bg-primary)' }}>
       <PageHeader
         title="Earnings Quality"
-        subtitle="決算品質 — 当日決算開示銘柄の品質スコア（0-7）・翌営業日（D+1）寄り買い候補 ※ 1Q-3Q のみ対象（本決算除外）／3・6・9・12月は構造的閑散期"
+        subtitle="決算品質 — 当日決算開示銘柄の品質スコア（0-9、1Q は最大 7）・翌営業日（D+1）寄り買い候補 ※ 1Q-3Q のみ対象（本決算除外）／3・6・9・12月は構造的閑散期"
         onRefresh={() => fetchData(selectedDate ?? undefined)}
         refreshing={loading}
       >
