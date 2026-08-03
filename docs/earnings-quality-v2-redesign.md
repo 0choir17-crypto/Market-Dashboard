@@ -275,21 +275,18 @@ create table earnings_quality_outcome (
 
 | ファイル | 内容 |
 |---|---|
-| **`docs/reference/earningsQualityV2.ts`** | 参照実装。移植先では `types/earningsQualityV2.ts` として配置する |
-| `docs/reference/earningsQualityV2.check.ts` | v1 到達域の全列挙 + §3.6 のケーススタディを出力する検証ハーネス |
+| **`types/earningsQualityV2.ts`** | 参照実装。移植先でも同じパスに置く |
+| `scripts/eqs_cases.ts` | v1 到達域の全列挙 + §3.6 のケーススタディを出力する検証ハーネス（DB 不要） |
+| `scripts/backtest_eqs.ts` | 実データで v1 と v2 の決算後成績を比較するバックテスト（要 DB → §12） |
 
 **React にも Supabase にも DOM にも依存しない。移植時は最初にこのファイルを丸ごと持っていく**
 （v1 の `types/earningsQuality.ts` と同じ運用）。
 
-検証済み: 本リポジトリの `tsconfig.json` と同一のコンパイラ設定
-（`--strict --target ES2017 --module esnext --moduleResolution bundler --isolatedModules`）で
-型エラーなし。§0 の到達域テーブルと §3.6 の比較表は、このハーネスの実出力である。
+検証済み: 本リポジトリの `tsconfig.json` で `tsc --noEmit` / `eslint` ともにエラーなし。
+§0 の到達域テーブルと §3.6 の比較表は、`scripts/eqs_cases.ts` の実出力である。
 
 ```bash
-# 検証ハーネスの実行（要 typescript）
-npx tsc --strict --target es2020 --module commonjs --outDir /tmp/eqs \
-  docs/reference/earningsQualityV2.ts docs/reference/earningsQualityV2.check.ts \
-  && node /tmp/eqs/earningsQualityV2.check.js
+npx tsx scripts/eqs_cases.ts     # DB 不要。§0 と §3.6 を再現する
 ```
 
 主要 API:
@@ -502,6 +499,8 @@ limit 50;
 
 ```
 types/earningsQualityV2.ts                        # 純ロジック（依存ゼロ）— 最初に持っていく
+scripts/eqs_cases.ts                              # 依存: types/earningsQualityV2（DB 不要）
+scripts/backtest_eqs.ts                           # 依存: types/earningsQualityV2 + @supabase/supabase-js
 components/earnings/EqsBadge.tsx                  # 依存: types/earningsQualityV2
 components/earnings/EarningsFilters.tsx           # 依存: なし（純 UI）
 app/earnings/review/page.tsx                      # 依存: lib/earningsOutcomeFetch
@@ -523,7 +522,70 @@ v1 §7.2 / §7.3 から**追加なし**。EQS の配色は v1 と同じ 16 進�
 
 ---
 
-## 11. 既知の制約・未決事項
+## 11. 決算後成績の比較バックテスト `scripts/backtest_eqs.ts`
+
+**v1 と v2 の「決算開示後の成績」を実データで突き合わせるスクリプト。**
+§8 の受け入れ基準 ⑥⑦⑧ はこのスクリプトの出力で判定する。
+`earnings_quality_outcome` テーブル（§4.3）を作る前でも、既存の価格テーブルから直接計算して動く。
+
+### 11.1 実行方法
+
+```bash
+# .env.local に NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY があれば追加設定不要
+npx tsx scripts/backtest_eqs.ts
+
+# 期間を絞る / 価格ソースを変える / 明細を CSV 出力
+npx tsx scripts/backtest_eqs.ts --since 2025-01-01 --hold 20 --csv /tmp/eqs_backtest.csv
+npx tsx scripts/backtest_eqs.ts --source signals
+```
+
+| オプション | 既定 | 意味 |
+|---|---|---|
+| `--since YYYY-MM-DD` | 全期間 | 対象開示日の下限 |
+| `--source ohlcv\|signals` | `ohlcv` | `ohlcv` = `chart_ohlcv_cache`（OHLC あり／エントリ = D+1 **始値**、MFE/MAE は高値安値ベース）<br>`signals` = `daily_signals`（終値のみ／エントリ = D+1 **終値**、MFE/MAE は終値ベースで保守的） |
+| `--hold N` | `20` | 保有本数（営業日） |
+| `--csv PATH` | なし | 明細 CSV 出力 |
+| `--concurrency N` | `8` | 価格取得の並列数 |
+
+### 11.2 測定方法
+
+- **エントリ**: 開示日 D の**翌営業日 (D+1)**。`/earnings` の「D+1 寄り買い候補」という商品前提に合わせる。
+  引け前開示は本来 D 当日に入れられるので、この定義は D 当日の初動を捨てるぶん**保守的**。
+  v1 / v2 の双方にまったく同じ定義を適用するため、**比較の公平性は保たれる**。
+- **リターン**: エントリ価格に対する D+1 / D+5 / D+10 / D+20（エントリ足を 1 本目と数える）の終値騰落率 %。
+- **打ち切りバイアス回避**: 最長ホライズンぶんの足が揃っていない行は集計から除外する
+  （直近の開示日が「まだ上がっていないだけ」で不利にならないようにする）。
+- **v1 のバンド**は `types/earningsQuality.ts` の `score3Color` と同一境界（満点 / 強 5-6 / 中 3-4 / 弱 0-2、1Q は満点 5）。
+- **v2 のバンド**は §3.5（S 80+ / A 65-79 / B 45-64 / C 0-44）。
+- v2 のスコアは `toEqsInput()` → `computeEqs()`、つまり **Phase 0 相当（供給側の追加列なし）** で計算する。
+  したがって 2Q/3Q は累計 YoY 近似（`degraded`）、黒字転換は `unknown` 扱い。
+  **実測値は v2 の実力の下限**であり、Phase 1 の列が入れば改善余地がある。
+
+### 11.3 出力される指標
+
+| 指標 | 見るポイント |
+|---|---|
+| **バンド別成績表** | バンドごとの N・構成比・平均 D+1/5/10/20・中央値・勝率・平均 MFE/MAE。**単調性**（上位バンドほど高リターン）の自動判定つき。v1 は R1/R2 により単調性が崩れているはず |
+| **見逃し率** | D+20 が **+20% 以上**だった銘柄のうち、開示日に最下位バンド（v1「弱」／v2「C」）だった割合。**今回の問題の直接の指標**。受け入れ基準 ⑥ = v1 比で半減 |
+| **誤検知率** | D+20 が **-10% 以下**だった銘柄のうち、最上位バンド（v1「満点」／v2「S」）だった割合。§3.6 ケース D 型（増配＋下方修正）が実データで何件あるか |
+| **上位 N 選抜の平均リターン** | 各開示日で上位 1/3/5/10 銘柄を選んだ場合の平均 D+20。**実運用に最も近い指標**。全銘柄平均をベースラインとして併記 |
+| **情報係数 IC** | 当日内のスコア順位と D+20 リターン順位の Spearman 相関を日ごとに算出し平均。受け入れ基準 ⑧ = v2 IC > v1 IC |
+| **1Q 限定の比較** | v1 で「弱(灰)」に落ちた 1Q の割合と、そのうち +20% 以上だった件数。**R2 の実害の直接計測** |
+| **反転銘柄リスト** | v1「弱」→ v2「S/A」に反転した銘柄を D+20 降順で表示。トーメンデバイス (2737) がここに出れば診断が実証される |
+
+### 11.4 実行前に確認すること
+
+- **価格カバレッジ**: スクリプトは冒頭で「価格が取れた銘柄 / 全銘柄」を表示する。
+  `chart_ohlcv_cache` はチャート表示用のキャッシュであり**全上場銘柄を網羅していない可能性がある**。
+  カバレッジが 30% を下回る場合は警告を出すので、`--source signals` を試すこと。
+  カバレッジが低いまま解釈すると**生存バイアス**（見られている銘柄＝既に注目された銘柄）が入る。
+- **サンプル数**: バンド別の N が二桁に満たない場合、平均リターンの差は統計的に無意味。
+  `--since` を外して全期間で回すこと。
+- 本スクリプトは**読み取り専用**。テーブルへの書き込みは一切行わない。
+
+---
+
+## 12. 既知の制約・未決事項
 
 - **閾値は暫定値**。§3.3 の段階表は「決算後ドリフトの一般則 + v1 の欠陥を埋める」という設計判断であり、
   **バックテスト未実施**。Phase 2 で必ずキャリブレーションすること。現状は

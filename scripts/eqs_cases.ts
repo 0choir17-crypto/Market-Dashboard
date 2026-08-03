@@ -1,4 +1,7 @@
-import { computeEqs, eqsBand, toEqsInput, type V1LikeRow } from './earningsQualityV2'
+// v1 (score3) と v2 (EQS) のスコア挙動を、DB 無しで突き合わせる検証ハーネス。
+//   npx tsx scripts/eqs_cases.ts
+// 実データでの成績比較は scripts/backtest_eqs.ts（要 Supabase 認証情報）。
+import { computeEqs, eqsBand, toEqsInput, type V1LikeRow } from '../types/earningsQualityV2'
 
 // ── v1 の再実装 (設計書 §3 のとおり) ───────────────────────────────────
 function v1Score(r: V1LikeRow) {
