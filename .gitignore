@@ -26,3 +26,6 @@ npm-debug.log*
 .claude/
 
 .vercel
+
+# ローカル解析結果 (scripts/analysis)
+.analysis/
