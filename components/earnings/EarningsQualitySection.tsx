@@ -93,6 +93,7 @@ function DivCell({ v }: { v: number | null | undefined }) {
 }
 
 // ── YoY/QoQ 2 値セル (上が YoY, 下が QoQ) ─────────────────────────────────
+// YoY は「単Q の前年同期比」であって累計 (期初からの累計) 比ではない。
 function YoyQoqCell({
   yoy,
   qoq,
@@ -527,8 +528,8 @@ export default function EarningsQualitySection({
               <th className="px-2 py-2.5 text-xs font-medium uppercase tracking-wide text-left text-[var(--text-secondary)] w-20">Code</th>
               <SortTh label="銘柄名" sortKey="co_name" {...sp} align="left" className="min-w-[180px]" />
               <SortTh label="セクター" sortKey="sector_s33" {...sp} align="left" className="min-w-[110px]" />
-              <SortTh label="売上 YoY/QoQ" tooltip="上: sales_yoy_pct (前年同期累計比 %) / 下: sales_qoq_pct (前期単Q比 %)" sortKey="sales_yoy_pct" {...sp} />
-              <SortTh label="EPS YoY/QoQ" tooltip="上: eps_yoy_pct / 下: eps_qoq_pct (Q1 は QoQ なし)" sortKey="eps_yoy_pct" {...sp} />
+              <SortTh label="売上 YoY/QoQ" tooltip="上: sales_yoy_pct (単Q 前年同期比 %) / 下: sales_qoq_pct (前期単Q比 %)" sortKey="sales_yoy_pct" {...sp} />
+              <SortTh label="EPS YoY/QoQ" tooltip="上: eps_yoy_pct (単Q 前年同期比 %) / 下: eps_qoq_pct (前期単Q比 %。Q1 は QoQ なし)" sortKey="eps_yoy_pct" {...sp} />
               <SortTh label="増配率" tooltip="div_change_pct — 同 FY 前回 FDivAnn からの増配率 % (>=10 で「大」★)" sortKey="div_change_pct" {...sp} />
               <SortTh label="通期 OP" tooltip="fop_rev_pct — 通期予想 OP 上方修正率 % (同 FY 前回 FOP 比)。s_guide 軸の根拠 — 加点された行は太字＋加点数を表示" sortKey="fop_rev_pct" {...sp} />
               <SortTh label="進捗超過" tooltip="progress_excess_pct — 実進捗 − 期待ペース (pt)" sortKey="progress_excess_pct" {...sp} />

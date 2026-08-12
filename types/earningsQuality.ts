@@ -34,6 +34,7 @@ export type EarningsQualityRow = {
   verdict: string | null
 
   div_change_pct: number | null
+  // *_yoy_pct は「単Q の前年同期比 %」(累計比ではない) / *_qoq_pct は「前期単Q比 %」
   eps_yoy_pct: number | null
   eps_qoq_pct: number | null
   sales_yoy_pct: number | null
