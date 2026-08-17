@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { MarketConditions } from '@/types/market'
 import { useDate } from '@/contexts/DateContext'
 import BreadthPanel from '@/components/market/BreadthPanel'
+import TopixChart from '@/components/market/TopixChart'
 import SectorSection from '@/components/sectors33/SectorSection'
 import PageHeader from '@/components/shared/PageHeader'
 
@@ -95,8 +96,15 @@ export default function Page() {
       )}
 
       {market && (
-        /* Market Breadth をダッシュボードのメインとして大きく表示 */
-        <BreadthPanel market={market} />
+        <>
+          {/* 指数そのもの (TOPIX ローソク足 + 市場出来高) → 内部状態 (Breadth) の順 */}
+          <div className="mb-6">
+            <TopixChart market={market} />
+          </div>
+
+          {/* Market Breadth をダッシュボードのメインとして大きく表示 */}
+          <BreadthPanel market={market} />
+        </>
       )}
 
       {/* Sectors-33 タブを統合: Market Breadth の下にセクターチャートを配置。

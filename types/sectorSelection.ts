@@ -61,6 +61,15 @@ export type SectorSelectionRow = {
   sector_shrt_with_res_va_s33?: number | null   // 価格規制有りの空売り代金（円）
   sector_shrt_no_res_va_s33?: number | null     // 価格規制無しの空売り代金（円）
   sector_short_va_ratio_s33?: number | null     // 当日の空売り比率（0〜1。×100 で%化）
+
+  // ── ④ 業種別出来高（2026-08-17 追加。単位は「株」）────────────────────────
+  // 2008-05-07 以降ほぼ全行 non-null。唯一の欠損は 2020-10-01（東証システム障害で
+  // 終日売買不成立）の33業種すべて。表示側は NULL を「—」にしてエラーにしないこと。
+  // Σ33業種 = market_conditions.market_volume（母集団を揃えてあるため完全一致）。
+  // ⚠️ 生の株数は低位株1銘柄に支配されるため業種間の勢い比較には使わない。
+  //    比較には平常比 (sector_volume_s33 / sector_volume_ma20_s33) を使う。
+  sector_volume_s33?: number | null
+  sector_volume_ma20_s33?: number | null
 }
 
 // Composite score weights — 4 成分に再正規化 (Flow 廃止)。DB 側の計算と一致させること。

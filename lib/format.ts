@@ -26,6 +26,24 @@ export function formatPct(
   return `${opts.sign && value > 0 ? '+' : ''}${s}%`
 }
 
+/**
+ * 出来高（株）。桁が大きいので億株／百万株に丸める。
+ * 市場全体は 1日 33〜36億株、業種単位では百万株オーダーになる。
+ */
+export function formatShares(value: number | null | undefined): string {
+  if (value == null || !Number.isFinite(value)) return '—'
+  const abs = Math.abs(value)
+  if (abs >= 1e8) return `${(value / 1e8).toFixed(1)}億株`
+  if (abs >= 1e6) return `${(value / 1e6).toFixed(0)}百万株`
+  return `${Math.round(value).toLocaleString('ja-JP')}株`
+}
+
+/** 出来高の平常比（20日平均比）。1.0 が平常。 */
+export function formatVolumeRatio(value: number | null | undefined): string {
+  if (value == null || !Number.isFinite(value)) return '—'
+  return `${value.toFixed(2)}倍`
+}
+
 /** R倍数（+1.25R / −0.80R）。 */
 export function formatR(value: number | null | undefined): string {
   if (value == null || !Number.isFinite(value)) return '—'

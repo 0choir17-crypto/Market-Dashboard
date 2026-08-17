@@ -16,7 +16,7 @@ import {
   type SectorChartEntry,
 } from '@/lib/sectorPriceFetch'
 import type { SectorIndexChangeEntry } from '@/lib/sectorIndexChangeFetch'
-import SectorCandleChart from './SectorCandleChart'
+import SectorCandleChart, { VolumeLegend } from './SectorCandleChart'
 import { SectorChangeStrip } from './SectorChangeCells'
 import { RankDeltaBadge, MoversOnlyToggle } from './SectorRankDelta'
 import {
@@ -170,6 +170,8 @@ function SectorCard({
         <SectorCandleChart
           bars={entry.bars}
           metric={metric}
+          volumes={entry.volumes}
+          volumeLabel="業種出来高"
           height={260}
           visibleBars={VISIBLE_BARS}
         />
@@ -268,9 +270,13 @@ export default function SectorChartGallery({
         <p className="text-sm font-semibold text-[var(--text-primary)]">
           業種指数チャート
           <span className="ml-2 font-normal text-[var(--text-muted)]">
-            — スコア順・ローソク足 + EMA
+            — スコア順・ローソク足 + EMA + 業種出来高
           </span>
         </p>
+
+        {/* 出来高バーは平常比で色分けする（生の株数は低位株1銘柄に支配されるため、
+            業種間の勢い比較はバーの高さではなく色で読む） */}
+        <VolumeLegend />
 
         <div className="flex items-center gap-1 text-xs">
           <span className="text-[var(--text-muted)]">重ねる指標:</span>
