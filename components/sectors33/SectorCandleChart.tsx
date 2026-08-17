@@ -4,13 +4,21 @@ import { useEffect, useRef } from 'react'
 import {
   CandlestickSeries,
   ColorType,
+  HistogramSeries,
   LineSeries,
   IChartApi,
   createChart,
 } from 'lightweight-charts'
-import type { OhlcvBar } from '@/types/chart'
+import type { OhlcvBar, VolumeBar } from '@/types/chart'
 import { ema, toSeries, type SeriesPoint } from '@/lib/indicators'
 import { monthlyTickMarkFormatter } from '@/components/market/TimeSeriesChart'
+import { formatShares, formatVolumeRatio } from '@/lib/format'
+import {
+  VOLUME_COLORS,
+  VOLUME_HEAVY_RATIO,
+  VOLUME_SURGE_RATIO,
+  volumeBarColor,
+} from '@/lib/volume'
 
 const UP = '#16a34a'
 const DOWN = '#dc2626'
@@ -48,6 +56,34 @@ export function MaLegend({ className = '' }: { className?: string }) {
   )
 }
 
+// 出来高バーの色の意味（平常比）を示す凡例。チャート内では色しか読めないため、
+// 出来高バーを出す画面のヘッダーに置く。
+export function VolumeLegend({ className = '' }: { className?: string }) {
+  const items = [
+    { color: VOLUME_COLORS.normal, label: `平常比 <${VOLUME_HEAVY_RATIO}` },
+    { color: VOLUME_COLORS.heavy, label: `≥${VOLUME_HEAVY_RATIO}` },
+    { color: VOLUME_COLORS.surge, label: `≥${VOLUME_SURGE_RATIO}` },
+  ]
+  return (
+    <div
+      className={`inline-flex items-center gap-3 flex-wrap rounded-lg border border-[var(--border)] bg-[var(--bg-card-hover)] px-3 py-1.5 ${className}`}
+    >
+      <span className="text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+        出来高
+      </span>
+      {items.map((it) => (
+        <span key={it.label} className="flex items-center gap-1.5">
+          <span
+            className="inline-block w-3 h-3 rounded-[2px]"
+            style={{ backgroundColor: it.color }}
+          />
+          <span className="text-xs font-mono text-[var(--text-secondary)]">{it.label}</span>
+        </span>
+      ))}
+    </div>
+  )
+}
+
 export type MetricOverlay = {
   points: SeriesPoint[]
   color: string
@@ -57,6 +93,13 @@ type Props = {
   bars: OhlcvBar[]
   /** 0-100 のスコア系指標をローソク足の下部に重ねる（任意） */
   metric?: MetricOverlay | null
+  /**
+   * 出来高バー（株）。渡すとローソク足の下部にヒストグラムを描き、
+   * 平常比 (出来高 / 20日平均) で色分けする。
+   */
+  volumes?: VolumeBar[] | null
+  /** 出来高バッジのラベル。例: 「市場出来高」「業種出来高」 */
+  volumeLabel?: string
   height?: number
   /**
    * 初期表示する足数。EMA150 の助走ぶんを含めて bars を渡し、
@@ -69,11 +112,16 @@ type Props = {
 export default function SectorCandleChart({
   bars,
   metric,
+  volumes,
+  volumeLabel = '出来高',
   height = 300,
   visibleBars,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
+
+  const hasVolume = !!volumes && volumes.length > 0
+  const latestVolume = hasVolume ? volumes[volumes.length - 1] : null
 
   useEffect(() => {
     const container = containerRef.current
@@ -97,8 +145,15 @@ export default function SectorCandleChart({
       },
       rightPriceScale: {
         borderColor: '#cbd5e1',
-        // 指標オーバーレイを置くときは価格を上寄せして描画域を分ける
-        scaleMargins: metric ? { top: 0.05, bottom: 0.34 } : { top: 0.08, bottom: 0.08 },
+        // 指標オーバーレイ / 出来高を置くときは価格を上寄せして描画域を分ける
+        scaleMargins:
+          metric && hasVolume
+            ? { top: 0.04, bottom: 0.46 }
+            : metric
+              ? { top: 0.05, bottom: 0.34 }
+              : hasVolume
+                ? { top: 0.06, bottom: 0.26 }
+                : { top: 0.08, bottom: 0.08 },
       },
       crosshair: { mode: 1 },
       autoSize: true,
@@ -152,6 +207,27 @@ export default function SectorCandleChart({
       })),
     )
 
+    // 出来高: 独立スケールで最下部に描く。色は平常比 (出来高/20日平均)。
+    // 生の株数は株価水準の違う銘柄の合算なので、バーの高さより色（平常比）で読む。
+    if (volumes && volumes.length > 0) {
+      const volumeSeries = chart.addSeries(HistogramSeries, {
+        priceScaleId: 'volume',
+        priceLineVisible: false,
+        lastValueVisible: false,
+        priceFormat: { type: 'volume' },
+      })
+      volumeSeries.setData(
+        volumes.map((v) => ({
+          time: v.date,
+          value: v.volume,
+          color: volumeBarColor(v.ratio),
+        })),
+      )
+      chart.priceScale('volume').applyOptions({
+        scaleMargins: { top: 0.82, bottom: 0 },
+      })
+    }
+
     // 指標オーバーレイ: 0-100 固定の独立スケールで下部 30% に描く
     if (metric && metric.points.length > 0) {
       // 現在値はチャート下のセルに出ているので、軸バッジは出さない。
@@ -167,8 +243,9 @@ export default function SectorCandleChart({
         }),
       })
       metricSeries.setData(metric.points)
+      // 出来高バーと重ならないよう、出来高があるときは 1 段上に寄せる
       chart.priceScale('metric').applyOptions({
-        scaleMargins: { top: 0.7, bottom: 0 },
+        scaleMargins: hasVolume ? { top: 0.58, bottom: 0.22 } : { top: 0.7, bottom: 0 },
       })
     }
 
@@ -195,7 +272,7 @@ export default function SectorCandleChart({
       chart.remove()
       chartRef.current = null
     }
-  }, [bars, metric, height, visibleBars])
+  }, [bars, metric, volumes, hasVolume, height, visibleBars])
 
   if (bars.length === 0) {
     return (
@@ -210,9 +287,36 @@ export default function SectorCandleChart({
 
   return (
     <div
-      ref={containerRef}
-      className="w-full rounded-md border border-[var(--border)] bg-[var(--bg-card)]"
+      className="relative w-full rounded-md border border-[var(--border)] bg-[var(--bg-card)]"
       style={{ height, minHeight: height }}
-    />
+    >
+      <div ref={containerRef} className="w-full h-full" />
+
+      {/* 出来高の現在値。チャートにはツールチップが無く、バーは色でしか読めないため
+          最新日の実数と平常比をバッジで出す。 */}
+      {latestVolume && (
+        <div className="absolute left-2 top-2 flex items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--bg-card)] px-1.5 py-0.5 text-[10px] font-mono tabular-nums pointer-events-none">
+          <span
+            className="inline-block w-2 h-2 rounded-[2px]"
+            style={{ backgroundColor: volumeBarColor(latestVolume.ratio) }}
+          />
+          <span className="text-[var(--text-muted)]">{volumeLabel}</span>
+          <span className="text-[var(--text-secondary)] font-semibold">
+            {formatShares(latestVolume.volume)}
+          </span>
+          <span
+            className="font-semibold"
+            style={{
+              color:
+                (latestVolume.ratio ?? 0) >= VOLUME_HEAVY_RATIO
+                  ? volumeBarColor(latestVolume.ratio)
+                  : 'var(--text-muted)',
+            }}
+          >
+            平常比 {formatVolumeRatio(latestVolume.ratio)}
+          </span>
+        </div>
+      )}
+    </div>
   )
 }

@@ -7,6 +7,15 @@ export type OhlcvBar = {
   volume: number
 }
 
+// 出来高バー1本。単位は「株」。
+// ratio = volume / 20日平均（平常比）。1.0 が平常、1.3 なら平常の1.3倍。
+// 平均が未算出/ゼロの日は ratio = null（バーは淡色で描く）。
+export type VolumeBar = {
+  date: string
+  volume: number
+  ratio: number | null
+}
+
 // One LL-HL setup phase, derived from chart_ohlcv_cache via:
 //   GROUP BY struct_long_phase_start_date
 // (See spec in 21-Cloudl-Database backend for exact column names.)

@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import { fetchAllPaged } from '@/lib/pagedFetch'
-import type { OhlcvBar } from '@/types/chart'
+import type { OhlcvBar, VolumeBar } from '@/types/chart'
 import type { SeriesPoint } from '@/lib/indicators'
 
 const TABLE = 'sector_selection_s33'
@@ -21,6 +21,8 @@ const METRIC_KEYS = Object.keys(OVERLAY_METRICS) as OverlayMetricKey[]
 export type SectorChartEntry = {
   sector: string
   bars: OhlcvBar[]
+  /** 出来高バー（株）。bars と同じ日付だけを持つ */
+  volumes: VolumeBar[]
   /** 指標キー → 時系列（チャート重ね描き用） */
   metrics: Record<OverlayMetricKey, SeriesPoint[]>
 }
@@ -38,6 +40,8 @@ const COLUMNS = [
   'sector_index_high_s33',
   'sector_index_low_s33',
   'sector_index_close_s33',
+  'sector_volume_s33',
+  'sector_volume_ma20_s33',
   ...METRIC_KEYS,
 ].join(', ')
 
@@ -140,6 +144,7 @@ export async function fetchAllSectorPriceHistory(
       bySector[sector] = {
         sector,
         bars: [],
+        volumes: [],
         metrics: {
           composite_score: [],
           component_rs: [],
@@ -156,8 +161,20 @@ export async function fetchAllSectorPriceHistory(
     const l = num(r.sector_index_low_s33)
     const c = num(r.sector_index_close_s33)
     // 指数の生カラムは直近150営業日のみ非null。欠損日はローソク足から除外する。
+    const vol = num(r.sector_volume_s33)
     if (o != null && h != null && l != null && c != null) {
-      entry.bars.push({ date, open: o, high: h, low: l, close: c, volume: 0 })
+      entry.bars.push({ date, open: o, high: h, low: l, close: c, volume: vol ?? 0 })
+
+      // 出来高（株）はローソク足より過去まで埋まっているが、同じ日付軸に重ねるので
+      // 足がある日だけを持つ。売買不成立日（2020-10-01）などの NULL はバーを描かない。
+      if (vol != null) {
+        const ma20 = num(r.sector_volume_ma20_s33)
+        entry.volumes.push({
+          date,
+          volume: vol,
+          ratio: ma20 != null && ma20 > 0 ? vol / ma20 : null,
+        })
+      }
     }
 
     for (const key of METRIC_KEYS) {

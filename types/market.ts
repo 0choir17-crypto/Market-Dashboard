@@ -7,7 +7,12 @@ export type MarketConditions = {
   total_count: number
   positive_pct: number
   // TOPIX
+  // ※ 終値は topix_close ではなく topix_price（既存カード用の名前を互換のため維持）
   topix_price: number | null
+  // OHLC の始/高/安（2026-08-17 追加。2008-05-08 以降 全行 non-null）
+  topix_open?: number | null
+  topix_high?: number | null
+  topix_low?: number | null
   topix_chg_1w: number | null
   topix_chg_1m: number | null
   topix_chg_ytd: number | null
@@ -50,6 +55,11 @@ export type MarketConditions = {
   nh_nl_diff: number | null
   pct_above_sma50: number | null
   pct_above_sma200: number | null
+  // ── 市場出来高（2026-08-17 追加。2008-05-08 以降 全行 non-null）────────────
+  // 個別株（ETF/ETN/JDR/REIT を除く）の出来高を全銘柄合算した値。単位は「株」。
+  // ⚠️ TOPIX 指数そのものに出来高は存在しないため「TOPIX 出来高」とは呼ばないこと。
+  market_volume?: number | null
+  market_volume_ma20?: number | null
   // Entry Gate (jquants-scanner 供給) — MC v4 カードの後継
   gate_state: 'attack' | 'normal' | 'rest' | null
   gate_score: number | null
