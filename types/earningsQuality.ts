@@ -8,13 +8,23 @@
 //   s_sales (0/1/2): +1 if sales_yoy_pct > 0, +1 if sales_qoq_pct > 0
 //   s_guide (0/1/2): 通期予想修正 (fop_rev_pct)
 //
-// Q1 は前 Q 同 FY が無く QoQ 計算不能 (s_eps / s_sales が各 1 点頭打ち)
-//   → 構造的最大 = 7 (本来 9)。UI では Q1 を "7/7" 表記で誤解防止
+// 構造的に満点が届かない Q が 2 つある (どちらも最大 7、本来は 9):
+//   1Q — 前 Q 同 FY が無く QoQ 計算不能 → s_eps / s_sales が各 1 点頭打ち
+//   FY — 通期本決算そのものなので修正すべき通期予想が無い → s_guide が常に 0
+// UI では "7/7" 表記にして「9 点満点に届いていない」誤解を防ぐ。
 //
-// rank_in_day / pct_rank_in_day は v2 から「日 × Q グループ (1Q / 2Q3Q)」単位。
-//   同じ日に rank_in_day = 1 の行が 2 行存在する。
+// FY (通期本決算, 2026-08-19 配信開始) は同じ列を別の意味で使う:
+//   div_change_pct      期末の配当上積み (実績年間配当 vs 同 FY 直近予想)
+//   div_yoy_pct         実績年間配当の前期比      ← FY 専用
+//   op_beat_pct         着地 beat (実績 OP vs 同 FY 直近予想) ← FY 専用
+//   nx_op_growth_pct    翌期 OP 予想の伸び        ← FY 専用・スコア非対象
+//   fop_rev_pct / progress_excess_pct は FY では常に NULL
+//
+// rank_in_day / pct_rank_in_day は「日 × Q グループ (1Q / 2Q3Q / FY)」単位。
+//   最大点が 7 / 9 / 7 と揃わないため同一プールで percentile を取ると 1Q・FY が
+//   恒常的に不利になる。結果、同じ日に rank_in_day = 1 の行が最大 3 行存在する。
 
-export type CurPerType = '1Q' | '2Q' | '3Q' | string
+export type CurPerType = '1Q' | '2Q' | '3Q' | 'FY' | string
 
 export type EarningsQualityRow = {
   date: string
@@ -39,8 +49,13 @@ export type EarningsQualityRow = {
   eps_qoq_pct: number | null
   sales_yoy_pct: number | null
   sales_qoq_pct: number | null
-  fop_rev_pct: number | null
-  progress_excess_pct: number | null
+  fop_rev_pct: number | null          // FY は常に NULL (修正対象の通期予想が無い)
+  progress_excess_pct: number | null  // FY は常に NULL (進捗という概念が無い)
+
+  // ── FY 専用 (1Q-3Q は常に NULL) ────────────────────────────────────────
+  div_yoy_pct: number | null       // 実績年間配当の前期比 %
+  op_beat_pct: number | null       // 当期実績 OP ÷ 同 FY 直近予想 − 1 (着地 beat)
+  nx_op_growth_pct: number | null  // 翌期 OP 予想 ÷ 当期実績 OP − 1 (スコア非対象)
 
   close: number | null
   turnover_oku: number | null
@@ -54,7 +69,8 @@ export type EarningsQualityRow = {
 
 // Structural maxima (v2: 4軸化で 7 → 9)
 export const SCORE3_MAX = 9
-export const SCORE3_MAX_Q1 = 7   // 1Q は QoQ 2軸が構造的に NULL
+// 1Q は QoQ 2軸が構造的に NULL、FY は s_guide が構造的に 0 → どちらも上限 7
+export const SCORE3_MAX_CAPPED = 7
 
 // 色の境界 (0-9 スケール): 満点 / 強 7-8 / 中 4-6 / 弱 0-3
 export const SCORE3_STRONG = 7
@@ -66,19 +82,39 @@ export const PEAK_DAY_THRESHOLD = 100
 // 当日 Q別 Top 1% → 検証で end_per_risk 1.131 / +20%到達 28.9% (⭐)
 export const TOP_1PCT_THRESHOLD = 1.0
 
+// 到達可能な最大点。1Q / FY は 7、2Q / 3Q は 9。
+// 絶対値の閾値 (score3 >= 8 等) で絞ると 1Q と FY が全滅するので、必ずこの関数で
+// 割った相対値 (score3 / max) で判定すること。
 export function maxScoreFor(curPerType: CurPerType): number {
-  return curPerType === '1Q' ? SCORE3_MAX_Q1 : SCORE3_MAX
+  return curPerType === '1Q' || curPerType === 'FY' ? SCORE3_MAX_CAPPED : SCORE3_MAX
 }
 
-// ランキングの粒度: rank_in_day / pct_rank_in_day は日 × この Q グループ単位
-export type QGroup = '1Q' | '2Q3Q'
+// QoQ (前期単Q比) が計算できるか。1Q は前 Q 同 FY が無いので不能。
+// (前 FY の 4Q と比較する案は供給側の検証でエッジゼロと判明し、意図的に未実装)
+export function hasQoq(curPerType: CurPerType): boolean {
+  return curPerType !== '1Q'
+}
+
+// 通期予想修正軸 (s_guide) が評価対象か。FY は本決算そのもので常に 0。
+export function hasGuideAxis(curPerType: CurPerType): boolean {
+  return curPerType !== 'FY'
+}
+
+// ランキングの粒度: rank_in_day / pct_rank_in_day は日 × この Q グループ単位。
+// 上限点が違う 1Q / FY を 2Q3Q と同じプールに入れないため 3 群に分かれている。
+export type QGroup = '1Q' | '2Q3Q' | 'FY'
 
 export function qGroupOf(curPerType: CurPerType): QGroup {
-  return curPerType === '1Q' ? '1Q' : '2Q3Q'
+  if (curPerType === '1Q') return '1Q'
+  if (curPerType === 'FY') return 'FY'
+  return '2Q3Q'
 }
 
+// 表示順・フィルタ順に使う Q の並び
+export const CUR_PER_TYPES: readonly CurPerType[] = ['1Q', '2Q', '3Q', 'FY'] as const
+
 // score3 バッジ色: 満点=濃緑, 7-8=緑, 4-6=黄, 0-3=灰
-// 1Q は max=7 のため 7 が満点扱いになり「強」帯は構造的に発生しない。
+// 1Q / FY は max=7 のため 7 が満点扱いになり「強」帯は構造的に発生しない。
 export function score3Color(
   score: number | null | undefined,
   curPerType?: CurPerType,
@@ -95,17 +131,18 @@ export function score3Color(
 
 // ── スコア内訳 (Score バッジのツールチップ用) ────────────────────────────
 // 軸ごとの最大: s_div 3 / s_eps 2 / s_sales 2 / s_guide 2 = 9
-// 1Q は QoQ が無いため s_eps / s_sales が各 1 点頭打ち → 3+1+1+2 = 7
+//   1Q — QoQ が無いため s_eps / s_sales が各 1 点頭打ち → 3+1+1+2 = 7
+//   FY — s_guide が構造的に 0 → 3+2+2+0 = 7
+// 構造的に取れない軸は "0/2" ではなく "対象外" と出す (取り逃したように見せない)。
 export function score3Breakdown(row: EarningsQualityRow): string {
-  const isQ1 = row.cur_per_type === '1Q'
-  const qoqMax = isQ1 ? 1 : 2
+  const qoqMax = hasQoq(row.cur_per_type) ? 2 : 1
   const part = (label: string, v: number | null | undefined, max: number) =>
     `${label} ${v == null || !Number.isFinite(v) ? '—' : v}/${max}`
   return [
-    part('配当', row.s_div, 3),
+    part(row.cur_per_type === 'FY' ? '配当上積み' : '配当', row.s_div, 3),
     part('EPS', row.s_eps, qoqMax),
     part('売上', row.s_sales, qoqMax),
-    part('予想', row.s_guide, 2),
+    hasGuideAxis(row.cur_per_type) ? part('予想', row.s_guide, 2) : '予想 対象外 (FY)',
   ].join(' ・ ')
 }
 
@@ -116,6 +153,9 @@ export function score3Breakdown(row: EarningsQualityRow): string {
 export type ScoreDataState = 'ok' | 'mixed' | 'legacy' | 'column-missing'
 
 export function isLegacyScoreRow(row: EarningsQualityRow): boolean {
+  // FY は v2 より後 (2026-08-19) に配信開始なので旧スコアの FY 行は存在しない。
+  // 供給側が FY の s_guide を 0 ではなく NULL で入れてきても誤検知しないよう除外。
+  if (row.cur_per_type === 'FY') return false
   return 's_guide' in row && row.s_guide == null
 }
 
@@ -153,12 +193,13 @@ export function isAfterClose(discTime: string | null): boolean {
 }
 
 // ── 鮮度判定 ─────────────────────────────────────────────────────────────
-// 決算開示は時期偏重 (8月=1Q ピーク, 11月=2Q, 2月=3Q, 5月=本決算)。
-// 本スキャナーは 1Q-3Q のみ → 6月・9月・12月・3月は閑散期で新規開示ほぼ無し。
+// 決算開示は時期偏重 (5月=本決算/FY, 8月=1Q, 11月=2Q, 2月=3Q がピーク。3月期決算
+// 企業基準)。2026-08-19 に FY が配信対象へ加わったので 5 月も対象月になった。
+// それでもピークの翌月にあたる 3 / 6 / 9 / 12 月は新規開示がほぼ無い閑散期。
 // earnings_quality テーブルは「直近開示日」のデータが残るため、ユーザーが
 // 「今日のデータ」と誤読しないよう、鮮度バッジで明示する。
 
-// 閑散期月 (1Q-3Q スキャナー視点): 3 / 6 / 9 / 12 月 (0-indexed: 2,5,8,11)
+// 閑散期月: 3 / 6 / 9 / 12 月 (0-indexed: 2,5,8,11)
 const QUIET_MONTHS = [2, 5, 8, 11] as const
 
 export function isQuietMonth(d: Date = new Date()): boolean {
