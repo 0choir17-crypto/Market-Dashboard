@@ -11,7 +11,8 @@ import ErrorBanner from '@/components/shared/ErrorBanner'
 import PageHeader from '@/components/shared/PageHeader'
 
 // 鮮度バッジ: latestDate と本日との営業日差で色分け。
-// 閑散期 (3/6/9/12月) では長期間データ更新が無いことが正常なので、
+// 開示ピークは 5月(FY)/8月(1Q)/11月(2Q)/2月(3Q) に偏るため、その翌月にあたる
+// 閑散期 (3/6/9/12月) では長期間データ更新が無いことが正常。
 // hint 文言で原因を明示してユーザーの誤読を防ぐ。
 function FreshnessBadge({ latestDate }: { latestDate: string }) {
   // 'now' を毎回再計算しないようマウント時にスナップショット
@@ -70,7 +71,7 @@ export default function EarningsPage() {
     <main className="min-h-screen p-6" style={{ backgroundColor: 'var(--bg-primary)' }}>
       <PageHeader
         title="Earnings Quality"
-        subtitle="決算品質 — 当日決算開示銘柄の品質スコア（0-9、1Q は最大 7）・翌営業日（D+1）寄り買い候補 ※ 1Q-3Q のみ対象（本決算除外）／3・6・9・12月は構造的閑散期"
+        subtitle="決算品質 — 当日決算開示銘柄の品質スコア（0-9、1Q と FY は構造的に最大 7）・翌営業日（D+1）寄り買い候補 ※ 1Q-3Q + FY 通期本決算が対象／3・6・9・12月は構造的閑散期"
         onRefresh={() => fetchData(selectedDate ?? undefined)}
         refreshing={loading}
       >
@@ -118,7 +119,7 @@ export default function EarningsPage() {
               表示中のデータは {latestAvailable} ({fresh.bdays} 営業日前) のものです
             </p>
             <p className="text-xs text-red-700 mt-0.5">
-              現在は決算閑散期 (3/6/9/12 月) のため、本スキャナー対象 (1Q-3Q) の新規開示がありません。
+              現在は決算閑散期 (3/6/9/12 月) のため、本スキャナー対象 (1Q-3Q + FY) の新規開示がありません。
               「直近の開示日」のデータが残り続けるため、「今日のデータ」ではない点にご注意ください。
             </p>
           </div>
