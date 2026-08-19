@@ -113,6 +113,14 @@ export function qGroupOf(curPerType: CurPerType): QGroup {
 // 表示順・フィルタ順に使う Q の並び
 export const CUR_PER_TYPES: readonly CurPerType[] = ['1Q', '2Q', '3Q', 'FY'] as const
 
+// 期の新旧順序 (大きいほど新しい)。決算を延期していた企業が同日に 1Q〜FY を
+// まとめて開示することがあり (PK が (date, code, cur_per_type) なので別行になる)、
+// 「1 銘柄 1 行」に集約する際の代表選びに使う。未知の Q は 0 で最下位。
+export function curPerTypeRank(curPerType: CurPerType): number {
+  const i = CUR_PER_TYPES.indexOf(curPerType)
+  return i < 0 ? 0 : i + 1
+}
+
 // score3 バッジ色: 満点=濃緑, 7-8=緑, 4-6=黄, 0-3=灰
 // 1Q / FY は max=7 のため 7 が満点扱いになり「強」帯は構造的に発生しない。
 export function score3Color(
