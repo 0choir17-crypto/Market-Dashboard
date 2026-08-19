@@ -5,6 +5,7 @@ import type { CurPerType, EarningsQualityRow } from '@/types/earningsQuality'
 import {
   CUR_PER_TYPES,
   PEAK_DAY_THRESHOLD,
+  curPerTypeRank,
   SCORE3_MAX,
   TOP_1PCT_THRESHOLD,
   classifyScoreData,
@@ -298,7 +299,15 @@ function qBadgeClass(q: CurPerType): string {
 }
 
 // ── 行 (1 銘柄) ───────────────────────────────────────────────────────────
-function Row({ row }: { row: EarningsQualityRow }) {
+function Row({
+  row,
+  dup,
+  collapsed,
+}: {
+  row: EarningsQualityRow
+  dup?: DupInfo
+  collapsed: boolean
+}) {
   const noQoq = !hasQoq(row.cur_per_type)
   const max = maxScoreFor(row.cur_per_type)
   const isPerfect = row.score3 >= max
@@ -337,14 +346,29 @@ function Row({ row }: { row: EarningsQualityRow }) {
         {row.verdict ?? <span className="text-gray-400">—</span>}
       </td>
       <td className="px-2 py-2 whitespace-nowrap">
-        <a
-          href={tradingViewUrl(row.code)}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="font-mono text-xs text-[var(--accent)] hover:underline"
-        >
-          {row.code}
-        </a>
+        <div className="flex items-center gap-1">
+          <a
+            href={tradingViewUrl(row.code)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-mono text-xs text-[var(--accent)] hover:underline"
+          >
+            {row.code}
+          </a>
+          {dup && dup.count > 1 && (
+            <span
+              className="px-1 rounded text-[9px] font-semibold bg-slate-200 text-slate-600 whitespace-nowrap"
+              title={
+                `同日に ${dup.count} 本の決算を開示 (${dup.types.join(' / ')})。` +
+                (collapsed
+                  ? `\n最新の ${row.cur_per_type} を代表として表示中 — 他は「1銘柄1行」を解除すると出ます`
+                  : '\n決算を延期していた企業がまとめて開示したケースなどで、いずれも別々の開示です')
+              }
+            >
+              {collapsed ? `他${dup.count - 1}` : `同日${dup.count}`}
+            </span>
+          )}
+        </div>
       </td>
       <td className="px-2 py-2 whitespace-nowrap text-xs text-gray-800 max-w-[200px] truncate">
         <a
@@ -439,6 +463,55 @@ function ChipFilter({
   )
 }
 
+// ── 同一銘柄が同日に複数 Q を開示したケース ─────────────────────────────
+// PK が (date, code, cur_per_type) なので、決算を延期していた企業が 1Q〜FY を
+// まとめて開示すると同じ code が最大 4 行並ぶ (訂正開示 + 当期新規も同様)。
+// データとしては正しいが、D+1 買い候補リストとしては 1 銘柄が上位を占有して
+// しまうため、「1 銘柄 1 行」に畳めるようにする。
+type DupInfo = { count: number; types: CurPerType[] }
+
+// その日の全行 (フィルタ前) から code ごとの開示 Q を集計。フィルタで一部が
+// 隠れても「この銘柄は同日に N 回開示している」事実は変わらないため rows 基準。
+function buildDupMap(rows: EarningsQualityRow[]): Map<string, DupInfo> {
+  const m = new Map<string, DupInfo>()
+  for (const r of rows) {
+    const cur = m.get(r.code)
+    if (cur) {
+      cur.count++
+      cur.types.push(r.cur_per_type)
+    } else {
+      m.set(r.code, { count: 1, types: [r.cur_per_type] })
+    }
+  }
+  for (const info of m.values()) {
+    info.types.sort((a, b) => curPerTypeRank(a) - curPerTypeRank(b))
+  }
+  return m
+}
+
+// 代表行の選定: 最新の Q (FY > 3Q > 2Q > 1Q)。未知の Q 同士で並んだときだけ
+// 開示時刻 → 相対スコアで決定的に決める。
+function isMoreRecent(a: EarningsQualityRow, b: EarningsQualityRow): boolean {
+  const ao = curPerTypeRank(a.cur_per_type)
+  const bo = curPerTypeRank(b.cur_per_type)
+  if (ao !== bo) return ao > bo
+  const at = a.disc_time ?? ''
+  const bt = b.disc_time ?? ''
+  if (at !== bt) return at > bt
+  return a.score3 / maxScoreFor(a.cur_per_type) > b.score3 / maxScoreFor(b.cur_per_type)
+}
+
+// 表示中の行を 1 銘柄 1 行に畳む。フィルタ後の集合に対して適用するので、
+// 「1Q だけ表示」中に代表 (FY) が消えて行が丸ごと落ちる、ということは起きない。
+function collapseByCode(rows: EarningsQualityRow[]): EarningsQualityRow[] {
+  const best = new Map<string, EarningsQualityRow>()
+  for (const r of rows) {
+    const cur = best.get(r.code)
+    if (!cur || isMoreRecent(r, cur)) best.set(r.code, r)
+  }
+  return Array.from(best.values())
+}
+
 // ソート用の値。「通期 OP」列は FY で fop_rev_pct が常に NULL のため表示値
 // (op_beat_pct) を返す。意味は違うが、列に出ている値と並び順を一致させる方が
 // 誤解が少ない (FY と四半期が同日に混在するのは訂正開示くらいで稀)。
@@ -462,6 +535,8 @@ export default function EarningsQualitySection({
   // なったため、指標の意味が違う FY を切り分けられるようにする。
   const [qSelected, setQSelected] = useState<Set<CurPerType>>(new Set())
   const [sectorSelected, setSectorSelected] = useState<Set<string>>(new Set())
+  // 同日に複数 Q を開示した銘柄を 1 行に畳むか。既定は OFF (データどおり全件表示)
+  const [collapsed, setCollapsed] = useState(false)
   const [sortKey, setSortKey] = useState<SortKey>('score3')
   const [sortDir, setSortDir] = useState<SortDir>('desc')
 
@@ -480,6 +555,13 @@ export default function EarningsQualitySection({
       setSortDir(k === 'rank_in_day' || k === 'co_name' || k === 'sector_s33' ? 'asc' : 'desc')
     }
   }
+
+  const dupMap = useMemo(() => buildDupMap(rows), [rows])
+  // 同日に複数開示した銘柄が 1 つも無ければトグル自体を出さない
+  const hasDup = useMemo(() => {
+    for (const info of dupMap.values()) if (info.count > 1) return true
+    return false
+  }, [dupMap])
 
   // 当日に存在する Q のみをチップに出す (FY 単独日に 1Q-3Q のチップは不要)
   const qOptions = useMemo(() => {
@@ -509,8 +591,13 @@ export default function EarningsQualitySection({
     })
   }, [rows, qSelected, sectorSelected])
 
+  const deduped = useMemo(
+    () => (collapsed ? collapseByCode(filtered) : filtered),
+    [filtered, collapsed],
+  )
+
   const sorted = useMemo(() => {
-    const arr = [...filtered]
+    const arr = [...deduped]
     arr.sort((a, b) => {
       let av: number | string
       let bv: number | string
@@ -542,7 +629,7 @@ export default function EarningsQualitySection({
       return sortDir === 'asc' ? (av > bv ? 1 : -1) : av < bv ? 1 : -1
     })
     return arr
-  }, [filtered, sortKey, sortDir])
+  }, [deduped, sortKey, sortDir])
 
   const sp = { currentKey: sortKey, currentDir: sortDir, onSort: handleSort }
 
@@ -659,10 +746,29 @@ export default function EarningsQualitySection({
 
       {/* ── テーブル ────────────────────────────────────────────── */}
       <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm overflow-x-auto">
-        <div className="flex items-center gap-3 px-4 pt-4 pb-3">
+        <div className="flex items-center gap-3 px-4 pt-4 pb-3 flex-wrap">
           <p className="text-sm font-semibold text-[var(--text-primary)]">品質スコア ランキング</p>
+          {hasDup && (
+            <label
+              className="flex items-center gap-1.5 text-[11px] text-gray-600 cursor-pointer select-none"
+              title="決算を延期していた企業などが同日に 1Q〜FY をまとめて開示すると、同じ銘柄が最大 4 行並びます。ON にすると最新の Q (FY > 3Q > 2Q > 1Q) の 1 行だけ残します"
+            >
+              <input
+                type="checkbox"
+                checked={collapsed}
+                onChange={e => setCollapsed(e.target.checked)}
+                className="cursor-pointer"
+              />
+              1銘柄1行
+            </label>
+          )}
           <span className="ml-auto text-xs text-[var(--text-muted)]">
             <span className="font-mono">{sorted.length} / {rows.length}</span> 件表示
+            {collapsed && filtered.length > sorted.length && (
+              <span className="ml-1 text-[10px]">
+                (同日重複 {filtered.length - sorted.length} 件を集約)
+              </span>
+            )}
           </span>
         </div>
 
@@ -689,7 +795,12 @@ export default function EarningsQualitySection({
           </thead>
           <tbody>
             {sorted.map(row => (
-              <Row key={`${row.code}-${row.cur_per_type}`} row={row} />
+              <Row
+                key={`${row.code}-${row.cur_per_type}`}
+                row={row}
+                dup={dupMap.get(row.code)}
+                collapsed={collapsed}
+              />
             ))}
           </tbody>
         </table>
@@ -737,6 +848,20 @@ export default function EarningsQualitySection({
           <span className="flex items-center gap-1 text-amber-700">
             <span>⏰</span> 引け後開示 (D+1 寄り対象)
           </span>
+          {hasDup && (
+            <>
+              <span className="text-gray-300">|</span>
+              <span
+                className="flex items-center gap-1 text-gray-600"
+                title="PK が (date, code, cur_per_type) のため、同日に複数の決算を開示した銘柄は Q ごとに別行になります"
+              >
+                <span className="px-1 rounded text-[9px] font-semibold bg-slate-200 text-slate-600">
+                  同日N
+                </span>
+                同一銘柄が同日に N 本開示
+              </span>
+            </>
+          )}
         </div>
       </div>
     </>
