@@ -1,16 +1,16 @@
 'use client'
 
-import type { SpringSetupRow } from '@/types/springSetups'
-import { springTypeMeta } from '@/types/springSetups'
+import type { EmaSetupCardRow, EmaTouch } from '@/types/emaSetups'
+import { resolveTouchType } from '@/types/emaSetups'
 import { formatPct } from '@/lib/format'
 import { tradingViewUrl, shikihoUrl } from '@/lib/tickerLinks'
 
 type Props = {
-  row: SpringSetupRow
+  row: EmaSetupCardRow
   hot?: boolean
   multiHit?: boolean
-  onAddWatchlist?: (row: SpringSetupRow) => void
-  onAddPosition?: (row: SpringSetupRow) => void
+  onAddWatchlist?: (row: EmaSetupCardRow) => void
+  onAddPosition?: (row: EmaSetupCardRow) => void
 }
 
 function isNum(v: number | null | undefined): v is number {
@@ -25,26 +25,43 @@ function fmtSignedPct(v: number | null | undefined, decimals = 1): string {
   return formatPct(v, { digits: decimals, sign: true })
 }
 
-function fmtClose(v: number | null | undefined): string {
+function fmtPrice(v: number | null | undefined): string {
   return isNum(v) ? v.toLocaleString('ja-JP', { maximumFractionDigits: 1 }) : '—'
 }
 
-function Chip({
-  text,
-  palette,
-  title,
-}: {
-  text: string
-  palette: { bg: string; fg: string; border: string }
-  title?: string
-}) {
+// rs (0–100, 高いほど強い)。他カードと同じ配色。
+function rsColor(v: number | null): string {
+  if (!isNum(v)) return 'var(--text-muted)'
+  if (v >= 80) return 'var(--positive)'
+  if (v >= 60) return 'var(--accent)'
+  if (v >= 40) return 'var(--text-secondary)'
+  return 'var(--negative)'
+}
+
+// EMA バッジは「どの EMA にタッチしたか」という事実の表示であって優劣ではない。
+// 9 / 21 / 50 を色で格付けせず、全て同じ中立色。ヒゲ / 実体は塗りの有無だけで区別する
+// （検証上どちらが有利という情報は無い ＝ AUC 0.50）。
+function TouchBadge({ touch }: { touch: EmaTouch }) {
+  const type = resolveTouchType(touch)
+  const filled = type === 'BODY'
+  const typeLabel = type === 'BODY' ? '実体' : type === 'WICK' ? 'ヒゲ' : '—'
   return (
     <span
-      className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold tabular-nums"
-      style={{ backgroundColor: palette.bg, color: palette.fg, border: `1px solid ${palette.border}` }}
-      title={title}
+      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold tabular-nums border"
+      style={{
+        backgroundColor: filled ? '#e2e8f0' : 'transparent',
+        color: 'var(--text-secondary)',
+        borderColor: '#cbd5e1',
+      }}
+      title={
+        `EMA${touch.ema} にタッチ（${typeLabel}）\n` +
+        `EMA値 ${fmtPrice(touch.ema_value)} / 安値ATR ${fmt(touch.low_atr, 3)}` +
+        (touch.fresh ? '\n直近10営業日で同じ EMA へのタッチは初回' : '')
+      }
     >
-      {text}
+      <span className="font-mono">{touch.ema}</span>
+      <span className="font-normal opacity-70">{typeLabel}</span>
+      {touch.fresh && <span className="text-[9px] text-amber-600" title="初回">初</span>}
     </span>
   )
 }
@@ -73,18 +90,13 @@ function Metric({
   )
 }
 
-// rs (0–100, 高いほど強い)
-function rsColor(v: number | null | undefined): string {
-  if (!isNum(v)) return 'var(--text-muted)'
-  if (v >= 80) return 'var(--positive)'
-  if (v >= 60) return 'var(--accent)'
-  if (v >= 40) return 'var(--text-secondary)'
-  return 'var(--negative)'
-}
-
-export default function SpringSetupCard({ row, hot = false, multiHit = false, onAddWatchlist, onAddPosition }: Props) {
-  const meta = springTypeMeta(row.type)
-
+export default function EmaSetupCard({
+  row,
+  hot = false,
+  multiHit = false,
+  onAddWatchlist,
+  onAddPosition,
+}: Props) {
   return (
     <div
       className="bg-[var(--bg-card)] rounded-lg border shadow-sm hover:shadow-md transition-shadow flex flex-col"
@@ -93,9 +105,11 @@ export default function SpringSetupCard({ row, hot = false, multiHit = false, on
         backgroundColor: multiHit ? '#fef9c3' : hot ? '#f0fdf4' : 'var(--bg-card)',
       }}
     >
-      {/* バッジ行 */}
-      <div className="px-3 py-2 border-b border-[var(--border-subtle)] flex items-center gap-1.5 flex-wrap">
-        <Chip text={meta.label} palette={meta.palette} title={meta.title} />
+      {/* タッチした EMA（同日に複数 EMA へタッチした銘柄はここに並ぶ） */}
+      <div className="px-3 py-2 border-b border-[var(--border-subtle)] flex items-center gap-1 flex-wrap">
+        {row.touches.map(t => (
+          <TouchBadge key={t.ema} touch={t} />
+        ))}
       </div>
 
       {/* 銘柄 */}
@@ -133,21 +147,52 @@ export default function SpringSetupCard({ row, hot = false, multiHit = false, on
         <div className="flex-shrink-0 text-right">
           <p className="text-[9px] font-medium uppercase tracking-wide text-[var(--text-muted)] leading-tight">Close</p>
           <p className="font-mono text-sm font-semibold text-[var(--text-primary)] tabular-nums leading-tight">
-            {fmtClose(row.close)}
+            {fmtPrice(row.close)}
           </p>
         </div>
       </div>
 
-      {/* 共通枠: 52w高 / ADR% / 強さ(RS) */}
-      <div className="px-3 grid grid-cols-2 gap-2">
-        <Metric label="52w高" value={fmtSignedPct(row.dist_from_high_pct)} title="52週高値からの距離(%)" />
-        <Metric label="ADR%" value={fmt(row.adr_pct)} title="平均日中変動率(%) = ボラの目安" />
+      {/* タッチの内訳（EMA 値 / 安値ATR）。安値ATR は (安値 − EMA) / ATR14(前日)。 */}
+      <div className="px-3 space-y-0.5">
+        {row.touches.map(t => (
+          <div
+            key={t.ema}
+            className="flex items-baseline justify-between gap-2 text-[10px] text-[var(--text-secondary)] tabular-nums"
+          >
+            <span className="font-mono">EMA{t.ema}</span>
+            <span className="font-mono">{fmtPrice(t.ema_value)}</span>
+            <span className="font-mono" title="安値ATR = (安値 − EMA) / ATR14(前日)。定義上 0 〜 −0.10">
+              安値ATR {fmt(t.low_atr, 3)}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {/* 指標 */}
+      <div className="px-3 pt-2 grid grid-cols-2 gap-2">
+        <Metric
+          label="売買代金"
+          value={isNum(row.turnover_oku) ? `${row.turnover_oku.toFixed(1)}億` : '—'}
+          title="売買代金 20日平均（億円/日）"
+        />
         <Metric
           label="RS"
           value={fmt(row.rs_topix_avg, 0)}
           color={rsColor(row.rs_topix_avg)}
-          title="対TOPIX 相対強さ（21/63/126平均, 0–100）"
+          title="対TOPIX RS 平均（21/63/126d）0-100"
         />
+        <Metric label="52w高" value={fmtSignedPct(row.dist_from_high_pct)} title="52週高値からの乖離(%)。0 に近いほど高値圏" />
+        <Metric label="ADR%" value={fmt(row.adr_pct)} title="ADR%（20日）= 日中ボラの目安" />
+      </div>
+
+      {/* 補助情報 */}
+      <div className="px-3 pt-1.5 flex items-center justify-between gap-2 text-[10px] text-[var(--text-muted)] tabular-nums">
+        <span className="font-mono" title="出来高比（対 20日平均）">
+          出来高比 {fmt(row.vol_ratio, 2)}
+        </span>
+        <span className="font-mono" title="終値の 150SMA からの乖離(%)">
+          150SMA {fmtSignedPct(row.ext_sma150_pct)}
+        </span>
       </div>
 
       {/* アクション */}
