@@ -13,7 +13,6 @@ const NAV_ITEMS: { href: string; label: string }[] = [
   // /sectors33 ルート自体は既存リンク用に残している。
   { href: '/', label: 'Market' },
   { href: '/leaders', label: 'Leaders' },
-  { href: '/momentum', label: 'Momentum' },
   { href: '/earnings', label: 'Earnings' },
   { href: '/today', label: 'Daily Watch' },
   { href: '/watchlist', label: 'Watchlist' },

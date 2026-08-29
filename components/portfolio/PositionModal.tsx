@@ -20,7 +20,9 @@ type Props = {
 const today = () => todayJST()
 
 // Screen 選択肢（表示名をそのまま screen_name に保存）。末尾に Other。
-const SCREEN_OPTIONS = ['Coil Pullback', 'MA Pullback']
+// 2026-08-29 のスキャナー刷新で Coil / MA Pullback は廃止。過去トレードに残る旧名は
+// 下の「initial の値が選択肢に無ければ 1 件だけ足す」分岐で選択状態を保てる。
+const SCREEN_OPTIONS = ['EMA Setup', 'Structure Pivot']
 
 export default function PositionModal({ open, onClose, onSaved, initial }: Props) {
   const isEdit = !!initial?.id

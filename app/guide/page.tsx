@@ -114,11 +114,10 @@ const GLOSSARY = [
   { term: 'Factor',   desc: '\u6bce\u65e5\u5168\u9298\u67c4\u3092\u30b9\u30ad\u30e3\u30f3\u3059\u308b\u30bf\u30a4\u30d7\u3002\u6761\u4ef6\u3092\u6e80\u305f\u3059\u9650\u308a\u6bce\u65e5\u30b7\u30b0\u30ca\u30eb\u304c\u51fa\u308b' },
   { term: 'Event',    desc: '\u7279\u5b9a\u306e\u30a4\u30d9\u30f3\u30c8\uff08\u30ae\u30e3\u30c3\u30d7\u30a2\u30c3\u30d7\u3001\u30d6\u30ec\u30a4\u30af\u30a2\u30a6\u30c8\u7b49\uff09\u304c\u767a\u751f\u3057\u305f\u65e5\u306e\u307f\u30b7\u30b0\u30ca\u30eb\u304c\u51fa\u308b' },
   { term: 'MC',    desc: 'Market Condition v4\u30028\u30d5\u30a1\u30af\u30bf\u30fc\u52a0\u91cd\u5e73\u5747\u3067\u5e02\u5834\u74b0\u5883\u30920\u301c100\u70b9\u3067\u8a55\u4fa1\uff08Market \u30da\u30fc\u30b8\uff09\u3002\u9ad8\u3044=\u5f37\u6c17\u3001\u4f4e\u3044=\u5f31\u6c17' },
-  { term: 'iqr5',  desc: '\u7d42\u5024\u306e\u53ce\u7e2e\u5ea6\uff08Daily Watch / Coil\uff09\u3002\u5c0f\u3055\u3044\u307b\u3069\u30bf\u30a4\u30c8\u306a\u300c\u9759\u304b\u306a\u30d9\u30fc\u30b9\u300d' },
-  { term: '52w\u9ad8',   desc: 'dist_from_high_pct\u300252\u9031\u9ad8\u5024\u304b\u3089\u306e\u8ddd\u96e2(%)\u30020 \u4ed8\u8fd1=\u9ad8\u5024\u63a5\u8fd1\u3002MA \u62bc\u3057\u76ee\u306e\u300c\u4f4d\u7f6e\u8ef8\u300d' },
-  { term: '\u6df1\u3055(ADR)', desc: '\u79fb\u52d5\u5e73\u5747\u304b\u3089\u306e\u4e56\u96e2\u3092 ADR \u5358\u4f4d\u3067\u6e2c\u3063\u305f\u62bc\u3057\u76ee\u306e\u6df1\u3055\u30020\u301c0.5 \u3067\u300c\u30bf\u30c3\u30c1\u300d\u3068\u307f\u306a\u3059\uff08MA \u62bc\u3057\u76ee\u306e\u300c\u6df1\u3055\u8ef8\u300d\uff09' },
-  { term: 'ret63',  desc: '\u76f4\u8fd1 63 \u55b6\u696d\u65e5\uff083\u30f6\u6708\uff09\u306e\u30ea\u30bf\u30fc\u30f3(%)\u3002\u30e2\u30e1\u30f3\u30bf\u30e0\u306e\u5f37\u3055' },
-  { term: 'fresh',  desc: '\u76f4\u8fd1 5 \u55b6\u696d\u65e5\u306b\u672a\u51fa\u73fe\uff1d\u65b0\u898f\u306e\u62bc\u3057\u76ee\u5019\u88dc\uff08Daily Watch \u3067\u5f37\u8abf\u8868\u793a\uff09' },
+  { term: '52w\u9ad8',   desc: 'dist_from_high_pct\u300252\u9031\u9ad8\u5024\u304b\u3089\u306e\u8ddd\u96e2(%)\u30020 \u4ed8\u8fd1=\u9ad8\u5024\u63a5\u8fd1' },
+  { term: 'fresh',  desc: '\u76f4\u8fd1 10 \u55b6\u696d\u65e5\u306b\u300c\u540c\u3058 EMA\u300d\u3078\u306e\u30bf\u30c3\u30c1\u304c\u7121\u3044\uff1d\u521d\u56de\uff08EMA Setups\uff09\u3002\u60c5\u5831\u5217\u3067\u3042\u3063\u3066\u7d5e\u308a\u8fbc\u307f\u6761\u4ef6\u3067\u306f\u306a\u3044' },
+  { term: '\u5b89\u5024ATR', desc: 'low_atr\u3002(\u5b89\u5024 \u2212 EMA) \u00f7 ATR14(\u524d\u65e5)\u3002EMA \u306b\u3069\u308c\u3060\u3051\u8fd1\u3044\u6240\u3067\u5b89\u5024\u304c\u6b62\u307e\u3063\u305f\u304b\u3002\u5b9a\u7fa9\u4e0a 0 \u301c \u22120.10 \u306b\u5165\u308b' },
+  { term: '\u30d2\u30b2 / \u5b9f\u4f53', desc: 'touch_type\u3002\u30d2\u30b2(WICK)=\u5b9f\u4f53\u306f EMA \u306e\u4e0a\u3067\u4e0b\u30d2\u30b2\u3060\u3051\u304c\u523a\u3055\u3063\u305f / \u5b9f\u4f53(BODY)=\u5b9f\u4f53\u4e0b\u9650\u304c EMA \u3092\u5272\u3063\u305f\u3002\u5b9f\u6e2c\u306f\u30d2\u30b2 \u7d0481% / \u5b9f\u4f53 \u7d0419%' },
   { term: 'DuPont Leverage', desc: '\u7dcf\u8cc7\u7523\u00f7\u81ea\u5df1\u8cc7\u672c\u3002\u8ca1\u52d9\u30ec\u30d0\u30ec\u30c3\u30b8\u306e\u6307\u6a19\u30022.0\u4ee5\u4e0a\u306f\u904e\u5270\u50b5\u52d9\u30ea\u30b9\u30af\u3068\u3057\u3066\u30d5\u30a3\u30eb\u30bf\u30fc' },
   { term: 'Divergence', desc: '\u6307\u6570\u304c\u4e0a\u6607\u3057\u3066\u3044\u308b\u306e\u306bBreadth\u304c\u60aa\u5316\u3057\u3066\u3044\u308b\u72b6\u614b\u3002\u5929\u4e95\u306e\u8b66\u544a\u30b7\u30b0\u30ca\u30eb' },
   { term: 'Velocity',   desc: 'MC v4 \u30b9\u30b3\u30a2\u306e\u5909\u5316\u901f\u5ea6\u30021d / 5d / 10d \u306e\u5dee\u5206\u3068 20d \u6a19\u6e96\u504f\u5dee\u3067\u300c\u3069\u3046\u52d5\u3044\u3066\u3044\u308b\u304b\u300d\u3092\u6e2c\u308b' },
@@ -203,18 +202,26 @@ export default function GuidePage() {
     <main className="min-h-screen p-6" style={{ backgroundColor: 'var(--bg-primary)' }}>
       <PageHeader
         title="Guide"
-        subtitle="ダッシュボードの見方 — Daily Watch（押し目ウォッチ）・Trading（記録）・Screens・Market Condition v4"
+        subtitle="ダッシュボードの見方 — Daily Watch（ウォッチリスト）・Trading（記録）・Screens・Market Condition v4"
       />
 
-      {/* ── Daily Watch — 押し目ウォッチ ──────────────────────────────────── */}
+      {/* ── Daily Watch — ウォッチリスト ──────────────────────────────────── */}
       <section className="mb-8">
         <h2 className="text-lg font-bold mb-3" style={{ color: 'var(--text-primary)' }}>
-          Daily Watch — 押し目ウォッチ
+          Daily Watch — ウォッチリスト
         </h2>
         <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-5 text-sm text-gray-700 space-y-3">
           <p>
-            高値圏の押し目<strong>&quot;候補&quot;</strong>を毎日（平日引け後 ~18:00 JST）に更新。最新日が「今日の候補」です。
-            <span className="text-gray-500">買いシグナルではなく、実エントリーはトリガー＋管理を別途想定。</span>
+            <strong>&quot;候補&quot;</strong>を毎日（平日引け後 ~18:00 JST）に更新。最新日が「今日の候補」です。
+            <span className="text-gray-500">
+              いずれも買いシグナルではなく、チャートを開く銘柄を絞り込むためのウォッチリストです（執行は手動判断）。
+            </span>
+            <br />
+            <span className="text-gray-500 text-xs">
+              2026-08-29 の配信側スキャナー刷新により、Coil Pullback / MA Pullback / Volume Ignition /
+              Momentum Spring / Box Breakout および Momentum タブ（生の上昇率ランキング）は廃止し、
+              ダッシュボードから削除しました。後継は EMA Setups です。
+            </span>
           </p>
           <ul className="list-disc pl-5 space-y-1.5">
             <li>
@@ -227,29 +234,43 @@ export default function GuidePage() {
               <span className="text-gray-500">買い指示ではなくウォッチリスト（執行は手動チャート判断）。</span>
             </li>
             <li>
-              <strong className="text-gray-900">Coil（静かなベース）</strong> — 高値圏で値幅が収縮した銘柄。
-              <code className="bg-gray-100 px-1 rounded">iqr5</code> が小さいほどタイト（ブレイク前の蓄積）。
-            </li>
-            <li>
-              <strong className="text-gray-900">MA（momentum 押し目）</strong> — 走行中の強い銘柄が移動平均
-              （EMA10 / EMA21 / SMA50）まで押した局面。
+              <strong className="text-gray-900">EMA Setups（EMA への到達）</strong> — 下落してきて
+              <strong> EMA 9 / 21 / 50</strong> にちょうど到達し、当日安値が
+              <strong>「EMA のすぐ下 0.1ATR」の薄い帯</strong>に収まって踏みとどまった日。
+              帯を下に抜けた日（EMA を明確に割った日）は含みません。
+              9 / 21 / 50 は<strong>それぞれ独立に判定</strong>するため、同じ銘柄が同日に複数の EMA に
+              タッチすることがあります（カード上段に <span className="font-mono">9</span>
+              <span className="font-mono"> 21</span> <span className="font-mono">50</span> のバッジが並びます）。
+              各バッジには<strong>ヒゲ</strong>（実体は EMA の上、下ヒゲだけ刺さった・実測 約81%）か
+              <strong>実体</strong>（実体下限が EMA を割った・約19%）かを併記。
+              絞り込みは EMA / ヒゲ・実体 / 初回のみ / RS 下限。
             </li>
           </ul>
           <div className="bg-[var(--bg-card-hover)] rounded-lg p-3">
-            <p className="font-semibold text-gray-800 mb-1.5">MA の 2 軸グレード（ダッシュ側で算出）</p>
+            <p className="font-semibold text-gray-800 mb-1.5">EMA Setups の位置づけ（重要）</p>
             <ul className="list-disc pl-5 space-y-1">
               <li>
-                <strong>深さ</strong> — 各 MA からの乖離（ADR 単位）が 0〜0.5 を満たす最深 MA →
-                <span className="ml-1 font-mono">A(50)</span>（深い） / <span className="font-mono">B(21)</span> /
-                <span className="font-mono">C(10)</span>（浅い）
+                <strong>このスキャナーに統計的エッジはありません。</strong>検証済みで、承知の上で採用しています。
+                勝率 <span className="font-mono">23.6%</span> に対し、同じユニバースを適当な日に買った
+                ベースラインが <span className="font-mono">23.1%</span>
+                （終値ベース / −8% に先に触れず +16% 到達 / 30営業日以内、2019-2026年）。
               </li>
               <li>
-                <strong>位置</strong> — 52 週高値からの距離 ≥−5% → <span className="font-mono">A++</span> /
-                ≥−10% → <span className="font-mono">A+</span> / それ未満 → <span className="font-mono">base</span>
+                「耐えの深さ」「ヒゲか実体か」「どの EMA か」「翌日寄りで上昇したか」は
+                <strong>いずれも AUC 0.50</strong> ＝ 勝ち負けについて情報ゼロ。よってダッシュ側では
+                <strong>スコア・グレード・ランク付けを実装していません</strong>
+                （無い情報があるように見せないため）。並べ替えの初期値は売買代金の降順です。
               </li>
               <li>
-                組合せバッジ <span className="font-mono">A(50)×A++</span> が最上位。
-                <strong className="text-amber-600">fresh</strong> = 直近 5 営業日に未出現の新規候補（強調表示）。
+                正しい使い方は<strong>「毎朝チャートを開く銘柄を機械的に絞り込んだリスト」</strong>。
+                最終判断は手動でチャートを見て行ってください。
+              </li>
+              <li>
+                件数は地合いで決まり、<strong>指数が下げた日に一斉に大量ヒット</strong>します
+                （実測 中央値 28件 / 最大 98件 / <strong>候補ゼロの日も 4%</strong>）。
+                <span className="font-mono">RS ≥</span> スライダーは配信側では掛けていない補助フィルタで、
+                既定は「なし」。上げると <span className="font-mono">EMA50</span> のタッチが大きく削れます
+                （深く押した銘柄は押した事実で RS が下がるため）。
               </li>
             </ul>
           </div>
@@ -277,7 +298,7 @@ export default function GuidePage() {
               損益 / 結果 / R を自動計算（過去の売却済みトレードも一発で記録可）。空ければ建玉（open）。
             </li>
             <li>
-              Sector は <strong>33 業種プルダウン</strong>、Screen は <span className="font-mono">Coil Pullback / MA Pullback</span>（＋ Other）。
+              Sector は <strong>33 業種プルダウン</strong>、Screen は <span className="font-mono">EMA Setup / Structure Pivot</span>（＋ Other）。過去トレードに残る廃止スキャナー名（Coil Pullback など）はそのまま保持されます。
               保有中の建玉は各行の <strong>Close</strong> で売り、<strong>Edit</strong> で修正。
             </li>
           </ul>

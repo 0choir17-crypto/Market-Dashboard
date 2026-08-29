@@ -3,35 +3,27 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useDate } from '@/contexts/DateContext'
 import { fetchToday, type TodayResponse } from '@/lib/todayFetch'
-import PullbackSetupsSection from '@/components/today/PullbackSetupsSection'
-import VolumeIgnitionSection from '@/components/today/VolumeIgnitionSection'
-import SpringSetupsSection from '@/components/today/SpringSetupsSection'
-import BoxBreakoutSection from '@/components/today/BoxBreakoutSection'
+import EmaSetupsSection from '@/components/today/EmaSetupsSection'
 import StructurePivotSection from '@/components/today/StructurePivotSection'
 import ErrorBanner from '@/components/shared/ErrorBanner'
 import PageHeader from '@/components/shared/PageHeader'
 
+const EMPTY: TodayResponse = {
+  emaDate: null,
+  ema: [],
+  emaTableMissing: false,
+  structDate: null,
+  struct: [],
+  hotSectors: [],
+  error: null,
+}
+
 export default function TodayPage() {
   const { selectedDate, isLatest } = useDate()
-  const [data, setData] = useState<TodayResponse>({
-    coilDate: null,
-    coil: [],
-    maDate: null,
-    ma: [],
-    igniteDate: null,
-    ignite: [],
-    springDate: null,
-    spring: [],
-    boxDate: null,
-    box: [],
-    structDate: null,
-    struct: [],
-    hotSectors: [],
-    error: null,
-  })
+  const [data, setData] = useState<TodayResponse>(EMPTY)
   const [loading, setLoading] = useState(true)
-  // fetchToday は最大 4 往復。日付を素早く切り替えた際に古い応答が
-  // 新しいバナーの下に残らないよう、最後のリクエストだけを採用する。
+  // 日付を素早く切り替えた際に古い応答が新しいバナーの下に残らないよう、
+  // 最後のリクエストだけを採用する。
   const requestIdRef = useRef(0)
 
   const fetchData = useCallback(async () => {
@@ -49,15 +41,12 @@ export default function TodayPage() {
     fetchData()
   }, [fetchData])
 
-  const displayDate =
-    data.structDate ?? data.boxDate ?? data.coilDate ?? data.maDate ?? data.igniteDate ?? data.springDate ?? selectedDate
-  const total =
-    data.coil.length +
-    data.ma.length +
-    data.ignite.length +
-    data.spring.length +
-    data.box.length +
-    data.struct.length
+  // ページ見出しの日付は現役スキャナーの最大 date のみから決める
+  // （2026-08-29 に廃止された6テーブルは参照しない。参照すると 2026-08-28 で
+  //   止まった日付を「最終更新日」として出し続けてしまう）。
+  const displayDate = data.structDate ?? data.emaDate ?? selectedDate
+
+  const total = data.ema.length + data.struct.length
 
   // 複数シグナル重複: 同一 code が 2 つ以上のスキャナーに当日出た銘柄。
   // 各スキャナーのカード背景を黄色で強調するために code の集合を作る。
@@ -71,11 +60,7 @@ export default function TodayPage() {
         counts.set(r.code, (counts.get(r.code) ?? 0) + 1)
       }
     }
-    addList(data.coil)
-    addList(data.ma)
-    addList(data.ignite)
-    addList(data.spring)
-    addList(data.box)
+    addList(data.ema)
     addList(data.struct)
     const set = new Set<string>()
     for (const [code, n] of counts) if (n >= 2) set.add(code)
@@ -97,7 +82,7 @@ export default function TodayPage() {
           {selectedDate} のスナップショットを表示中
           {displayDate && displayDate !== selectedDate && (
             <span className="ml-2 font-normal text-amber-700">
-              （押し目テーブルは {displayDate} の最近値にフォールバック）
+              （各テーブルは {displayDate} の最近値にフォールバック）
             </span>
           )}
         </div>
@@ -121,42 +106,13 @@ export default function TodayPage() {
             title="Structure Pivot"
             subtitle="押し安値切り上がり（HL）から作る構造の 1st（建玉ライン=HL+0.618戻し）/ 2nd（スイングハイ）ヒット。本日ヒットした銘柄のみ表示。本日どちら（1st/2nd）にヒットしたかを明示し、1st・2nd それぞれの直近ヒット日を併記（本日ヒットは緑で強調）。終了済み（TP2/Stop）は除外。買い指示ではなくウォッチリスト（執行は手動チャート判断）。"
           />
-          <BoxBreakoutSection
-            rows={data.box}
+          <EmaSetupsSection
+            rows={data.ema}
+            tableMissing={data.emaTableMissing}
             hotSectors={data.hotSectors}
             multiHitCodes={multiHitCodes}
-            title="Box Breakout"
-            subtitle="20営業日以上のベース（揉み合い箱）を上抜けた候補。表示は確認中(PENDING)のみ。レジスタンス(pivot)とサポート(eff_box_low)をチャートに引く。売買シグナルではなくウォッチリスト。"
-          />
-          <PullbackSetupsSection
-            kind="coil"
-            rows={data.coil}
-            hotSectors={data.hotSectors}
-            multiHitCodes={multiHitCodes}
-            title="Coil Pullback"
-            subtitle="高値圏で値幅が収縮（iqr5 小）した銘柄。ブレイク前の蓄積。小さいほどタイト。"
-          />
-          <PullbackSetupsSection
-            kind="ma"
-            rows={data.ma}
-            hotSectors={data.hotSectors}
-            multiHitCodes={multiHitCodes}
-            title="MA Pullback"
-            subtitle="走行中の強い銘柄が移動平均まで押した局面。バッジ＝深さ(MA)×位置(52週高値)。A(50)×A++ が最上位。"
-          />
-          <VolumeIgnitionSection
-            rows={data.ignite}
-            hotSectors={data.hotSectors}
-            multiHitCodes={multiHitCodes}
-            title="Volume Ignition"
-            subtitle="上昇トレンド中に出来高が枯れた後、上昇日に出来高2倍で再点火した初動。高ADRの瞬発系（直近5営業日以内に点火）。"
-          />
-          <SpringSetupsSection
-            rows={data.spring}
-            hotSectors={data.hotSectors}
-            multiHitCodes={multiHitCodes}
-            title="Momentum Spring"
-            subtitle="モメンタムリーダーが下側の基準線を防衛して短期の押しから踏ん張った局面（①点火ライン死守 / ③安値リクレイム）。防衛ライン割れがストップ。"
+            title="EMA Setups"
+            subtitle="下落してきて EMA 9 / 21 / 50 にちょうど到達し、安値が「EMA のすぐ下 0.1ATR」の帯に収まって踏みとどまった日。EMA を明確に割った日は含まない。同じ銘柄が複数の EMA に同日タッチすると EMA バッジが並ぶ。※このスキャナーに統計的エッジは無い（勝率 23.6% に対しベースライン 23.1%、耐えの深さ・ヒゲ/実体・EMA の別はいずれも AUC 0.50）。買いシグナルではなく、毎朝チャートを開く銘柄を機械的に絞り込んだリストとして使う。"
           />
         </div>
       )}

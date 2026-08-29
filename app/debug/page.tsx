@@ -11,8 +11,8 @@ type Probe = {
 
 const TABLES = [
   'market_conditions',
-  'coil_pullback_setups',
-  'ma_pullback_setups',
+  'ema_setups',
+  'structure_pivot_events',
   'mc_v4_raw_history',
   'sector_selection_s33',
   'sector_index_prices',
