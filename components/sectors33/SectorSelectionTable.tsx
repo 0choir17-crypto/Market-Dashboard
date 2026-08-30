@@ -308,7 +308,8 @@ export default function SectorSelectionTable({
   const [sortKey, setSortKey] = useState<SortKey>('composite_score')
   const [sortDir, setSortDir] = useState<SortDir>('desc')
   const [expanded, setExpanded] = useState<string | null>(null)
-  const [hideLowConf, setHideLowConf] = useState(false)
+  // 既定で信頼度低 (銘柄数<10) を除外する
+  const [hideLowConf, setHideLowConf] = useState(true)
   const [moversOnly, setMoversOnly] = useState(false)
 
   function handleSort(key: SortKey) {

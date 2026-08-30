@@ -47,7 +47,8 @@ export default function SectorSection({
   // 業種指数の騰落率 (1D / 1M / 6M / 1Y)（ランキング本体より後に届く）
   const [changes, setChanges] = useState<Record<string, SectorIndexChangeEntry>>({})
   const [view, setView] = useState<View>('bar')
-  const [mainView, setMainView] = useState<MainView>('chart')
+  // 既定はテーブル（一覧で順位・スコアを俯瞰したいことが多いため）
+  const [mainView, setMainView] = useState<MainView>('table')
   // ランク変動の比較期間。テーブルとチャートで共有する
   const [deltaPeriod, setDeltaPeriod] = useState<RankDeltaPeriodKey>(
     DEFAULT_RANK_DELTA_PERIOD,

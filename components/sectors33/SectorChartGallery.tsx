@@ -228,7 +228,8 @@ export default function SectorChartGallery({
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [metricKey, setMetricKey] = useState<MetricSelection>('composite_score')
-  const [hideLowConf, setHideLowConf] = useState(false)
+  // 既定で信頼度低 (銘柄数<10) を除外する
+  const [hideLowConf, setHideLowConf] = useState(true)
   const [moversOnly, setMoversOnly] = useState(false)
 
   // 境界日の算出に使う代表業種（どの業種も 1 日 1 行なのでどれでもよい）

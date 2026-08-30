@@ -96,22 +96,22 @@ export default function Page() {
       )}
 
       {market && (
-        <>
-          {/* 指数そのもの (TOPIX ローソク足 + 市場出来高) → 内部状態 (Breadth) の順 */}
-          <div className="mb-6">
-            <TopixChart market={market} />
-          </div>
-
-          {/* Market Breadth をダッシュボードのメインとして大きく表示 */}
-          <BreadthPanel market={market} />
-        </>
+        /* 指数そのもの (TOPIX ローソク足 + 市場出来高) を最初に置く */
+        <div className="mb-6">
+          <TopixChart market={market} />
+        </div>
       )}
 
-      {/* Sectors-33 タブを統合: Market Breadth の下にセクターチャートを配置。
-          市況 (Breadth) → どのセクターか、の順で 1 ページで読めるようにする。 */}
-      <div className="mt-10">
-        <SectorSection />
-      </div>
+      {/* Sectors-33 タブを統合。まず「どのセクターか」を見せ、
+          市場全体の内部状態 (Market Breadth) はその下で確認する。 */}
+      <SectorSection />
+
+      {market && (
+        /* Market Breadth は Sector Selection の下に大きく表示 */
+        <div className="mt-10">
+          <BreadthPanel market={market} />
+        </div>
+      )}
 
     </main>
   )
