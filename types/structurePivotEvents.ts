@@ -1,3 +1,4 @@
+import type { SemanticTone } from '@/types/semantic'
 // Advanced Structure Pivot（ロング）1st / 2nd ヒット — Daily Watch の新テーブル。
 // Source table: public.structure_pivot_events  (PK: date + code + signal, RLS public read)
 // Pipeline: scripts/daily/scan_structure_pivot.py（本番 run_daily Step1j）が毎営業日・引け後に
@@ -78,20 +79,20 @@ export type StructurePivotCardRow = StructurePivotEventRow & {
 // signal バッジ（1st=建玉ライン / 2nd=ブレイク進行）の表示定義。
 export type SignalMeta = {
   label: string
-  palette: { bg: string; fg: string; border: string }
+  tone: SemanticTone
   title: string
 }
 
 export const SIGNAL_META: Record<StructurePivotSignal, SignalMeta> = {
   '1st': {
     label: '1st 建玉ライン',
-    palette: { bg: '#eef2ff', fg: '#3730a3', border: '#c7d2fe' },
+    tone: 'idle' as const,
     title:
       '1st ヒット = 押し目からの再上昇入口。1st Pivot（HL+0.618 戻し）に高値が到達。建玉ライン。',
   },
   '2nd': {
     label: '2nd ブレイク',
-    palette: { bg: '#eff6ff', fg: '#1e40af', border: '#bfdbfe' },
+    tone: 'focus' as const,
     title: '2nd ヒット = 構造ブレイク進行。手前のスイングハイ（2nd Pivot）に高値が到達。',
   },
 }
@@ -100,7 +101,7 @@ export function signalMeta(signal: StructurePivotSignal | string | null | undefi
   if (signal === '1st' || signal === '2nd') return SIGNAL_META[signal]
   return {
     label: signal ?? '—',
-    palette: { bg: '#f3f4f6', fg: '#6b7280', border: '#d1d5db' },
+    tone: 'archive' as const,
     title: '',
   }
 }
@@ -108,34 +109,34 @@ export function signalMeta(signal: StructurePivotSignal | string | null | undefi
 // status バッジの表示定義。終了済み（TP2 / STOPPED）はダッシュ側で除外するが、色定義は残す。
 export type StatusMeta = {
   label: string
-  palette: { bg: string; fg: string; border: string }
+  tone: SemanticTone
   title: string
 }
 
 export const STATUS_META: Record<StructurePivotStatus, StatusMeta> = {
   ACTIVE: {
     label: '追跡中',
-    palette: { bg: '#f1f5f9', fg: '#475569', border: '#cbd5e1' },
+    tone: 'idle' as const,
     title: 'ACTIVE: まだ 2nd 未到達。1st 建玉ラインを見張る段階。',
   },
   REACHED_2ND: {
     label: '2nd到達',
-    palette: { bg: '#ecfeff', fg: '#0e7490', border: '#a5f3fc' },
+    tone: 'ok' as const,
     title: 'REACHED_2ND: 構造ブレイク（2nd Pivot）まで進行。',
   },
   TP1: {
     label: 'TP1',
-    palette: { bg: '#dcfce7', fg: '#166534', border: '#86efac' },
+    tone: 'strong' as const,
     title: 'TP1: 第1利確目標（HL+1.764）まで到達。追跡継続中。',
   },
   TP2: {
     label: 'TP2',
-    palette: { bg: '#bbf7d0', fg: '#14532d', border: '#4ade80' },
+    tone: 'strong' as const,
     title: 'TP2: 第2利確目標（HL+2.618）達成。追跡終了。',
   },
   STOPPED: {
     label: 'Stop',
-    palette: { bg: '#f3f4f6', fg: '#6b7280', border: '#d1d5db' },
+    tone: 'archive' as const,
     title: 'STOPPED: Stop（21EMA of Low 割れ）到達。既に失敗した建て玉。追跡終了。',
   },
 }
@@ -144,7 +145,7 @@ export function statusMeta(status: StructurePivotStatus | string | null | undefi
   if (status && status in STATUS_META) return STATUS_META[status as StructurePivotStatus]
   return {
     label: status ?? '—',
-    palette: { bg: '#f3f4f6', fg: '#6b7280', border: '#d1d5db' },
+    tone: 'archive' as const,
     title: '',
   }
 }

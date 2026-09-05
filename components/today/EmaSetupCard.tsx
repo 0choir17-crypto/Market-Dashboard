@@ -139,7 +139,6 @@ export default function EmaSetupCard({
             style={{ color: hot ? 'var(--positive)' : 'var(--text-secondary)' }}
             title={row.sector_s33 ?? ''}
           >
-            {hot ? '🟢 ' : ''}
             {row.sector_s33 ?? '—'}
           </div>
         </div>

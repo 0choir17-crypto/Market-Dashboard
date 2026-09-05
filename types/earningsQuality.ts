@@ -1,3 +1,4 @@
+import type { SemanticTone } from '@/types/semantic'
 // Earnings Quality: 決算品質スキャナー結果
 // Source table: earnings_quality
 // PK: (date, code, cur_per_type)
@@ -128,13 +129,21 @@ export function score3Color(
   curPerType?: CurPerType,
 ): { bg: string; text: string; border: string } {
   if (score == null || !Number.isFinite(score)) {
-    return { bg: '#f3f4f6', text: '#9ca3af', border: '#e5e7eb' }
+    return { bg: 'var(--sem-idle-bg)', text: 'var(--sem-idle-fg)', border: 'var(--sem-idle-bd)' }
   }
   const max = curPerType ? maxScoreFor(curPerType) : SCORE3_MAX
-  if (score >= max) return { bg: '#86efac', text: '#14532d', border: '#16a34a' }
-  if (score >= SCORE3_STRONG) return { bg: '#dcfce7', text: '#15803d', border: '#86efac' }
-  if (score >= SCORE3_MID) return { bg: '#fef3c7', text: '#92400e', border: '#fde68a' }
-  return { bg: '#f3f4f6', text: '#6b7280', border: '#e5e7eb' }
+  // 満点と「強」を別の緑で塗り分けていたが、同じ意味に 2 色は当てない。
+  // 満点は面ではなく枠の濃さで示す。
+  if (score >= max) {
+    return { bg: 'var(--sem-strong-bg)', text: 'var(--sem-strong-fg)', border: 'var(--sem-strong-fg)' }
+  }
+  if (score >= SCORE3_STRONG) {
+    return { bg: 'var(--sem-strong-bg)', text: 'var(--sem-strong-fg)', border: 'var(--sem-strong-bd)' }
+  }
+  if (score >= SCORE3_MID) {
+    return { bg: 'var(--sem-ok-bg)', text: 'var(--sem-ok-fg)', border: 'var(--sem-ok-bd)' }
+  }
+  return { bg: 'var(--sem-idle-bg)', text: 'var(--sem-idle-fg)', border: 'var(--sem-idle-bd)' }
 }
 
 // ── スコア内訳 (Score バッジのツールチップ用) ────────────────────────────
@@ -182,11 +191,12 @@ export function classifyScoreData(rows: EarningsQualityRow[]): {
 
 // +%/-%/0 の色: 増配・YoY・QoQ・OP修正 共通
 export function pctColor(v: number | null | undefined): string {
-  if (v == null || !Number.isFinite(v)) return '#9ca3af'
-  if (v >= 10) return '#15803d'
-  if (v > 0) return '#16a34a'
-  if (v < 0) return '#dc2626'
-  return '#6b7280'
+  // 符号に付く色なので意味語彙ではなく損益系統（--positive / --negative）を使う。
+  // 「+10% 以上だけ濃い緑」という段差はやめた（同じ意味に 2 色を当てないため）。
+  if (v == null || !Number.isFinite(v)) return 'var(--sem-idle-fg)'
+  if (v > 0) return 'var(--positive)'
+  if (v < 0) return 'var(--negative)'
+  return 'var(--text-secondary)'
 }
 
 // 開示時刻が引け後 (15:30 以降) → 翌営業日 D+1 寄り対象
@@ -248,10 +258,12 @@ export type Freshness = {
   inQuietMonth: boolean
   label: string
   hint: string
-  bg: string
-  text: string
-  border: string
-  icon: string
+  /**
+   * 表示の語彙（globals.css の --sem-*）。生の 16 進は持たない。
+   * live / fresh は **無色**（idle）— 正常が目立たない状態を作ることが、
+   * 異常の発見を速くする。
+   */
+  tone: SemanticTone
 }
 
 export function classifyFreshness(latestIso: string, now: Date = new Date()): Freshness {
@@ -265,10 +277,7 @@ export function classifyFreshness(latestIso: string, now: Date = new Date()): Fr
       inQuietMonth,
       label: '本日 (LIVE)',
       hint: '本日の開示データ',
-      bg: '#dcfce7',
-      text: '#15803d',
-      border: '#86efac',
-      icon: '🟢',
+      tone: 'idle',
     }
   }
   if (bdays === 1) {
@@ -278,10 +287,7 @@ export function classifyFreshness(latestIso: string, now: Date = new Date()): Fr
       inQuietMonth,
       label: '1営業日前',
       hint: '前営業日の開示データ',
-      bg: '#dcfce7',
-      text: '#15803d',
-      border: '#86efac',
-      icon: '🟢',
+      tone: 'idle',
     }
   }
   if (bdays <= 5) {
@@ -291,10 +297,7 @@ export function classifyFreshness(latestIso: string, now: Date = new Date()): Fr
       inQuietMonth,
       label: `${bdays}営業日前`,
       hint: '開示が無い日が続いています',
-      bg: '#fef3c7',
-      text: '#92400e',
-      border: '#fde68a',
-      icon: '🟡',
+      tone: 'watch',
     }
   }
   return {
@@ -305,9 +308,6 @@ export function classifyFreshness(latestIso: string, now: Date = new Date()): Fr
     hint: inQuietMonth
       ? '決算閑散期 (3/6/9/12 月) のため新規開示が無い時期です'
       : '長期間新規開示がありません — データ供給を確認してください',
-    bg: '#fee2e2',
-    text: '#b91c1c',
-    border: '#fecaca',
-    icon: '🔴',
+    tone: inQuietMonth ? 'watch' : 'weak',
   }
 }

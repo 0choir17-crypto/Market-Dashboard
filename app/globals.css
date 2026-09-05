@@ -1,40 +1,118 @@
 @import "tailwindcss";
 
 /* ── フォント ─────────────────────────────────────────────────
-   layout.tsx で next/font が --font-sora / --font-noto / --font-plex を
-   注入する。Tailwind の font-sans / font-mono ユーティリティへ配線し、
-   欧文=Sora・和文=Noto Sans JP・数値=IBM Plex Mono を全画面で効かせる。 */
+   参照点は TradingView のライトモード。TradingView の既定スタック
+   （Lightweight Charts の LayoutOptions.fontFamily / Pine の font.family_default）
+   を欧文・数値の主スタックとし、末尾に和文（Noto Sans JP）を接続する。
+
+   これにより Sora の webfont 読み込みが不要になり、欧文はすべてシステム
+   フォントで解決される。等幅（IBM Plex Mono）は「文字単位で読む識別子」
+   ＝銘柄コードと日付・時刻にだけ残す。
+
+   ⚠️ Trebuchet MS は 1996 年の TrueType で OpenType の tnum を持たない
+   可能性がある。その場合 font-variant-numeric: tabular-nums は無言で
+   無効化され表の桁がずれる。/debug/font で実機（Windows / macOS）の
+   桁揃えを確認し、ずれていたら --font-sans の先頭を var(--font-plex-sans)
+   に差し替えること。 */
 @theme inline {
-  --font-sans: var(--font-sora), var(--font-noto), ui-sans-serif, system-ui, sans-serif;
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, "Trebuchet MS", Roboto, Ubuntu,
+    var(--font-noto), sans-serif;
   --font-mono: var(--font-plex), ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
+/* ── タイプスケール ────────────────────────────────────────────
+   段階を 5 つに固定する。これ以外のサイズを使わない。
+   ウェイトは 400 と 500 の 2 つだけ（font-bold = 700 は使わない）。 */
+@theme {
+  --text-caption: 11px; /* グループ見出し・注記・単位・列見出し */
+  --text-small: 12px;   /* 銘柄名・セクター・補助数値 */
+  --text-body: 13px;    /* 表のセル本体 */
+  --text-lead: 15px;    /* セクションの主数値 */
+  --text-title: 18px;   /* ページタイトル */
+}
+
 :root {
+  /* ── 面 ──────────────────────────────────────────────────
+     --bg-primary はクリームを維持する（この画面の「自分のノート」という
+     性格は正しい）。カードは白に分離し、面の階層を背景色差だけで作る。
+     影とホバーの移動は廃止した（§6）ので、白くしても浮きすぎない。 */
   --bg-primary: #fdf6e3;
-  --bg-card: #fdf6e3;
-  --bg-card-hover: #f5ecd5;
-  --border: #e6dcc0;
-  --border-subtle: #efe6cf;
+  --bg-card: #fffdf7;
+  --bg-card-hover: #f7f2e4;
+  --border: #ece3cc;
+  --border-subtle: #f3ecda;
+
+  /* ── 文字 ─────────────────────────────────────────────── */
   --text-primary: #1a1d23;
   --text-secondary: #6b7280;
   --text-muted: #9ca3af;
+
+  /* ── 損益 ─────────────────────────────────────────────────
+     意味語彙とは別系統。数値の符号に付く色であり、状態を表す色ではない。
+     この 2 色が画面上で最も速く目に入る状態を保つことが、色を減らす目的。 */
   --positive: #16a34a;
-  --positive-bg: #dcfce7;
   --negative: #dc2626;
-  --negative-bg: #fee2e2;
-  --neutral-color: #92400e;
-  --neutral-bg: #fef3c7;
-  --accent: #1d4ed8;
-  --accent-bg: #eff6ff;
+
+  /* ── 意味語彙（7 つ）───────────────────────────────────────
+     色そのものではなく意味に名前を付ける。装飾・分類のために色を使わない。
+     各語彙は bg / fg / bd の 3 値を持つ。 */
+
+  /* 強い・良い・保有中 — HOLD、機関買い継続、スコア上位 */
+  --sem-strong-bg: #dcfce7;
+  --sem-strong-fg: #15803d;
+  --sem-strong-bd: #86efac;
+
+  /* 通常・許容範囲 — 通常上昇、スコア中上位 */
+  --sem-ok-bg: #f0fdf4;
+  --sem-ok-fg: #16a34a;
+  --sem-ok-bd: #bbf7d0;
+
+  /* 警戒・要注意 — 出来高警戒、鮮度 aging。琥珀はこの一語だけを指す */
+  --sem-watch-bg: #fef3c7;
+  --sem-watch-fg: #92400e;
+  --sem-watch-bd: #fde68a;
+
+  /* 弱い・悪い — SHORT、出来高枯渇、鮮度 old */
+  --sem-weak-bg: #fee2e2;
+  --sem-weak-fg: #b91c1c;
+  --sem-weak-bd: #fecaca;
+
+  /* 未評価・未整理・無彩色 — OTHERS、INBOX、SECOND、欠損。
+     未整理は警戒ではないので琥珀から無彩色へ移した */
+  --sem-idle-bg: #f4f4f5;
+  --sem-idle-fg: #71717a;
+  --sem-idle-bd: #e4e4e7;
+
+  /* 済み・対象外 — SOLD */
+  --sem-archive-bg: #fafafa;
+  --sem-archive-fg: #a1a1aa;
+  --sem-archive-bd: #ececee;
+
+  /* 注目・選択中 — READY、リンク、ソート中の列 */
+  --sem-focus-bg: #eff6ff;
+  --sem-focus-fg: #1d4ed8;
+  --sem-focus-bd: #93c5fd;
+
+  /* --sem-focus-fg の別名。リンクとフォーカスリングは同じ意味なので同値 */
+  --accent: var(--sem-focus-fg);
+  --accent-bg: var(--sem-focus-bg);
 }
 
 body {
   background-color: var(--bg-primary);
   color: var(--text-primary);
   font-family: var(--font-sans);
+  font-size: var(--text-body);
 }
 
-/* 価格・損益・日付など、桁が動く数値は等幅タブラー数字で縦を揃える */
+/* 桁が動く数値は等幅タブラー数字で縦を揃える。
+   等幅書体（.font-mono）とは切り離してあるので、サンセリフの数値にも効く。 */
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* 識別子（銘柄コード・日付）用。数値の桁揃えは .num が担当する。 */
 .font-mono {
   font-variant-numeric: tabular-nums;
 }
@@ -51,15 +129,10 @@ body {
   color: var(--accent);
 }
 
+/* 面は静止する。ホバーで浮く・影が変わる要素は置かない（設計原則 2）。
+   面の分離は背景色差と細い罫線だけで行う。 */
 .card {
   background-color: var(--bg-card);
   border-radius: 12px;
-  border: 1px solid var(--border);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-  transition: box-shadow 0.2s ease, transform 0.2s ease;
-}
-
-.card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  transform: translateY(-1px);
+  border: 0.5px solid var(--border);
 }

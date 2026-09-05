@@ -16,21 +16,21 @@ export default function ErrorBanner({ detail, message, onRetry }: Props) {
   return (
     <div
       role="alert"
-      className="mb-4 px-4 py-2.5 rounded-lg bg-red-50 border border-red-300 text-red-800 text-sm flex items-start gap-2"
+      className="mb-4 px-4 py-2.5 rounded-lg bg-[var(--sem-weak-bg)] border-[0.5px] border-[var(--sem-weak-bd)] text-[var(--sem-weak-fg)] text-small flex items-start gap-2"
     >
       <span aria-hidden className="text-base leading-tight">⚠️</span>
       <div className="flex-1 min-w-0">
-        <p className="font-semibold">
+        <p className="font-medium">
           {message ?? 'データ取得に失敗しました — 表示中の内容は不完全な可能性があります'}
         </p>
         {detail && (
-          <p className="text-xs text-red-700 mt-0.5 break-all">{detail}</p>
+          <p className="text-caption mt-0.5 break-all opacity-80">{detail}</p>
         )}
       </div>
       {onRetry && (
         <button
           onClick={onRetry}
-          className="shrink-0 px-2.5 py-1 rounded-md text-xs font-medium border border-red-300 bg-[var(--bg-card)] text-red-700 hover:bg-red-100 transition-colors"
+          className="shrink-0 px-2.5 py-1 rounded-md text-caption border-[0.5px] border-[var(--sem-weak-bd)] bg-[var(--bg-card)] text-[var(--sem-weak-fg)] hover:bg-[var(--sem-weak-bg)]"
         >
           再試行
         </button>

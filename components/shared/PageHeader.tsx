@@ -33,11 +33,11 @@ export default function PageHeader({
   return (
     <header className="flex flex-wrap justify-between items-center gap-3 mb-6">
       <div className="min-w-0">
-        <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">
+        <h1 className="text-title font-medium tracking-tight text-[var(--text-primary)]">
           {title}
         </h1>
         {subtitle && (
-          <p className="text-sm mt-0.5 text-[var(--text-muted)]">{subtitle}</p>
+          <p className="text-small mt-0.5 text-[var(--text-muted)]">{subtitle}</p>
         )}
       </div>
 
@@ -46,14 +46,14 @@ export default function PageHeader({
 
         {date && (
           <span
-            className={`text-xs font-mono px-2.5 py-1 rounded-full border ${
+            className={`text-caption font-mono px-2.5 py-1 rounded-full border-[0.5px] ${
               isLatest
                 ? 'border-[var(--border)] bg-[var(--bg-card)] text-[var(--text-secondary)]'
-                : 'border-amber-400 bg-amber-50 text-amber-800 font-semibold'
+                : 'border-[var(--sem-watch-bd)] bg-[var(--sem-watch-bg)] text-[var(--sem-watch-fg)]'
             }`}
             title={isLatest ? 'データ基準日（最新）' : '過去スナップショットを表示中'}
           >
-            {isLatest ? '' : '📌 '}{date}
+            {date}
           </span>
         )}
 
@@ -61,7 +61,7 @@ export default function PageHeader({
           <button
             onClick={onRefresh}
             disabled={refreshing}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium border border-[var(--border)] bg-[var(--bg-card)] hover:bg-[var(--bg-card-hover)] transition-colors disabled:opacity-50 text-[var(--accent)] min-h-[36px]"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-small border-[0.5px] border-[var(--border)] bg-[var(--bg-card)] hover:bg-[var(--bg-card-hover)] disabled:opacity-50 text-[var(--sem-focus-fg)] min-h-[32px]"
           >
             <svg
               className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`}

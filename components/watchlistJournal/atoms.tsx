@@ -3,22 +3,29 @@
 // Watchlist Journal の 3 セクション（現在の状態 / 今日の差分 / 見逃しボード）で
 // 共有する小物。旧 /watchlist の ScreenTagBadge に相当する部品群。
 
-import { stateColors } from '@/types/watchlistJournal'
+import { stateTone } from '@/types/watchlistJournal'
+import { toneVars } from '@/types/semantic'
 import { formatPct, formatYen } from '@/lib/format'
 import { shikihoUrl, tradingViewUrl } from '@/lib/tickerLinks'
 
-/** TradingView のセクション名（= 状態）バッジ。 */
-export function StateBadge({ state }: { state: string | null | undefined }) {
-  if (!state) return <span className="text-gray-400 text-xs">—</span>
-  const c = stateColors(state)
+/**
+ * 状態のラベル。
+ *
+ * バッジ（塗り + 枠）はやめてテキストにした。Current State は既に state で
+ * グループ化されており、その中の全行に同じ色のバッジを置くのは同じ情報の
+ * 二重描画になる。重みは色ではなく行左端のレール（`READY` のみ）で表す。
+ */
+export function StateLabel({ state }: { state: string | null | undefined }) {
+  if (!state) return <span className="text-[var(--sem-idle-fg)]">—</span>
   return (
-    <span
-      className="inline-block px-2 py-0.5 rounded text-[11px] font-semibold whitespace-nowrap"
-      style={{ backgroundColor: c.bg, color: c.text, border: `1px solid ${c.border}` }}
-    >
-      {state}
-    </span>
+    <span className="text-caption tracking-wide text-[var(--text-secondary)]">{state}</span>
   )
+}
+
+/** 語彙の色を面として使う数少ない場所（鮮度バッジなど）向けのインラインスタイル。 */
+export function toneStyle(state: string | null | undefined) {
+  const t = toneVars(stateTone(state))
+  return { backgroundColor: t.bg, color: t.fg, border: `0.5px solid ${t.bd}` }
 }
 
 /**
@@ -32,7 +39,7 @@ export function ScannerTags({ names }: { names: string[] | null | undefined }) {
   if (!names || names.length === 0) {
     return (
       <span
-        className="text-gray-300"
+        className="text-[var(--sem-idle-fg)]"
         title="スキャナー名の記録なし（どのスキャナーも拾えていない場合と、その日リストを貼らなかった場合が区別できません）"
       >
         —
@@ -44,7 +51,7 @@ export function ScannerTags({ names }: { names: string[] | null | undefined }) {
       {names.map(n => (
         <span
           key={n}
-          className="inline-block px-1.5 py-0.5 rounded text-[10px] font-medium bg-indigo-50 text-indigo-700 whitespace-nowrap"
+          className="inline-block px-1.5 py-0.5 rounded text-caption bg-[var(--sem-idle-bg)] text-[var(--sem-idle-fg)] whitespace-nowrap"
         >
           {n}
         </span>
@@ -71,14 +78,14 @@ export function PctCell({
 }) {
   if (value == null || !Number.isFinite(value)) {
     return (
-      <span className="text-gray-300 font-mono tabular-nums" title={title ?? '未測定（翌営業日以降に計算されます）'}>
+      <span className="num text-[var(--sem-idle-fg)]" title={title ?? '未測定（翌営業日以降に計算されます）'}>
         —
       </span>
     )
   }
   if (neutral) {
     return (
-      <span className="font-mono tabular-nums text-[var(--text-secondary)]" title={title}>
+      <span className="num text-[var(--text-secondary)]" title={title}>
         {formatPct(value, { digits })}
       </span>
     )
@@ -86,7 +93,7 @@ export function PctCell({
   const color =
     value > 0 ? 'text-[var(--positive)]' : value < 0 ? 'text-[var(--negative)]' : 'text-[var(--text-secondary)]'
   return (
-    <span className={`font-mono tabular-nums ${color}`} title={title}>
+    <span className={`num ${color}`} title={title}>
       {formatPct(value, { digits, sign: true })}
     </span>
   )
@@ -107,10 +114,10 @@ export function YenCell({
   title?: string
 }) {
   if (value == null || !Number.isFinite(value)) {
-    return <span className="text-gray-300 font-mono tabular-nums">—</span>
+    return <span className="num text-[var(--sem-idle-fg)]">—</span>
   }
   return (
-    <span className="font-mono tabular-nums text-[var(--text-secondary)]" title={title}>
+    <span className="num text-[var(--text-secondary)]" title={title}>
       {formatYen(value)}
     </span>
   )
@@ -129,10 +136,10 @@ export function NumCell({
   title?: string
 }) {
   if (value == null || !Number.isFinite(value)) {
-    return <span className="text-gray-300 font-mono tabular-nums">—</span>
+    return <span className="num text-[var(--sem-idle-fg)]">—</span>
   }
   return (
-    <span className="font-mono tabular-nums text-[var(--text-secondary)]" title={title}>
+    <span className="num text-[var(--text-secondary)]" title={title}>
       {value.toFixed(digits)}
       {suffix}
     </span>

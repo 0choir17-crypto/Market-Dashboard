@@ -1,3 +1,4 @@
+import type { SemanticTone } from '@/types/semantic'
 // TOPIX-33 sector selection: composite score model
 // Source table: sector_selection_s33  (PK: date + sector_name_s33)
 
@@ -90,10 +91,12 @@ export const COMPONENT_META: { key: ComponentKey; label: string; tooltip: string
   { key: 'component_short',    label: 'Sht',     tooltip: '空売り過熱の逆 — 踏み上げ余地 (0-100)' },
 ]
 
-export const MOMENTUM_CONFIG: Record<SectorMomentum, { label: string; color: string; bg: string; emoji: string }> = {
-  leading: { label: 'leading', color: '#16a34a', bg: '#dcfce7', emoji: '🟢' },
-  neutral: { label: 'neutral', color: '#6b7280', bg: '#f3f4f6', emoji: '⚪' },
-  lagging: { label: 'lagging', color: '#dc2626', bg: '#fee2e2', emoji: '🔴' },
+export const MOMENTUM_CONFIG: Record<SectorMomentum, { label: string; tone: SemanticTone }> = {
+  // 絵文字は環境ごとに字形とサイズが変わり、密度の高い表で位置が揃わないので使わない。
+  // 状態はドット（呼び出し側が tone から描く）とラベルで示す。
+  leading: { label: 'leading', tone: 'strong' as const },
+  neutral: { label: 'neutral', tone: 'idle' as const },
+  lagging: { label: 'lagging', tone: 'weak' as const },
 }
 
 // Composite score heatmap: red (low) → yellow (mid) → green (high)
@@ -102,17 +105,17 @@ export function compositeColor(score: number | null | undefined): {
   text: string
 } {
   if (score === null || score === undefined || Number.isNaN(score)) {
-    return { bg: '#f3f4f6', text: '#9ca3af' }
+    return { bg: 'var(--sem-idle-bg)', text: 'var(--sem-idle-fg)' }
   }
-  if (score >= 60) return { bg: '#dcfce7', text: '#15803d' }
-  if (score >= 30) return { bg: '#fef3c7', text: '#92400e' }
-  return { bg: '#fee2e2', text: '#b91c1c' }
+  if (score >= 60) return { bg: 'var(--sem-strong-bg)', text: 'var(--sem-strong-fg)' }
+  if (score >= 30) return { bg: 'var(--sem-ok-bg)', text: 'var(--sem-ok-fg)' }
+  return { bg: 'var(--sem-weak-bg)', text: 'var(--sem-weak-fg)' }
 }
 
 // Per-component bar color (mini bars + drilldown)
 export function componentColor(value: number | null | undefined): string {
-  if (value === null || value === undefined || Number.isNaN(value)) return '#e5e7eb'
-  if (value >= 70) return '#22c55e'
-  if (value >= 40) return '#eab308'
-  return '#ef4444'
+  if (value === null || value === undefined || Number.isNaN(value)) return 'var(--sem-idle-bd)'
+  if (value >= 70) return 'var(--sem-strong-fg)'
+  if (value >= 40) return 'var(--sem-watch-fg)'
+  return 'var(--sem-weak-fg)'
 }

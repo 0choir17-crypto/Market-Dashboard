@@ -1,5 +1,9 @@
 # Watchlist Journal 設計書（`/watchlist`・2026-09-05 時点）
 
+> ⚠️ **2026-09-05: `DESIGN_DIRECTION.md` の step 0〜4 を適用済み。**
+> 色（意味語彙 7 トークン）・フォント・面・タイプスケールが変わっています。
+> §7 の配色表と §4 の鮮度バッジは更新済み。列構成（§5 / §6）は step 7 で変わる予定です。
+
 デザイン見直しのベースとして、**実装から起こした現状**をまとめたもの。
 「なぜそうなっているか」を併記してあるので、変える前に読んで、意図ごと置き換えるか
 意図を残して見た目だけ変えるかを判断できる。
@@ -75,12 +79,15 @@ main (min-h-screen, p-6, bg: --bg-primary)
 最終記録: 9/5 23:30  [🟢 0 時間前]
 ```
 
-| 経過 | level | 色 | ラベル | hint |
+| 経過 | level | 語彙 | ラベル | hint |
 |---|---|---|---|---|
-| < 24h | `ok` | 🟢 `#dcfce7` / `#15803d` / `#86efac` | `N 時間前` | 直近 24 時間以内に記録されています |
-| 24–48h | `aging` | 🟡 `#fef3c7` / `#92400e` / `#fde68a` | `N 時間更新なし` | 丸 1 日撮れていません。拡張は TradingView を開いた時にしか撮らないため… |
-| > 48h | `old` | 🔴 `#fee2e2` / `#b91c1c` / `#fecaca` | `N 日更新なし` | 48 時間以上更新されていません。TV を開いていないだけの場合も… |
-| 記録なし | `unknown` | ⚪ グレー | `記録なし` | — |
+| < 24h | `ok` | **`idle`（無色）** | `N 時間前` | 直近 24 時間以内に記録されています |
+| 24–48h | `aging` | `watch` | `N 時間更新なし` | 丸 1 日撮れていません。拡張は TradingView を開いた時にしか撮らないため… |
+| > 48h | `old` | `weak` | `N 日更新なし` | 48 時間以上更新されていません。TV を開いていないだけの場合も… |
+| 記録なし | `unknown` | `idle`（無色） | `記録なし` | — |
+
+正常（`ok`）は面を持たず、グレーのドットと時刻だけになる。
+**正常が目立たない状態を作ることが、異常の発見を速くする。**
 
 **設計上の決めごと**
 
@@ -199,31 +206,52 @@ min-w-[980px]
 
 ### 色
 
-| 用途 | トークン / 値 |
+| 用途 | トークン |
 |---|---|
-| 背景 | `--bg-primary` `#fdf6e3`（クリーム）/ カード `--bg-card` 同色 / ホバー `--bg-card-hover` `#f5ecd5` |
-| 枠線 | `--border` `#e6dcc0` |
-| 文字 | `--text-primary` `#1a1d23` / `--text-secondary` `#6b7280` / `--text-muted` `#9ca3af` |
-| 損益 | `--positive` `#16a34a` / `--negative` `#dc2626` |
-| アクセント（リンク・ソート中の列） | `--accent` `#1d4ed8` / `--accent-bg` `#eff6ff` |
-| 欠損 | `text-gray-300` の `—` |
+| 背景 | `--bg-primary` `#fdf6e3`（クリーム）/ カード `--bg-card` `#fffdf7`（**白に分離**）/ ホバー `--bg-card-hover` |
+| 罫線 | `--border` `#ece3cc`（0.5px） |
+| 文字 | `--text-primary` / `--text-secondary` / `--text-muted` |
+| 損益 | `--positive` `#16a34a` / `--negative` `#dc2626`（**意味語彙とは別系統**） |
+| 意味語彙 | `--sem-{strong,ok,watch,weak,idle,archive,focus}-{bg,fg,bd}`（7 語彙 × 3 値） |
+| 欠損 | `--sem-idle-fg` の `—` |
 
-### 状態バッジの配色
+面は静止する。**影とホバーの移動・浮上は全廃**（`.card` から `box-shadow` / `transform` を削除）。
+面の分離は背景色差と 0.5px の罫線だけで行う。
 
-| 状態 | bg | text | border | 意図 |
-|---|---|---|---|---|
-| `HOLD` | `#dcfce7` | `#15803d` | `#86efac` | 保有＝緑 |
-| `READY` | `#dbeafe` | `#1d4ed8` | `#93c5fd` | アクセントと同系の青 |
-| `FOCUS` | `#e0e7ff` | `#4338ca` | `#a5b4fc` | READY より一段内側 |
-| `SECOND` | `#f1f5f9` | `#475569` | `#cbd5e1` | 二軍＝彩度なし |
-| `SHORT` | `#fee2e2` | `#b91c1c` | `#fecaca` | 別軸＝赤 |
-| `OTHERS` | `#fef3c7` | `#92400e` | `#fde68a` | 未整理＝琥珀 |
-| `INBOX` | `#f5f3ff` | `#6d28d9` | `#ddd6fe` | 未仕分け＝紫 |
-| `SOLD` | `#f8fafc` | `#94a3b8` | `#e2e8f0` | アーカイブ＝最も薄い |
+### 状態の表現 — バッジは廃止
+
+Current State は既に state でグループ化されているので、その中の全行に同じ色のバッジを
+置くのは同じ情報の二重描画。**塗りのバッジをやめてテキストにした**（`StateLabel`）。
+重みは色ではなく **`READY` の行だけ左端 2px のレール**（`--sem-focus-fg`）で表す。
+
+状態 → 意味語彙の対応（`types/watchlistJournal.ts#STATE_TONE`）:
+
+| 状態 | 語彙 | 理由 |
+|---|---|---|
+| `HOLD` | `strong` | 保有中 |
+| `READY` / `FOCUS` | `focus` | 注目 |
+| `SECOND` / `OTHERS` / `INBOX` | `idle` | **未整理は警戒ではない**ので無彩色へ移した |
+| `SHORT` | `weak` | 買い方向としては弱い（別軸） |
+| `SOLD` | `archive` | 済み・対象外 |
+
+実際の色は `globals.css` の `--sem-*` が持ち、`types/*.ts` に生の 16 進は無い。
+
+### タイポグラフィ
+
+- 欧文・数値は TradingView と同じシステムフォントスタック
+  （`-apple-system, BlinkMacSystemFont, "Trebuchet MS", Roboto, Ubuntu`）+ 和文 Noto Sans JP。
+  **Sora の webfont は廃止**した
+- サイズは 5 段のみ: `text-caption` 11 / `text-small` 12 / `text-body` 13 / `text-lead` 15 / `text-title` 18
+- ウェイトは 400 と 500 の 2 つだけ（`font-bold` は使わない）
+- 等幅（IBM Plex Mono）は**識別子だけ**: 銘柄コード・日付・時刻。
+  数値の桁揃えは `.num`（`tabular-nums`）が担当し、書体はサンセリフ
+
+> ⚠️ Trebuchet MS が `tnum` を持たない場合、桁が揃わない。実機（Windows / macOS / iPhone）で
+> `/debug/font` を開いて確認し、ずれていたら `--font-sans` 先頭を IBM Plex Sans に差し替える。
 
 ### 数値
 
-- 数値は `font-mono`（IBM Plex Mono）+ `tabular-nums`、**表では右揃え**
+- 数値は `.num`（サンセリフ + `tabular-nums`）、**表では右揃え**
 - 率は既定 1 桁、`1R %` / `RR2 %` は TradingView と突き合わせるので **2 桁**
 - 金額は整数丸め + `¥` 前置（`lib/format.ts#formatYen`）
 

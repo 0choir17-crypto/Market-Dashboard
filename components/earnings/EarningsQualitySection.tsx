@@ -885,7 +885,7 @@ function StatCard({
       : accent === 'blue'
         ? 'text-[var(--accent)]'
         : accent === 'amber'
-          ? 'text-[var(--neutral-color)]'
+          ? 'text-[var(--sem-watch-fg)]'
           : 'text-[var(--text-primary)]'
   return (
     <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-3">

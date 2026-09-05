@@ -169,7 +169,6 @@ export default function StructurePivotCard({
               style={{ color: hot ? 'var(--positive)' : 'var(--text-secondary)' }}
               title={row.sector_s33 ?? ''}
             >
-              {hot ? '🟢 ' : ''}
               {row.sector_s33 ?? '—'}
             </span>
             {/* 本日どのシグナルにヒットしたか（1st / 2nd）を明示 */}

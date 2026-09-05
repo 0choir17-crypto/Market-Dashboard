@@ -63,18 +63,18 @@ export default function WatchlistJournalPage() {
 
       {loading && !hasAnything ? (
         <div
-          className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-8 text-center"
+          className="bg-[var(--bg-card)] rounded-xl border-[0.5px] border-[var(--border)] p-8 text-center"
           style={{ color: 'var(--text-muted)' }}
         >
-          <p className="text-lg font-medium">読み込み中…</p>
+          <p className="text-lead">読み込み中…</p>
         </div>
       ) : !hasAnything ? (
         <div
-          className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-8 text-center"
+          className="bg-[var(--bg-card)] rounded-xl border-[0.5px] border-[var(--border)] p-8 text-center"
           style={{ color: 'var(--text-muted)' }}
         >
-          <p className="text-lg font-medium mb-2">記録がまだありません</p>
-          <p className="text-sm">
+          <p className="text-lead mb-2">記録がまだありません</p>
+          <p className="text-small">
             Supabase の <code className="font-mono">watchlist_events</code> /{' '}
             <code className="font-mono">watchlist_current</code> にデータがあるか確認してください。
             <br />
@@ -90,7 +90,7 @@ export default function WatchlistJournalPage() {
 
       {/* 読み取り専用であることと、記録の性格を明示しておく。
           リストを動かした日は約定日ではなく、損益の正本は trades（Trading）。 */}
-      <p className="mt-10 text-[11px] leading-relaxed text-[var(--text-muted)]">
+      <p className="mt-10 text-caption leading-relaxed text-[var(--text-muted)]">
         この画面は読み取り専用です。銘柄の追加・移動・削除は TradingView 側で行い、毎日 23:30
         （手動更新はデスクトップのショートカット）に自動で記録されます。日中は更新されません。
         <br />

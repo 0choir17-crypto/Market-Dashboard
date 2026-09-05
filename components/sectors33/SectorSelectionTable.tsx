@@ -21,6 +21,7 @@ import {
   type RankDeltaMap,
   type RankDeltaPeriodKey,
 } from '@/lib/sectorRankDelta'
+import Dot from '@/components/shared/Dot'
 
 type SortKey = 'rank' | 'sector_name_s33' | 'composite_score' | ComponentKey | 'sector_stock_count_s33'
 type SortDir = 'asc' | 'desc'
@@ -115,10 +116,9 @@ function MomentumBadge({ m }: { m: SectorMomentum | null }) {
   const cfg = MOMENTUM_CONFIG[m]
   return (
     <span
-      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap"
-      style={{ backgroundColor: cfg.bg, color: cfg.color }}
+      className="inline-flex items-center gap-1.5 text-caption whitespace-nowrap text-[var(--text-secondary)]"
     >
-      {cfg.emoji} {cfg.label}
+      <Dot tone={cfg.tone} /> {cfg.label}
     </span>
   )
 }

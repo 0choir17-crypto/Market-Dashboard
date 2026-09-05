@@ -17,7 +17,7 @@
 import { useMemo, useState } from 'react'
 import type { WatchlistEvent } from '@/types/watchlistJournal'
 import { formatPct } from '@/lib/format'
-import { NumCell, PctCell, SampleSizeNote, StateBadge, TickerCell, YenCell, median } from './atoms'
+import { NumCell, PctCell, SampleSizeNote, StateLabel, TickerCell, YenCell, median } from './atoms'
 
 // READY からの離脱が最も重い。この順で並べ、READY だけ枠を強調する。
 const FROM_STATE_ORDER = ['READY', 'FOCUS', 'SECOND', 'SHORT', 'OTHERS', 'INBOX']
@@ -121,8 +121,8 @@ export default function MissedBoard({ rows }: Props) {
     <th
       onClick={() => handleSort(key)}
       title={title}
-      className={`px-3 py-2 ${align === 'left' ? 'text-left' : 'text-right'} text-xs font-semibold uppercase tracking-wide cursor-pointer select-none whitespace-nowrap hover:bg-[var(--bg-card-hover)] transition-colors ${
-        sortKey === key ? 'text-[var(--accent)]' : 'text-gray-500'
+      className={`px-2.5 py-2 ${align === 'left' ? 'text-left' : 'text-right'} text-caption tracking-wide cursor-pointer select-none whitespace-nowrap ${
+        sortKey === key ? 'text-[var(--sem-focus-fg)]' : 'text-[var(--text-muted)]'
       }`}
     >
       {label}
@@ -133,12 +133,12 @@ export default function MissedBoard({ rows }: Props) {
   if (rows.length === 0) {
     return (
       <section>
-        <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-3">Missed Board</h2>
+        <h2 className="text-caption tracking-wide text-[var(--text-muted)] mb-3">Missed Board</h2>
         <div
-          className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-6 text-center"
+          className="bg-[var(--bg-card)] rounded-xl border-[0.5px] border-[var(--border)] p-6 text-center"
           style={{ color: 'var(--text-muted)' }}
         >
-          <p className="text-sm">Watch list から落とした銘柄はまだありません</p>
+          <p className="text-small">Watch list から落とした銘柄はまだありません</p>
         </div>
       </section>
     )
@@ -147,10 +147,10 @@ export default function MissedBoard({ rows }: Props) {
   return (
     <section>
       <div className="flex flex-wrap items-baseline justify-between gap-2 mb-3">
-        <h2 className="text-lg font-semibold text-[var(--text-primary)]">Missed Board</h2>
-        <p className="text-xs text-[var(--text-muted)]">
+        <h2 className="text-caption tracking-wide text-[var(--text-muted)]">Missed Board</h2>
+        <p className="text-caption text-[var(--text-muted)]">
           Watch list に入れたのに、買わないまま落とした銘柄がその後どうなったか{' '}
-          <span className="text-gray-400">
+          <span>
             — 並び順は列見出しをクリック（既定: 落とした後に伸びた順）
           </span>
         </p>
@@ -160,16 +160,14 @@ export default function MissedBoard({ rows }: Props) {
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 mb-4">
         <button
           onClick={() => setFilter(null)}
-          className={`text-left px-3 py-2 rounded-lg border transition-colors ${
+          className={`text-left px-3 py-2 rounded-lg border-[0.5px] ${
             filter === null
-              ? 'border-[var(--accent)] bg-[var(--accent-bg)]'
+              ? 'border-[var(--sem-focus-bd)] bg-[var(--sem-focus-bg)]'
               : 'border-[var(--border)] bg-[var(--bg-card)] hover:bg-[var(--bg-card-hover)]'
           }`}
         >
-          <p className="text-[11px] font-semibold text-[var(--text-secondary)]">全部</p>
-          <p className="text-lg font-bold font-mono tabular-nums text-[var(--text-primary)]">
-            {rows.length}
-          </p>
+          <p className="text-caption text-[var(--text-muted)]">All</p>
+          <p className="text-lead num text-[var(--text-primary)]">{rows.length}</p>
         </button>
 
         {groups.map(g => {
@@ -179,26 +177,25 @@ export default function MissedBoard({ rows }: Props) {
             <button
               key={g.state}
               onClick={() => setFilter(active ? null : g.state)}
-              className={`text-left px-3 py-2 rounded-lg border transition-colors ${
+              className={`text-left px-3 py-2 rounded-lg border-[0.5px] ${
                 active
-                  ? 'border-[var(--accent)] bg-[var(--accent-bg)]'
-                  : isReady
-                    ? 'border-blue-300 bg-blue-50/60 hover:bg-blue-50'
-                    : 'border-[var(--border)] bg-[var(--bg-card)] hover:bg-[var(--bg-card-hover)]'
+                  ? 'border-[var(--sem-focus-bd)] bg-[var(--sem-focus-bg)]'
+                  : 'border-[var(--border)] bg-[var(--bg-card)] hover:bg-[var(--bg-card-hover)]'
               }`}
+              style={
+                isReady ? { borderLeft: '2px solid var(--sem-focus-fg)' } : undefined
+              }
               title={
                 isReady
                   ? 'エントリー可と判断しておいて買わなかった — 最も重い見逃し'
                   : undefined
               }
             >
-              <span className="flex items-center gap-1.5">
-                <StateBadge state={g.state} />
-                <span className="text-lg font-bold font-mono tabular-nums text-[var(--text-primary)]">
-                  {g.count}
-                </span>
+              <span className="flex items-baseline gap-1.5">
+                <StateLabel state={g.state} />
+                <span className="text-lead num text-[var(--text-primary)]">{g.count}</span>
               </span>
-              <p className="text-[10px] text-[var(--text-muted)] mt-1 font-mono tabular-nums">
+              <p className="text-caption text-[var(--text-muted)] mt-1 num">
                 中央 現在 {formatPct(g.medRet, { digits: 2, sign: true })} / 最大{' '}
                 {formatPct(g.medMax, { digits: 2, sign: true })}
               </p>
@@ -212,9 +209,9 @@ export default function MissedBoard({ rows }: Props) {
         <span className="font-mono mx-0.5">—</span>になります
       </SampleSizeNote>
 
-      <div className="mt-3 bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm overflow-x-auto">
-        <table className="w-full min-w-[980px] text-sm">
-          <thead className="bg-[var(--bg-card-hover)] border-b border-[var(--border)]">
+      <div className="mt-3 bg-[var(--bg-card)] rounded-xl border-[0.5px] border-[var(--border)] overflow-x-auto">
+        <table className="w-full min-w-[980px] text-body">
+          <thead className="border-b-[0.5px] border-[var(--border)]">
             <tr>
               {th('date', 'Date', 'Watch list から落とした日', 'left')}
               {th('bars_since', 'Days', '落とした日からの経過営業日数。右の 3 つの % を測った期間の長さ')}
@@ -233,43 +230,48 @@ export default function MissedBoard({ rows }: Props) {
             {visible.map(r => (
               <tr
                 key={`${r.snapshot_id}-${r.code}`}
-                className={`border-t border-[var(--border)] hover:bg-[var(--bg-card-hover)] transition-colors ${
-                  r.from_state === 'READY' ? 'bg-blue-50/40' : ''
-                }`}
+                className="border-t-[0.5px] border-[var(--border)] hover:bg-[var(--bg-card-hover)]"
               >
-                <td className="px-3 py-2 font-mono text-xs text-[var(--text-secondary)] whitespace-nowrap">
+                {/* READY からの離脱が最も重い。塗りではなく左端のレールで示す */}
+                <td
+                  className="px-2.5 py-2 font-mono text-small text-[var(--text-secondary)] whitespace-nowrap border-l-2"
+                  style={{
+                    borderLeftColor:
+                      r.from_state === 'READY' ? 'var(--sem-focus-fg)' : 'transparent',
+                  }}
+                >
                   {r.date}
                 </td>
-                <td className="px-3 py-2 text-right">
+                <td className="px-2.5 py-2 text-right">
                   {/* 単位は Current State の Days に揃えて「日」。中身は営業日数なので
                       ツールチップで明示する（Stay の暦日数とは数え方が違う）。 */}
                   <NumCell value={r.bars_since} digits={0} suffix="日" title="落とした日からの経過営業日数" />
                 </td>
-                <td className="px-3 py-2">
+                <td className="px-2.5 py-2">
                   <TickerCell code={r.code} name={r.co_name} />
                 </td>
-                <td className="px-3 py-2 text-right">
+                <td className="px-2.5 py-2 text-right">
                   <YenCell value={r.close_adj} title="落とした日の終値" />
                 </td>
-                <td className="px-3 py-2 text-xs text-[var(--text-secondary)] whitespace-nowrap">
+                <td className="px-2.5 py-2 text-small text-[var(--text-secondary)] whitespace-nowrap">
                   {r.sector_s33 ?? '—'}
                 </td>
-                <td className="px-3 py-2">
-                  <StateBadge state={r.from_state} />
+                <td className="px-2.5 py-2">
+                  <StateLabel state={r.from_state} />
                 </td>
-                <td className="px-3 py-2 text-right">
+                <td className="px-2.5 py-2 text-right">
                   <NumCell value={r.dwell_days} digits={0} suffix="日" title="落とす前にその状態に居た暦日数" />
                 </td>
-                <td className="px-3 py-2 text-right">
+                <td className="px-2.5 py-2 text-right">
                   <PctCell value={r.ret_since_pct} />
                 </td>
-                <td className="px-3 py-2 text-right font-semibold">
+                <td className="px-2.5 py-2 text-right">
                   <PctCell value={r.max_ret_pct} title="期間中の最大上昇%（終値ベース）" />
                 </td>
-                <td className="px-3 py-2 text-right">
+                <td className="px-2.5 py-2 text-right">
                   <PctCell value={r.min_ret_pct} title="期間中の最大下落%（安値ベース）" />
                 </td>
-                <td className="px-3 py-2 text-right">
+                <td className="px-2.5 py-2 text-right">
                   <NumCell value={r.adr_pct_20} suffix="%" />
                 </td>
               </tr>

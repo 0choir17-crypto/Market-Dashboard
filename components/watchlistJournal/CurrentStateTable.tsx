@@ -14,7 +14,7 @@
 import { useMemo, useState } from 'react'
 import type { WatchlistCurrentRow } from '@/types/watchlistJournal'
 import { STATE_ORDER, riskPct, stateOrderIndex } from '@/types/watchlistJournal'
-import { NumCell, PctCell, StateBadge, TickerCell, YenCell } from './atoms'
+import { NumCell, PctCell, StateLabel, TickerCell, YenCell } from './atoms'
 
 type SortKey =
   | 'code'
@@ -121,8 +121,8 @@ export default function CurrentStateTable({ rows }: Props) {
     <th
       onClick={() => handleSort(key)}
       title={title}
-      className={`px-3 py-2 ${align === 'left' ? 'text-left' : 'text-right'} text-xs font-semibold uppercase tracking-wide cursor-pointer select-none whitespace-nowrap hover:bg-[var(--bg-card-hover)] transition-colors ${
-        sortKey === key ? 'text-[var(--accent)]' : 'text-gray-500'
+      className={`px-2.5 py-2 ${align === 'left' ? 'text-left' : 'text-right'} text-caption tracking-wide cursor-pointer select-none whitespace-nowrap ${
+        sortKey === key ? 'text-[var(--sem-focus-fg)]' : 'text-[var(--text-muted)]'
       }`}
     >
       {label}
@@ -133,11 +133,11 @@ export default function CurrentStateTable({ rows }: Props) {
   if (rows.length === 0) {
     return (
       <div
-        className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-8 text-center"
+        className="bg-[var(--bg-card)] rounded-xl border-[0.5px] border-[var(--border)] p-8 text-center"
         style={{ color: 'var(--text-muted)' }}
       >
-        <p className="text-lg font-medium mb-2">現在のリストが空です</p>
-        <p className="text-sm">
+        <p className="text-lead mb-2">現在のリストが空です</p>
+        <p className="text-small">
           Supabase の <code className="font-mono">watchlist_current</code> は毎晩 23:30 に作り直されます。
         </p>
       </div>
@@ -147,26 +147,26 @@ export default function CurrentStateTable({ rows }: Props) {
   return (
     <section>
       <div className="flex flex-wrap items-baseline justify-between gap-2 mb-3">
-        <h2 className="text-lg font-semibold text-[var(--text-primary)]">Current State</h2>
-        <p className="text-xs text-[var(--text-muted)]">
+        <h2 className="text-caption tracking-wide text-[var(--text-muted)]">Current State</h2>
+        <p className="text-caption text-[var(--text-muted)]">
           {rows.length} 銘柄 — 指標は今日の値。{' '}
-          <span className="text-gray-400">
+          <span>
             並び順は列見出しをクリック（既定: 滞在日数の長い順）
           </span>
         </p>
       </div>
 
-      <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm overflow-x-auto">
-        <table className="w-full min-w-[1320px] text-sm">
-          <thead className="bg-[var(--bg-card-hover)] border-b border-[var(--border)]">
+      <div className="bg-[var(--bg-card)] rounded-xl border-[0.5px] border-[var(--border)] overflow-x-auto">
+        <table className="w-full min-w-[1320px] text-body">
+          <thead className="border-b-[0.5px] border-[var(--border)]">
             <tr>
               {th('code', 'Code / Name', '銘柄コード → TradingView / 銘柄名 → 四季報', 'left')}
-              <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 whitespace-nowrap">
+              <th className="px-2.5 py-2 text-left text-caption tracking-wide text-[var(--text-muted)] whitespace-nowrap">
                 Sector
               </th>
               {th('since', 'Since', 'そのセクションに入った日', 'left')}
               {th('days', 'Days', 'since からの暦日数')}
-              <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 whitespace-nowrap">
+              <th className="px-2.5 py-2 text-right text-caption tracking-wide text-[var(--text-muted)] whitespace-nowrap">
                 Entry → Now
               </th>
               {th('ret_since_pct', 'Return', '入ってから何 % 動いたか')}
@@ -194,9 +194,9 @@ export default function CurrentStateTable({ rows }: Props) {
           </thead>
 
           {groups.map(group => (
-            <tbody key={group.state} className="border-b border-[var(--border)] last:border-b-0">
+            <tbody key={group.state} className="border-b-[0.5px] border-[var(--border)] last:border-b-0">
               <tr className="bg-[var(--bg-primary)]">
-                <td colSpan={COLUMN_COUNT} className="px-3 py-1.5">
+                <td colSpan={COLUMN_COUNT} className="px-2.5 py-1.5">
                   <button
                     onClick={() => toggleGroup(group.state)}
                     aria-expanded={!collapsed.has(group.state)}
@@ -210,15 +210,15 @@ export default function CurrentStateTable({ rows }: Props) {
                     >
                       ▶
                     </span>
-                    <StateBadge state={group.state} />
-                    <span className="text-xs text-[var(--text-muted)]">{group.rows.length} 銘柄</span>
+                    <StateLabel state={group.state} />
+                    <span className="text-caption text-[var(--text-muted)]">{group.rows.length} 銘柄</span>
                     {group.state === 'READY' && (
-                      <span className="text-[11px] text-[var(--text-muted)]">
+                      <span className="text-caption text-[var(--text-muted)]">
                         — エントリー可と判断した銘柄。滞在が伸びているものは判断を見直す
                       </span>
                     )}
                     {group.state === 'SOLD' && (
-                      <span className="text-[11px] text-[var(--text-muted)]">
+                      <span className="text-caption text-[var(--text-muted)]">
                         — 売却済アーカイブ。現在のウォッチ対象ではない（損益の正本は Trading）
                       </span>
                     )}
@@ -230,55 +230,62 @@ export default function CurrentStateTable({ rows }: Props) {
                 group.rows.map(r => (
                   <tr
                     key={r.code}
-                    className="border-t border-[var(--border)] hover:bg-[var(--bg-card-hover)] transition-colors"
+                    className="border-t-[0.5px] border-[var(--border)] hover:bg-[var(--bg-card-hover)]"
                   >
-                    <td className="px-3 py-2">
+                    {/* READY だけ左端のレールで重みを表す。塗りのバッジは置かない */}
+                    <td
+                      className="px-2.5 py-2 border-l-2"
+                      style={{
+                        borderLeftColor:
+                          group.state === 'READY' ? 'var(--sem-focus-fg)' : 'transparent',
+                      }}
+                    >
                       <TickerCell code={r.code} name={r.co_name} />
                     </td>
-                    <td className="px-3 py-2 text-xs text-[var(--text-secondary)] whitespace-nowrap">
+                    <td className="px-2.5 py-2 text-small text-[var(--text-secondary)] whitespace-nowrap">
                       {r.sector_s33 ?? '—'}
                     </td>
-                    <td className="px-3 py-2 font-mono text-xs text-[var(--text-secondary)] whitespace-nowrap">
+                    <td className="px-2.5 py-2 font-mono text-small text-[var(--text-secondary)] whitespace-nowrap">
                       {r.since ?? '—'}
                     </td>
-                    <td className="px-3 py-2 text-right">
+                    <td className="px-2.5 py-2 text-right">
                       <NumCell value={r.days} digits={0} suffix="日" />
                     </td>
-                    <td className="px-3 py-2 text-right font-mono text-xs text-[var(--text-secondary)] whitespace-nowrap">
+                    <td className="px-2.5 py-2 text-right num text-small text-[var(--text-secondary)] whitespace-nowrap">
                       {r.close_at_since != null && r.close_adj != null
                         ? `${r.close_at_since.toLocaleString('ja-JP')} → ${r.close_adj.toLocaleString('ja-JP')}`
                         : '—'}
                     </td>
-                    <td className="px-3 py-2 text-right">
+                    <td className="px-2.5 py-2 text-right">
                       <PctCell value={r.ret_since_pct} />
                     </td>
-                    <td className="px-3 py-2 text-right">
+                    <td className="px-2.5 py-2 text-right">
                       <NumCell value={r.adr_pct_20} suffix="%" />
                     </td>
 
-                    <td className="px-3 py-2 text-right">
+                    <td className="px-2.5 py-2 text-right">
                       <NumCell value={r.atr_14} />
                     </td>
-                    <td className="px-3 py-2 text-right">
+                    <td className="px-2.5 py-2 text-right">
                       <YenCell value={r.dist_ema21_low_yen} title="TV 表示は呼値に丸められるため数円ずれます" />
                     </td>
-                    <td className="px-3 py-2 text-right">
+                    <td className="px-2.5 py-2 text-right">
                       <PctCell value={riskPct(r.dist_ema21_low_yen, r.close_adj)} digits={2} neutral />
                     </td>
-                    <td className="px-3 py-2 text-right">
+                    <td className="px-2.5 py-2 text-right">
                       <YenCell value={r.rr2_ema21_low_yen} title="TV 表示は呼値に丸められるため数円ずれます" />
                     </td>
-                    <td className="px-3 py-2 text-right">
+                    <td className="px-2.5 py-2 text-right">
                       <PctCell value={riskPct(r.rr2_ema21_low_yen, r.close_adj)} digits={2} neutral />
                     </td>
 
-                    <td className="px-3 py-2 text-right">
+                    <td className="px-2.5 py-2 text-right">
                       <NumCell value={r.rs_vs_topix_avg} digits={0} />
                     </td>
-                    <td className="px-3 py-2 text-right">
+                    <td className="px-2.5 py-2 text-right">
                       <NumCell value={r.dist_from_high_pct} suffix="%" />
                     </td>
-                    <td className="px-3 py-2 text-right">
+                    <td className="px-2.5 py-2 text-right">
                       <NumCell value={r.ext_r} suffix="R" />
                     </td>
                   </tr>
@@ -291,7 +298,7 @@ export default function CurrentStateTable({ rows }: Props) {
       {/* STATE_ORDER に載っていない状態が来たら（TradingView 側で新しい
           セクションを作ったとき）末尾に「（不明）」で出る。気付けるよう明示。 */}
       {groups.some(g => !STATE_ORDER.includes(g.state as never)) && (
-        <p className="text-[11px] text-amber-700 mt-2">
+        <p className="text-caption text-[var(--sem-watch-fg)] mt-2">
           未知の状態が含まれています。TradingView 側でセクションを追加した場合は
           <code className="font-mono mx-1">types/watchlistJournal.ts</code>
           の STATE_ORDER も更新してください。
