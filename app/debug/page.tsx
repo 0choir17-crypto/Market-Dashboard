@@ -18,7 +18,8 @@ const TABLES = [
   'sector_index_prices',
   'chart_ohlcv_cache',
   'trades',
-  'watchlist',
+  'watchlist_events',
+  'watchlist_current',
   'risk_settings',
 ] as const
 

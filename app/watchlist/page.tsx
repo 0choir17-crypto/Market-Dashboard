@@ -1,326 +1,153 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
-import { supabase } from '@/lib/supabase'
-import { WatchlistItem } from '@/types/portfolio'
-import { Trade } from '@/types/trades'
-import WatchlistModal from '@/components/watchlist/WatchlistModal'
-import ConfirmDialog from '@/components/shared/ConfirmDialog'
+// Watchlist Journal — TradingView の操作記録を振り返る画面。
+//
+// 旧 /watchlist（Supabase の watchlist テーブルへの手入力）は 0 行のまま使われず、
+// テーブルごと 2026-09-05 に drop された。銘柄選定は TradingView 上で行い、
+// Chrome 拡張が 30 分おきにスナップショットを撮って差分から遷移イベントを
+// 復元して Supabase に配信する。この画面はその記録を読むだけの読み取り専用で、
+// 追加・編集・削除の導線は持たない（Supabase 側にも write policy が無い）。
+//
+// この画面の目的は 2 つだけ:
+//   1. 上昇・下降する銘柄の特徴を掴めているか（自分が拾った銘柄はどういう姿だったか）
+//   2. 見逃したのはなぜか（入れたのに買わずに落とした銘柄がその後どうなったか）
+//
+// 日付は DateContext（営業日ピッカー）を使わない。記録は土日祝にも発生するため、
+// 営業日で絞ると週末のイベントが丸ごと消える。/leaders や /earnings と同じく
+// ページ独自のセレクトにし、選択肢は watchlist_events の date の distinct から作る。
+
+import { useCallback, useEffect, useRef, useState } from 'react'
+import {
+  EMPTY_SNAPSHOT,
+  fetchWatchlistJournal,
+  type WatchlistJournalSnapshot,
+} from '@/lib/watchlistJournalFetch'
+import CurrentStateTable from '@/components/watchlistJournal/CurrentStateTable'
+import DailyDiff from '@/components/watchlistJournal/DailyDiff'
+import MissedBoard from '@/components/watchlistJournal/MissedBoard'
+import SnapshotFreshnessBadge from '@/components/watchlistJournal/SnapshotFreshnessBadge'
 import ErrorBanner from '@/components/shared/ErrorBanner'
-import PositionModal from '@/components/portfolio/PositionModal'
 import PageHeader from '@/components/shared/PageHeader'
-import { formatYen } from '@/lib/format'
 
-type SortKey = 'watch_date' | 'ticker' | 'screen_tag'
-
-function ScreenTagBadge({ tag }: { tag: string | null }) {
-  if (!tag) return <span className="text-gray-400 text-xs">—</span>
-  return (
-    <span className="inline-block px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded text-xs font-medium">
-      {tag}
-    </span>
-  )
-}
-
-export default function WatchlistPage() {
-  const [items, setItems] = useState<WatchlistItem[]>([])
+export default function WatchlistJournalPage() {
+  const [snapshot, setSnapshot] = useState<WatchlistJournalSnapshot>(EMPTY_SNAPSHOT)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [sortKey, setSortKey] = useState<SortKey>('watch_date')
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
 
-  // Modal states
-  const [addOpen, setAddOpen] = useState(false)
-  const [editItem, setEditItem] = useState<WatchlistItem | null>(null)
-  const [deleteItem, setDeleteItem] = useState<WatchlistItem | null>(null)
-  const [promoteItem, setPromoteItem] = useState<WatchlistItem | null>(null)
+  // 日付の高速切替時に古い応答が後着して新しい表示を上書きしないためのガード
+  const requestIdRef = useRef(0)
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (date?: string) => {
+    const reqId = ++requestIdRef.current
     setLoading(true)
-    const { data, error: err } = await supabase
-      .from('watchlist')
-      .select('*')
-      .order('watch_date', { ascending: false })
-    if (err) {
-      // 取得失敗時は直前の表示内容を保持し、バナーで明示（空リストと混同させない）
-      console.error('[watchlist] fetch error', err)
-      setError(`watchlist: ${err.message}`)
-    } else {
-      setItems((data ?? []) as WatchlistItem[])
-      setError(null)
-    }
+    const snap = await fetchWatchlistJournal(date)
+    if (reqId !== requestIdRef.current) return // 古いリクエストの応答は破棄
+    setSnapshot(snap)
     setLoading(false)
   }, [])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => { load() }, [load])  // eslint-disable-line react-hooks/set-state-in-effect
 
-  function handleSort(key: SortKey) {
-    if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
-    else { setSortKey(key); setSortDir('desc') }
-  }
+  const latestAvailable = snapshot.availableDates[0] ?? null
+  const isLatest =
+    snapshot.availableDates.length === 0 || snapshot.selectedDate === snapshot.availableDates[0]
 
-  const sorted = useMemo(() => {
-    return [...items].sort((a, b) => {
-      const av = a[sortKey] ?? ''
-      const bv = b[sortKey] ?? ''
-      const cmp = av < bv ? -1 : av > bv ? 1 : 0
-      return sortDir === 'asc' ? cmp : -cmp
-    })
-  }, [items, sortKey, sortDir])
-
-  async function handleDelete() {
-    if (!deleteItem) return
-    const { error: err } = await supabase.from('watchlist').delete().eq('id', deleteItem.id)
-    setDeleteItem(null)
-    if (err) {
-      // 削除失敗は黙って戻さない（リロードで行が復活して見えるだけ、を防ぐ）
-      console.error('[watchlist] delete error', err)
-      setError(`削除に失敗しました: ${err.message}`)
-      return
-    }
-    setError(null)
-    load()
-  }
-
-  // Build prefill for PositionModal from watchlist item
-  const promotePrefill: Partial<Trade> | undefined = promoteItem ? {
-    ticker: promoteItem.ticker,
-    company_name: promoteItem.company_name,
-    entry_price: promoteItem.entry_price ?? 0,
-    stop_price: promoteItem.stop_price,
-    target_r: promoteItem.target_r,
-    memo: promoteItem.memo,
-    // シグナルスナップショット引き継ぎ
-    sector_s33: promoteItem.sector_s33,
-    signal_price: promoteItem.signal_price,
-    rs_at_entry: promoteItem.rs_composite,
-    rvol_at_entry: promoteItem.rvol,
-    adr_at_entry: promoteItem.adr_pct,
-    dist_ema21_at_entry: promoteItem.dist_ema21_r,
-    stop_pct_at_entry: promoteItem.stop_pct,
-    mc_met_at_entry: promoteItem.mc_met,
-    mc_condition_at_entry: promoteItem.mc_condition,
-  } : undefined
-
-  const thClass = (key: SortKey) =>
-    `px-3 py-2.5 text-xs font-semibold uppercase tracking-wide cursor-pointer select-none whitespace-nowrap hover:bg-gray-100 transition-colors ${sortKey === key ? 'text-blue-600' : 'text-gray-500'}`
-
-  const indicator = (key: SortKey) =>
-    sortKey === key ? (sortDir === 'asc' ? ' ↑' : ' ↓') : ' ↕'
+  const hasAnything =
+    snapshot.current.length > 0 || snapshot.events.length > 0 || snapshot.missed.length > 0
 
   return (
     <main className="min-h-screen p-6" style={{ backgroundColor: 'var(--bg-primary)' }}>
-      {/* Header */}
-      <PageHeader title="Watchlist" subtitle="21 Cloud — スクリーニング候補管理">
-        <button
-          onClick={() => setAddOpen(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors min-h-[44px]"
-        >
-          <span className="text-lg leading-none">＋</span> 追加
-        </button>
+      <PageHeader
+        title="Watchlist Journal"
+        subtitle="TradingView の操作記録 — 何を拾い、何を落としたか"
+        onRefresh={() => load(snapshot.selectedDate ?? undefined)}
+        refreshing={loading}
+      >
+        <SnapshotFreshnessBadge lastTs={snapshot.lastTs} />
+
+        {snapshot.availableDates.length > 0 && (
+          <select
+            value={snapshot.selectedDate ?? ''}
+            onChange={e => load(e.target.value)}
+            aria-label="差分を表示する日"
+            className={`text-xs font-mono px-2 py-1 rounded border cursor-pointer ${
+              isLatest
+                ? 'border-gray-200 bg-[var(--bg-card)] text-gray-700'
+                : 'border-amber-400 bg-amber-100 text-amber-800 font-semibold'
+            }`}
+          >
+            {snapshot.availableDates.map(d => (
+              <option key={d} value={d}>
+                {d}{d === snapshot.availableDates[0] ? '（最新）' : ''}
+              </option>
+            ))}
+          </select>
+        )}
+        {!isLatest && latestAvailable && (
+          <button
+            onClick={() => load(latestAvailable)}
+            className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500 text-white hover:bg-amber-600 transition-colors font-medium"
+          >
+            最新に戻る
+          </button>
+        )}
       </PageHeader>
 
-      {error && <ErrorBanner detail={error} onRetry={load} />}
+      {/* 過去日を選んでいるのは「差分」セクションだけで、現在の状態と
+          見逃しボードは常に最新を出す。取り違えないよう明示する。 */}
+      {!isLatest && snapshot.selectedDate && (
+        <div className="mb-4 px-4 py-2 rounded-lg bg-amber-50 border border-amber-300 text-amber-800 text-sm font-medium">
+          {snapshot.selectedDate} の差分を表示中
+          <span className="ml-2 font-normal text-amber-700">
+            （「現在の状態」と「見逃しボード」は常に最新です）
+          </span>
+        </div>
+      )}
 
-      {/* Desktop Table */}
-      <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm overflow-x-auto hidden sm:block">
-        <div className="px-4 pt-4 pb-2 text-xs text-gray-400">{items.length} 件</div>
-        <table className="w-full min-w-[1200px] text-sm">
-          <thead>
-            <tr className="bg-[var(--bg-card-hover)] border-b border-t border-[var(--border)]">
-              <th className={`${thClass('ticker')} text-left`} onClick={() => handleSort('ticker')}>
-                Ticker{indicator('ticker')}
-              </th>
-              <th className="px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide text-left whitespace-nowrap">Name</th>
-              <th className={`${thClass('watch_date')} text-left`} onClick={() => handleSort('watch_date')}>
-                Added{indicator('watch_date')}
-              </th>
-              <th className={`${thClass('screen_tag')} text-left`} onClick={() => handleSort('screen_tag')}>
-                Screen{indicator('screen_tag')}
-              </th>
-              <th className="px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide text-right whitespace-nowrap">Signal Price</th>
-              <th className="px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide text-right whitespace-nowrap">Stop</th>
-              <th className="px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide text-right whitespace-nowrap">R Target</th>
-              <th className="px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide text-right whitespace-nowrap">RS</th>
-              <th className="px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide text-right whitespace-nowrap">RVOL</th>
-              <th className="px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide text-right whitespace-nowrap">ADR%</th>
-              <th className="px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide text-right whitespace-nowrap">EMA21(R)</th>
-              <th className="px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide text-left whitespace-nowrap">Sector</th>
-              <th className="px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide text-left whitespace-nowrap">Memo</th>
-              <th className="px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide text-right whitespace-nowrap">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sorted.map((item, i) => (
-              <tr
-                key={item.id}
-                className={`border-b border-[var(--border-subtle)] hover:bg-[var(--bg-card-hover)] transition-colors ${i % 2 === 0 ? 'bg-[var(--bg-card)]' : 'bg-[var(--bg-card-hover)]'}`}
-              >
-                <td className="px-3 py-2.5 whitespace-nowrap">
-                  <a
-                    href={`https://jp.tradingview.com/chart/?symbol=TSE:${item.ticker}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="font-mono font-bold text-blue-600 hover:underline text-xs"
-                  >
-                    {item.ticker}
-                  </a>
-                </td>
-                <td className="px-3 py-2.5 whitespace-nowrap text-xs text-gray-700">
-                  {item.company_name ? (
-                    <a
-                      href={`https://shikiho.toyokeizai.net/stocks/${item.ticker}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="hover:underline"
-                    >
-                      {item.company_name}
-                    </a>
-                  ) : '—'}
-                </td>
-                <td className="px-3 py-2.5 whitespace-nowrap text-xs text-gray-600 font-mono">{item.watch_date}</td>
-                <td className="px-3 py-2.5 whitespace-nowrap"><ScreenTagBadge tag={item.screen_tag} /></td>
-                <td className="px-3 py-2.5 text-right font-mono text-xs whitespace-nowrap">{formatYen(item.entry_price)}</td>
-                <td className="px-3 py-2.5 text-right font-mono text-xs whitespace-nowrap">{formatYen(item.stop_price)}</td>
-                <td className="px-3 py-2.5 text-right font-mono text-xs whitespace-nowrap">
-                  {item.target_r != null ? `${item.target_r}R` : '—'}
-                </td>
-                <td className="px-3 py-2.5 text-right font-mono text-xs whitespace-nowrap">{item.rs_composite != null ? item.rs_composite.toFixed(1) : '—'}</td>
-                <td className="px-3 py-2.5 text-right font-mono text-xs whitespace-nowrap">
-                  {item.rvol != null ? (
-                    <span className={item.rvol >= 2 ? 'font-bold text-emerald-600' : ''}>{item.rvol.toFixed(2)}</span>
-                  ) : '—'}
-                </td>
-                <td className="px-3 py-2.5 text-right font-mono text-xs whitespace-nowrap">{item.adr_pct != null ? item.adr_pct.toFixed(1) : '—'}</td>
-                <td className="px-3 py-2.5 text-right font-mono text-xs whitespace-nowrap">{item.dist_ema21_r != null ? item.dist_ema21_r.toFixed(2) : '—'}</td>
-                <td className="px-3 py-2.5 text-xs text-gray-500 whitespace-nowrap">{item.sector_s33 ?? '—'}</td>
-                <td className="px-3 py-2.5 text-xs text-gray-500 max-w-[160px]">
-                  <span className="block truncate">{item.memo ?? '—'}</span>
-                </td>
-                <td className="px-3 py-2.5 whitespace-nowrap">
-                  <div className="flex items-center justify-end gap-1">
-                    <button
-                      onClick={() => setPromoteItem(item)}
-                      className="px-2 py-1 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded hover:bg-green-100 transition-colors"
-                      title="ポートフォリオに昇格"
-                    >
-                      → Portfolio
-                    </button>
-                    <button
-                      onClick={() => setEditItem(item)}
-                      className="px-2 py-1 text-xs font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded hover:bg-blue-100 transition-colors"
-                    >
-                      編集
-                    </button>
-                    <button
-                      onClick={() => setDeleteItem(item)}
-                      className="px-2 py-1 text-xs font-medium text-red-600 bg-red-50 border border-red-200 rounded hover:bg-red-100 transition-colors"
-                    >
-                      削除
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {items.length === 0 && !loading && (
-          <div className="py-12 text-center text-gray-400 text-sm">
-            ウォッチリストは空です。「追加」から登録してください。
-          </div>
-        )}
-        {loading && (
-          <div className="py-12 text-center text-gray-400 text-sm">読み込み中…</div>
-        )}
-      </div>
+      {snapshot.error && (
+        <ErrorBanner
+          detail={snapshot.error}
+          onRetry={() => load(snapshot.selectedDate ?? undefined)}
+        />
+      )}
 
-      {/* Mobile Card Layout */}
-      <div className="block sm:hidden space-y-3">
-        {loading && <p className="text-center text-gray-400 text-sm py-8">読み込み中…</p>}
-        {!loading && items.length === 0 && (
-          <p className="text-center text-gray-400 text-sm py-8">ウォッチリストは空です。</p>
-        )}
-        {sorted.map(item => (
-          <div key={item.id} className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-4">
-            <div className="flex justify-between items-start mb-2">
-              <div>
-                <a
-                  href={`https://jp.tradingview.com/chart/?symbol=TSE:${item.ticker}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="font-mono font-bold text-blue-600 text-base hover:underline"
-                >
-                  {item.ticker}
-                </a>
-                {item.company_name && (
-                  <span className="ml-2 text-xs text-gray-600">{item.company_name}</span>
-                )}
-              </div>
-              <ScreenTagBadge tag={item.screen_tag} />
-            </div>
-            <div className="grid grid-cols-3 gap-2 text-xs text-gray-600 mb-2">
-              <div><span className="text-gray-400 block">Added</span><span className="font-mono">{item.watch_date}</span></div>
-              <div><span className="text-gray-400 block">Signal</span><span className="font-mono">{formatYen(item.entry_price)}</span></div>
-              <div><span className="text-gray-400 block">Stop</span><span className="font-mono">{formatYen(item.stop_price)}</span></div>
-              <div><span className="text-gray-400 block">R Target</span>{item.target_r != null ? `${item.target_r}R` : '—'}</div>
-            </div>
-            {item.rs_composite != null && (
-              <div className="grid grid-cols-3 gap-2 text-xs text-gray-600 mb-3">
-                <div><span className="text-gray-400 block">RS</span>{item.rs_composite.toFixed(1)}</div>
-                <div><span className="text-gray-400 block">RVOL</span><span className={item.rvol != null && item.rvol >= 2 ? 'font-bold text-emerald-600' : ''}>{item.rvol?.toFixed(2) ?? '—'}</span></div>
-                <div><span className="text-gray-400 block">Sector</span>{item.sector_s33 ?? '—'}</div>
-              </div>
-            )}
-            {item.memo && <p className="text-xs text-gray-500 mb-3 truncate">{item.memo}</p>}
-            <div className="flex gap-2">
-              <button
-                onClick={() => setPromoteItem(item)}
-                className="flex-1 py-2 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100"
-              >
-                → Portfolio
-              </button>
-              <button
-                onClick={() => setEditItem(item)}
-                className="px-3 py-2 text-xs font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100"
-              >
-                編集
-              </button>
-              <button
-                onClick={() => setDeleteItem(item)}
-                className="px-3 py-2 text-xs font-medium text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100"
-              >
-                削除
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
+      {loading && !hasAnything ? (
+        <div
+          className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-8 text-center"
+          style={{ color: 'var(--text-muted)' }}
+        >
+          <p className="text-lg font-medium">読み込み中…</p>
+        </div>
+      ) : !hasAnything ? (
+        <div
+          className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-8 text-center"
+          style={{ color: 'var(--text-muted)' }}
+        >
+          <p className="text-lg font-medium mb-2">記録がまだありません</p>
+          <p className="text-sm">
+            Supabase の <code className="font-mono">watchlist_events</code> /{' '}
+            <code className="font-mono">watchlist_current</code> にデータがあるか確認してください。
+            <br />
+            毎日 23:30（土日祝も）に WatchlistJournal-Ingest から自動 push されます。
+          </p>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-10">
+          <CurrentStateTable rows={snapshot.current} />
+          <DailyDiff events={snapshot.events} date={snapshot.selectedDate} />
+          <MissedBoard rows={snapshot.missed} />
+        </div>
+      )}
 
-      {/* Modals */}
-      <WatchlistModal
-        open={addOpen}
-        onClose={() => setAddOpen(false)}
-        onSaved={load}
-      />
-      <WatchlistModal
-        open={!!editItem}
-        onClose={() => setEditItem(null)}
-        onSaved={load}
-        initial={editItem ?? undefined}
-      />
-      <ConfirmDialog
-        open={!!deleteItem}
-        message={`「${deleteItem?.ticker}」をウォッチリストから削除しますか？`}
-        onConfirm={handleDelete}
-        onCancel={() => setDeleteItem(null)}
-      />
-      {/* Promote to Portfolio modal */}
-      <PositionModal
-        open={!!promoteItem}
-        onClose={() => setPromoteItem(null)}
-        onSaved={() => { setPromoteItem(null) }}
-        initial={promotePrefill}
-      />
+      {/* 読み取り専用であることと、記録の性格を明示しておく。
+          リストを動かした日は約定日ではなく、損益の正本は trades（Trading）。 */}
+      <p className="mt-10 text-[11px] leading-relaxed text-[var(--text-muted)]">
+        この画面は読み取り専用です。銘柄の追加・移動・削除は TradingView 側で行い、毎日 23:30
+        （手動更新はデスクトップのショートカット）に自動で記録されます。日中は更新されません。
+        <br />
+        HOLD → SOLD はリストを動かした日であって約定日ではありません。損益は Trading（trades）が正本です。
+        記録開始日 2026-08-13 に HOLD / SOLD として現れた 4 銘柄（3697 / 5857 / 6326 / 8136）は
+        それ以前から保有していた建玉で、日付も滞在日数も実際のエントリーとは無関係です。
+      </p>
     </main>
   )
 }

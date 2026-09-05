@@ -202,19 +202,21 @@ export default function GuidePage() {
     <main className="min-h-screen p-6" style={{ backgroundColor: 'var(--bg-primary)' }}>
       <PageHeader
         title="Guide"
-        subtitle="ダッシュボードの見方 — Daily Watch（ウォッチリスト）・Trading（記録）・Screens・Market Condition v4"
+        subtitle="ダッシュボードの見方 — Daily Watch（候補）・Watchlist Journal（TradingView の記録）・Trading（記録）・Screens・Market Condition v4"
       />
 
-      {/* ── Daily Watch — ウォッチリスト ──────────────────────────────────── */}
+      {/* ── Daily Watch — 今日の候補 ─────────────────────────────────────── */}
       <section className="mb-8">
         <h2 className="text-lg font-bold mb-3" style={{ color: 'var(--text-primary)' }}>
-          Daily Watch — ウォッチリスト
+          Daily Watch — 今日の候補
         </h2>
         <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-5 text-sm text-gray-700 space-y-3">
           <p>
             <strong>&quot;候補&quot;</strong>を毎日（平日引け後 ~18:00 JST）に更新。最新日が「今日の候補」です。
             <span className="text-gray-500">
-              いずれも買いシグナルではなく、チャートを開く銘柄を絞り込むためのウォッチリストです（執行は手動判断）。
+              いずれも買いシグナルではなく、チャートを開く銘柄を絞り込むためのリストです（執行は手動判断）。
+              気になった銘柄はカードの <span className="font-mono">⧉ TSE:XXXX</span> ボタンでティッカーをコピーし、
+              <strong>TradingView 側のウォッチリストに追加</strong>してください（ダッシュボードから登録する機能はありません）。
             </span>
             <br />
             <span className="text-gray-500 text-xs">
@@ -271,6 +273,66 @@ export default function GuidePage() {
                 <span className="font-mono">RS ≥</span> スライダーは配信側では掛けていない補助フィルタで、
                 既定は「なし」。上げると <span className="font-mono">EMA50</span> のタッチが大きく削れます
                 （深く押した銘柄は押した事実で RS が下がるため）。
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Watchlist Journal — TradingView の操作記録 ─────────────────────── */}
+      <section className="mb-8">
+        <h2 className="text-lg font-bold mb-3" style={{ color: 'var(--text-primary)' }}>
+          Watchlist Journal — TradingView の操作記録
+        </h2>
+        <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-5 text-sm text-gray-700 space-y-3">
+          <p>
+            候補の管理は<strong>ダッシュボードではなく TradingView</strong> で行い、
+            その操作（追加・セクション移動・削除）が <strong>30 分おきのスナップショット</strong>から
+            自動で記録されます。<strong>この画面は読み取り専用</strong>で、追加・編集・削除はできません。
+            <br />
+            <span className="text-gray-500 text-xs">
+              かつてダッシュボードに手入力する Watchlist 画面がありましたが、1 件も入力されないまま
+              2026-09-05 に廃止しました（手入力は続かない、というのが実測結果です）。
+            </span>
+          </p>
+          <ul className="list-disc pl-5 space-y-1.5">
+            <li>
+              <strong className="text-gray-900">現在の状態</strong> —
+              <span className="font-mono"> HOLD / READY / FOCUS / SECOND / SHORT / OTHERS / INBOX / SOLD</span>{' '}
+              ごとに現在のリストを表示。既定は<strong>滞在日数の長い順</strong>で、
+              「READY で何日止まっているか」が一目で分かるようにしています。
+            </li>
+            <li>
+              <strong className="text-gray-900">差分</strong> — 選んだ日の
+              新規 / 昇格 / 降格 / 削除を時系列で。優先度は
+              <span className="font-mono"> HOLD &gt; READY &gt; FOCUS &gt; SECOND &gt; OTHERS &gt; INBOX</span> で、
+              <strong>READY → HOLD（実際に買った）</strong>が最も強い昇格として出ます。
+            </li>
+            <li>
+              <strong className="text-gray-900">見逃しボード</strong> — Watch list に入れたのに
+              <strong>買わないまま落とした銘柄</strong>を、落とした後の最大上昇順に並べます。
+              <strong>READY からの離脱</strong>（エントリー可と判断しておいて買わなかった）が最も重い見逃しです。
+            </li>
+          </ul>
+          <div className="bg-[var(--bg-card-hover)] rounded-lg p-3">
+            <p className="font-semibold text-gray-800 mb-1.5">読むときの注意</p>
+            <ul className="list-disc pl-5 space-y-1">
+              <li>
+                <strong>勝率・PF・期待値は出していません。</strong>2026-08-13 開始でサンプルが少なく、
+                この規模の勝率は実力ではなくノイズ（そして繰り返し
+                <span className="font-mono"> ADR%20 </span>の影武者）になるためです。集計は中央値まで。
+              </li>
+              <li>
+                記録は<strong>土日祝にも発生します</strong>（週末にまとめて整理するため）。
+                この画面だけ営業日ピッカーを使わず、ページ独自の日付セレクトになっているのはそのためです。
+              </li>
+              <li>
+                <span className="font-mono">HOLD → SOLD</span> は<strong>リストを動かした日</strong>であって
+                約定日ではありません。損益の正本は <strong>Trading</strong>（trades）です。
+              </li>
+              <li>
+                更新は<strong>毎日 23:30</strong>（手動更新はデスクトップのショートカット）。
+                日中は更新されず、前夜の状態を見る画面です。
               </li>
             </ul>
           </div>

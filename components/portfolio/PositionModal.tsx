@@ -174,7 +174,7 @@ export default function PositionModal({ open, onClose, onSaved, initial }: Props
       status: hasExit ? 'closed' : 'open',
       updated_at: new Date().toISOString(),
       ...exitFields,
-      // シグナルスナップショット（新規作成時のみ、Watchlist昇格等で渡された場合）
+      // シグナルスナップショット（新規作成時のみ、Daily Watch のカードから渡された場合）
       ...(isEdit ? {} : {
         signal_price: initial?.signal_price ?? null,
         rs_at_entry: initial?.rs_at_entry ?? null,

@@ -24,7 +24,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 ## 認証とRLS
 
-書き込み系テーブル（`trades` / `notes` / `risk_settings` / `watchlist`）は
+書き込み系テーブル（`trades` / `notes` / `risk_settings`）は
 `supabase/migrations/20260704_secure_user_tables.sql` 適用後、**閲覧は anon のまま・書き込みは authenticated 限定**になります。
 
 セットアップ手順:
@@ -71,23 +71,23 @@ npm run build   # 静的ビルド → out/
 ## ディレクトリ構成
 
 ```
-app/                  # App Router ページ (/, /today, /journal, /portfolio, /sectors, /sectors33, /watchlist, /guide)
+app/                  # App Router ページ (/, /leaders, /earnings, /today, /watchlist,
+                      #   /journal, /notes, /guide, /sectors33, /portfolio→redirect, /debug)
 components/           # 画面別 UI コンポーネント
-  market/             # MC v4 ScoreGauge / FactorGrid / DynamicsCards / Breadth / IndexCard
-  today/              # Today 集約画面
+  market/             # TOPIX チャート / Market Breadth
+  sectors33/          # TOPIX-33 Sector Selection (チャート / テーブル / RRG / 棒グラフ)
+  leaders/            # Market Leaders Top 50 / セクター集中度 / ローテーション
+  earnings/           # Earnings Quality
+  today/              # Daily Watch (Structure Pivot / EMA Setups)
+  watchlistJournal/   # Watchlist Journal (現在の状態 / 差分 / 見逃しボード) — 読み取り専用
   journal/            # Trade Journal
-  portfolio/          # Positions / History / Risk
-  watchlist/          # Watchlist
-  sectors/            # Sector RS / RRG / 棒グラフ
-  sectors33/          # TOPIX-33 Sector Selection
-  chart/              # 個別銘柄チャート（StockChartView ほか）
-  vcp/                # VCP テーブル
-  signals/            # Signals テーブル
-  structurePivot/     # Structure Pivot テーブル / 凡例
-  shared/             # Modal / Tooltip / ConfirmDialog
+  portfolio/          # Positions / Risk / PositionModal
+  auth/               # LoginModal
+  shared/             # PageHeader / Modal / Tooltip / ConfirmDialog / ErrorBanner
 lib/                  # Supabase クライアント・フェッチ・指標計算
 types/                # TS 型定義
-contexts/             # DateContext (日付ピッカー)
+contexts/             # DateContext (日付ピッカー) / AuthContext
 supabase/             # SQL マイグレーション（参考）
 scripts/              # メンテナンス用 (MFE/MAE バックフィル等)
+docs/                 # PAGE_STRUCTURE.md（画面構成のスナップショット）
 ```

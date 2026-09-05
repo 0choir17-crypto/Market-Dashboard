@@ -50,7 +50,7 @@ app/layout.tsx  (RootLayout, lang="ja")
 | `/leaders` | `app/leaders/page.tsx` | 画面 | Market Leaders (Top 50) |
 | `/earnings` | `app/earnings/page.tsx` | 画面 | Earnings Quality |
 | `/today` | `app/today/page.tsx` | 画面 | Daily Watch（当日スキャナー結果） |
-| `/watchlist` | `app/watchlist/page.tsx` | 画面 | Watchlist（スクリーニング候補管理） |
+| `/watchlist` | `app/watchlist/page.tsx` | 画面 | Watchlist Journal（TradingView の操作記録・読み取り専用） |
 | `/journal` | `app/journal/page.tsx` | 画面 | Trading（3 タブ: Positions / Journal / Risk） |
 | `/notes` | `app/notes/page.tsx` | 画面 | Notes（自由メモ、自動保存） |
 | `/guide` | `app/guide/page.tsx` | 画面 | Guide（見方・Screens・MC v4 解説・Glossary） |
@@ -132,20 +132,34 @@ app/layout.tsx  (RootLayout, lang="ja")
    ※統計的エッジ無し（勝率 23.6% vs ベースライン 23.1%）と明記した上でのスクリーニング用リスト。→ `EmaSetupCard`
 
 - 複数シグナル重複（同一 code が 2 スキャナー以上に出現）は `multiHitCodes` で黄色強調
-- 各カードから `WatchlistModal` / `PositionModal` を直接開ける
+- 各カードから `PositionModal` を直接開ける。ウォッチリストへの追加ボタンは廃止し、
+  `CopyTickerButton`（`TSE:XXXX` をクリップボードにコピー → TradingView に貼る）に置き換え
 - データ: `lib/todayFetch.ts`（`ema` / `struct` / `hotSectors`）
 
 ---
 
-### `/watchlist` — Watchlist
-サブタイトル: 21 Cloud — スクリーニング候補管理。
+### `/watchlist` — Watchlist Journal
+サブタイトル: TradingView の操作記録 — 何を拾い、何を落としたか。
 
-- ヘッダー右: 新規追加ボタン
-- デスクトップ用テーブル（最小幅 1200px）: 監視日 / ティッカー / スクリーンタグ（`ScreenTagBadge`）ほか。
-  `watch_date` / `ticker` / `screen_tag` でソート可（クリックで昇降順トグル）
-- 行アクション: 編集 / 削除（`ConfirmDialog`）/「ポートフォリオに昇格」（`PositionModal`）
-- モーダル: `WatchlistModal`（追加・編集）
-- データ: `watchlist`。取得失敗時は直前の表示を保持し `ErrorBanner` で明示
+**読み取り専用**。追加・編集・削除の導線は無い（編集は TradingView 側で行い、Chrome 拡張が
+30 分おきのスナップショットの差分からイベントを復元して Supabase に配信する）。
+旧「手入力の候補管理」画面は 1 件も入力されないまま 2026-09-05 に廃止し、`watchlist` テーブルも drop 済み。
+
+- ヘッダー右: **SnapshotFreshnessBadge**（最終記録時刻 + 鮮度）/ 日付セレクト /「最新に戻る」
+  - 鮮度は **実時間ベース**（<24h 緑 / 24-48h 黄 / >48h 赤）。記録は土日祝にも走るため、
+    `/earnings` の `classifyFreshness`（営業日ベース）は流用せず `types/watchlistJournal.ts` に専用実装
+- **日付ピッカーは `DateContext` を使わない**。イベント日は土日祝を含むので、選択肢は
+  `watchlist_events` の `date` の distinct から作る（`/leaders` `/earnings` と同じページ独自セレクト）
+- 過去日を選ぶと「差分」だけがその日になり、「現在の状態」「見逃しボード」は常に最新
+- 本体 3 セクション
+  1. **CurrentStateTable** — 現在の状態。`watchlist_current` を state でグループ化
+     （`HOLD → READY → FOCUS → SECOND → SHORT → OTHERS → INBOX → SOLD`）。既定ソートは滞在日数の降順
+  2. **DailyDiff** — 選択日の差分。`classifyMove` で新規 / 昇格 / 降格 / 買い / 決済 / 転換 / 仕分け / 削除を判定
+     （優先度 `HOLD > READY > FOCUS > SECOND > OTHERS > INBOX`、`SHORT` は別軸）
+  3. **MissedBoard** — 見逃しボード（主役）。Watch list に入れたが **その exit の時点までに HOLD に
+     至らなかった**銘柄を `from_state` 別に集計し、`max_ret_pct` 降順で並べる。READY からの離脱を強調
+- **勝率・PF・期待値は出さない**（サンプル過少。集計は中央値までで、件数を明記）
+- データ: `watchlist_events` / `watchlist_current`（`lib/watchlistJournalFetch.ts`）、型は `types/watchlistJournal.ts`
 
 ---
 
@@ -200,7 +214,8 @@ app/layout.tsx  (RootLayout, lang="ja")
 `process.env.NODE_ENV === 'production'` のとき実装ごとスタブに置換（公開サイトでの偵察情報化を防ぐ）。
 Env 表示 / `market_conditions` 最新行プローブ / anon ロールでのテーブル別 HEAD count。
 探査対象: `market_conditions`, `ema_setups`, `structure_pivot_events`, `mc_v4_raw_history`,
-`sector_selection_s33`, `sector_index_prices`, `chart_ohlcv_cache`, `trades`, `watchlist`, `risk_settings`。
+`sector_selection_s33`, `sector_index_prices`, `chart_ohlcv_cache`, `trades`,
+`watchlist_events`, `watchlist_current`, `risk_settings`。
 
 ---
 
@@ -228,24 +243,30 @@ Env 表示 / `market_conditions` 最新行プローブ / anon ロールでのテ
 | `market_leaders` | `/leaders`（Top 50 スナップショット・セクターローテーションとも同一テーブル） |
 | `ema_setups` / `structure_pivot_events` | `/today`（`lib/todayFetch.ts`） |
 | `trades` / `risk_settings` | `/journal` |
-| `watchlist` | `/watchlist`, `/today`, `/journal` の昇格導線 |
+| `watchlist_events` | `/watchlist`（差分・見逃しボード・鮮度判定） |
+| `watchlist_current` | `/watchlist`（現在の状態） |
 | `notes` | `/notes` |
-| `chart_ohlcv_cache` | `lib/chartFetch.ts`（現状どのページからも未参照、下記） |
-| `daily_signals` | `lib/`（現状どのページからも未参照、下記） |
+| `chart_ohlcv_cache` | `components/journal/TradeChart.tsx`（`lib/chartData.ts`） |
 
 ---
 
 ## 6. 現在どのページからも到達しないコンポーネント
 
-ルートは残っていないが実装だけ残っている系統。整理・復活のどちらでも判断材料になるので明記しておく。
+`components/chart/` `components/signals/` `components/structurePivot/` `components/watchlist/` は
+2026-09-05 の Watchlist Journal 移行で削除しました（いずれもルートから到達不能で、`tsconfig.json` の
+`include` が `**/*.tsx` のため型チェックだけが走り続けている状態でした）。道連れに未参照となった
+`lib/chartFetch.ts` `lib/cockpit.ts` `lib/structurePivotDraw.ts` `lib/structurePivotFetch.ts`
+`types/signals.ts` `types/structurePivot.ts`、および `types/portfolio.ts` の `WatchlistItem` 型も削除済み。
 
-| ディレクトリ | 状態 |
+残っている到達不能ファイル（今回の対象外・別途判断）:
+
+| ファイル | 備考 |
 |---|---|
-| `components/chart/` | `StockChartView` / `StockGrid` / `ViewToggle` がエントリだが、どの `app/**/page.tsx` からも import されていない（内部では `CockpitPanel` / `PriceChart` / `MiniChart` / `StockCard` を使用）。個別銘柄チャート画面のルートが存在しない |
-| `components/signals/` | `SignalsHeader` / `SignalsFilter`（→ `SignalsTable`）が未参照。Signals 画面のルートなし |
-| `components/structurePivot/` | `StructurePivotHeader` / `StructurePivotFilter` / `StructurePivotTable` / `StructurePivotLegend` が未参照。`/today` が使うのは `components/today/StructurePivotSection` + `StructurePivotCard` の別系統 |
+| `components/market/IndexCard.tsx` / `IndexChart.tsx` / `ScoreGauge.tsx` / `EntryGateCard.tsx` / `RefreshButton.tsx` | MC v4 廃止時に画面から外れた |
+| `components/portfolio/HistoryTab.tsx` | Trading の 3 タブ統合時に外れた |
 
-> README の「ディレクトリ構成」には `components/vcp/` と `components/sectors/` の記載があるが、現在のリポジトリには存在しない（`sectors33/` に統合）。
+> README の「ディレクトリ構成」にある `components/vcp/` と `components/sectors/` は存在しません
+> （`sectors33/` に統合）。
 
 ---
 
@@ -256,8 +277,8 @@ NavBar ──┬─ /            Market ─── TopixChart / SectorSection / B
          ├─ /leaders     Market Leaders (Top 50)
          ├─ /earnings    Earnings Quality
          ├─ /today       Daily Watch ── Structure Pivot / EMA Setups
-         │                 └─ カードから WatchlistModal・PositionModal
-         ├─ /watchlist   Watchlist ── 「昇格」→ PositionModal → /journal のデータへ
+         │                 └─ カードから TSE:XXXX コピー・PositionModal
+         ├─ /watchlist   Watchlist Journal ── 現在の状態 / 差分 / 見逃しボード（読み取り専用）
          ├─ /journal     Trading [Positions | Journal | Risk]
          ├─ /notes       Notes
          └─ /guide       Guide

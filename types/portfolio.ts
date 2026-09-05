@@ -1,27 +1,3 @@
-export type WatchlistItem = {
-  id: string
-  ticker: string
-  company_name: string | null
-  watch_date: string
-  entry_price: number | null
-  stop_price: number | null
-  target_r: number | null
-  screen_tag: string | null
-  memo: string | null
-  // シグナルスナップショット
-  rs_composite: number | null
-  rvol: number | null
-  adr_pct: number | null
-  dist_ema21_r: number | null
-  stop_pct: number | null
-  mc_met: boolean | null
-  mc_condition: string | null
-  sector_s33: string | null
-  signal_price: number | null
-  created_at: string
-  updated_at: string
-}
-
 /** @deprecated — trades テーブルに統合済み。Trade型を使用すること */
 export type Position = {
   id: string

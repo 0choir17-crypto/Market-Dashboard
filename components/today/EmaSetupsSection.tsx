@@ -3,10 +3,8 @@
 import { useMemo, useState } from 'react'
 import type { EmaSetupCardRow, EmaPeriod, TouchType } from '@/types/emaSetups'
 import { EMA_PERIODS, resolveTouchType } from '@/types/emaSetups'
-import type { WatchlistItem } from '@/types/portfolio'
 import type { Trade } from '@/types/trades'
 import EmaSetupCard from './EmaSetupCard'
-import WatchlistModal from '@/components/watchlist/WatchlistModal'
 import PositionModal from '@/components/portfolio/PositionModal'
 
 type Props = {
@@ -105,21 +103,8 @@ export default function EmaSetupsSection({
     [filtered],
   )
 
-  const [watchTarget, setWatchTarget] = useState<Partial<WatchlistItem> | null>(null)
   const [positionTarget, setPositionTarget] = useState<Partial<Trade> | null>(null)
 
-  function toWatch(r: EmaSetupCardRow): Partial<WatchlistItem> {
-    return {
-      ticker: r.code,
-      company_name: r.co_name ?? undefined,
-      sector_s33: r.sector_s33 ?? undefined,
-      screen_tag: 'EMA Setup',
-      rs_composite: r.rs_topix_avg ?? undefined,
-      rvol: r.vol_ratio ?? undefined,
-      adr_pct: r.adr_pct ?? undefined,
-      signal_price: r.close ?? undefined,
-    }
-  }
 
   function toPosition(r: EmaSetupCardRow): Partial<Trade> {
     return {
@@ -250,19 +235,12 @@ export default function EmaSetupsSection({
               row={r}
               hot={r.sector_s33 != null && hotSet.has(r.sector_s33)}
               multiHit={multiHitCodes.has(r.code)}
-              onAddWatchlist={row => setWatchTarget(toWatch(row))}
               onAddPosition={row => setPositionTarget(toPosition(row))}
             />
           ))}
         </div>
       )}
 
-      <WatchlistModal
-        open={watchTarget !== null}
-        onClose={() => setWatchTarget(null)}
-        onSaved={() => setWatchTarget(null)}
-        initial={watchTarget ?? undefined}
-      />
       <PositionModal
         open={positionTarget !== null}
         onClose={() => setPositionTarget(null)}

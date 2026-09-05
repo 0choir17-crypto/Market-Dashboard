@@ -2,10 +2,8 @@
 
 import { useMemo, useState } from 'react'
 import type { StructurePivotCardRow, StructurePivotSignal } from '@/types/structurePivotEvents'
-import type { WatchlistItem } from '@/types/portfolio'
 import type { Trade } from '@/types/trades'
 import StructurePivotCard from './StructurePivotCard'
-import WatchlistModal from '@/components/watchlist/WatchlistModal'
 import PositionModal from '@/components/portfolio/PositionModal'
 
 type Props = {
@@ -91,21 +89,8 @@ export default function StructurePivotSection({ rows, hotSectors, title, subtitl
     return [...filtered].sort((a, b) => def.compare(a, b))
   }, [filtered, sortKey])
 
-  const [watchTarget, setWatchTarget] = useState<Partial<WatchlistItem> | null>(null)
   const [positionTarget, setPositionTarget] = useState<Partial<Trade> | null>(null)
 
-  function toWatch(r: StructurePivotCardRow): Partial<WatchlistItem> {
-    return {
-      ticker: r.code,
-      company_name: r.co_name ?? undefined,
-      sector_s33: r.sector_s33 ?? undefined,
-      screen_tag: 'Structure Pivot',
-      rs_composite: r.rs_topix_avg ?? undefined,
-      adr_pct: r.adr_pct ?? undefined,
-      // 建玉ライン（1st Pivot）をエントリー基準としてプリセット。無ければヒット日終値。
-      signal_price: r.first_pivot ?? r.close ?? undefined,
-    }
-  }
 
   function toPosition(r: StructurePivotCardRow): Partial<Trade> {
     return {
@@ -186,19 +171,12 @@ export default function StructurePivotSection({ rows, hotSectors, title, subtitl
               row={r}
               hot={r.sector_s33 != null && hotSet.has(r.sector_s33)}
               multiHit={multiHitCodes.has(r.code)}
-              onAddWatchlist={row => setWatchTarget(toWatch(row))}
               onAddPosition={row => setPositionTarget(toPosition(row))}
             />
           ))}
         </div>
       )}
 
-      <WatchlistModal
-        open={watchTarget !== null}
-        onClose={() => setWatchTarget(null)}
-        onSaved={() => setWatchTarget(null)}
-        initial={watchTarget ?? undefined}
-      />
       <PositionModal
         open={positionTarget !== null}
         onClose={() => setPositionTarget(null)}
