@@ -158,8 +158,9 @@ app/layout.tsx  (RootLayout, lang="ja")
      `1R（21EMA Low）` `1R %（21EMA Low）` `RR2（21EMA Low）` `RR2 %（21EMA Low）` `RS` `52W High` `Ext R (50MA)`
   2. **MissedBoard**（`Missed Board`）— 主役。Watch list に入れたが **その exit の date より前に HOLD に
      なっていない**銘柄を `from_state` 別に集計し、`max_ret_pct` 降順で並べる。READY からの離脱を強調。
-     同一 code の exit は畳まず全件出す。列は 11 列:
-     `Date` `Code / Name` `From` `Sector` `Dwell` `Bars` `Price` `Return` `Max Gain` `Max Draw` `ADR %`
+     同一 code の exit は畳まず全件出す。全列ソート可（既定は `Max Gain` 降順、NULL は昇降とも末尾）。列は 11 列:
+     `Date` `Days` `Code / Name` `Price` `Sector` `From` `Stay` `Return` `Max Gain` `Max Draw` `ADR %`
+     — `Days` は落としてからの経過**営業日**数、`Stay` は落とす前にその状態に居た**暦日**数で数え方が違う
 - 「今日の差分」セクションは**置かない**。当日の移動は「現在の状態」の `since` / 滞在日数に出るため
 - 銘柄セルはプロジェクト共通のティッカークリック規約（`lib/tickerLinks.ts`）に従う:
   **コード → TradingView / 銘柄名 → 四季報**
