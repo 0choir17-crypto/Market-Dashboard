@@ -208,8 +208,8 @@ min-w-[980px]
 
 | 用途 | トークン |
 |---|---|
-| 背景 | `--bg-primary` `#fdf6e3`（クリーム）/ カード `--bg-card` `#fffdf7`（**白に分離**）/ ホバー `--bg-card-hover` |
-| 罫線 | `--border` `#ece3cc`（0.5px） |
+| 背景 | `--bg-primary` `#f6f7f9`（薄グレー）/ カード `--bg-card` `#ffffff`（白）/ ホバー `--bg-card-hover` `#f6f7f9` |
+| 罫線 | `--border` `#e6e8eb`（0.5px） |
 | 文字 | `--text-primary` / `--text-secondary` / `--text-muted` |
 | 損益 | `--positive` `#16a34a` / `--negative` `#dc2626`（**意味語彙とは別系統**） |
 | 意味語彙 | `--sem-{strong,ok,watch,weak,idle,archive,focus}-{bg,fg,bd}`（7 語彙 × 3 値） |
@@ -332,6 +332,6 @@ lib/{format,dates,tickerLinks,pagedFetch}.ts      共通ユーティリティ
 5. **Missed Board のサマリタイル** — 6 枚並ぶと `lg:grid-cols-6` で細くなる。
    中央値 2 つを 1 行に詰めているので窮屈
 6. **`SOLD` の折りたたみ** — 既定で畳んでいるが、そもそも Current State に出すべきかは別論点
-7. **クリーム背景（`#fdf6e3`）とカード色が同一** — 枠線だけで階層を作っているので、
-   テーブルが背景に沈む。グループ見出し行だけ `--bg-primary` を敷いて区切っている
-8. **ダークモード非対応** — トークンは `:root` のみで `prefers-color-scheme` の定義が無い
+7. ~~クリーム背景とカード色が同一~~ — **解決済み**（地は薄グレー、カードは白に分離）
+8. **ダークモード非対応** — トークンは `:root` のみで `prefers-color-scheme` の定義が無い。
+   クリームをやめたので技術的な障害は無くなった（語彙が固まってから別途検討）

@@ -72,7 +72,7 @@ function ScoreGauge({ score, color }: { score: number | null; color: string }) {
       <path
         d={`M ${bgStart.x} ${bgStart.y} A ${r} ${r} 0 1 1 ${bgEnd.x} ${bgEnd.y}`}
         fill="none"
-        stroke="#e6dcc0"
+        stroke="#e6e8eb"
         strokeWidth={strokeWidth}
         strokeLinecap="round"
       />
