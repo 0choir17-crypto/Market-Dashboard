@@ -1,27 +1,55 @@
 'use client'
 
-// §3.1 現在の状態 — 旧 /watchlist（手入力テーブル）の置き換え先。
+// Current State — 旧 /watchlist（手入力テーブル）の置き換え先。
 //
 // watchlist_current を状態でグループ化して表示する。既定ソートは days 降順で、
 // 「READY で何日止まっているか」が一目で分かることを最優先にしている。
 // 読み取り専用: 追加・編集・削除の導線は無い（編集は TradingView 側）。
+//
+// 列は ADR% のあとに ATR 系（ATR14 → 1R → 1R % → RR2 → RR2 %）をまとめ、
+// 相場強弱の指標（RS / 52W High / Ext R）を右に回している。1R は TradingView で
+// 常時表示しているインジケーターと同じ値で、安値 21EMA にストップを置いたときの
+// 値幅。8% 以上はエントリー対象外だが、色や印は付けず数値だけを出す。
 
 import { useMemo, useState } from 'react'
 import type { WatchlistCurrentRow } from '@/types/watchlistJournal'
-import { STATE_ORDER, stateOrderIndex } from '@/types/watchlistJournal'
-import { NumCell, PctCell, ScannerTags, StateBadge, TickerCell } from './atoms'
+import { STATE_ORDER, riskPct, stateOrderIndex } from '@/types/watchlistJournal'
+import { NumCell, PctCell, StateBadge, TickerCell, YenCell } from './atoms'
 
 type SortKey =
-  | 'days'
   | 'code'
   | 'since'
+  | 'days'
   | 'ret_since_pct'
   | 'adr_pct_20'
-  | 'turnover_oku'
+  | 'atr_14'
+  | 'dist_ema21_low_yen'
+  | 'risk_pct'
+  | 'rr2_ema21_low_yen'
+  | 'rr2_pct'
   | 'rs_vs_topix_avg'
   | 'dist_from_high_pct'
   | 'ext_r'
-  | 'mcap_oku'
+
+// 派生列（1R % / RR2 %）は行に無いのでソート時に計算する。
+const SORT_VALUE: Record<SortKey, (r: WatchlistCurrentRow) => string | number | null> = {
+  code: r => r.code,
+  since: r => r.since,
+  days: r => r.days,
+  ret_since_pct: r => r.ret_since_pct,
+  adr_pct_20: r => r.adr_pct_20,
+  atr_14: r => r.atr_14,
+  dist_ema21_low_yen: r => r.dist_ema21_low_yen,
+  risk_pct: r => riskPct(r.dist_ema21_low_yen, r.close_adj),
+  rr2_ema21_low_yen: r => r.rr2_ema21_low_yen,
+  rr2_pct: r => riskPct(r.rr2_ema21_low_yen, r.close_adj),
+  rs_vs_topix_avg: r => r.rs_vs_topix_avg,
+  dist_from_high_pct: r => r.dist_from_high_pct,
+  ext_r: r => r.ext_r,
+}
+
+/** td の数。グループ見出し行の colSpan に使う。 */
+const COLUMN_COUNT = 15
 
 type Props = {
   rows: WatchlistCurrentRow[]
@@ -62,18 +90,20 @@ export default function CurrentStateTable({ rows }: Props) {
       else byState.set(key, [r])
     }
 
+    const getValue = SORT_VALUE[sortKey]
     const cmp = (a: WatchlistCurrentRow, b: WatchlistCurrentRow) => {
-      const av = a[sortKey]
-      const bv = b[sortKey]
+      const av = getValue(a)
+      const bv = getValue(b)
       // NULL は常に末尾（昇順・降順どちらでも）。欠損を「最小値」として
       // 先頭に並べると、まだ測れていない銘柄が上位に居座って読めなくなる。
       if (av == null && bv == null) return 0
       if (av == null) return 1
       if (bv == null) return -1
       // code は英字混じり（278A）なので文字列比較。数値としてパースしない。
-      const c = typeof av === 'string' || typeof bv === 'string'
-        ? String(av).localeCompare(String(bv))
-        : (av as number) - (bv as number)
+      const c =
+        typeof av === 'string' || typeof bv === 'string'
+          ? String(av).localeCompare(String(bv))
+          : av - bv
       return sortDir === 'asc' ? c : -c
     }
 
@@ -82,11 +112,16 @@ export default function CurrentStateTable({ rows }: Props) {
       .map(([state, list]) => ({ state, rows: [...list].sort(cmp) }))
   }, [rows, sortKey, sortDir])
 
-  const thSortable = (key: SortKey, label: string, title?: string) => (
+  const th = (
+    key: SortKey,
+    label: string,
+    title: string,
+    align: 'left' | 'right' = 'right',
+  ) => (
     <th
       onClick={() => handleSort(key)}
       title={title}
-      className={`px-3 py-2 text-xs font-semibold uppercase tracking-wide cursor-pointer select-none whitespace-nowrap hover:bg-[var(--bg-card-hover)] transition-colors ${
+      className={`px-3 py-2 ${align === 'left' ? 'text-left' : 'text-right'} text-xs font-semibold uppercase tracking-wide cursor-pointer select-none whitespace-nowrap hover:bg-[var(--bg-card-hover)] transition-colors ${
         sortKey === key ? 'text-[var(--accent)]' : 'text-gray-500'
       }`}
     >
@@ -112,7 +147,7 @@ export default function CurrentStateTable({ rows }: Props) {
   return (
     <section>
       <div className="flex flex-wrap items-baseline justify-between gap-2 mb-3">
-        <h2 className="text-lg font-semibold text-[var(--text-primary)]">現在の状態</h2>
+        <h2 className="text-lg font-semibold text-[var(--text-primary)]">Current State</h2>
         <p className="text-xs text-[var(--text-muted)]">
           {rows.length} 銘柄 — 指標は今日の値。{' '}
           <span className="text-gray-400">
@@ -122,35 +157,46 @@ export default function CurrentStateTable({ rows }: Props) {
       </div>
 
       <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm overflow-x-auto">
-        <table className="w-full min-w-[1180px] text-sm">
+        <table className="w-full min-w-[1320px] text-sm">
           <thead className="bg-[var(--bg-card-hover)] border-b border-[var(--border)]">
             <tr>
-              {thSortable('code', '銘柄')}
+              {th('code', 'Code / Name', '銘柄コード → TradingView / 銘柄名 → 四季報', 'left')}
               <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 whitespace-nowrap">
-                業種
+                Sector
               </th>
-              {thSortable('since', 'since', 'そのセクションに入った日')}
-              {thSortable('days', '滞在', 'since からの暦日数')}
+              {th('since', 'Since', 'そのセクションに入った日', 'left')}
+              {th('days', 'Days', 'since からの暦日数')}
               <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 whitespace-nowrap">
-                入時 → 現在
+                Entry → Now
               </th>
-              {thSortable('ret_since_pct', '入ってから')}
-              {thSortable('adr_pct_20', 'ADR%', 'ADR% 20日 — 銘柄の速さ')}
-              {thSortable('turnover_oku', '代金', '20日平均売買代金（億円）')}
-              {thSortable('rs_vs_topix_avg', 'RS', 'RS vs TOPIX（0-100）')}
-              {thSortable('dist_from_high_pct', '高値乖離', '52週高値からの乖離%')}
-              {thSortable('ext_r', 'Ext R', '50MA からの ATR 伸長（R）')}
-              {thSortable('mcap_oku', '時価総額', '億円')}
-              <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 whitespace-nowrap">
-                スキャナー
-              </th>
+              {th('ret_since_pct', 'Return', '入ってから何 % 動いたか')}
+              {th('adr_pct_20', 'ADR %', 'ADR% 20日 — 銘柄の速さ')}
+
+              {/* ATR 系（TradingView の Cockpit BT10 / ADR×ATR と同じ値） */}
+              {th('atr_14', 'ATR14', 'ta.atr(14)（Wilder RMA）。TV は整数表示、ここは生値')}
+              {th(
+                'dist_ema21_low_yen',
+                '1R（21EMA Low）',
+                '終値 − ema(low,21)。安値 21EMA にストップを置いたときの値幅。呼値に丸めていない生値なので TV 表示と数円ずれる',
+              )}
+              {th(
+                'risk_pct',
+                '1R %（21EMA Low）',
+                '1R ÷ 終値。TV が括弧で併記している % と小数第 2 位まで一致する。8% 以上は RR2:1 が成立しないためエントリー対象外',
+              )}
+              {th('rr2_ema21_low_yen', 'RR2（21EMA Low）', '1R × 2 — 利確目標までの値幅')}
+              {th('rr2_pct', 'RR2 %（21EMA Low）', 'RR2 ÷ 終値')}
+
+              {th('rs_vs_topix_avg', 'RS', 'RS vs TOPIX（0-100）')}
+              {th('dist_from_high_pct', '52W High', '52週高値からの乖離%')}
+              {th('ext_r', 'Ext R (50MA)', '50MA からの ATR 伸長（R）。21EMA 基準の 1R とは別物')}
             </tr>
           </thead>
 
           {groups.map(group => (
             <tbody key={group.state} className="border-b border-[var(--border)] last:border-b-0">
               <tr className="bg-[var(--bg-primary)]">
-                <td colSpan={13} className="px-3 py-1.5">
+                <td colSpan={COLUMN_COUNT} className="px-3 py-1.5">
                   <button
                     onClick={() => toggleGroup(group.state)}
                     aria-expanded={!collapsed.has(group.state)}
@@ -180,54 +226,63 @@ export default function CurrentStateTable({ rows }: Props) {
                 </td>
               </tr>
 
-              {!collapsed.has(group.state) && group.rows.map(r => (
-                <tr
-                  key={r.code}
-                  className="border-t border-[var(--border)] hover:bg-[var(--bg-card-hover)] transition-colors"
-                >
-                  <td className="px-3 py-2">
-                    <TickerCell code={r.code} name={r.co_name} />
-                  </td>
-                  <td className="px-3 py-2 text-xs text-[var(--text-secondary)] whitespace-nowrap">
-                    {r.sector_s33 ?? '—'}
-                  </td>
-                  <td className="px-3 py-2 font-mono text-xs text-[var(--text-secondary)] whitespace-nowrap">
-                    {r.since ?? '—'}
-                  </td>
-                  <td className="px-3 py-2 text-right">
-                    <NumCell value={r.days} digits={0} suffix="日" />
-                  </td>
-                  <td className="px-3 py-2 text-right font-mono text-xs text-[var(--text-secondary)] whitespace-nowrap">
-                    {r.close_at_since != null && r.close_adj != null
-                      ? `${r.close_at_since.toLocaleString('ja-JP')} → ${r.close_adj.toLocaleString('ja-JP')}`
-                      : '—'}
-                  </td>
-                  <td className="px-3 py-2 text-right">
-                    <PctCell value={r.ret_since_pct} />
-                  </td>
-                  <td className="px-3 py-2 text-right">
-                    <NumCell value={r.adr_pct_20} suffix="%" />
-                  </td>
-                  <td className="px-3 py-2 text-right">
-                    <NumCell value={r.turnover_oku} suffix="億" />
-                  </td>
-                  <td className="px-3 py-2 text-right">
-                    <NumCell value={r.rs_vs_topix_avg} digits={0} />
-                  </td>
-                  <td className="px-3 py-2 text-right">
-                    <NumCell value={r.dist_from_high_pct} suffix="%" />
-                  </td>
-                  <td className="px-3 py-2 text-right">
-                    <NumCell value={r.ext_r} suffix="R" />
-                  </td>
-                  <td className="px-3 py-2 text-right">
-                    <NumCell value={r.mcap_oku} digits={0} suffix="億" />
-                  </td>
-                  <td className="px-3 py-2">
-                    <ScannerTags names={r.scanner_names} />
-                  </td>
-                </tr>
-              ))}
+              {!collapsed.has(group.state) &&
+                group.rows.map(r => (
+                  <tr
+                    key={r.code}
+                    className="border-t border-[var(--border)] hover:bg-[var(--bg-card-hover)] transition-colors"
+                  >
+                    <td className="px-3 py-2">
+                      <TickerCell code={r.code} name={r.co_name} />
+                    </td>
+                    <td className="px-3 py-2 text-xs text-[var(--text-secondary)] whitespace-nowrap">
+                      {r.sector_s33 ?? '—'}
+                    </td>
+                    <td className="px-3 py-2 font-mono text-xs text-[var(--text-secondary)] whitespace-nowrap">
+                      {r.since ?? '—'}
+                    </td>
+                    <td className="px-3 py-2 text-right">
+                      <NumCell value={r.days} digits={0} suffix="日" />
+                    </td>
+                    <td className="px-3 py-2 text-right font-mono text-xs text-[var(--text-secondary)] whitespace-nowrap">
+                      {r.close_at_since != null && r.close_adj != null
+                        ? `${r.close_at_since.toLocaleString('ja-JP')} → ${r.close_adj.toLocaleString('ja-JP')}`
+                        : '—'}
+                    </td>
+                    <td className="px-3 py-2 text-right">
+                      <PctCell value={r.ret_since_pct} />
+                    </td>
+                    <td className="px-3 py-2 text-right">
+                      <NumCell value={r.adr_pct_20} suffix="%" />
+                    </td>
+
+                    <td className="px-3 py-2 text-right">
+                      <NumCell value={r.atr_14} />
+                    </td>
+                    <td className="px-3 py-2 text-right">
+                      <YenCell value={r.dist_ema21_low_yen} title="TV 表示は呼値に丸められるため数円ずれます" />
+                    </td>
+                    <td className="px-3 py-2 text-right">
+                      <PctCell value={riskPct(r.dist_ema21_low_yen, r.close_adj)} digits={2} neutral />
+                    </td>
+                    <td className="px-3 py-2 text-right">
+                      <YenCell value={r.rr2_ema21_low_yen} title="TV 表示は呼値に丸められるため数円ずれます" />
+                    </td>
+                    <td className="px-3 py-2 text-right">
+                      <PctCell value={riskPct(r.rr2_ema21_low_yen, r.close_adj)} digits={2} neutral />
+                    </td>
+
+                    <td className="px-3 py-2 text-right">
+                      <NumCell value={r.rs_vs_topix_avg} digits={0} />
+                    </td>
+                    <td className="px-3 py-2 text-right">
+                      <NumCell value={r.dist_from_high_pct} suffix="%" />
+                    </td>
+                    <td className="px-3 py-2 text-right">
+                      <NumCell value={r.ext_r} suffix="R" />
+                    </td>
+                  </tr>
+                ))}
             </tbody>
           ))}
         </table>
