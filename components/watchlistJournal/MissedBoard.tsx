@@ -27,14 +27,15 @@ function fromStateIndex(state: string | null): number {
   return i < 0 ? FROM_STATE_ORDER.length : i
 }
 
+// テーブルの列順に合わせて並べてある。
 type SortKey =
   | 'date'
-  | 'code'
-  | 'from_state'
-  | 'sector_s33'
-  | 'dwell_days'
   | 'bars_since'
+  | 'code'
   | 'close_adj'
+  | 'sector_s33'
+  | 'from_state'
+  | 'dwell_days'
   | 'ret_since_pct'
   | 'max_ret_pct'
   | 'min_ret_pct'
@@ -42,12 +43,12 @@ type SortKey =
 
 const SORT_VALUE: Record<SortKey, (r: WatchlistEvent) => string | number | null> = {
   date: r => r.date,
-  code: r => r.code,
-  from_state: r => fromStateIndex(r.from_state), // 状態は五十音ではなく重みの順で並べる
-  sector_s33: r => r.sector_s33,
-  dwell_days: r => r.dwell_days,
   bars_since: r => r.bars_since,
+  code: r => r.code,
   close_adj: r => r.close_adj,
+  sector_s33: r => r.sector_s33,
+  from_state: r => fromStateIndex(r.from_state), // 状態は五十音ではなく重みの順で並べる
+  dwell_days: r => r.dwell_days,
   ret_since_pct: r => r.ret_since_pct,
   max_ret_pct: r => r.max_ret_pct,
   min_ret_pct: r => r.min_ret_pct,
@@ -216,12 +217,12 @@ export default function MissedBoard({ rows }: Props) {
           <thead className="bg-[var(--bg-card-hover)] border-b border-[var(--border)]">
             <tr>
               {th('date', 'Date', 'Watch list から落とした日', 'left')}
+              {th('bars_since', 'Days', '落とした日からの経過営業日数。右の 3 つの % を測った期間の長さ')}
               {th('code', 'Code / Name', '銘柄コード → TradingView / 銘柄名 → 四季報', 'left')}
-              {th('from_state', 'From', 'どの状態から落としたか（READY が最も重い順で並ぶ）', 'left')}
+              {th('close_adj', 'Price', '落とした日の終値。Return / Max Gain / Max Draw はこの値が基準')}
               {th('sector_s33', 'Sector', '33 業種', 'left')}
-              {th('dwell_days', 'Dwell', 'その状態に居た暦日数')}
-              {th('bars_since', 'Bars', '落とした日からの経過営業日数。右の 3 つの % を測った期間の長さ')}
-              {th('close_adj', 'Price', '落とした日の終値。右の % はこの値が基準')}
+              {th('from_state', 'From', 'どの状態から落としたか（READY が最も重い順で並ぶ）', 'left')}
+              {th('dwell_days', 'Stay', '落とす前にその状態に居た暦日数')}
               {th('ret_since_pct', 'Return', '落としてから現在までの変化%')}
               {th('max_ret_pct', 'Max Gain', '期間中の最大上昇%（終値ベース）')}
               {th('min_ret_pct', 'Max Draw', '期間中の最大下落%（安値ベース）')}
@@ -239,23 +240,25 @@ export default function MissedBoard({ rows }: Props) {
                 <td className="px-3 py-2 font-mono text-xs text-[var(--text-secondary)] whitespace-nowrap">
                   {r.date}
                 </td>
+                <td className="px-3 py-2 text-right">
+                  {/* 単位は Current State の Days に揃えて「日」。中身は営業日数なので
+                      ツールチップで明示する（Stay の暦日数とは数え方が違う）。 */}
+                  <NumCell value={r.bars_since} digits={0} suffix="日" title="落とした日からの経過営業日数" />
+                </td>
                 <td className="px-3 py-2">
                   <TickerCell code={r.code} name={r.co_name} />
                 </td>
-                <td className="px-3 py-2">
-                  <StateBadge state={r.from_state} />
+                <td className="px-3 py-2 text-right">
+                  <YenCell value={r.close_adj} title="落とした日の終値" />
                 </td>
                 <td className="px-3 py-2 text-xs text-[var(--text-secondary)] whitespace-nowrap">
                   {r.sector_s33 ?? '—'}
                 </td>
-                <td className="px-3 py-2 text-right">
-                  <NumCell value={r.dwell_days} digits={0} suffix="日" />
+                <td className="px-3 py-2">
+                  <StateBadge state={r.from_state} />
                 </td>
                 <td className="px-3 py-2 text-right">
-                  <NumCell value={r.bars_since} digits={0} suffix="本" title="落とした日からの経過営業日数" />
-                </td>
-                <td className="px-3 py-2 text-right">
-                  <YenCell value={r.close_adj} title="落とした日の終値" />
+                  <NumCell value={r.dwell_days} digits={0} suffix="日" title="落とす前にその状態に居た暦日数" />
                 </td>
                 <td className="px-3 py-2 text-right">
                   <PctCell value={r.ret_since_pct} />
