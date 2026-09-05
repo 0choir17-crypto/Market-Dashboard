@@ -27,6 +27,7 @@ import {
   type RankDeltaPeriodKey,
 } from '@/lib/sectorRankDelta'
 import Tooltip from '@/components/shared/Tooltip'
+import Dot from '@/components/shared/Dot'
 
 type Props = {
   rows: SectorSelectionRow[]
@@ -144,10 +145,9 @@ function SectorCard({
         {isLow && <span title="信頼度低: 銘柄数<10">⚠️</span>}
         {momentumCfg && (
           <span
-            className="ml-auto shrink-0 px-2 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap"
-            style={{ backgroundColor: momentumCfg.bg, color: momentumCfg.color }}
+            className="ml-auto shrink-0 inline-flex items-center gap-1.5 text-caption whitespace-nowrap text-[var(--text-secondary)]"
           >
-            {momentumCfg.emoji} {momentumCfg.label}
+            <Dot tone={momentumCfg.tone} /> {momentumCfg.label}
           </span>
         )}
         <span

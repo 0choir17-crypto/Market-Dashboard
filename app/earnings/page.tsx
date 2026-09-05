@@ -6,6 +6,7 @@ import {
   type EarningsQualitySnapshot,
 } from '@/lib/earningsQualityFetch'
 import { classifyFreshness } from '@/types/earningsQuality'
+import { toneVars } from '@/types/semantic'
 import EarningsQualitySection from '@/components/earnings/EarningsQualitySection'
 import ErrorBanner from '@/components/shared/ErrorBanner'
 import PageHeader from '@/components/shared/PageHeader'
@@ -17,17 +18,23 @@ import PageHeader from '@/components/shared/PageHeader'
 function FreshnessBadge({ latestDate }: { latestDate: string }) {
   // 'now' を毎回再計算しないようマウント時にスナップショット
   const fresh = useMemo(() => classifyFreshness(latestDate), [latestDate])
+  const tone = toneVars(fresh.tone)
+  const plain = fresh.tone === 'idle' // 正常は面を持たない（異常だけが目に入る）
   return (
     <span
-      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold whitespace-nowrap"
-      style={{
-        backgroundColor: fresh.bg,
-        color: fresh.text,
-        border: `1px solid ${fresh.border}`,
-      }}
+      className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-caption whitespace-nowrap"
+      style={
+        plain
+          ? { color: 'var(--text-muted)' }
+          : { backgroundColor: tone.bg, color: tone.fg, border: `0.5px solid ${tone.bd}` }
+      }
       title={fresh.hint}
     >
-      <span className="text-[9px]">{fresh.icon}</span>
+      <span
+        aria-hidden
+        className="inline-block w-1.5 h-1.5 rounded-full"
+        style={{ backgroundColor: plain ? 'var(--sem-idle-bd)' : tone.fg }}
+      />
       {fresh.label}
     </span>
   )

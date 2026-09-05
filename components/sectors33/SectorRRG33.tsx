@@ -175,10 +175,10 @@ export default function SectorRRG33({ history }: Props) {
         onHover={setHovered}
       />
       <div className="mt-3 flex flex-wrap items-center justify-center gap-4 text-[11px]">
-        <Legend label="🟢 Leading (RS↑ / 加速↑)" color={QUAD_COLOR.leading} />
-        <Legend label="🔵 Improving (RS↓ / 加速↑)" color={QUAD_COLOR.improving} />
-        <Legend label="🟡 Weakening (RS↑ / 加速↓)" color={QUAD_COLOR.weakening} />
-        <Legend label="🔴 Lagging (RS↓ / 加速↓)" color={QUAD_COLOR.lagging} />
+        <Legend label="Leading (RS↑ / 加速↑)" color={QUAD_COLOR.leading} />
+        <Legend label="Improving (RS↓ / 加速↑)" color={QUAD_COLOR.improving} />
+        <Legend label="Weakening (RS↑ / 加速↓)" color={QUAD_COLOR.weakening} />
+        <Legend label="Lagging (RS↓ / 加速↓)" color={QUAD_COLOR.lagging} />
       </div>
     </div>
   )

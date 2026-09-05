@@ -179,8 +179,8 @@ export default function RiskTab({ riskSettings, history, onRefresh }: Props) {
             <label className={labelClass}>DD Check</label>
             <div className={roClass}>
               {ddOk === null ? '—' : ddOk
-                ? <span className="text-[var(--positive)] font-bold">🟢 OK</span>
-                : <span className="text-[var(--negative)] font-bold">🔴 NG — DD over limit</span>
+                ? <span className="text-[var(--sem-strong-fg)]">OK</span>
+                : <span className="text-[var(--sem-weak-fg)]">NG — DD over limit</span>
               }
             </div>
           </div>
@@ -192,7 +192,7 @@ export default function RiskTab({ riskSettings, history, onRefresh }: Props) {
         <div className="flex items-center gap-2 mb-4">
           <h3 className="text-sm font-bold text-gray-800">🔄 Losing Streak</h3>
           {isHalfRisk && (
-            <span className="px-2 py-0.5 bg-yellow-200 text-yellow-800 rounded-full text-xs font-bold">⚠️ Risk halved</span>
+            <span className="px-2 py-0.5 bg-[var(--sem-watch-bg)] text-[var(--sem-watch-fg)] border-[0.5px] border-[var(--sem-watch-bd)] rounded-full text-caption">Risk halved</span>
           )}
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

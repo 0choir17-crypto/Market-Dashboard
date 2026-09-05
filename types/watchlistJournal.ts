@@ -1,3 +1,5 @@
+import type { SemanticTone } from '@/types/semantic'
+
 // Watchlist Journal — TradingView の操作記録。
 //
 // 旧 `watchlist` テーブル（ダッシュボードへの手入力）は 0 行のまま 2026-09-05 に
@@ -36,32 +38,25 @@ export function stateOrderIndex(state: string | null | undefined): number {
   return i < 0 ? STATE_ORDER.length : i
 }
 
-/** 状態バッジの配色。旧 ScreenTagBadge の置き換え先。 */
-export function stateColors(state: string | null | undefined): {
-  bg: string
-  text: string
-  border: string
-} {
-  switch (state) {
-    case 'HOLD':
-      return { bg: '#dcfce7', text: '#15803d', border: '#86efac' }
-    case 'READY':
-      return { bg: '#dbeafe', text: '#1d4ed8', border: '#93c5fd' }
-    case 'FOCUS':
-      return { bg: '#e0e7ff', text: '#4338ca', border: '#a5b4fc' }
-    case 'SECOND':
-      return { bg: '#f1f5f9', text: '#475569', border: '#cbd5e1' }
-    case 'SHORT':
-      return { bg: '#fee2e2', text: '#b91c1c', border: '#fecaca' }
-    case 'OTHERS':
-      return { bg: '#fef3c7', text: '#92400e', border: '#fde68a' }
-    case 'INBOX':
-      return { bg: '#f5f3ff', text: '#6d28d9', border: '#ddd6fe' }
-    case 'SOLD':
-      return { bg: '#f8fafc', text: '#94a3b8', border: '#e2e8f0' }
-    default:
-      return { bg: '#f8fafc', text: '#64748b', border: '#e2e8f0' }
-  }
+/**
+ * 状態 → 意味語彙の対応。
+ *
+ * `OTHERS` / `SECOND` / `INBOX` は「未整理・未評価」であって警戒ではないので
+ * `idle`（無彩色）。琥珀＝`watch` は「警戒」の一語だけを指す。
+ */
+const STATE_TONE: Record<WatchState, SemanticTone> = {
+  HOLD: 'strong',   // 保有中
+  READY: 'focus',   // エントリー可＝注目
+  FOCUS: 'focus',   // 注目
+  SECOND: 'idle',   // 二軍・様子見
+  SHORT: 'weak',    // 空売り候補（買い方向としては弱い）
+  OTHERS: 'idle',   // その他＝未整理
+  INBOX: 'idle',    // 未仕分け
+  SOLD: 'archive',  // 売却済アーカイブ
+}
+
+export function stateTone(state: string | null | undefined): SemanticTone {
+  return STATE_TONE[state as WatchState] ?? 'idle'
 }
 
 /**
@@ -209,10 +204,11 @@ export type SnapshotFreshness = {
   hours: number | null
   label: string
   hint: string
-  bg: string
-  text: string
-  border: string
-  icon: string
+  /**
+   * 表示の語彙。`ok` は **無色**（idle）にする — 正常が目立たない状態を作ることが、
+   * 異常の発見を速くする。aging で初めて警戒、old で弱い。
+   */
+  tone: SemanticTone
 }
 
 export function classifySnapshotFreshness(
@@ -225,10 +221,7 @@ export function classifySnapshotFreshness(
       hours: null,
       label: '記録なし',
       hint: 'watchlist_events にイベントがありません',
-      bg: '#f8fafc',
-      text: '#64748b',
-      border: '#e2e8f0',
-      icon: '⚪',
+      tone: 'idle',
     }
   }
 
@@ -240,10 +233,7 @@ export function classifySnapshotFreshness(
       hours,
       label: `${Math.max(0, Math.floor(hours))} 時間前`,
       hint: '直近 24 時間以内に記録されています',
-      bg: '#dcfce7',
-      text: '#15803d',
-      border: '#86efac',
-      icon: '🟢',
+      tone: 'idle',
     }
   }
   if (hours < 48) {
@@ -254,10 +244,7 @@ export function classifySnapshotFreshness(
       hint:
         '丸 1 日撮れていません。拡張は TradingView を開いた時にしか撮らないため、' +
         'TV を開かなかった日はこうなります',
-      bg: '#fef3c7',
-      text: '#92400e',
-      border: '#fde68a',
-      icon: '🟡',
+      tone: 'watch',
     }
   }
   return {
@@ -267,19 +254,15 @@ export function classifySnapshotFreshness(
     hint:
       '48 時間以上更新されていません。TradingView を開いていないだけの場合もありますが、' +
       '拡張または ingest が停止している可能性があります',
-    bg: '#fee2e2',
-    text: '#b91c1c',
-    border: '#fecaca',
-    icon: '🔴',
+    tone: 'weak',
   }
 }
 
-// ── 1R 乖離% ────────────────────────────────────────────────────────────────
+// ── 1R 乖離% と 8% ルール ───────────────────────────────────────────────────
 // 乖離% は列に無い。close_adj が同じ行にあるので 1 行で出せるため保存していない。
-//
-// 8% 以上は新基準ではエントリー対象外（1R が大きすぎて RR2:1 が成立しない。
-// docs/win_criteria_rr2_ema21low.md）だが、画面上での強調はしない方針。
-// 値は常にプラス側なので、損益セルと同じ色分けもしない（「良い数字」と誤読されるため）。
+// 8% 以上は 1R が大きすぎて RR2:1 が成立せず、新基準ではエントリー対象外
+// （docs/win_criteria_rr2_ema21low.md。events 全体の 37% が該当する）。
+// ただし画面側では色も印も付けない — しきい値の判断は数値を見て手で行う。
 
 /**
  * 1R（安値 21EMA までの値幅）が終値の何 % か。
