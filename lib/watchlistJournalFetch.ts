@@ -8,12 +8,6 @@ const CURRENT_TABLE = 'watchlist_current'
 export type WatchlistJournalSnapshot = {
   /** watchlist_current の全行（毎晩 delete-all → insert で作り直される）。 */
   current: WatchlistCurrentRow[]
-  /** イベント日の distinct 降順。土日祝を含むので営業日カレンダーは使わない。 */
-  availableDates: string[]
-  /** 選択中の日付（未指定なら最新イベント日）。 */
-  selectedDate: string | null
-  /** 選択日のイベント（ts 降順）。 */
-  events: WatchlistEvent[]
   /** 最終スナップショット時刻（生存確認用・UTC 文字列）。 */
   lastTs: string | null
   /** 見逃し（Watch list に入れたが HOLD に至らないまま落とした）イベント。 */
@@ -23,47 +17,9 @@ export type WatchlistJournalSnapshot = {
 
 export const EMPTY_SNAPSHOT: WatchlistJournalSnapshot = {
   current: [],
-  availableDates: [],
-  selectedDate: null,
-  events: [],
   lastTs: null,
   missed: [],
   error: null,
-}
-
-/**
- * 日付セレクトの選択肢。
- *
- * `date` は土日祝を含む（§1）。DateContext / 営業日カレンダーで絞ると
- * 週末の記録が丸ごと消えるので、実データの distinct から作る。
- * 1 日のイベントは多くても数十件だが、日数が伸びれば 1000 行の壁に当たるため
- * distinct が maxDates 件集まるまでページングする。
- */
-async function fetchAvailableDates(maxDates = 90): Promise<{ dates: string[]; error: string | null }> {
-  const PAGE = 1000
-  const seen = new Set<string>()
-  const out: string[] = [] // date desc で走査するので降順のまま溜まる
-  for (let from = 0; out.length < maxDates; from += PAGE) {
-    const { data, error } = await supabase
-      .from(EVENTS_TABLE)
-      .select('date')
-      .order('date', { ascending: false })
-      .order('snapshot_id', { ascending: false })
-      .range(from, from + PAGE - 1)
-    if (error) {
-      console.error(`[${EVENTS_TABLE}] available dates`, error)
-      return { dates: out, error: `${EVENTS_TABLE}: ${error.message}` }
-    }
-    if (!data || data.length === 0) break
-    for (const row of data as { date: string }[]) {
-      if (!row.date || seen.has(row.date)) continue
-      seen.add(row.date)
-      out.push(row.date)
-      if (out.length >= maxDates) break
-    }
-    if (data.length < PAGE) break
-  }
-  return { dates: out, error: null }
 }
 
 /** 最終スナップショット時刻。記録パイプラインが黙って止まるのを検知するための生存確認。 */
@@ -126,14 +82,13 @@ function buildMissed(
   })
 }
 
-export async function fetchWatchlistJournal(date?: string): Promise<WatchlistJournalSnapshot> {
+export async function fetchWatchlistJournal(): Promise<WatchlistJournalSnapshot> {
   const errors: string[] = []
 
-  const [currentRes, datesRes, lastTsRes, exitsRes, holdsRes] = await Promise.all([
+  const [currentRes, lastTsRes, exitsRes, holdsRes] = await Promise.all([
     // 現在の状態（メイン）。行数は数十なのでページング不要だが、
     // 将来の増加に備えて安定順序を付けておく。
     supabase.from(CURRENT_TABLE).select('*').order('days', { ascending: false }).order('code'),
-    fetchAvailableDates(),
     fetchLastTs(),
     // 見逃し候補: Watch list からの exit を全件。
     fetchAllPaged<WatchlistEvent>((from, to) =>
@@ -164,34 +119,12 @@ export async function fetchWatchlistJournal(date?: string): Promise<WatchlistJou
     console.error(`[${CURRENT_TABLE}] fetch`, currentRes.error)
     errors.push(`${CURRENT_TABLE}: ${currentRes.error.message}`)
   }
-  if (datesRes.error) errors.push(datesRes.error)
   if (lastTsRes.error) errors.push(lastTsRes.error)
   if (exitsRes.error) errors.push(`${EVENTS_TABLE} (exit): ${exitsRes.error}`)
   if (holdsRes.error) errors.push(`${EVENTS_TABLE} (hold): ${holdsRes.error}`)
 
-  const availableDates = datesRes.dates
-  const selectedDate = date ?? availableDates[0] ?? null
-
-  let events: WatchlistEvent[] = []
-  if (selectedDate) {
-    const { rows, error } = await fetchAllPaged<WatchlistEvent>((from, to) =>
-      supabase
-        .from(EVENTS_TABLE)
-        .select('*')
-        .eq('date', selectedDate)
-        .order('ts', { ascending: false })
-        .order('code')
-        .range(from, to),
-    )
-    if (error) errors.push(`${EVENTS_TABLE} (${selectedDate}): ${error}`)
-    events = rows
-  }
-
   return {
     current: (currentRes.data ?? []) as WatchlistCurrentRow[],
-    availableDates,
-    selectedDate,
-    events,
     lastTs: lastTsRes.ts,
     missed: buildMissed(exitsRes.rows, holdsRes.rows),
     error: errors.length > 0 ? errors.join(' / ') : null,
