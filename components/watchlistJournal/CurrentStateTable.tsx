@@ -30,6 +30,18 @@ type Props = {
 export default function CurrentStateTable({ rows }: Props) {
   const [sortKey, setSortKey] = useState<SortKey>('days')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
+  // SOLD は売却済アーカイブで、現在のウォッチ対象ではない。しかも記録開始前からの
+  // 建玉が混ざっている（§6）ので、現在のリストと並べると紛らわしい。既定で畳む。
+  const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set(['SOLD']))
+
+  function toggleGroup(state: string) {
+    setCollapsed(prev => {
+      const next = new Set(prev)
+      if (next.has(state)) next.delete(state)
+      else next.add(state)
+      return next
+    })
+  }
 
   function handleSort(key: SortKey) {
     if (sortKey === key) setSortDir(d => (d === 'asc' ? 'desc' : 'asc'))
@@ -139,7 +151,19 @@ export default function CurrentStateTable({ rows }: Props) {
             <tbody key={group.state} className="border-b border-[var(--border)] last:border-b-0">
               <tr className="bg-[var(--bg-primary)]">
                 <td colSpan={13} className="px-3 py-1.5">
-                  <span className="inline-flex items-center gap-2">
+                  <button
+                    onClick={() => toggleGroup(group.state)}
+                    aria-expanded={!collapsed.has(group.state)}
+                    className="inline-flex items-center gap-2 text-left hover:opacity-80 transition-opacity"
+                  >
+                    <span
+                      className={`text-[10px] text-gray-400 inline-block transition-transform ${
+                        collapsed.has(group.state) ? '' : 'rotate-90'
+                      }`}
+                      aria-hidden
+                    >
+                      ▶
+                    </span>
                     <StateBadge state={group.state} />
                     <span className="text-xs text-[var(--text-muted)]">{group.rows.length} 銘柄</span>
                     {group.state === 'READY' && (
@@ -149,14 +173,14 @@ export default function CurrentStateTable({ rows }: Props) {
                     )}
                     {group.state === 'SOLD' && (
                       <span className="text-[11px] text-[var(--text-muted)]">
-                        — アーカイブ。リストを動かした日であって約定日ではない（損益は Trading）
+                        — 売却済アーカイブ。現在のウォッチ対象ではない（損益の正本は Trading）
                       </span>
                     )}
-                  </span>
+                  </button>
                 </td>
               </tr>
 
-              {group.rows.map(r => (
+              {!collapsed.has(group.state) && group.rows.map(r => (
                 <tr
                   key={r.code}
                   className="border-t border-[var(--border)] hover:bg-[var(--bg-card-hover)] transition-colors"

@@ -84,10 +84,11 @@ async function fetchLastTs(): Promise<{ ts: string | null; error: string | null 
 /**
  * 見逃しボードの行を組み立てる。
  *
- * 「見逃し」= Watch list に入れたが HOLD に至らないまま落とした銘柄。
- * HOLD 判定は **その exit より前** に限る。全期間で判定すると
- * 「一度落として後から買い直した銘柄」が丸ごと board から消えるが、
- * その exit の時点では確かに落としているので、学びとしては残したい行になる。
+ * 「見逃し」= Watch list に入れたが、その時点でまだ買っていないまま落とした銘柄。
+ * HOLD 判定は **その exit の date より前** に限る。全期間で判定すると
+ * 「8 月に落として 10 月に買い直した銘柄」が board から消えてしまうが、
+ * 8 月の判断はやはり見逃しで、むしろ「戻ってきた = 落とすべきでなかった」証拠になる。
+ * 同一 code の exit は畳まず全件出す（1 回ごとが独立した判断）。
  *
  * PostgREST に NOT EXISTS が無いので 2 クエリに分ける。
  * ソートは max_ret_pct 降順だが、Postgres の DESC は NULL を先頭に置く（§6）。
@@ -97,21 +98,21 @@ async function fetchLastTs(): Promise<{ ts: string | null; error: string | null 
  */
 function buildMissed(
   exits: WatchlistEvent[],
-  holds: Pick<WatchlistEvent, 'code' | 'ts'>[],
+  holds: Pick<WatchlistEvent, 'code' | 'date'>[],
 ): WatchlistEvent[] {
-  // code ごとに「最初に HOLD になった時刻」。これより後の exit は見逃しに数えない。
-  const firstHoldTs = new Map<string, number>()
+  // code ごとに「最初に HOLD になった日」。判定は ts ではなく date で行う
+  // （同じ日のうちに HOLD にして落とし直した、のような並びを取りこぼさない）。
+  const firstHoldDate = new Map<string, string>()
   for (const h of holds) {
-    if (!h.code || !h.ts) continue
-    const t = new Date(h.ts).getTime()
-    const prev = firstHoldTs.get(h.code)
-    if (prev === undefined || t < prev) firstHoldTs.set(h.code, t)
+    if (!h.code || !h.date) continue
+    const prev = firstHoldDate.get(h.code)
+    if (prev === undefined || h.date < prev) firstHoldDate.set(h.code, h.date)
   }
 
   const missed = exits.filter(ev => {
-    const held = firstHoldTs.get(ev.code)
+    const held = firstHoldDate.get(ev.code)
     if (held === undefined) return true // 一度も HOLD になっていない
-    return new Date(ev.ts).getTime() < held // この exit の時点ではまだ HOLD 前
+    return held >= ev.date // この exit の日より前には HOLD になっていない
   })
 
   // 「落とした後に伸びた順」。NULL（当日 exit で翌営業日がまだ来ていない）は末尾。
@@ -146,11 +147,11 @@ export async function fetchWatchlistJournal(date?: string): Promise<WatchlistJou
         .order('code')
         .range(from, to),
     ),
-    // HOLD になった履歴（code と ts だけあれば判定できる）。
-    fetchAllPaged<Pick<WatchlistEvent, 'code' | 'ts'>>((from, to) =>
+    // HOLD になった履歴（code と date だけあれば判定できる）。
+    fetchAllPaged<Pick<WatchlistEvent, 'code' | 'date'>>((from, to) =>
       supabase
         .from(EVENTS_TABLE)
-        .select('code, ts')
+        .select('code, date')
         .eq('to_state', 'HOLD')
         // PK (snapshot_id, code) で安定順序を作る — ページの重複・取りこぼしを防ぐ
         .order('snapshot_id')

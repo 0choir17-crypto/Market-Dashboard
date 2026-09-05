@@ -147,18 +147,26 @@ app/layout.tsx  (RootLayout, lang="ja")
 
 - ヘッダー右: **SnapshotFreshnessBadge**（最終記録時刻 + 鮮度）/ 日付セレクト /「最新に戻る」
   - 鮮度は **実時間ベース**（<24h 緑 / 24-48h 黄 / >48h 赤）。記録は土日祝にも走るため、
-    `/earnings` の `classifyFreshness`（営業日ベース）は流用せず `types/watchlistJournal.ts` に専用実装
+    `/earnings` の `classifyFreshness`（営業日ベース）は流用せず `types/watchlistJournal.ts` に専用実装。
+    拡張は TradingView を開いた時にしか撮らない（＝古い＝異常とは限らない）ので、文言は事実のみ
 - **日付ピッカーは `DateContext` を使わない**。イベント日は土日祝を含むので、選択肢は
   `watchlist_events` の `date` の distinct から作る（`/leaders` `/earnings` と同じページ独自セレクト）
 - 過去日を選ぶと「差分」だけがその日になり、「現在の状態」「見逃しボード」は常に最新
 - 本体 3 セクション
   1. **CurrentStateTable** — 現在の状態。`watchlist_current` を state でグループ化
-     （`HOLD → READY → FOCUS → SECOND → SHORT → OTHERS → INBOX → SOLD`）。既定ソートは滞在日数の降順
-  2. **DailyDiff** — 選択日の差分。`classifyMove` で新規 / 昇格 / 降格 / 買い / 決済 / 転換 / 仕分け / 削除を判定
-     （優先度 `HOLD > READY > FOCUS > SECOND > OTHERS > INBOX`、`SHORT` は別軸）
-  3. **MissedBoard** — 見逃しボード（主役）。Watch list に入れたが **その exit の時点までに HOLD に
-     至らなかった**銘柄を `from_state` 別に集計し、`max_ret_pct` 降順で並べる。READY からの離脱を強調
+     （`HOLD → READY → FOCUS → SECOND → SHORT → OTHERS → INBOX → SOLD`）。既定ソートは滞在日数の降順。
+     `SOLD`（売却済アーカイブ）は既定で折りたたむ
+  2. **DailyDiff** — 選択日の差分。`classifyMove` で **買った / 売った / 昇格・降格 / 区分変更** の 4 分類
+     （+ 新規 / 削除）。昇降のラダーは Watch list 内の 5 状態
+     `READY > FOCUS > SECOND > OTHERS > INBOX` のみで、`HOLD`（買った）`SOLD`（売った）は先に確定させ、
+     `SHORT` が絡む move や `SOLD → OTHERS` は中立の区分変更。
+     配信側 `config.yaml` の `state_priority` は解決順であって昇格順ではないので使わない
+  3. **MissedBoard** — 見逃しボード（主役）。Watch list に入れたが **その exit の date より前に HOLD に
+     なっていない**銘柄を `from_state` 別に集計し、`max_ret_pct` 降順で並べる。READY からの離脱を強調。
+     同一 code の exit は畳まず全件出す
 - **勝率・PF・期待値は出さない**（サンプル過少。集計は中央値までで、件数を明記）
+- `scanner_names` が空の行に「自力発見」ラベルは付けない（スキャナーが拾えなかったのか、
+  その日リストを貼らなかったのかが区別できないため）。タグ表示に留め、空は `—`
 - データ: `watchlist_events` / `watchlist_current`（`lib/watchlistJournalFetch.ts`）、型は `types/watchlistJournal.ts`
 
 ---

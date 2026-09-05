@@ -23,17 +23,18 @@ export function StateBadge({ state }: { state: string | null | undefined }) {
 /**
  * その日ヒットしていたスキャナー名。
  *
- * 空配列は「どのスキャナーも拾えていない = 自力発見」を意味するので、
- * 無表示にせず明示する（イベントの 3 割弱がこれに当たる）。
+ * 空欄は「自力発見」と断定できない: ①どのスキャナーも拾えていなかった のほかに
+ * ②その日スキャナーリストを TradingView に貼らなかった が混ざっていて区別できない。
+ * ラベルを付けると誤解を招くので `—` に留める（集計もしない）。
  */
 export function ScannerTags({ names }: { names: string[] | null | undefined }) {
   if (!names || names.length === 0) {
     return (
       <span
-        className="inline-block px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-50 text-slate-500 border border-slate-200 whitespace-nowrap"
-        title="どのスキャナーにも出ていなかった銘柄（自力発見）"
+        className="text-gray-300"
+        title="スキャナー名の記録なし（どのスキャナーも拾えていない場合と、その日リストを貼らなかった場合が区別できません）"
       >
-        自力発見
+        —
       </span>
     )
   }
