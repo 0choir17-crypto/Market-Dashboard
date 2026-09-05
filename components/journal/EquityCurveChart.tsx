@@ -129,7 +129,7 @@ export default function EquityCurveChart({ trades }: Props) {
                 <stop offset="100%" stopColor={RED} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#efe6cf" />
+            <CartesianGrid strokeDasharray="3 3" stroke="#e6e8eb" />
             <ReferenceLine y={0} stroke="#9ca3af" strokeDasharray="2 2" />
             <XAxis
               dataKey="date"
