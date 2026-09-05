@@ -4,12 +4,12 @@ import type { EmaSetupCardRow, EmaTouch } from '@/types/emaSetups'
 import { resolveTouchType } from '@/types/emaSetups'
 import { formatPct } from '@/lib/format'
 import { tradingViewUrl, shikihoUrl } from '@/lib/tickerLinks'
+import CopyTickerButton from '@/components/shared/CopyTickerButton'
 
 type Props = {
   row: EmaSetupCardRow
   hot?: boolean
   multiHit?: boolean
-  onAddWatchlist?: (row: EmaSetupCardRow) => void
   onAddPosition?: (row: EmaSetupCardRow) => void
 }
 
@@ -94,7 +94,6 @@ export default function EmaSetupCard({
   row,
   hot = false,
   multiHit = false,
-  onAddWatchlist,
   onAddPosition,
 }: Props) {
   return (
@@ -196,28 +195,20 @@ export default function EmaSetupCard({
       </div>
 
       {/* アクション */}
-      {(onAddWatchlist || onAddPosition) && (
-        <div className="px-3 pt-2 pb-2 mt-2 border-t border-[var(--border-subtle)] flex items-center justify-end gap-1.5">
-          {onAddWatchlist && (
-            <button
-              onClick={() => onAddWatchlist(row)}
-              className="px-2 py-1 text-[10px] font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded transition-colors"
-              title="Watchlist に追加"
-            >
-              ＋ Watch
-            </button>
-          )}
-          {onAddPosition && (
-            <button
-              onClick={() => onAddPosition(row)}
-              className="px-2 py-1 text-[10px] font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded transition-colors"
-              title="Position として保存"
-            >
-              ＋ Position
-            </button>
-          )}
-        </div>
-      )}
+      <div className="px-3 pt-2 pb-2 mt-2 border-t border-[var(--border-subtle)] flex items-center justify-end gap-1.5">
+        {/* ウォッチリストの管理は TradingView 側。ここからできるのは
+            TradingView に貼れる形でティッカーを渡すことまで。 */}
+        <CopyTickerButton code={row.code} />
+        {onAddPosition && (
+          <button
+            onClick={() => onAddPosition(row)}
+            className="px-2 py-1 text-[10px] font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded transition-colors"
+            title="Position として保存"
+          >
+            ＋ Position
+          </button>
+        )}
+      </div>
     </div>
   )
 }
