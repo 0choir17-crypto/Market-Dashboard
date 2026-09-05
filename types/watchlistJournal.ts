@@ -19,34 +19,6 @@ export type WatchState =
 
 export type WatchEventType = 'enter' | 'move' | 'exit'
 
-/** TradingView 側のリスト名。汚染期のデータは配信時に正規化済みで、この 2 つしか現れない。 */
-export type WatchListName = 'Watch list' | 'Holdings'
-
-/**
- * 昇格 / 降格を測るラダー（大きいほど上位）。**Watch list 内の 5 状態だけ**が乗る。
- *
- * 配信側 `config.yaml` の `state_priority`
- * （`HOLD > READY > FOCUS > SECOND > SHORT > OTHERS > INBOX > SOLD`）とは別物なので
- * 混同しないこと。あちらは「同じ銘柄が複数リストに居たときどちらを採るか」の
- * 解決順で、そのまま大小比較に使うと `HOLD → SOLD` が「降格」、
- * `OTHERS → SHORT` が「昇格」になって意味を取り違える。
- *
- * HOLD / SOLD はラダーに載せない（買い・売りとして先に分類する）。
- * SHORT は空売り候補で別の軸なので、絡む move は中立扱いにする。
- */
-const LADDER: Partial<Record<WatchState, number>> = {
-  READY: 4,
-  FOCUS: 3,
-  SECOND: 2,
-  OTHERS: 1,
-  INBOX: 0,
-}
-
-function ladderRank(state: string | null | undefined): number | null {
-  if (!state) return null
-  return LADDER[state as WatchState] ?? null
-}
-
 /** §3.1 の表示順。ここに無い状態（想定外の値）は末尾に回す。 */
 export const STATE_ORDER: WatchState[] = [
   'HOLD',
@@ -110,7 +82,9 @@ export type WatchlistEvent = {
   from_state: string | null
   /** 移動後の状態。exit では null。 */
   to_state: string | null
+  /** `Watch list` / `Holdings` のみ（汚染期のデータは配信時に正規化済み）。 */
   from_list: string | null
+  /** 同上。exit では null。 */
   to_list: string | null
   /** 直前の状態に居た暦日数。enter では null。 */
   dwell_days: number | null
@@ -176,68 +150,6 @@ export type WatchlistCurrentRow = {
   ext_r: number | null
   scanner_names: string[] | null
   updated_at: string | null
-}
-
-/** §3.2 の差分表示で使うイベントの分類。 */
-export type MoveKind =
-  | 'enter'
-  | 'exit'
-  /** 買った — この画面で最重要のイベント。 */
-  | 'buy'
-  /** 売った。 */
-  | 'sell'
-  | 'promote'
-  | 'demote'
-  /** 区分変更（中立）— SHORT が絡む move、SOLD → OTHERS など、ラダーに乗らない移動。 */
-  | 'reclass'
-
-/**
- * イベントを表示用に分類する（§3.2 の 4 分類 + enter / exit）。
- *
- * 単一の優先度で大小比較すると `HOLD → SOLD` が「降格」になってしまうので、
- * 買い・売りを先に確定させ、残りのうち **両端が Watch list 内の 5 状態に収まるもの**
- * だけをラダーで比較する。それ以外（SHORT が絡む / SOLD → OTHERS 等）は中立。
- */
-export function classifyMove(ev: WatchlistEvent): MoveKind {
-  if (ev.event === 'enter') return 'enter'
-  if (ev.event === 'exit') return 'exit'
-
-  // 買った — READY → HOLD など、Holdings に入った瞬間
-  if (ev.to_state === 'HOLD') return 'buy'
-  // 売った — HOLD からの SOLD だけ。FOCUS → SOLD のような移動は区分変更に落とす
-  if (ev.from_state === 'HOLD' && ev.to_state === 'SOLD') return 'sell'
-
-  const from = ladderRank(ev.from_state)
-  const to = ladderRank(ev.to_state)
-  if (from === null || to === null) return 'reclass'
-  if (to > from) return 'promote'
-  if (to < from) return 'demote'
-  return 'reclass'
-}
-
-export const MOVE_LABEL: Record<MoveKind, string> = {
-  enter: '新規',
-  exit: '削除',
-  buy: '買った',
-  sell: '売った',
-  promote: '昇格',
-  demote: '降格',
-  reclass: '区分変更',
-}
-
-/**
- * 差分行のラベル色。既存のバッジ様式（パステル背景 + 枠線）に揃える。
- * 「買った」はこの画面で最重要のイベントなので、昇格（emerald-50）より彩度を上げた
- * emerald-100 + font-bold で区別する。区分変更は昇降と取り違えないよう中立色。
- */
-export const MOVE_CLASS: Record<MoveKind, string> = {
-  enter: 'bg-blue-50 text-blue-700 border-blue-200',
-  exit: 'bg-red-50 text-red-700 border-red-200',
-  buy: 'bg-emerald-100 text-emerald-800 border-emerald-300 font-bold',
-  sell: 'bg-slate-100 text-slate-700 border-slate-300',
-  promote: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  demote: 'bg-orange-50 text-orange-700 border-orange-200',
-  reclass: 'bg-slate-50 text-slate-500 border-slate-200',
 }
 
 // ── 鮮度判定 ────────────────────────────────────────────────────────────────

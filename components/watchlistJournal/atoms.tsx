@@ -5,6 +5,7 @@
 
 import { stateColors } from '@/types/watchlistJournal'
 import { formatPct } from '@/lib/format'
+import { shikihoUrl, tradingViewUrl } from '@/lib/tickerLinks'
 
 /** TradingView のセクション名（= 状態）バッジ。 */
 export function StateBadge({ state }: { state: string | null | undefined }) {
@@ -105,8 +106,9 @@ export function NumCell({
 }
 
 /**
- * 銘柄セル。コードは `278A` のように英字を含むので文字列のまま扱う
- * （数値としてパース・ソートしない）。
+ * 銘柄セル。プロジェクト共通のティッカークリック規約に従う（lib/tickerLinks.ts）:
+ * コード → TradingView、銘柄名 → 四季報。
+ * コードは `278A` のように英字を含むので文字列のまま扱う（数値としてパース・ソートしない）。
  */
 export function TickerCell({
   code,
@@ -116,13 +118,25 @@ export function TickerCell({
   name: string | null | undefined
 }) {
   return (
-    <div className="min-w-0">
-      <span className="font-mono font-semibold text-[var(--text-primary)]">{code}</span>
-      {name && (
-        <span className="ml-2 text-xs text-[var(--text-muted)] truncate" title={name}>
-          {name}
-        </span>
-      )}
+    <div className="flex items-baseline gap-2 min-w-0">
+      <a
+        href={tradingViewUrl(code)}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="font-mono font-semibold text-[var(--accent)] hover:underline flex-shrink-0"
+        title={`${code}（TradingView を開く）`}
+      >
+        {code}
+      </a>
+      <a
+        href={shikihoUrl(code)}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-xs text-[var(--text-muted)] hover:text-[var(--accent)] hover:underline truncate min-w-0"
+        title={`${name ?? '—'}（四季報を開く）`}
+      >
+        {name ?? '—'}
+      </a>
     </div>
   )
 }
