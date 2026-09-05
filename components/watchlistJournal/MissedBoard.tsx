@@ -17,7 +17,7 @@
 import { useMemo, useState } from 'react'
 import type { WatchlistEvent } from '@/types/watchlistJournal'
 import { formatPct } from '@/lib/format'
-import { NumCell, PctCell, SampleSizeNote, ScannerTags, StateBadge, TickerCell, median } from './atoms'
+import { NumCell, PctCell, SampleSizeNote, StateBadge, TickerCell, YenCell, median } from './atoms'
 
 // READY からの離脱が最も重い。この順で並べ、READY だけ枠を強調する。
 const FROM_STATE_ORDER = ['READY', 'FOCUS', 'SECOND', 'SHORT', 'OTHERS', 'INBOX']
@@ -27,6 +27,33 @@ function fromStateIndex(state: string | null): number {
   return i < 0 ? FROM_STATE_ORDER.length : i
 }
 
+type SortKey =
+  | 'date'
+  | 'code'
+  | 'from_state'
+  | 'sector_s33'
+  | 'dwell_days'
+  | 'bars_since'
+  | 'close_adj'
+  | 'ret_since_pct'
+  | 'max_ret_pct'
+  | 'min_ret_pct'
+  | 'adr_pct_20'
+
+const SORT_VALUE: Record<SortKey, (r: WatchlistEvent) => string | number | null> = {
+  date: r => r.date,
+  code: r => r.code,
+  from_state: r => fromStateIndex(r.from_state), // 状態は五十音ではなく重みの順で並べる
+  sector_s33: r => r.sector_s33,
+  dwell_days: r => r.dwell_days,
+  bars_since: r => r.bars_since,
+  close_adj: r => r.close_adj,
+  ret_since_pct: r => r.ret_since_pct,
+  max_ret_pct: r => r.max_ret_pct,
+  min_ret_pct: r => r.min_ret_pct,
+  adr_pct_20: r => r.adr_pct_20,
+}
+
 type Props = {
   rows: WatchlistEvent[]
 }
@@ -34,6 +61,17 @@ type Props = {
 export default function MissedBoard({ rows }: Props) {
   // 既定は「全部」。from_state を選ぶと絞り込む。
   const [filter, setFilter] = useState<string | null>(null)
+  // 既定は「落とした後に伸びた順」（max_ret_pct 降順）。lib 側の並びと一致させる。
+  const [sortKey, setSortKey] = useState<SortKey>('max_ret_pct')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
+
+  function handleSort(key: SortKey) {
+    if (sortKey === key) setSortDir(d => (d === 'asc' ? 'desc' : 'asc'))
+    else {
+      setSortKey(key)
+      setSortDir('desc')
+    }
+  }
 
   const groups = useMemo(() => {
     const byState = new Map<string, WatchlistEvent[]>()
@@ -53,15 +91,48 @@ export default function MissedBoard({ rows }: Props) {
       }))
   }, [rows])
 
-  const visible = useMemo(
-    () => (filter ? rows.filter(r => (r.from_state ?? '（不明）') === filter) : rows),
-    [rows, filter],
+  const visible = useMemo(() => {
+    const filtered = filter ? rows.filter(r => (r.from_state ?? '（不明）') === filter) : rows
+    const getValue = SORT_VALUE[sortKey]
+    return [...filtered].sort((a, b) => {
+      const av = getValue(a)
+      const bv = getValue(b)
+      // NULL は常に末尾。当日 exit（値動き未測定）を先頭に居座らせないため、
+      // 昇順・降順のどちらでも末尾に置く。
+      if (av == null && bv == null) return 0
+      if (av == null) return 1
+      if (bv == null) return -1
+      // code は英字混じり（278A）なので文字列比較。数値としてパースしない。
+      const c =
+        typeof av === 'string' || typeof bv === 'string'
+          ? String(av).localeCompare(String(bv))
+          : av - bv
+      return sortDir === 'asc' ? c : -c
+    })
+  }, [rows, filter, sortKey, sortDir])
+
+  const th = (
+    key: SortKey,
+    label: string,
+    title: string,
+    align: 'left' | 'right' = 'right',
+  ) => (
+    <th
+      onClick={() => handleSort(key)}
+      title={title}
+      className={`px-3 py-2 ${align === 'left' ? 'text-left' : 'text-right'} text-xs font-semibold uppercase tracking-wide cursor-pointer select-none whitespace-nowrap hover:bg-[var(--bg-card-hover)] transition-colors ${
+        sortKey === key ? 'text-[var(--accent)]' : 'text-gray-500'
+      }`}
+    >
+      {label}
+      {sortKey === key ? (sortDir === 'asc' ? ' ↑' : ' ↓') : ' ↕'}
+    </th>
   )
 
   if (rows.length === 0) {
     return (
       <section>
-        <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-3">見逃しボード</h2>
+        <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-3">Missed Board</h2>
         <div
           className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-6 text-center"
           style={{ color: 'var(--text-muted)' }}
@@ -75,9 +146,12 @@ export default function MissedBoard({ rows }: Props) {
   return (
     <section>
       <div className="flex flex-wrap items-baseline justify-between gap-2 mb-3">
-        <h2 className="text-lg font-semibold text-[var(--text-primary)]">見逃しボード</h2>
+        <h2 className="text-lg font-semibold text-[var(--text-primary)]">Missed Board</h2>
         <p className="text-xs text-[var(--text-muted)]">
-          Watch list に入れたのに、買わないまま落とした銘柄がその後どうなったか（落とした後に伸びた順）
+          Watch list に入れたのに、買わないまま落とした銘柄がその後どうなったか{' '}
+          <span className="text-gray-400">
+            — 並び順は列見出しをクリック（既定: 落とした後に伸びた順）
+          </span>
         </p>
       </div>
 
@@ -141,39 +215,17 @@ export default function MissedBoard({ rows }: Props) {
         <table className="w-full min-w-[980px] text-sm">
           <thead className="bg-[var(--bg-card-hover)] border-b border-[var(--border)]">
             <tr>
-              <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 whitespace-nowrap">
-                落とした日
-              </th>
-              <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 whitespace-nowrap">
-                銘柄
-              </th>
-              <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 whitespace-nowrap">
-                どこから
-              </th>
-              <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 whitespace-nowrap">
-                業種
-              </th>
-              <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 whitespace-nowrap">
-                滞在
-              </th>
-              <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 whitespace-nowrap">
-                経過
-              </th>
-              <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 whitespace-nowrap">
-                現在
-              </th>
-              <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-[var(--accent)] whitespace-nowrap">
-                最大上昇 ↓
-              </th>
-              <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 whitespace-nowrap">
-                最大下落
-              </th>
-              <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 whitespace-nowrap">
-                ADR%
-              </th>
-              <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 whitespace-nowrap">
-                スキャナー
-              </th>
+              {th('date', 'Date', 'Watch list から落とした日', 'left')}
+              {th('code', 'Code / Name', '銘柄コード → TradingView / 銘柄名 → 四季報', 'left')}
+              {th('from_state', 'From', 'どの状態から落としたか（READY が最も重い順で並ぶ）', 'left')}
+              {th('sector_s33', 'Sector', '33 業種', 'left')}
+              {th('dwell_days', 'Dwell', 'その状態に居た暦日数')}
+              {th('bars_since', 'Bars', '落とした日からの経過営業日数。右の 3 つの % を測った期間の長さ')}
+              {th('close_adj', 'Price', '落とした日の終値。右の % はこの値が基準')}
+              {th('ret_since_pct', 'Return', '落としてから現在までの変化%')}
+              {th('max_ret_pct', 'Max Gain', '期間中の最大上昇%（終値ベース）')}
+              {th('min_ret_pct', 'Max Draw', '期間中の最大下落%（安値ベース）')}
+              {th('adr_pct_20', 'ADR %', '落とした日の ADR% 20日')}
             </tr>
           </thead>
           <tbody>
@@ -200,7 +252,10 @@ export default function MissedBoard({ rows }: Props) {
                   <NumCell value={r.dwell_days} digits={0} suffix="日" />
                 </td>
                 <td className="px-3 py-2 text-right">
-                  <NumCell value={r.bars_since} digits={0} suffix="本" title="イベントからの経過営業日数" />
+                  <NumCell value={r.bars_since} digits={0} suffix="本" title="落とした日からの経過営業日数" />
+                </td>
+                <td className="px-3 py-2 text-right">
+                  <YenCell value={r.close_adj} title="落とした日の終値" />
                 </td>
                 <td className="px-3 py-2 text-right">
                   <PctCell value={r.ret_since_pct} />
@@ -213,9 +268,6 @@ export default function MissedBoard({ rows }: Props) {
                 </td>
                 <td className="px-3 py-2 text-right">
                   <NumCell value={r.adr_pct_20} suffix="%" />
-                </td>
-                <td className="px-3 py-2">
-                  <ScannerTags names={r.scanner_names} />
                 </td>
               </tr>
             ))}

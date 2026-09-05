@@ -4,7 +4,7 @@
 // 共有する小物。旧 /watchlist の ScreenTagBadge に相当する部品群。
 
 import { stateColors } from '@/types/watchlistJournal'
-import { formatPct } from '@/lib/format'
+import { formatPct, formatYen } from '@/lib/format'
 import { shikihoUrl, tradingViewUrl } from '@/lib/tickerLinks'
 
 /** TradingView のセクション名（= 状態）バッジ。 */
@@ -61,10 +61,13 @@ export function PctCell({
   value,
   digits = 1,
   title,
+  neutral = false,
 }: {
   value: number | null | undefined
   digits?: number
   title?: string
+  /** 損益ではない % に使う。1R % はほぼ常にプラスなので、緑にすると「良い数字」と誤読される。 */
+  neutral?: boolean
 }) {
   if (value == null || !Number.isFinite(value)) {
     return (
@@ -73,11 +76,42 @@ export function PctCell({
       </span>
     )
   }
+  if (neutral) {
+    return (
+      <span className="font-mono tabular-nums text-[var(--text-secondary)]" title={title}>
+        {formatPct(value, { digits })}
+      </span>
+    )
+  }
   const color =
     value > 0 ? 'text-[var(--positive)]' : value < 0 ? 'text-[var(--negative)]' : 'text-[var(--text-secondary)]'
   return (
     <span className={`font-mono tabular-nums ${color}`} title={title}>
       {formatPct(value, { digits, sign: true })}
+    </span>
+  )
+}
+
+/**
+ * 円建てセル。
+ *
+ * Supabase には Pine の呼値丸めを掛けていない生値が入っており、TradingView の
+ * 表示とは数円ずれる（+915 に対し 914.58 など）。整数に丸めて出し、厳密な
+ * 突き合わせは % 側で行う（% は小数第 2 位まで TV と一致する）。
+ */
+export function YenCell({
+  value,
+  title,
+}: {
+  value: number | null | undefined
+  title?: string
+}) {
+  if (value == null || !Number.isFinite(value)) {
+    return <span className="text-gray-300 font-mono tabular-nums">—</span>
+  }
+  return (
+    <span className="font-mono tabular-nums text-[var(--text-secondary)]" title={title}>
+      {formatYen(value)}
     </span>
   )
 }

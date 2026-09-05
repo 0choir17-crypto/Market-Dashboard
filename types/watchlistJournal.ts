@@ -117,6 +117,26 @@ export type WatchlistEvent = {
   max_ret_pct: number | null
   min_ret_pct: number | null
   measured_at: string | null
+
+  // ── 21EMA 系リスク列（2026-09-05 追加）─────────────────────────────────
+  // TradingView で常時表示しているインジケーター（Cockpit BT10 / ADR×ATR）と
+  // 同じ値。画面とダッシュボードで数字が食い違わないようにするためのもの。
+  // 円建て 4 列は Pine の呼値丸めを掛けていない生値なので TV 表示と数円ずれる。
+  // 検算は % で行う（小数第 2 位まで一致する）。
+  /** ta.atr(14)（Wilder RMA）。 */
+  atr_14: number | null
+  /** (close − ema(close,21)) / atr_14。Cockpit BT10 では 1.5 以下が緑。 */
+  ext_ema21: number | null
+  /** (close − ema(low,21)) / atr_14。 */
+  ext_ema21_low: number | null
+  /** close − ema(close,21)（円）。 */
+  dist_ema21_yen: number | null
+  /** close − ema(low,21)（円）= **1R**。安値 21EMA にストップを置いたときの値幅。 */
+  dist_ema21_low_yen: number | null
+  /** dist_ema21_yen × 2（円）。 */
+  rr2_ema21_yen: number | null
+  /** dist_ema21_low_yen × 2（円）= 利確目標までの値幅。 */
+  rr2_ema21_low_yen: number | null
 }
 
 /**
@@ -150,6 +170,26 @@ export type WatchlistCurrentRow = {
   ext_r: number | null
   scanner_names: string[] | null
   updated_at: string | null
+
+  // ── 21EMA 系リスク列（2026-09-05 追加）─────────────────────────────────
+  // TradingView で常時表示しているインジケーター（Cockpit BT10 / ADR×ATR）と
+  // 同じ値。画面とダッシュボードで数字が食い違わないようにするためのもの。
+  // 円建て 4 列は Pine の呼値丸めを掛けていない生値なので TV 表示と数円ずれる。
+  // 検算は % で行う（小数第 2 位まで一致する）。
+  /** ta.atr(14)（Wilder RMA）。 */
+  atr_14: number | null
+  /** (close − ema(close,21)) / atr_14。Cockpit BT10 では 1.5 以下が緑。 */
+  ext_ema21: number | null
+  /** (close − ema(low,21)) / atr_14。 */
+  ext_ema21_low: number | null
+  /** close − ema(close,21)（円）。 */
+  dist_ema21_yen: number | null
+  /** close − ema(low,21)（円）= **1R**。安値 21EMA にストップを置いたときの値幅。 */
+  dist_ema21_low_yen: number | null
+  /** dist_ema21_yen × 2（円）。 */
+  rr2_ema21_yen: number | null
+  /** dist_ema21_low_yen × 2（円）= 利確目標までの値幅。 */
+  rr2_ema21_low_yen: number | null
 }
 
 // ── 鮮度判定 ────────────────────────────────────────────────────────────────
@@ -232,4 +272,24 @@ export function classifySnapshotFreshness(
     border: '#fecaca',
     icon: '🔴',
   }
+}
+
+// ── 1R 乖離% ────────────────────────────────────────────────────────────────
+// 乖離% は列に無い。close_adj が同じ行にあるので 1 行で出せるため保存していない。
+//
+// 8% 以上は新基準ではエントリー対象外（1R が大きすぎて RR2:1 が成立しない。
+// docs/win_criteria_rr2_ema21low.md）だが、画面上での強調はしない方針。
+// 値は常にプラス側なので、損益セルと同じ色分けもしない（「良い数字」と誤読されるため）。
+
+/**
+ * 1R（安値 21EMA までの値幅）が終値の何 % か。
+ * TradingView が括弧で併記している % と小数第 2 位まで一致する。
+ */
+export function riskPct(
+  distEma21LowYen: number | null | undefined,
+  close: number | null | undefined,
+): number | null {
+  if (distEma21LowYen == null || close == null || !close) return null
+  if (!Number.isFinite(distEma21LowYen) || !Number.isFinite(close)) return null
+  return (100 * distEma21LowYen) / close
 }
