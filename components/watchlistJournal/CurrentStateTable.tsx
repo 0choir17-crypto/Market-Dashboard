@@ -200,10 +200,10 @@ export default function CurrentStateTable({ rows }: Props) {
                   <button
                     onClick={() => toggleGroup(group.state)}
                     aria-expanded={!collapsed.has(group.state)}
-                    className="inline-flex items-center gap-2 text-left hover:opacity-80 transition-opacity"
+                    className="inline-flex items-center gap-2 text-left"
                   >
                     <span
-                      className={`text-[10px] text-gray-400 inline-block transition-transform ${
+                      className={`text-caption text-[var(--sem-idle-fg)] inline-block transition-transform ${
                         collapsed.has(group.state) ? '' : 'rotate-90'
                       }`}
                       aria-hidden

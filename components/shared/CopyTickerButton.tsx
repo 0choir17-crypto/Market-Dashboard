@@ -63,12 +63,12 @@ export default function CopyTickerButton({ code, className }: Props) {
       title={`${ticker} をコピー（TradingView に貼り付け）`}
       className={
         className ??
-        `px-2 py-1 text-[10px] font-medium rounded border transition-colors ${
+        `px-2 py-1 text-caption rounded border-[0.5px] transition-colors ${
           state === 'done'
-            ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
+            ? 'text-[var(--sem-strong-fg)] bg-[var(--sem-strong-bg)] border-[var(--sem-strong-bd)]'
             : state === 'failed'
-              ? 'text-red-700 bg-red-50 border-red-200'
-              : 'text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border-indigo-200'
+              ? 'text-[var(--sem-weak-fg)] bg-[var(--sem-weak-bg)] border-[var(--sem-weak-bd)]'
+              : 'text-[var(--sem-focus-fg)] bg-[var(--sem-focus-bg)] border-[var(--sem-focus-bd)]'
         }`
       }
     >

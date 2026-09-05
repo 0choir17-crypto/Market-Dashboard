@@ -164,7 +164,7 @@ export function TickerCell({
         href={tradingViewUrl(code)}
         target="_blank"
         rel="noopener noreferrer"
-        className="font-mono font-semibold text-[var(--accent)] hover:underline flex-shrink-0"
+        className="font-mono font-medium text-[var(--sem-focus-fg)] hover:underline flex-shrink-0"
         title={`${code}（TradingView を開く）`}
       >
         {code}
@@ -173,7 +173,7 @@ export function TickerCell({
         href={shikihoUrl(code)}
         target="_blank"
         rel="noopener noreferrer"
-        className="text-xs text-[var(--text-muted)] hover:text-[var(--accent)] hover:underline truncate min-w-0"
+        className="text-small text-[var(--text-muted)] hover:text-[var(--sem-focus-fg)] hover:underline truncate min-w-0"
         title={`${name ?? '—'}（四季報を開く）`}
       >
         {name ?? '—'}
@@ -185,7 +185,7 @@ export function TickerCell({
 /** 件数が少ないことを明示する注記。勝率・PF・期待値は出さない（§3.4）。 */
 export function SampleSizeNote({ n, children }: { n: number; children?: React.ReactNode }) {
   return (
-    <p className="text-[11px] text-[var(--text-muted)] mt-2">
+    <p className="text-caption text-[var(--text-muted)] mt-2">
       n={n} — 件数がまだ少ないため中央値のみ。勝率・PF・期待値は出しません
       {children}
     </p>
