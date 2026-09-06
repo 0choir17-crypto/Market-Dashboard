@@ -12,7 +12,7 @@ import {
   type Time,
 } from 'lightweight-charts'
 import { useEffect, useRef, useState } from 'react'
-import { CHART, SERIES } from '@/lib/chartColors'
+import { CHART, GRID_LINE, SERIES } from '@/lib/chartColors'
 
 // 月ラベルを毎月表示させるための共通フォーマッタ。
 // lightweight-charts のデフォルトは横幅が狭いと月を間引く（2ヶ月ごと等）ため、
@@ -112,8 +112,8 @@ export function TimeSeriesChart({
         attributionLogo: false,
       },
       grid: {
-        vertLines: { color: 'rgba(148, 163, 184, 0.12)' },
-        horzLines: { color: 'rgba(148, 163, 184, 0.12)' },
+        vertLines: { color: GRID_LINE },
+        horzLines: { color: GRID_LINE },
       },
       timeScale: {
         timeVisible: false,

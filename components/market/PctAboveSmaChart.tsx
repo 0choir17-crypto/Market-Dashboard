@@ -5,7 +5,7 @@ import { LineStyle } from 'lightweight-charts'
 import { TimeSeriesChart, type TimeSeriesPoint } from './TimeSeriesChart'
 import { fetchPctAboveSmaTimeSeries } from '@/lib/marketChartData'
 import { useDate } from '@/contexts/DateContext'
-import { CHART } from '@/lib/chartColors'
+import { CHART, REF_LINE } from '@/lib/chartColors'
 
 export function PctAboveSmaChart({ height = 180 }: { height?: number }) {
   const { selectedDate, isLatest } = useDate()
@@ -35,7 +35,7 @@ export function PctAboveSmaChart({ height = 180 }: { height?: number }) {
     () => [
       {
         price: 50,
-        color: 'rgba(148, 163, 184, 0.5)',
+        color: REF_LINE,
         title: '50%',
         lineStyle: LineStyle.Dashed,
       },

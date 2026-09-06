@@ -271,12 +271,22 @@ Env 表示 / `market_conditions` 最新行プローブ / anon ロールでのテ
 `lib/chartFetch.ts` `lib/cockpit.ts` `lib/structurePivotDraw.ts` `lib/structurePivotFetch.ts`
 `types/signals.ts` `types/structurePivot.ts`、および `types/portfolio.ts` の `WatchlistItem` 型も削除済み。
 
-残っている到達不能ファイル（今回の対象外・別途判断）:
+**到達不能ファイルは 2026-09-06 に一掃済み。現在 0 件。**
 
-| ファイル | 備考 |
+| 削除したファイル | 経緯 |
 |---|---|
-| `components/market/IndexCard.tsx` / `IndexChart.tsx` / `ScoreGauge.tsx` / `EntryGateCard.tsx` / `RefreshButton.tsx` | MC v4 廃止時に画面から外れた |
-| `components/portfolio/HistoryTab.tsx` | Trading の 3 タブ統合時に外れた |
+| `components/market/IndexCard.tsx` / `IndexChart.tsx` / `ScoreGauge.tsx` / `EntryGateCard.tsx` / `RefreshButton.tsx` | MC v4 廃止時に画面から外れた。`IndexChart` は `IndexCard` からのみ参照されていたので道連れ |
+| `components/portfolio/HistoryTab.tsx` | Trading の 3 タブ統合（`7661c18`）で外れたあと、2 か月半のあいだ 3 回編集されていた |
+
+道連れで消えたもの: `lib/marketChartData.ts#fetchGateScoreTimeSeries`（`EntryGateCard` 専用）、
+`lib/chartColors.ts#REGIME_RAMP`（`ScoreGauge` 専用）。
+`lib/marketChartData.ts` の残り 4 つの fetch は `BreadthPanel` 経由で現役。
+
+> **なぜ 2 か月半も残ったか** — `tsconfig.json` が `**/*.tsx` を見るので、
+> import されていないファイルも型チェックと lint の対象になる。ビルドには入らない
+> （Next のツリーシェイクで落ちる）が、共通層を触るたびに修正コストだけが乗る。
+> 実際 2026-09-06 のカラー移行では、直した生 16 進 57 個のうち 33 個がこの
+> 死んだコードの中だった。画面から外したら同じコミットでファイルも消すこと。
 
 > README の「ディレクトリ構成」にある `components/vcp/` と `components/sectors/` は存在しません
 > （`sectors33/` に統合）。
