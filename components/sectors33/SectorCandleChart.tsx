@@ -20,14 +20,17 @@ import {
   VOLUME_SURGE_RATIO,
   volumeBarColor,
 } from '@/lib/volume'
-import { CHART, EMA_COLORS } from '@/lib/chartColors'
+import { CHART, EMA_COLORS, emaLineColor } from '@/lib/chartColors'
 
 
-// EMA 期間と色は 21EMA Cockpit+（TradingView）の指定に合わせる。
-export const MA_CONFIG: { length: number; color: string; label: string }[] = [
+// 期間と色は TradingView 側のチャート設定に合わせる。
+// 線は 30% 不透明（emaLineColor）で引き、凡例の文字だけ原色を使う。
+// 50 は 75 から変更した。移動平均は bars から都度計算しているので、
+// 期間を変えるだけで別途データを取りに行く必要はない。
+export const MA_CONFIG: { length: 10 | 21 | 50 | 150; color: string; label: string }[] = [
   { length: 10, color: EMA_COLORS[10], label: 'EMA10' },
   { length: 21, color: EMA_COLORS[21], label: 'EMA21' },
-  { length: 75, color: EMA_COLORS[75], label: 'EMA75' },
+  { length: 50, color: EMA_COLORS[50], label: 'EMA50' },
   { length: 150, color: EMA_COLORS[150], label: 'EMA150' },
 ]
 
@@ -45,7 +48,7 @@ export function MaLegend({ className = '' }: { className?: string }) {
         <span key={m.length} className="flex items-center gap-1.5">
           <span
             className="inline-block w-6 h-[3px] rounded-full"
-            style={{ backgroundColor: m.color }}
+            style={{ backgroundColor: emaLineColor(m.length) }}
           />
           <span className="text-xs font-semibold font-mono" style={{ color: m.color }}>
             {m.length}
@@ -175,11 +178,11 @@ export default function SectorCandleChart({
 
     const closes = bars.map((b) => b.close)
     // MA は candlestick の背後に来るよう先に追加する。
-    // title を付けると価格軸に EMA10/21/75/150 のバッジが積み上がって
+    // title を付けると価格軸に EMA10/21/50/150 のバッジが積み上がって
     // 値動きを隠すため付けない（色の対応はヘッダーの MaLegend で示す）。
     for (const m of MA_CONFIG) {
       const line = chart.addSeries(LineSeries, {
-        color: m.color,
+        color: emaLineColor(m.length),
         lineWidth: 1,
         priceLineVisible: false,
         lastValueVisible: false,

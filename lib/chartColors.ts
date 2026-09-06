@@ -76,15 +76,32 @@ export const SERIES = {
 } as const
 
 /**
- * EMA の色。21EMA Cockpit+（TradingView）の指定と対応させているので、
- * 意味語彙には寄せずに TradingView 側と同じ色を保つ。
+ * 移動平均線の色。TradingView 側のチャート設定と同じ値にしている。
+ * 意味を表す色ではないので意味語彙には寄せない。
  */
 export const EMA_COLORS = {
-  10: '#eab308', // ゴールド/イエロー
-  21: '#a855f7', // パープル
-  75: '#3b82f6', // ブルー
-  150: '#22c55e', // グリーン
+  10: '#00bcd4', // シアン
+  21: '#2962ff', // ブルー
+  50: '#673ab7', // ディープパープル
+  150: '#f23645', // レッド
 } as const
+
+/** 移動平均線の不透明度。値動きを隠さないよう TradingView 側と同じ 30%。 */
+export const EMA_ALPHA = 0.3
+
+/** #rrggbb → rgba()。チャートライブラリは 8 桁 16 進を受けないものがあるため展開する。 */
+export function withAlpha(hex: string, alpha: number): string {
+  const h = hex.replace('#', '')
+  const r = parseInt(h.slice(0, 2), 16)
+  const g = parseInt(h.slice(2, 4), 16)
+  const b = parseInt(h.slice(4, 6), 16)
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`
+}
+
+/** チャートに引く実際の線の色（30% 不透明）。凡例の文字色には使わない。 */
+export function emaLineColor(length: keyof typeof EMA_COLORS): string {
+  return withAlpha(EMA_COLORS[length], EMA_ALPHA)
+}
 
 /**
  * チャートに重ねる 5 指標の色。系列を見分けるためだけの分類スケールで、

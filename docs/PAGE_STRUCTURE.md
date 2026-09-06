@@ -275,8 +275,8 @@ Env 表示 / `market_conditions` 最新行プローブ / anon ロールでのテ
 
 | ファイル | 備考 |
 |---|---|
-| `components/market/IndexCard.tsx` / `IndexChart.tsx` / `ScoreGauge.tsx` / `EntryGateCard.tsx` / `RefreshButton.tsx` | MC v4 廃止時に画面から外れた |
-| `components/portfolio/HistoryTab.tsx` | Trading の 3 タブ統合時に外れた |
+| `components/market/IndexCard.tsx` / `IndexChart.tsx` / `ScoreGauge.tsx` / `EntryGateCard.tsx` / `RefreshButton.tsx` | MC v4 廃止時に画面から外れた。`IndexChart` は `IndexCard` からのみ参照されるので、根が死ぬと一緒に死ぬ |
+| ~~`components/portfolio/HistoryTab.tsx`~~ | **2026-09-06 削除**。Trading の 3 タブ統合（`7661c18`）で外れたあと、2 か月半のあいだ 3 回編集されていた |
 
 > README の「ディレクトリ構成」にある `components/vcp/` と `components/sectors/` は存在しません
 > （`sectors33/` に統合）。
