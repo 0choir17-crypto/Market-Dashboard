@@ -213,10 +213,10 @@ export default function PositionModal({ open, onClose, onSaved, initial }: Props
     <Modal open={open} onClose={onClose} title={title}>
       <div className="px-6 py-5 space-y-4">
         {error && (
-          <p className="text-sm text-[var(--negative)] bg-[var(--sem-weak-bg)] px-3 py-2 rounded-lg">{error}</p>
+          <p className="text-small text-[var(--negative)] bg-[var(--sem-weak-bg)] px-3 py-2 rounded-lg">{error}</p>
         )}
         {warning && (
-          <p className="text-sm text-[var(--sem-watch-fg)] bg-[var(--sem-watch-bg)] border border-[var(--sem-watch-bd)] px-3 py-2 rounded-lg">{warning}</p>
+          <p className="text-small text-[var(--sem-watch-fg)] bg-[var(--sem-watch-bg)] border border-[var(--sem-watch-bd)] px-3 py-2 rounded-lg">{warning}</p>
         )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -346,7 +346,7 @@ export default function PositionModal({ open, onClose, onSaved, initial }: Props
             <label className={labelClass}>
               Stop Price
               {stopPctFromEntry != null && (
-                <span className="ml-1 font-normal font-mono text-[var(--sem-watch-fg)]">
+                <span className="ml-1 font-normal num text-[var(--sem-watch-fg)]">
                   （Entry比 {formatPct(stopPctFromEntry, { sign: true })}）
                 </span>
               )}
@@ -366,7 +366,7 @@ export default function PositionModal({ open, onClose, onSaved, initial }: Props
             <label className={labelClass}>
               Target Price (目標株価)
               {targetPctFromEntry != null && (
-                <span className="ml-1 font-normal font-mono text-[var(--positive)]">
+                <span className="ml-1 font-normal num text-[var(--positive)]">
                   （Entry比 {formatPct(targetPctFromEntry, { sign: true })}）
                 </span>
               )}
@@ -396,7 +396,7 @@ export default function PositionModal({ open, onClose, onSaved, initial }: Props
 
         {/* Exit（任意）: 入力すると closed として確定。空ければ open のまま */}
         <div className="border border-dashed border-[var(--border-strong)] rounded-lg p-4 space-y-3">
-          <p className="text-xs font-semibold text-[var(--text-secondary)]">
+          <p className="text-caption font-medium text-[var(--text-secondary)]">
             イグジット（売り・任意）
             <span className="ml-1 font-normal text-[var(--text-muted)]">— 入力すると「確定（closed）」として保存し損益を自動計算</span>
           </p>
@@ -457,11 +457,11 @@ export default function PositionModal({ open, onClose, onSaved, initial }: Props
               : exitPreview.result === 'LOSS' ? 'text-[var(--sem-weak-fg)]' : 'text-[var(--text-primary)]'
             return (
               <div className={`rounded-lg px-4 py-2 text-center ${bg}`}>
-                <span className={`text-base font-bold font-mono ${fgStrong}`}>
+                <span className={`text-lead font-medium num ${fgStrong}`}>
                   {formatYen(exitPreview.pnl, { sign: true })}
                   {' '}({formatPct(exitPreview.pnlPct, { sign: true })})
                 </span>
-                <span className={`ml-2 text-xs font-semibold ${fgStrong}`}>{exitPreview.result}</span>
+                <span className={`ml-2 text-caption font-medium ${fgStrong}`}>{exitPreview.result}</span>
               </div>
             )
           })()}

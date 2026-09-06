@@ -134,15 +134,15 @@ export default function CloseTradeModal({ open, onClose, onSaved, trade }: Props
     <Modal open={open} onClose={onClose} title="Close Trade">
       <div className="px-6 py-5 space-y-4">
         {error && (
-          <p className="text-sm text-[var(--negative)] bg-[var(--sem-weak-bg)] px-3 py-2 rounded-lg">{error}</p>
+          <p className="text-small text-[var(--negative)] bg-[var(--sem-weak-bg)] px-3 py-2 rounded-lg">{error}</p>
         )}
 
         {/* トレード情報 */}
         <div className="bg-[var(--bg-card-hover)] rounded-lg px-4 py-3 space-y-1">
-          <p className="text-sm font-semibold text-[var(--text-primary)]">
+          <p className="text-small font-medium text-[var(--text-primary)]">
             {trade.ticker} {trade.company_name ?? ''}
           </p>
-          <p className="text-xs text-[var(--text-secondary)]">
+          <p className="text-caption text-[var(--text-secondary)]">
             {screenDisplay} &middot; Entry: {trade.entry_date} &middot; &yen;{trade.entry_price.toLocaleString()} &times; {trade.shares} sh
           </p>
         </div>
@@ -206,12 +206,12 @@ export default function CloseTradeModal({ open, onClose, onSaved, trade }: Props
             : 'text-[var(--text-secondary)]'
           return (
             <div className={`rounded-lg px-4 py-3 text-center ${bg}`}>
-              <p className={`text-lg font-bold font-mono ${fgStrong}`}>
+              <p className={`text-title font-medium num ${fgStrong}`}>
                 {formatYen(preview.pnl, { sign: true })}
                 {' '}
                 ({formatPct(preview.pnlPct, { sign: true })})
               </p>
-              <p className={`text-xs font-semibold ${fgWeak}`}>
+              <p className={`text-caption font-medium ${fgWeak}`}>
                 {preview.result}
               </p>
             </div>

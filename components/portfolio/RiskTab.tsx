@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { Trade } from '@/types/trades'
 import { RiskSettings } from '@/types/portfolio'
 import { formatYen, formatPct, pnlColorClass } from '@/lib/format'
+import { fieldClass, labelClass } from '@/components/shared/form'
 
 type Props = {
   riskSettings: RiskSettings | null
@@ -94,17 +95,18 @@ export default function RiskTab({ riskSettings, history, onRefresh }: Props) {
     onRefresh()
   }
 
-  const inputClass = "w-full border border-[var(--border-strong)] rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-[var(--sem-focus-fg)]"
-  const labelClass = "block text-xs font-medium text-[var(--text-secondary)] mb-1"
-  const roClass = "w-full border border-[var(--border)] bg-[var(--bg-card-hover)] rounded-lg px-3 py-2.5 text-base font-mono text-[var(--text-primary)]"
+  // 入力欄の見た目は components/shared/form.tsx が持つ。読み取り専用の欄だけ
+  // 面と罫線を落として「触れない」ことを示す。
+  const inputClass = fieldClass
+  const roClass = `${fieldClass} bg-[var(--bg-card-hover)] border-[var(--border)] num`
 
   return (
     <div className="space-y-5 max-w-2xl">
-      {error && <p className="text-sm text-[var(--negative)] bg-[var(--sem-weak-bg)] px-3 py-2 rounded-lg">{error}</p>}
+      {error && <p className="text-small text-[var(--negative)] bg-[var(--sem-weak-bg)] px-3 py-2 rounded-lg">{error}</p>}
 
       {/* === Capital & Risk Settings === */}
       <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-5">
-        <h3 className="text-sm font-bold text-[var(--text-primary)] mb-4">💰 Capital & Risk Settings</h3>
+        <h3 className="text-small font-medium text-[var(--text-primary)] mb-4">💰 Capital & Risk Settings</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={labelClass}>Account Capital (¥)</label>
@@ -137,7 +139,7 @@ export default function RiskTab({ riskSettings, history, onRefresh }: Props) {
 
       {/* === Drawdown Rules === */}
       <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-5">
-        <h3 className="text-sm font-bold text-[var(--text-primary)] mb-4">📉 Drawdown Rules</h3>
+        <h3 className="text-small font-medium text-[var(--text-primary)] mb-4">📉 Drawdown Rules</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={labelClass}>Monthly DD Limit % (e.g., -8)</label>
@@ -190,7 +192,7 @@ export default function RiskTab({ riskSettings, history, onRefresh }: Props) {
       {/* === Losing Streak === */}
       <div className={`rounded-xl border shadow-sm p-5 ${isHalfRisk ? 'bg-[var(--sem-watch-bg)] border-[var(--sem-watch-bd)]' : 'bg-[var(--bg-card)] border-[var(--border)]'}`}>
         <div className="flex items-center gap-2 mb-4">
-          <h3 className="text-sm font-bold text-[var(--text-primary)]">🔄 Losing Streak</h3>
+          <h3 className="text-small font-medium text-[var(--text-primary)]">🔄 Losing Streak</h3>
           {isHalfRisk && (
             <span className="px-2 py-0.5 bg-[var(--sem-watch-bg)] text-[var(--sem-watch-fg)] border-[0.5px] border-[var(--sem-watch-bd)] rounded-full text-caption">Risk halved</span>
           )}
@@ -198,13 +200,13 @@ export default function RiskTab({ riskSettings, history, onRefresh }: Props) {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={labelClass}>Losing Streak (auto)</label>
-            <div className={`${roClass} ${consecLosses >= 3 ? 'text-[var(--negative)] font-bold' : ''}`}>
+            <div className={`${roClass} ${consecLosses >= 3 ? 'text-[var(--negative)] font-medium' : ''}`}>
               {consecLosses}
             </div>
           </div>
           <div>
             <label className={labelClass}>Applied Risk %</label>
-            <div className={`${roClass} ${isHalfRisk ? 'text-[var(--sem-watch-fg)] font-bold' : 'text-[var(--positive)]'}`}>
+            <div className={`${roClass} ${isHalfRisk ? 'text-[var(--sem-watch-fg)] font-medium' : 'text-[var(--positive)]'}`}>
               {!isNaN(appliedRiskPct) ? `${formatPct(appliedRiskPct)}${isHalfRisk ? ' (halved)' : ''}` : '—'}
             </div>
           </div>
@@ -215,7 +217,7 @@ export default function RiskTab({ riskSettings, history, onRefresh }: Props) {
       <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-5">
         <label className={labelClass}>Memo</label>
         <textarea value={memo} onChange={e => setMemo(e.target.value)} rows={3}
-          className="w-full border border-[var(--border-strong)] rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-[var(--sem-focus-fg)] resize-none"
+          className={`${fieldClass} resize-none`}
           placeholder="リスク管理方針など" />
       </div>
 
@@ -223,7 +225,7 @@ export default function RiskTab({ riskSettings, history, onRefresh }: Props) {
         <button
           onClick={handleSave}
           disabled={saving}
-          className={`px-6 py-3 text-sm font-semibold text-white rounded-lg transition-colors min-h-[44px] disabled:opacity-50 ${saved ? 'bg-[var(--positive)]' : 'bg-[var(--sem-focus-fg)] hover:brightness-110'}`}
+          className={`px-6 py-3 text-small font-medium text-white rounded-lg transition-colors min-h-[44px] disabled:opacity-50 ${saved ? 'bg-[var(--positive)]' : 'bg-[var(--sem-focus-fg)] hover:brightness-110'}`}
         >
           {saving ? '保存中…' : saved ? '✓ 保存しました' : '保存'}
         </button>

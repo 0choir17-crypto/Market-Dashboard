@@ -60,16 +60,16 @@ export default function ReviewSection({ trade, onSaved, onCancel }: Props) {
     >
       {/* ヘッダー */}
       <div className="flex flex-wrap items-center gap-2 pb-2 border-b border-[var(--border)]">
-        <span className="text-sm font-semibold text-[var(--text-primary)]">
+        <span className="text-small font-medium text-[var(--text-primary)]">
           🔍 Review: <span className="font-mono">{trade.ticker}</span> {trade.company_name ?? ''}
         </span>
-        <span className="text-xs text-[var(--text-secondary)] font-mono">
+        <span className="text-caption text-[var(--text-secondary)] font-mono">
           {trade.entry_date} → {trade.exit_date}
         </span>
-        <span className={`text-xs font-semibold font-mono ${isWin ? 'text-[var(--positive)]' : 'text-[var(--negative)]'}`}>
+        <span className={`text-caption font-medium num ${isWin ? 'text-[var(--positive)]' : 'text-[var(--negative)]'}`}>
           {formatPct(trade.pnl_pct ?? 0, { sign: true })}
         </span>
-        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+        <span className={`text-caption font-medium px-1.5 py-0.5 rounded ${
           isWin ? 'bg-[var(--sem-strong-bg)] text-[var(--sem-strong-fg)]' : 'bg-[var(--sem-weak-bg)] text-[var(--sem-weak-fg)]'
         }`}>
           {trade.result}
@@ -77,51 +77,51 @@ export default function ReviewSection({ trade, onSaved, onCancel }: Props) {
       </div>
 
       {error && (
-        <p className="text-xs text-[var(--negative)] bg-[var(--sem-weak-bg)] px-3 py-2 rounded">{error}</p>
+        <p className="text-caption text-[var(--negative)] bg-[var(--sem-weak-bg)] px-3 py-2 rounded">{error}</p>
       )}
 
       {/* チャート */}
       <div>
-        <p className="text-xs font-semibold text-[var(--text-primary)] mb-2">📈 チャート</p>
+        <p className="text-caption font-medium text-[var(--text-primary)] mb-2">📈 チャート</p>
         <TradeChart trade={trade} />
       </div>
 
       {/* MFE / MAE */}
       {trade.mfe_pct != null && trade.mae_pct != null ? (
         <div>
-          <p className="text-xs font-semibold text-[var(--text-primary)] mb-2">📏 MFE / MAE</p>
+          <p className="text-caption font-medium text-[var(--text-primary)] mb-2">📏 MFE / MAE</p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
             <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-lg px-3 py-2.5">
-              <p className="text-[11px] text-[var(--text-secondary)]">Peak gain (MFE)</p>
-              <p className="text-xl font-bold font-mono text-[var(--positive)] mt-0.5">
+              <p className="text-caption text-[var(--text-secondary)]">Peak gain (MFE)</p>
+              <p className="text-title font-medium num text-[var(--positive)] mt-0.5">
                 {formatPct(trade.mfe_pct, { digits: 1, sign: true })}
               </p>
               {trade.mfe_date && (
-                <p className="text-[11px] text-[var(--text-muted)] mt-0.5 font-mono">{trade.mfe_date}</p>
+                <p className="text-caption text-[var(--text-muted)] mt-0.5 font-mono">{trade.mfe_date}</p>
               )}
             </div>
             <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-lg px-3 py-2.5">
-              <p className="text-[11px] text-[var(--text-secondary)]">Worst drawdown (MAE)</p>
-              <p className="text-xl font-bold font-mono text-[var(--negative)] mt-0.5">
+              <p className="text-caption text-[var(--text-secondary)]">Worst drawdown (MAE)</p>
+              <p className="text-title font-medium num text-[var(--negative)] mt-0.5">
                 {formatPct(trade.mae_pct, { digits: 1, sign: true })}
               </p>
               {trade.mae_date && (
-                <p className="text-[11px] text-[var(--text-muted)] mt-0.5 font-mono">{trade.mae_date}</p>
+                <p className="text-caption text-[var(--text-muted)] mt-0.5 font-mono">{trade.mae_date}</p>
               )}
             </div>
             <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-lg px-3 py-2.5">
-              <p className="text-[11px] text-[var(--text-secondary)]">Missed rate</p>
-              <p className="text-xl font-bold font-mono text-[var(--sem-watch-fg)] mt-0.5">
+              <p className="text-caption text-[var(--text-secondary)]">Missed rate</p>
+              <p className="text-title font-medium num text-[var(--sem-watch-fg)] mt-0.5">
                 {formatPct(calculateMissedRate(trade.mfe_pct, trade.pnl_pct), { digits: 0 })}
               </p>
-              <p className="text-[11px] text-[var(--text-muted)] mt-0.5 font-mono">
+              <p className="text-caption text-[var(--text-muted)] mt-0.5 font-mono">
                 MFE {formatPct(trade.mfe_pct, { digits: 1 })} → Actual {trade.pnl_pct != null ? formatPct(trade.pnl_pct, { digits: 1, sign: true }) : '—'}
               </p>
             </div>
           </div>
         </div>
       ) : (
-        <div className="text-xs text-[var(--text-secondary)] bg-[var(--bg-card)] border border-[var(--border)] rounded-lg px-3 py-2">
+        <div className="text-caption text-[var(--text-secondary)] bg-[var(--bg-card)] border border-[var(--border)] rounded-lg px-3 py-2">
           📏 MFE/MAEデータなし（保有期間中の終値データが不足している可能性）
         </div>
       )}
@@ -129,7 +129,7 @@ export default function ReviewSection({ trade, onSaved, onCancel }: Props) {
       {/* タグ選択 */}
       {(Object.keys(grouped) as ReviewTagCategory[]).map(category => (
         <div key={category} className="space-y-1.5">
-          <p className="text-xs font-semibold text-[var(--text-primary)]">{CATEGORY_LABELS[category]}</p>
+          <p className="text-caption font-medium text-[var(--text-primary)]">{CATEGORY_LABELS[category]}</p>
           <div className="flex flex-wrap gap-1.5">
             {grouped[category].map(tag => {
               const checked = selectedTagIds.includes(tag.id)
@@ -137,7 +137,7 @@ export default function ReviewSection({ trade, onSaved, onCancel }: Props) {
                 <label
                   key={tag.id}
                   title={tag.description}
-                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs cursor-pointer transition-colors ${
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-caption cursor-pointer transition-colors ${
                     checked
                       ? 'bg-[var(--sem-focus-bg)] border-[var(--sem-focus-bd)] text-[var(--sem-focus-fg)]'
                       : 'bg-[var(--bg-card)] border-[var(--border-strong)] text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)]'
@@ -159,25 +159,25 @@ export default function ReviewSection({ trade, onSaved, onCancel }: Props) {
 
       {/* エントリー理由 */}
       <div>
-        <label className="block text-xs font-semibold text-[var(--text-primary)] mb-1">💭 Entry thesis</label>
+        <label className="block text-caption font-medium text-[var(--text-primary)] mb-1">💭 Entry thesis</label>
         <textarea
           value={entryReason}
           onChange={e => setEntryReason(e.target.value)}
           rows={2}
           placeholder="なぜこのタイミングでエントリーしたか"
-          className="w-full border border-[var(--border-strong)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--sem-focus-fg)] resize-none bg-[var(--bg-card)]"
+          className="w-full border border-[var(--border-strong)] rounded-lg px-3 py-2 text-small focus:outline-none focus:ring-2 focus:ring-[var(--sem-focus-fg)] resize-none bg-[var(--bg-card)]"
         />
       </div>
 
       {/* 教訓 */}
       <div>
-        <label className="block text-xs font-semibold text-[var(--text-primary)] mb-1">📝 Lesson learned</label>
+        <label className="block text-caption font-medium text-[var(--text-primary)] mb-1">📝 Lesson learned</label>
         <textarea
           value={lessonLearned}
           onChange={e => setLessonLearned(e.target.value)}
           rows={2}
           placeholder="このトレードから学んだこと"
-          className="w-full border border-[var(--border-strong)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--sem-focus-fg)] resize-none bg-[var(--bg-card)]"
+          className="w-full border border-[var(--border-strong)] rounded-lg px-3 py-2 text-small focus:outline-none focus:ring-2 focus:ring-[var(--sem-focus-fg)] resize-none bg-[var(--bg-card)]"
         />
       </div>
 
@@ -185,14 +185,14 @@ export default function ReviewSection({ trade, onSaved, onCancel }: Props) {
       <div className="flex justify-end gap-2 pt-2">
         <button
           onClick={onCancel}
-          className="px-3 py-1.5 text-xs font-medium text-[var(--text-primary)] border border-[var(--border-strong)] rounded-lg hover:bg-[var(--bg-card-hover)] transition-colors"
+          className="px-3 py-1.5 text-caption font-medium text-[var(--text-primary)] border border-[var(--border-strong)] rounded-lg hover:bg-[var(--bg-card-hover)] transition-colors"
         >
           キャンセル
         </button>
         <button
           onClick={handleSave}
           disabled={saving}
-          className="px-4 py-1.5 text-xs font-medium text-white bg-[var(--sem-focus-fg)] rounded-lg hover:brightness-110 transition-colors disabled:opacity-50"
+          className="px-4 py-1.5 text-caption font-medium text-white bg-[var(--sem-focus-fg)] rounded-lg hover:brightness-110 transition-colors disabled:opacity-50"
         >
           {saving ? '保存中…' : '保存'}
         </button>

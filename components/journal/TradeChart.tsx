@@ -186,7 +186,7 @@ export default function TradeChart({ trade }: Props) {
 
   if (!loading && fetchError) {
     return (
-      <div className="text-xs text-[var(--negative)] bg-[var(--sem-weak-bg)] border border-[var(--sem-weak-bd)] rounded-lg px-3 py-2">
+      <div className="text-caption text-[var(--negative)] bg-[var(--sem-weak-bg)] border border-[var(--sem-weak-bd)] rounded-lg px-3 py-2">
         ⚠️ チャートの取得に失敗しました（通信エラー。再読み込みしてください）
       </div>
     )
@@ -194,7 +194,7 @@ export default function TradeChart({ trade }: Props) {
 
   if (!loading && data.length === 0) {
     return (
-      <div className="text-xs text-[var(--text-secondary)] bg-[var(--bg-card)] border border-[var(--border)] rounded-lg px-3 py-2">
+      <div className="text-caption text-[var(--text-secondary)] bg-[var(--bg-card)] border border-[var(--border)] rounded-lg px-3 py-2">
         📈 チャートデータなし（daily_signalsに該当期間のデータがありません）
       </div>
     )
@@ -202,7 +202,7 @@ export default function TradeChart({ trade }: Props) {
 
   return (
     <div>
-      <div className="flex flex-wrap gap-3 mb-2 text-xs">
+      <div className="flex flex-wrap gap-3 mb-2 text-caption">
         <label className="inline-flex items-center gap-1 cursor-pointer">
           <input
             type="checkbox"
@@ -243,7 +243,7 @@ export default function TradeChart({ trade }: Props) {
 
       {loading ? (
         <div className="h-80 flex items-center justify-center bg-[var(--bg-card)] border border-[var(--border)] rounded-lg">
-          <div className="text-sm text-[var(--text-secondary)]">📈 チャート読み込み中…</div>
+          <div className="text-small text-[var(--text-secondary)]">📈 チャート読み込み中…</div>
         </div>
       ) : (
         <div
