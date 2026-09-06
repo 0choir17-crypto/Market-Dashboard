@@ -71,6 +71,11 @@ type Props<Row> = {
   expandOnRowClick?: boolean
   /** 行に足すクラス。信頼度の低い行を減光する、といった用途。 */
   rowClassName?: (row: Row) => string
+  /**
+   * ソート値が同値のときの決定規則。指定しないと元の順序のまま（安定ソート）。
+   * 同値が並ぶ列（グループ別の順位など）で並びを決定的にしたいときに使う。
+   */
+  tieBreak?: (a: Row, b: Row) => number
   /** 全列ビューのときだけ必要な最小幅。要約ビューは min-w を持たない。 */
   fullMinWidth?: number
   /** 要約 / 全列トグルを出すか。false なら常に全列。 */
@@ -90,6 +95,7 @@ export default function DataTable<Row>({
   renderDetail,
   expandOnRowClick = false,
   rowClassName,
+  tieBreak,
   fullMinWidth,
   summaryToggle = true,
 }: Props<Row>) {
@@ -126,8 +132,10 @@ export default function DataTable<Row>({
   const groups: Group<Row>[] = useMemo(() => {
     const col = columns.find(c => c.key === sortKey)
     const getValue = col?.value
-    const cmp = (a: Row, b: Row) =>
-      getValue ? compareValues(getValue(a), getValue(b), sortDir) : 0
+    const cmp = (a: Row, b: Row) => {
+      const c = getValue ? compareValues(getValue(a), getValue(b), sortDir) : 0
+      return c !== 0 ? c : (tieBreak?.(a, b) ?? 0)
+    }
 
     if (!groupBy) return [{ key: '', rows: [...rows].sort(cmp) }]
 
@@ -141,7 +149,7 @@ export default function DataTable<Row>({
     const entries = [...byKey.entries()]
     if (groupRank) entries.sort((a, b) => groupRank(a[0]) - groupRank(b[0]))
     return entries.map(([key, list]) => ({ key, rows: [...list].sort(cmp) }))
-  }, [rows, columns, sortKey, sortDir, groupBy, groupRank])
+  }, [rows, columns, sortKey, sortDir, groupBy, groupRank, tieBreak])
 
   const colSpan = visible.length + (detailButton ? 1 : 0)
 
