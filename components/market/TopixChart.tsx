@@ -51,21 +51,30 @@ function ChangePill({ label, value }: { label: string; value: number | null | un
   )
 }
 
+// 単純移動平均（SMA）の上下バッジ。Supabase の *_sma50 / *_sma200 列をそのまま出す。
+// チャートに引いている 4 本は EMA なので、線の位置とこのバッジは一致しない。
+// title で明示しないと「線より上なのにバッジが下」が不具合に見える。
+const SMA_BADGE_NOTE = 'データ側の単純移動平均（SMA）との比較。チャートの線は EMA なので位置は一致しません'
+
 function SmaBadge({ above, label }: { above: boolean | null | undefined; label: string }) {
   if (above === null || above === undefined) {
     return (
-      <span className="px-1.5 py-0.5 rounded text-caption bg-[var(--bg-primary)] text-[var(--text-muted)]">
+      <span
+        title={SMA_BADGE_NOTE}
+        className="px-1.5 py-0.5 rounded text-caption bg-[var(--bg-primary)] text-[var(--text-muted)]"
+      >
         {label} N/A
       </span>
     )
   }
   return (
     <span
+      title={SMA_BADGE_NOTE}
       className="px-1.5 py-0.5 rounded text-caption font-medium"
       style={
         above
-          ? { backgroundColor: 'var(--positive-bg)', color: 'var(--positive)' }
-          : { backgroundColor: 'var(--negative-bg)', color: 'var(--negative)' }
+          ? { backgroundColor: 'var(--sem-ok-bg)', color: 'var(--positive)' }
+          : { backgroundColor: 'var(--sem-weak-bg)', color: 'var(--negative)' }
       }
     >
       {label} {above ? '↑' : '↓'}

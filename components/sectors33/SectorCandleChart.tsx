@@ -10,7 +10,7 @@ import {
   createChart,
 } from 'lightweight-charts'
 import type { OhlcvBar, VolumeBar } from '@/types/chart'
-import { ema, sma, toSeries, type SeriesPoint } from '@/lib/indicators'
+import { ema, toSeries, type SeriesPoint } from '@/lib/indicators'
 import { cssVar } from '@/lib/cssVar'
 import { monthlyTickMarkFormatter } from '@/components/market/TimeSeriesChart'
 import { formatShares, formatVolumeRatio } from '@/lib/format'
@@ -28,21 +28,19 @@ import { CHART, EMA_COLORS, GRID_LINE, emaLineColor } from '@/lib/chartColors'
 // 50 は 75 から変更した。移動平均は bars から都度計算しているので、
 // 期間を変えるだけで別途データを取りに行く必要はない。
 //
-// 50 だけ SMA。ダッシュボードの他の場所で「50MA」と書いているもの
-// （Ext R (50MA) / セクター表の >50MA % / 構造ピボットのユニバース条件）は
-// すべて Supabase 側で SMA50 として計算されている。チャートの線だけ EMA だと
-// 「50MA の上」という判定と目で見た位置がずれる。データ側は Pine / Supabase の
-// 管轄で本リポジトリからは直せないので、線の方を合わせる。
-export const MA_CONFIG: {
-  length: 10 | 21 | 50 | 150
-  kind: 'ema' | 'sma'
-  color: string
-  label: string
-}[] = [
-  { length: 10, kind: 'ema', color: EMA_COLORS[10], label: 'EMA10' },
-  { length: 21, kind: 'ema', color: EMA_COLORS[21], label: 'EMA21' },
-  { length: 50, kind: 'sma', color: EMA_COLORS[50], label: 'SMA50' },
-  { length: 150, kind: 'ema', color: EMA_COLORS[150], label: 'EMA150' },
+// 4 本とも EMA。TradingView 側で実際に見ているのが EMA なので、チャートは
+// そちらに合わせる。
+//
+// 注意: ダッシュボードの数値側で「50MA」と書いているもの
+// （Ext R (50MA) / セクター表の >50MA % / TOPIX の SMA50 バッジ）は
+// すべて Supabase の *_sma50 列で、SMA50 として計算された別物。本リポジトリは
+// それを表示しているだけで、計算しているのは Pine とバッチ側。
+// したがって「線より上なのにバッジが下」ということが起こりうる。
+export const MA_CONFIG: { length: 10 | 21 | 50 | 150; color: string; label: string }[] = [
+  { length: 10, color: EMA_COLORS[10], label: 'EMA10' },
+  { length: 21, color: EMA_COLORS[21], label: 'EMA21' },
+  { length: 50, color: EMA_COLORS[50], label: 'EMA50' },
+  { length: 150, color: EMA_COLORS[150], label: 'EMA150' },
 ]
 
 // チャート内の細い線だけでは移動平均の色が判別しづらいため、
@@ -53,7 +51,7 @@ export function MaLegend({ className = '' }: { className?: string }) {
       className={`inline-flex items-center gap-3 flex-wrap rounded-lg border border-[var(--border)] bg-[var(--bg-card-hover)] px-3 py-1.5 ${className}`}
     >
       <span className="text-caption font-medium uppercase tracking-wide text-[var(--text-muted)]">
-        MA
+        EMA
       </span>
       {MA_CONFIG.map((m) => (
         <span key={m.length} className="flex items-center gap-1.5">
@@ -62,7 +60,7 @@ export function MaLegend({ className = '' }: { className?: string }) {
             style={{ backgroundColor: emaLineColor(m.length) }}
           />
           <span className="text-caption font-medium font-mono" style={{ color: m.color }}>
-            {m.label}
+            {m.length}
           </span>
         </span>
       ))}
@@ -189,7 +187,7 @@ export default function SectorCandleChart({
 
     const closes = bars.map((b) => b.close)
     // MA は candlestick の背後に来るよう先に追加する。
-    // title を付けると価格軸に EMA10/21 SMA50 EMA150 のバッジが積み上がって
+    // title を付けると価格軸に EMA10/21/50/150 のバッジが積み上がって
     // 値動きを隠すため付けない（色の対応はヘッダーの MaLegend で示す）。
     for (const m of MA_CONFIG) {
       const line = chart.addSeries(LineSeries, {
@@ -199,9 +197,7 @@ export default function SectorCandleChart({
         lastValueVisible: false,
         crosshairMarkerVisible: false,
       })
-      line.setData(
-        toSeries(bars, m.kind === 'sma' ? sma(closes, m.length) : ema(closes, m.length)),
-      )
+      line.setData(toSeries(bars, ema(closes, m.length)))
     }
 
     // ローソク足は白黒（TradingView 側の設定に合わせる）。陽線は白抜き、

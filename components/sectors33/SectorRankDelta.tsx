@@ -62,7 +62,7 @@ export function RankDeltaBadge({
     body = `${up ? '▲' : '▼'}${Math.abs(delta.delta)}`
     color = up ? 'var(--positive)' : 'var(--negative)'
     if (isBigMove(delta)) {
-      bg = up ? 'var(--positive-bg)' : 'var(--negative-bg)'
+      bg = up ? 'var(--sem-ok-bg)' : 'var(--sem-weak-bg)'
       weight = 'font-medium'
     }
   }

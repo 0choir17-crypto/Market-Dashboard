@@ -151,7 +151,8 @@ const COLUMNS: Column<WatchlistCurrentRow>[] = [
   {
     key: 'ext_r',
     label: 'Ext R (50MA)',
-    tooltip: '50MA からの ATR 伸長（R）。21EMA 基準の 1R とは別物',
+    tooltip:
+      '50MA からの ATR 伸長（R）。21EMA 基準の 1R とは別物。この 50MA はデータ側の単純移動平均（SMA）で、チャートに引いている EMA50 とは一致しない',
     summary: false,
     value: r => r.ext_r,
     render: r => <NumCell value={r.ext_r} suffix="R" />,
