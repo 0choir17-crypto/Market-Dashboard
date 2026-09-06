@@ -199,7 +199,7 @@ function SectorCard({
                   ? text
                   : isNum(value)
                     ? componentColor(value)
-                    : '#9ca3af'
+                    : 'var(--text-muted)'
               }
               active={metricKey === m.key}
             />

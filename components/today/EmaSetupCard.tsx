@@ -49,9 +49,9 @@ function TouchBadge({ touch }: { touch: EmaTouch }) {
     <span
       className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold tabular-nums border"
       style={{
-        backgroundColor: filled ? '#e2e8f0' : 'transparent',
+        backgroundColor: filled ? 'var(--sem-idle-bd)' : 'transparent',
         color: 'var(--text-secondary)',
-        borderColor: '#cbd5e1',
+        borderColor: 'var(--border-strong)',
       }}
       title={
         `EMA${touch.ema} にタッチ（${typeLabel}）\n` +
@@ -100,8 +100,8 @@ export default function EmaSetupCard({
     <div
       className="bg-[var(--bg-card)] rounded-lg border shadow-sm hover:shadow-md transition-shadow flex flex-col"
       style={{
-        borderColor: multiHit ? '#fbbf24' : hot ? '#86efac' : 'var(--border)',
-        backgroundColor: multiHit ? '#fef9c3' : hot ? '#f0fdf4' : 'var(--bg-card)',
+        borderColor: multiHit ? 'var(--sem-watch-bd)' : hot ? 'var(--sem-strong-bd)' : 'var(--border)',
+        backgroundColor: multiHit ? 'var(--sem-watch-bg)' : hot ? 'var(--sem-ok-bg)' : 'var(--bg-card)',
       }}
     >
       {/* タッチした EMA（同日に複数 EMA へタッチした銘柄はここに並ぶ） */}

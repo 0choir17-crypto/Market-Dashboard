@@ -5,6 +5,7 @@ import { LineStyle } from 'lightweight-charts'
 import { TimeSeriesChart, type TimeSeriesPoint } from './TimeSeriesChart'
 import { fetchPctAboveSmaTimeSeries } from '@/lib/marketChartData'
 import { useDate } from '@/contexts/DateContext'
+import { CHART } from '@/lib/chartColors'
 
 export function PctAboveSmaChart({ height = 180 }: { height?: number }) {
   const { selectedDate, isLatest } = useDate()
@@ -49,8 +50,8 @@ export function PctAboveSmaChart({ height = 180 }: { height?: number }) {
       <TimeSeriesChart
         data={sma50Data}
         secondaryData={sma200Data}
-        color="#ef4444"
-        secondaryColor="#10b981"
+        color={CHART.negative}
+        secondaryColor={CHART.positive}
         name="SMA50"
         secondaryName="SMA200"
         height={height}

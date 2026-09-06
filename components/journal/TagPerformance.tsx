@@ -208,7 +208,7 @@ export default function TagPerformance({ trades }: Props) {
                             <div
                               className="absolute top-0.5 bottom-0.5 rounded"
                               style={{
-                                backgroundColor: pnlPositive ? '#10b981' : '#ef4444',
+                                backgroundColor: pnlPositive ? 'var(--positive)' : 'var(--negative)',
                                 width: `${barWidthPct / 2}%`,
                                 left: pnlPositive ? '50%' : `${50 - barWidthPct / 2}%`,
                               }}

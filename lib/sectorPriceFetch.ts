@@ -2,16 +2,17 @@ import { supabase } from '@/lib/supabase'
 import { fetchAllPaged } from '@/lib/pagedFetch'
 import type { OhlcvBar, VolumeBar } from '@/types/chart'
 import type { SeriesPoint } from '@/lib/indicators'
+import { OVERLAY_SERIES } from '@/lib/chartColors'
 
 const TABLE = 'sector_selection_s33'
 
 // チャートに重ねられる 0-100 のスコア系指標。N(銘柄数) はスケールが違うため除外。
 export const OVERLAY_METRICS = {
-  composite_score: { label: 'Score', color: '#0ea5e9' },
-  component_rs: { label: 'RS', color: '#6366f1' },
-  component_acc: { label: 'Acc', color: '#ec4899' },
-  component_breadth: { label: 'Brd', color: '#14b8a6' },
-  component_short: { label: 'Sht', color: '#f97316' },
+  composite_score: { label: 'Score', color: OVERLAY_SERIES.composite },
+  component_rs: { label: 'RS', color: OVERLAY_SERIES.rs },
+  component_acc: { label: 'Acc', color: OVERLAY_SERIES.acc },
+  component_breadth: { label: 'Brd', color: OVERLAY_SERIES.breadth },
+  component_short: { label: 'Sht', color: OVERLAY_SERIES.short },
 } as const
 
 export type OverlayMetricKey = keyof typeof OVERLAY_METRICS

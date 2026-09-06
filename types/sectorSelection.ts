@@ -1,4 +1,4 @@
-import type { SemanticTone } from '@/types/semantic'
+import { toneVars, type SemanticTone } from '@/types/semantic'
 // TOPIX-33 sector selection: composite score model
 // Source table: sector_selection_s33  (PK: date + sector_name_s33)
 
@@ -100,16 +100,24 @@ export const MOMENTUM_CONFIG: Record<SectorMomentum, { label: string; tone: Sema
 }
 
 // Composite score heatmap: red (low) → yellow (mid) → green (high)
+/**
+ * composite_score の 3 段階（Leader >=60 / Neutral 30-60 / Lagging <30）。
+ * 閾値をここ 1 箇所に置き、表のバッジ（compositeColor）もバーの塗り
+ * （SectorBarChart33）も同じ判定を使う。
+ */
+export function compositeTone(score: number | null | undefined): SemanticTone {
+  if (score === null || score === undefined || Number.isNaN(score)) return 'idle'
+  if (score >= 60) return 'strong'
+  if (score >= 30) return 'watch'
+  return 'weak'
+}
+
 export function compositeColor(score: number | null | undefined): {
   bg: string
   text: string
 } {
-  if (score === null || score === undefined || Number.isNaN(score)) {
-    return { bg: 'var(--sem-idle-bg)', text: 'var(--sem-idle-fg)' }
-  }
-  if (score >= 60) return { bg: 'var(--sem-strong-bg)', text: 'var(--sem-strong-fg)' }
-  if (score >= 30) return { bg: 'var(--sem-ok-bg)', text: 'var(--sem-ok-fg)' }
-  return { bg: 'var(--sem-weak-bg)', text: 'var(--sem-weak-fg)' }
+  const t = toneVars(compositeTone(score))
+  return { bg: t.bg, text: t.fg }
 }
 
 // Per-component bar color (mini bars + drilldown)

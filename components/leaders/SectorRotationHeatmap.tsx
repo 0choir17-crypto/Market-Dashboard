@@ -1,27 +1,29 @@
 'use client'
 
 import type { SectorRotation } from '@/lib/marketLeadersFetch'
+import { GREEN_RAMP } from '@/lib/chartColors'
 
 type Props = {
   rotation: SectorRotation
   loading: boolean
 }
 
-// セル色: count に応じた緑グラデーション (0 = 灰)
+// セル色: count に応じた緑の濃淡（0 は地の色）。
+// 意味語彙は段階を持たない（緑は strong と ok の 2 つだけ）ので、
+// 量を濃淡で表すここだけ lib/chartColors.ts の専用ランプを使う。
 function cellColor(count: number, max: number): string {
-  if (count === 0) return '#f9fafb'
+  if (count === 0) return 'var(--bg-primary)'
   const ratio = Math.min(1, count / Math.max(1, max))
-  // 薄緑 (#dcfce7) → 濃緑 (#15803d)
-  if (ratio >= 0.8) return '#15803d'
-  if (ratio >= 0.6) return '#16a34a'
-  if (ratio >= 0.4) return '#22c55e'
-  if (ratio >= 0.2) return '#86efac'
-  return '#dcfce7'
+  if (ratio >= 0.8) return GREEN_RAMP[4]
+  if (ratio >= 0.6) return GREEN_RAMP[3]
+  if (ratio >= 0.4) return GREEN_RAMP[2]
+  if (ratio >= 0.2) return GREEN_RAMP[1]
+  return GREEN_RAMP[0]
 }
 
 function cellTextColor(count: number, max: number): string {
   const ratio = Math.min(1, count / Math.max(1, max))
-  return ratio >= 0.4 ? '#fff' : '#1f2937'
+  return ratio >= 0.4 ? 'var(--bg-card)' : 'var(--text-primary)'
 }
 
 function fmtWeek(w: string): string {
@@ -114,7 +116,7 @@ export default function SectorRotationHeatmap({ rotation, loading }: Props) {
 
       <div className="flex items-center justify-center gap-3 mt-4 text-[11px]">
         <span className="text-[var(--text-secondary)]">少 ←</span>
-        {[ '#f9fafb', '#dcfce7', '#86efac', '#22c55e', '#16a34a', '#15803d'].map(c => (
+        {['var(--bg-primary)', ...GREEN_RAMP].map(c => (
           <span key={c} className="inline-block w-5 h-3 rounded-sm" style={{ backgroundColor: c }} />
         ))}
         <span className="text-[var(--text-secondary)]">→ 多</span>

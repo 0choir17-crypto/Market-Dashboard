@@ -70,14 +70,14 @@ export default function SectorConcentration({ rows }: Props) {
                   style={{
                     width: `${pct}%`,
                     backgroundColor:
-                      b.count >= 10 ? '#16a34a' :
-                      b.count >= 5 ? '#22c55e' :
-                      b.count >= 3 ? '#eab308' : '#9ca3af',
+                      b.count >= 10 ? 'var(--sem-strong-fg)' :
+                      b.count >= 5 ? 'var(--positive)' :
+                      b.count >= 3 ? 'var(--sem-watch-fg)' : 'var(--text-muted)',
                   }}
                 />
                 <span
                   className="absolute inset-0 flex items-center px-2 text-[11px] font-mono font-semibold tabular-nums"
-                  style={{ color: pct > 30 ? '#fff' : '#374151' }}
+                  style={{ color: pct > 30 ? 'var(--bg-card)' : 'var(--text-primary)' }}
                 >
                   {b.count} 銘柄 ({sharePct.toFixed(0)}%)
                 </span>

@@ -11,6 +11,7 @@ import {
 import { supabase } from '@/lib/supabase'
 import { useDate } from '@/contexts/DateContext'
 import { monthlyTickMarkFormatter } from './TimeSeriesChart'
+import { CHART, SERIES } from '@/lib/chartColors'
 
 type Prefix = 'topix' | 'nikkei' | 'growth'
 
@@ -94,7 +95,7 @@ export function IndexChart({ prefix, displayName, height = 260, lookbackDays = 1
       height,
       layout: {
         background: { type: ColorType.Solid, color: 'transparent' },
-        textColor: '#64748b',
+        textColor: CHART.textSecondary,
         attributionLogo: false,
       },
       grid: {
@@ -103,11 +104,11 @@ export function IndexChart({ prefix, displayName, height = 260, lookbackDays = 1
       },
       timeScale: {
         timeVisible: false,
-        borderColor: '#cbd5e1',
+        borderColor: CHART.borderStrong,
         tickMarkFormatter: monthlyTickMarkFormatter,
       },
       rightPriceScale: {
-        borderColor: '#cbd5e1',
+        borderColor: CHART.borderStrong,
       },
       crosshair: { mode: 1 },
       autoSize: true,
@@ -128,7 +129,7 @@ export function IndexChart({ prefix, displayName, height = 260, lookbackDays = 1
     })
 
     const series = chart.addSeries(LineSeries, {
-      color: '#10b981',
+      color: SERIES.primary,
       lineWidth: 2,
       priceLineVisible: false,
       lastValueVisible: true,

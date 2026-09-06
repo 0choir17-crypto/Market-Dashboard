@@ -14,6 +14,7 @@ import {
 } from 'lightweight-charts'
 import { Trade } from '@/types/trades'
 import { fetchTradeChartData, ChartDataPoint } from '@/lib/chartData'
+import { CHART, SERIES } from '@/lib/chartColors'
 
 interface Props {
   trade: Trade
@@ -68,7 +69,7 @@ export default function TradeChart({ trade }: Props) {
       height: 320,
       layout: {
         background: { type: ColorType.Solid, color: 'transparent' },
-        textColor: '#475569',
+        textColor: CHART.textSecondary,
       },
       grid: {
         vertLines: { color: 'rgba(148, 163, 184, 0.15)' },
@@ -76,17 +77,17 @@ export default function TradeChart({ trade }: Props) {
       },
       timeScale: {
         timeVisible: false,
-        borderColor: '#cbd5e1',
+        borderColor: CHART.borderStrong,
       },
       rightPriceScale: {
-        borderColor: '#cbd5e1',
+        borderColor: CHART.borderStrong,
       },
       crosshair: { mode: 1 },
       autoSize: true,
     })
 
     const series = chart.addSeries(LineSeries, {
-      color: '#2563eb',
+      color: SERIES.secondary,
       lineWidth: 2,
       priceLineVisible: false,
       lastValueVisible: true,
@@ -143,7 +144,7 @@ export default function TradeChart({ trade }: Props) {
       markers.push({
         time: entryTime as Time,
         position: 'belowBar',
-        color: '#3b82f6',
+        color: SERIES.secondary,
         shape: 'arrowUp',
         text: `Entry ¥${trade.entry_price?.toLocaleString() ?? ''}`,
       })
@@ -153,7 +154,7 @@ export default function TradeChart({ trade }: Props) {
       markers.push({
         time: mfeTime as Time,
         position: 'aboveBar',
-        color: '#f59e0b',
+        color: CHART.watchFg,
         shape: 'circle',
         text: `MFE ${trade.mfe_pct >= 0 ? '+' : ''}${trade.mfe_pct.toFixed(1)}%`,
       })
@@ -163,7 +164,7 @@ export default function TradeChart({ trade }: Props) {
       markers.push({
         time: maeTime as Time,
         position: 'belowBar',
-        color: '#ef4444',
+        color: CHART.negative,
         shape: 'circle',
         text: `MAE ${trade.mae_pct.toFixed(1)}%`,
       })
@@ -173,7 +174,7 @@ export default function TradeChart({ trade }: Props) {
       markers.push({
         time: exitTime as Time,
         position: 'aboveBar',
-        color: '#10b981',
+        color: CHART.positive,
         shape: 'arrowDown',
         text: `Exit ¥${trade.exit_price?.toLocaleString() ?? ''}`,
       })

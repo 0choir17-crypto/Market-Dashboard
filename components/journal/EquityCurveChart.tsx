@@ -13,6 +13,7 @@ import {
 } from 'recharts'
 import { Trade } from '@/types/trades'
 import { formatYen } from '@/lib/format'
+import { CHART } from '@/lib/chartColors'
 
 type Props = {
   trades: Trade[]
@@ -74,8 +75,8 @@ export default function EquityCurveChart({ trades }: Props) {
   }
 
   const isUp = final >= 0
-  const GREEN = '#10b981'
-  const RED = '#ef4444'
+  const GREEN = CHART.positive
+  const RED = CHART.negative
 
   // Gradient offset for the 0 line: positions where y=0 sits inside the chart
   // (0 at top, 1 at bottom). When the curve never crosses 0, the gradient
@@ -129,16 +130,16 @@ export default function EquityCurveChart({ trades }: Props) {
                 <stop offset="100%" stopColor={RED} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e6e8eb" />
-            <ReferenceLine y={0} stroke="#9ca3af" strokeDasharray="2 2" />
+            <CartesianGrid strokeDasharray="3 3" stroke={CHART.border} />
+            <ReferenceLine y={0} stroke={CHART.textMuted} strokeDasharray="2 2" />
             <XAxis
               dataKey="date"
-              tick={{ fontSize: 10, fill: '#9ca3af' }}
+              tick={{ fontSize: 10, fill: CHART.textMuted }}
               tickMargin={6}
             />
             <YAxis
               tickFormatter={fmtAxis}
-              tick={{ fontSize: 10, fill: '#9ca3af' }}
+              tick={{ fontSize: 10, fill: CHART.textMuted }}
               width={48}
             />
             <Tooltip

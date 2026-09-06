@@ -242,7 +242,7 @@ export default function NotesPage() {
                           className={`w-full text-left rounded-lg border px-3 py-2 transition-colors ${
                             active
                               ? 'border-[var(--accent)] bg-[var(--sem-focus-bg)]'
-                              : 'border-[#eef0f2] bg-[var(--bg-card)] hover:bg-[var(--bg-card-hover)]'
+                              : 'border-[var(--border)] bg-[var(--bg-card)] hover:bg-[var(--bg-card-hover)]'
                           }`}
                         >
                           <div className="flex items-center gap-1.5 min-w-0">
@@ -297,7 +297,7 @@ export default function NotesPage() {
                   onChange={e => setBody(e.target.value)}
                   placeholder={PLACEHOLDER}
                   spellCheck={false}
-                  className="w-full min-h-[64vh] resize-y rounded-lg border border-[var(--border)] bg-[#fcfcfd] px-4 py-3 text-sm leading-relaxed text-[var(--text-primary)] font-mono focus:outline-none focus:ring-2 focus:ring-[var(--sem-focus-fg)]"
+                  className="w-full min-h-[64vh] resize-y rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-4 py-3 text-sm leading-relaxed text-[var(--text-primary)] font-mono focus:outline-none focus:ring-2 focus:ring-[var(--sem-focus-fg)]"
                 />
                 <div className="flex items-center justify-between px-1 pt-2 text-[11px] text-[var(--text-muted)]">
                   <span>{body.length.toLocaleString()} 文字</span>

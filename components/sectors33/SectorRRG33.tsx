@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import type { SectorHistoryResponse } from '@/lib/sectorSelectionHistoryFetch'
+import { CHART } from '@/lib/chartColors'
 
 type Props = {
   history: SectorHistoryResponse
@@ -33,10 +34,10 @@ function quadrantOf(x: number, y: number): 'leading' | 'weakening' | 'lagging' |
 }
 
 const QUAD_COLOR: Record<string, string> = {
-  leading: '#16a34a',
-  weakening: '#f59e0b',
-  lagging: '#dc2626',
-  improving: '#2563eb',
+  leading: CHART.positive,
+  weakening: CHART.watchFg,
+  lagging: CHART.negative,
+  improving: CHART.focusFg,
 }
 
 export default function SectorRRG33({ history }: Props) {
@@ -227,36 +228,36 @@ function RRGCanvas({
         style={{ display: 'block' }}
       >
         {/* Quadrant background tints */}
-        <rect x={cx} y={PAD} width={innerW + PAD - cx} height={cy - PAD} fill="#dcfce7" opacity={0.18} />
-        <rect x={PAD} y={PAD} width={cx - PAD} height={cy - PAD} fill="#dbeafe" opacity={0.18} />
-        <rect x={cx} y={cy} width={innerW + PAD - cx} height={H - PAD - cy} fill="#fef3c7" opacity={0.18} />
-        <rect x={PAD} y={cy} width={cx - PAD} height={H - PAD - cy} fill="#fee2e2" opacity={0.18} />
+        <rect x={cx} y={PAD} width={innerW + PAD - cx} height={cy - PAD} fill={CHART.strongBg} opacity={0.18} />
+        <rect x={PAD} y={PAD} width={cx - PAD} height={cy - PAD} fill={CHART.focusBg} opacity={0.18} />
+        <rect x={cx} y={cy} width={innerW + PAD - cx} height={H - PAD - cy} fill={CHART.watchBg} opacity={0.18} />
+        <rect x={PAD} y={cy} width={cx - PAD} height={H - PAD - cy} fill={CHART.weakBg} opacity={0.18} />
 
         {/* Crosshair */}
-        <line x1={cx} y1={PAD} x2={cx} y2={H - PAD} stroke="#9ca3af" strokeDasharray="4 4" />
-        <line x1={PAD} y1={cy} x2={innerW + PAD} y2={cy} stroke="#9ca3af" strokeDasharray="4 4" />
+        <line x1={cx} y1={PAD} x2={cx} y2={H - PAD} stroke={CHART.textMuted} strokeDasharray="4 4" />
+        <line x1={PAD} y1={cy} x2={innerW + PAD} y2={cy} stroke={CHART.textMuted} strokeDasharray="4 4" />
 
         {/* Axes ticks */}
         {[xRange[0], CENTER, xRange[1]].map(v => (
           <g key={`xt-${v}`}>
-            <text x={sx(v)} y={H - PAD + 16} fontSize={10} textAnchor="middle" fill="#9ca3af">
+            <text x={sx(v)} y={H - PAD + 16} fontSize={10} textAnchor="middle" fill={CHART.textMuted}>
               {v.toFixed(0)}
             </text>
           </g>
         ))}
         {[yRange[0], CENTER, yRange[1]].map(v => (
           <g key={`yt-${v}`}>
-            <text x={PAD - 8} y={sy(v) + 3} fontSize={10} textAnchor="end" fill="#9ca3af">
+            <text x={PAD - 8} y={sy(v) + 3} fontSize={10} textAnchor="end" fill={CHART.textMuted}>
               {v.toFixed(0)}
             </text>
           </g>
         ))}
 
         {/* Axis labels */}
-        <text x={innerW + PAD - 4} y={cy - 6} fontSize={10} textAnchor="end" fill="#6b7280">
+        <text x={innerW + PAD - 4} y={cy - 6} fontSize={10} textAnchor="end" fill={CHART.textSecondary}>
           RS →
         </text>
-        <text x={cx + 6} y={PAD - 10} fontSize={10} fill="#6b7280">
+        <text x={cx + 6} y={PAD - 10} fontSize={10} fill={CHART.textSecondary}>
           加速 ↑
         </text>
 
@@ -321,14 +322,14 @@ function RRGCanvas({
                 r={isHover ? 7 : 5}
                 fill={QUAD_COLOR[q]}
                 opacity={dim ? 0.25 : 0.9}
-                stroke="#fff"
+                stroke={CHART.card}
                 strokeWidth={1.4}
               />
               <text
                 x={sx(d.x) + 8}
                 y={sy(d.y) + 3}
                 fontSize={10}
-                fill={dim ? '#9ca3af' : '#374151'}
+                fill={dim ? CHART.textMuted : CHART.textPrimary}
                 fontWeight={isHover ? 700 : 500}
                 style={{ pointerEvents: 'none' }}
               >
