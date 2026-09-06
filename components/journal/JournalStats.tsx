@@ -30,7 +30,7 @@ function Stat({
   tooltip?: string
 }) {
   const labelSpan = (
-    <span className="text-[11px] font-medium uppercase tracking-wide text-[var(--text-muted)]">
+    <span className="text-caption font-medium uppercase tracking-wide text-[var(--text-muted)]">
       {label}
     </span>
   )
@@ -42,10 +42,10 @@ function Stat({
   return (
     <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm px-4 py-3">
       <div className="mb-1">{labelEl}</div>
-      <p className={`text-lg font-bold font-mono leading-tight ${valueClass ?? 'text-[var(--text-primary)]'}`}>
+      <p className={`text-title font-medium num leading-tight ${valueClass ?? 'text-[var(--text-primary)]'}`}>
         {value}
       </p>
-      {sub && <p className="text-[10px] text-[var(--text-muted)] mt-0.5 font-mono">{sub}</p>}
+      {sub && <p className="text-caption text-[var(--text-muted)] mt-0.5 num">{sub}</p>}
     </div>
   )
 }

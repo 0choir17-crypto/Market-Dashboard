@@ -237,14 +237,14 @@ export default function CloseModal({ open, onClose, onSaved, position }: Props) 
     <Modal open={open} onClose={onClose} title={`Close: ${position.ticker}`}>
       <div className="px-6 py-5 space-y-4">
         {/* Position summary */}
-        <div className="bg-[var(--bg-card-hover)] rounded-lg px-4 py-3 text-xs text-[var(--text-secondary)] grid grid-cols-3 gap-2">
-          <div><span className="text-[var(--text-muted)] block">Entry Price</span><span className="font-mono">¥{position.entry_price.toLocaleString()}</span></div>
-          <div><span className="text-[var(--text-muted)] block">Shares</span><span className="font-mono">{position.shares.toLocaleString()} sh</span></div>
-          <div><span className="text-[var(--text-muted)] block">Stop</span><span className="font-mono">{position.stop_price != null ? `¥${position.stop_price.toLocaleString()}` : '—'}</span></div>
+        <div className="bg-[var(--bg-card-hover)] rounded-lg px-4 py-3 text-caption text-[var(--text-secondary)] grid grid-cols-3 gap-2">
+          <div><span className="text-[var(--text-muted)] block">Entry Price</span><span className="num">¥{position.entry_price.toLocaleString()}</span></div>
+          <div><span className="text-[var(--text-muted)] block">Shares</span><span className="num">{position.shares.toLocaleString()} sh</span></div>
+          <div><span className="text-[var(--text-muted)] block">Stop</span><span className="num">{position.stop_price != null ? `¥${position.stop_price.toLocaleString()}` : '—'}</span></div>
         </div>
 
         {error && (
-          <p className="text-sm text-[var(--negative)] bg-[var(--sem-weak-bg)] px-3 py-2 rounded-lg">{error}</p>
+          <p className="text-small text-[var(--negative)] bg-[var(--sem-weak-bg)] px-3 py-2 rounded-lg">{error}</p>
         )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -270,7 +270,7 @@ export default function CloseModal({ open, onClose, onSaved, position }: Props) 
           <div>
             <label className={labelClass}>
               売却株数 <span className={requiredClass}>*</span>
-              <span className="ml-1 text-[10px] text-[var(--text-muted)]">（{SHARE_LOT}株単位）</span>
+              <span className="ml-1 text-caption text-[var(--text-muted)]">（{SHARE_LOT}株単位）</span>
             </label>
             <input
               type="number"
@@ -283,10 +283,10 @@ export default function CloseModal({ open, onClose, onSaved, position }: Props) 
               placeholder={String(position.shares)}
               className={fieldClass}
             />
-            <p className="mt-1 text-[10px] text-[var(--text-muted)]">
+            <p className="mt-1 text-caption text-[var(--text-muted)]">
               保有: {position.shares.toLocaleString()} sh
               {isPartial && effectiveSellShares > 0 && (
-                <span className="ml-2 text-[var(--sem-watch-fg)] font-semibold">
+                <span className="ml-2 text-[var(--sem-watch-fg)] font-medium">
                   部分売却 → 残 {(position.shares - effectiveSellShares).toLocaleString()} sh
                 </span>
               )}
@@ -325,18 +325,18 @@ export default function CloseModal({ open, onClose, onSaved, position }: Props) 
         {realizedPnl != null && (
           <div className="bg-[var(--bg-card-hover)] rounded-lg px-4 py-3 grid grid-cols-2 gap-4">
             <div>
-              <span className="text-xs text-[var(--text-muted)] block mb-0.5">Realized PnL</span>
+              <span className="text-caption text-[var(--text-muted)] block mb-0.5">Realized PnL</span>
               <span
-                className={`text-lg font-bold font-mono ${pnlColorClass(realizedPnl)}`}
+                className={`text-title font-medium num ${pnlColorClass(realizedPnl)}`}
               >
                 {formatYen(realizedPnl, { sign: true })}
               </span>
             </div>
             {rMultiple != null && (
               <div>
-                <span className="text-xs text-[var(--text-muted)] block mb-0.5">R Multiple</span>
+                <span className="text-caption text-[var(--text-muted)] block mb-0.5">R Multiple</span>
                 <span
-                  className={`text-lg font-bold font-mono ${pnlColorClass(rMultiple)}`}
+                  className={`text-title font-medium num ${pnlColorClass(rMultiple)}`}
                 >
                   {formatR(rMultiple)}
                 </span>

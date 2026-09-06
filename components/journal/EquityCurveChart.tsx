@@ -54,7 +54,7 @@ export default function EquityCurveChart({ trades }: Props) {
 
   if (data.length < 2) {
     return (
-      <div className="mb-6 bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-6 text-center text-sm text-[var(--text-muted)]">
+      <div className="mb-6 bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-6 text-center text-small text-[var(--text-muted)]">
         資産推移チャートを表示するには 2 件以上のクローズ済みトレードが必要です。
       </div>
     )
@@ -89,10 +89,10 @@ export default function EquityCurveChart({ trades }: Props) {
   return (
     <div className="mb-6 bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-3 mb-3">
-        <h3 className="text-sm font-semibold text-[var(--text-primary)]">
-          Equity Curve <span className="text-xs font-normal text-[var(--text-muted)]">(累積 PnL)</span>
+        <h3 className="text-small font-medium text-[var(--text-primary)]">
+          Equity Curve <span className="text-caption font-normal text-[var(--text-muted)]">(累積 PnL)</span>
         </h3>
-        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs font-mono">
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-caption num">
           <span>
             <span className="text-[var(--text-secondary)]">Final: </span>
             <strong className={isUp ? 'text-[var(--positive)]' : 'text-[var(--negative)]'}>

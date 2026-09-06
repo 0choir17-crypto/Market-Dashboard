@@ -154,7 +154,7 @@ export default function EditTradeModal({ open, onClose, onSaved, trade }: Props)
     <Modal open={open} onClose={onClose} title="Edit Trade">
       <div className="px-6 py-5 space-y-4">
         {error && (
-          <p className="text-sm text-[var(--negative)] bg-[var(--sem-weak-bg)] px-3 py-2 rounded-lg">{error}</p>
+          <p className="text-small text-[var(--negative)] bg-[var(--sem-weak-bg)] px-3 py-2 rounded-lg">{error}</p>
         )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -244,7 +244,7 @@ export default function EditTradeModal({ open, onClose, onSaved, trade }: Props)
         {isClosed && (
           <>
             <div className="border-t border-[var(--border)] pt-4">
-              <p className="text-xs font-semibold text-[var(--text-secondary)] mb-3">Exit</p>
+              <p className="text-caption font-medium text-[var(--text-secondary)] mb-3">Exit</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className={labelClass}>
@@ -285,12 +285,12 @@ export default function EditTradeModal({ open, onClose, onSaved, trade }: Props)
                 : 'text-[var(--text-secondary)]'
               return (
                 <div className={`rounded-lg px-4 py-3 text-center ${bg}`}>
-                  <p className={`text-lg font-bold font-mono ${fgStrong}`}>
+                  <p className={`text-title font-medium num ${fgStrong}`}>
                     {formatYen(preview.pnl, { sign: true })}
                     {' '}
                     ({formatPct(preview.pnlPct, { sign: true })})
                   </p>
-                  <p className={`text-xs font-semibold ${fgWeak}`}>
+                  <p className={`text-caption font-medium ${fgWeak}`}>
                     {preview.result}
                   </p>
                 </div>
@@ -301,7 +301,7 @@ export default function EditTradeModal({ open, onClose, onSaved, trade }: Props)
 
         {/* Signal Snapshot */}
         <div className="border-t border-[var(--border)] pt-4">
-          <p className="text-xs font-semibold text-[var(--text-secondary)] mb-3">📝 Signal Snapshot</p>
+          <p className="text-caption font-medium text-[var(--text-secondary)] mb-3">📝 Signal Snapshot</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className={labelClass}>Signal Price</label>
@@ -376,7 +376,7 @@ export default function EditTradeModal({ open, onClose, onSaved, trade }: Props)
               />
             </div>
             <div className="flex items-end">
-              <label className="inline-flex items-center gap-2 text-sm text-[var(--text-primary)] py-2">
+              <label className="inline-flex items-center gap-2 text-small text-[var(--text-primary)] py-2">
                 <input
                   type="checkbox"
                   checked={mcMetAtEntry}

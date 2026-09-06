@@ -51,13 +51,13 @@ export default function PeriodPerformance({ trades }: Props) {
   return (
     <div className="mb-6 bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm">
       <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border-subtle)]">
-        <h3 className="text-sm font-semibold text-[var(--text-primary)]">
+        <h3 className="text-small font-medium text-[var(--text-primary)]">
           Period Performance
-          <span className="ml-2 text-xs font-normal text-[var(--text-muted)]">
+          <span className="ml-2 text-caption font-normal text-[var(--text-muted)]">
             {mode === 'month' ? '月別' : '年別'}成績
           </span>
         </h3>
-        <div className="inline-flex rounded-lg border border-[var(--border)] p-0.5 text-xs">
+        <div className="inline-flex rounded-lg border border-[var(--border)] p-0.5 text-caption">
           {(['month', 'year'] as Mode[]).map(m => (
             <button
               key={m}
@@ -74,25 +74,25 @@ export default function PeriodPerformance({ trades }: Props) {
         </div>
       </div>
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full text-small">
           <thead>
             <tr className="bg-[var(--bg-card-hover)] border-b border-[var(--border-subtle)]">
-              <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-[var(--text-secondary)]">
+              <th className="px-3 py-2 text-left text-caption font-medium uppercase tracking-wide text-[var(--text-secondary)]">
                 {mode === 'month' ? '月' : '年'}
               </th>
-              <th className="px-3 py-2 text-right text-xs font-medium uppercase tracking-wide text-[var(--text-secondary)]">
+              <th className="px-3 py-2 text-right text-caption font-medium uppercase tracking-wide text-[var(--text-secondary)]">
                 Trades
               </th>
-              <th className="px-3 py-2 text-right text-xs font-medium uppercase tracking-wide text-[var(--text-secondary)]">
+              <th className="px-3 py-2 text-right text-caption font-medium uppercase tracking-wide text-[var(--text-secondary)]">
                 W / L
               </th>
-              <th className="px-3 py-2 text-right text-xs font-medium uppercase tracking-wide text-[var(--text-secondary)]">
+              <th className="px-3 py-2 text-right text-caption font-medium uppercase tracking-wide text-[var(--text-secondary)]">
                 Win Rate
               </th>
-              <th className="px-3 py-2 text-right text-xs font-medium uppercase tracking-wide text-[var(--text-secondary)]">
+              <th className="px-3 py-2 text-right text-caption font-medium uppercase tracking-wide text-[var(--text-secondary)]">
                 PnL
               </th>
-              <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-[var(--text-secondary)] w-1/3">
+              <th className="px-3 py-2 text-left text-caption font-medium uppercase tracking-wide text-[var(--text-secondary)] w-1/3">
                 Distribution
               </th>
             </tr>
@@ -105,11 +105,11 @@ export default function PeriodPerformance({ trades }: Props) {
               const barWidthPct = (Math.abs(b.pnl) / maxAbsPnl) * 100
               return (
                 <tr key={b.key} className="border-b border-[var(--border-subtle)] hover:bg-[var(--bg-card-hover)]">
-                  <td className="px-3 py-2 font-mono font-semibold text-[var(--text-primary)]">
+                  <td className="px-3 py-2 font-mono font-medium text-[var(--text-primary)]">
                     {b.key}
                   </td>
-                  <td className="px-3 py-2 text-right font-mono">{b.trades}</td>
-                  <td className="px-3 py-2 text-right font-mono text-xs">
+                  <td className="px-3 py-2 text-right num">{b.trades}</td>
+                  <td className="px-3 py-2 text-right num text-caption">
                     <span className="text-[var(--positive)]">{b.wins}</span>
                     <span className="text-[var(--text-muted)] mx-0.5">/</span>
                     <span className="text-[var(--negative)]">{b.losses}</span>
@@ -121,7 +121,7 @@ export default function PeriodPerformance({ trades }: Props) {
                     )}
                   </td>
                   <td
-                    className="px-3 py-2 text-right font-mono"
+                    className="px-3 py-2 text-right num"
                     style={{
                       color: wr >= 50 ? 'var(--positive)' : 'var(--negative)',
                     }}
@@ -129,7 +129,7 @@ export default function PeriodPerformance({ trades }: Props) {
                     {formatPct(wr, { digits: 1 })}
                   </td>
                   <td
-                    className={`px-3 py-2 text-right font-mono font-semibold ${pnlColorClass(b.pnl)}`}
+                    className={`px-3 py-2 text-right num font-medium ${pnlColorClass(b.pnl)}`}
                   >
                     {formatYen(b.pnl, { sign: true })}
                   </td>

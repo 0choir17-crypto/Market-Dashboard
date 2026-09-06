@@ -101,26 +101,26 @@ export default function ReasonPerformance({ trades }: Props) {
   return (
     <div className="mb-6 bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm">
       <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border-subtle)]">
-        <h3 className="text-sm font-semibold text-[var(--text-primary)]">
+        <h3 className="text-small font-medium text-[var(--text-primary)]">
           Exit Reason Performance
-          <span className="ml-2 text-xs font-normal text-[var(--text-muted)]">
+          <span className="ml-2 text-caption font-normal text-[var(--text-muted)]">
             手仕舞い理由別成績
           </span>
         </h3>
-        <span className="text-xs text-[var(--text-muted)] font-mono">n={closed.length}</span>
+        <span className="text-caption text-[var(--text-muted)] num">n={closed.length}</span>
       </div>
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full text-small">
           <thead>
             <tr className="bg-[var(--bg-card-hover)] border-b border-[var(--border-subtle)]">
-              <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-[var(--text-secondary)]">Reason</th>
-              <th className="px-3 py-2 text-right text-xs font-medium uppercase tracking-wide text-[var(--text-secondary)]">Trades</th>
-              <th className="px-3 py-2 text-right text-xs font-medium uppercase tracking-wide text-[var(--text-secondary)]">W·L</th>
-              <th className="px-3 py-2 text-right text-xs font-medium uppercase tracking-wide text-[var(--text-secondary)]">Win Rate</th>
-              <th className="px-3 py-2 text-right text-xs font-medium uppercase tracking-wide text-[var(--text-secondary)]">Avg%</th>
-              <th className="px-3 py-2 text-right text-xs font-medium uppercase tracking-wide text-[var(--text-secondary)]">PnL</th>
-              <th className="px-3 py-2 text-right text-xs font-medium uppercase tracking-wide text-[var(--text-secondary)]">PF</th>
-              <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-[var(--text-secondary)] w-1/4">
+              <th className="px-3 py-2 text-left text-caption font-medium uppercase tracking-wide text-[var(--text-secondary)]">Reason</th>
+              <th className="px-3 py-2 text-right text-caption font-medium uppercase tracking-wide text-[var(--text-secondary)]">Trades</th>
+              <th className="px-3 py-2 text-right text-caption font-medium uppercase tracking-wide text-[var(--text-secondary)]">W·L</th>
+              <th className="px-3 py-2 text-right text-caption font-medium uppercase tracking-wide text-[var(--text-secondary)]">Win Rate</th>
+              <th className="px-3 py-2 text-right text-caption font-medium uppercase tracking-wide text-[var(--text-secondary)]">Avg%</th>
+              <th className="px-3 py-2 text-right text-caption font-medium uppercase tracking-wide text-[var(--text-secondary)]">PnL</th>
+              <th className="px-3 py-2 text-right text-caption font-medium uppercase tracking-wide text-[var(--text-secondary)]">PF</th>
+              <th className="px-3 py-2 text-left text-caption font-medium uppercase tracking-wide text-[var(--text-secondary)] w-1/4">
                 Distribution
               </th>
             </tr>
@@ -140,20 +140,20 @@ export default function ReasonPerformance({ trades }: Props) {
                   >
                     {r.reason}
                   </td>
-                  <td className="px-3 py-2 text-right font-mono">{r.count}</td>
-                  <td className="px-3 py-2 text-right font-mono text-xs">
+                  <td className="px-3 py-2 text-right num">{r.count}</td>
+                  <td className="px-3 py-2 text-right num text-caption">
                     <span className="text-[var(--positive)]">{r.wins}</span>
                     <span className="text-[var(--text-muted)] mx-0.5">/</span>
                     <span className="text-[var(--negative)]">{r.losses}</span>
                   </td>
                   <td
-                    className="px-3 py-2 text-right font-mono"
+                    className="px-3 py-2 text-right num"
                     style={{ color: wrStyleColor(r.wr) }}
                   >
                     {r.wr != null ? formatPct(r.wr, { digits: 1 }) : '—'}
                   </td>
                   <td
-                    className="px-3 py-2 text-right font-mono"
+                    className="px-3 py-2 text-right num"
                     style={{
                       color: r.avgPct == null
                         ? 'var(--text-muted)'
@@ -163,12 +163,12 @@ export default function ReasonPerformance({ trades }: Props) {
                     {formatPct(r.avgPct, { digits: 1, sign: true })}
                   </td>
                   <td
-                    className={`px-3 py-2 text-right font-mono font-semibold ${pnlColorClass(r.pnl)}`}
+                    className={`px-3 py-2 text-right num font-medium ${pnlColorClass(r.pnl)}`}
                   >
                     {formatYen(r.pnl, { sign: true })}
                   </td>
                   <td
-                    className="px-3 py-2 text-right font-mono"
+                    className="px-3 py-2 text-right num"
                     style={{ color: pfStyleColor(r.pf) }}
                   >
                     {r.pf == null ? '—' : r.pf === Infinity ? '∞' : r.pf.toFixed(2)}
@@ -192,7 +192,7 @@ export default function ReasonPerformance({ trades }: Props) {
           </tbody>
         </table>
       </div>
-      <p className="px-4 py-2 text-[11px] text-[var(--text-muted)] border-t border-[var(--border-subtle)]">
+      <p className="px-4 py-2 text-caption text-[var(--text-muted)] border-t border-[var(--border-subtle)]">
         ※ 各トレードは 1 理由のみで集計されるため Trades 合計 = CLOSED 総数。
         CSV import 分は exit_reason が無いため「未設定」に入る。
       </p>

@@ -91,7 +91,7 @@ export default function JournalPage() {
       >
         <button
           onClick={() => setShowNewTrade(true)}
-          className="px-4 py-1.5 rounded-lg text-sm font-medium text-white bg-[var(--sem-focus-fg)] hover:brightness-110 transition-colors min-h-[36px]"
+          className="px-4 py-1.5 rounded-lg text-small font-medium text-white bg-[var(--sem-focus-fg)] hover:brightness-110 transition-colors min-h-[36px]"
         >
           ＋ 新規トレード
         </button>
@@ -104,7 +104,7 @@ export default function JournalPage() {
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`px-4 py-3 min-w-fit text-sm font-semibold rounded-lg transition-colors ${
+              className={`px-4 py-3 min-w-fit text-small font-medium rounded-lg transition-colors ${
                 activeTab === tab.key
                   ? 'bg-[var(--sem-focus-fg)] text-white'
                   : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)]'
@@ -120,7 +120,7 @@ export default function JournalPage() {
 
       {/* Loading (初回のみ全面表示。再取得中は既存表示を維持し、ヘッダーの Refresh が回る) */}
       {loading && trades.length === 0 && (
-        <div className="text-center py-16 text-[var(--text-muted)] text-sm">読み込み中…</div>
+        <div className="text-center py-16 text-[var(--text-muted)] text-small">読み込み中…</div>
       )}
 
       {/* Tab content */}
