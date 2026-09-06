@@ -4,7 +4,6 @@
 // 表そのものの骨格（ソート・グループ・要約/詳細）は components/shared/DataTable.tsx。
 
 import { formatPct, formatYen } from '@/lib/format'
-import { shikihoUrl, tradingViewUrl } from '@/lib/tickerLinks'
 
 /**
  * 損益率セル。NULL は「0%」ではなく欠損として出す（§6）。
@@ -89,42 +88,6 @@ export function NumCell({
       {value.toFixed(digits)}
       {suffix}
     </span>
-  )
-}
-
-/**
- * 銘柄セル。プロジェクト共通のティッカークリック規約に従う（lib/tickerLinks.ts）:
- * コード → TradingView、銘柄名 → 四季報。
- * コードは `278A` のように英字を含むので文字列のまま扱う（数値としてパース・ソートしない）。
- */
-export function TickerCell({
-  code,
-  name,
-}: {
-  code: string
-  name: string | null | undefined
-}) {
-  return (
-    <div className="flex items-baseline gap-2 min-w-0">
-      <a
-        href={tradingViewUrl(code)}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="font-mono font-medium text-[var(--sem-focus-fg)] hover:underline flex-shrink-0"
-        title={`${code}（TradingView を開く）`}
-      >
-        {code}
-      </a>
-      <a
-        href={shikihoUrl(code)}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-small text-[var(--text-muted)] hover:text-[var(--sem-focus-fg)] hover:underline truncate min-w-0"
-        title={`${name ?? '—'}（四季報を開く）`}
-      >
-        {name ?? '—'}
-      </a>
-    </div>
   )
 }
 
