@@ -1,5 +1,15 @@
 'use client'
 
+// Positions（/journal のオープンポジション一覧）。
+//
+// 読み取り専用の 4 表（Watchlist / Leaders / Earnings / Sectors）と違い、行に
+// 決済・編集・削除の導線を持つ入力 UI なので DataTable には載せていない。
+// ただし見た目の語彙は共有する: 面と罫線は --bg-card / 0.5px --border、
+// 文字サイズは text-body / text-small / text-caption、数値は .num（等幅数字）、
+// 色は --sem-* と --positive / --negative だけを使う。
+//
+// 表に min-width は置かない。固定すると 13 列が収まる幅でも横スクロールが出る。
+
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Trade } from '@/types/trades'
@@ -7,6 +17,8 @@ import PositionModal from './PositionModal'
 import CloseModal from './CloseModal'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import { formatYen, formatPct, pnlColorClass } from '@/lib/format'
+import { shikihoUrl, tradingViewUrl } from '@/lib/tickerLinks'
+import { toneStyle, type SemanticTone } from '@/types/semantic'
 
 type Props = {
   positions: Trade[]
@@ -19,21 +31,41 @@ function fmt(v: number | null | undefined, decimals = 0): string {
   return v.toLocaleString('ja-JP', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })
 }
 
+/** 欠損は 0 ではなく「—」。他の表（watchlistJournal/atoms）と同じ扱い。 */
+function Missing() {
+  return <span className="num text-[var(--sem-idle-fg)]">—</span>
+}
+
 function PnlCell({ value }: { value: number | null }) {
-  if (value == null) return <span className="text-gray-400 font-mono text-xs">—</span>
-  return (
-    <span className={`font-mono text-xs font-semibold ${pnlColorClass(value)}`}>
-      {formatYen(value, { sign: true })}
-    </span>
-  )
+  if (value == null) return <Missing />
+  return <span className={`num ${pnlColorClass(value)}`}>{formatYen(value, { sign: true })}</span>
 }
 
 function PctCell({ value }: { value: number | null }) {
-  if (value == null) return <span className="text-gray-400 font-mono text-xs">—</span>
+  if (value == null) return <Missing />
+  return <span className={`num ${pnlColorClass(value)}`}>{formatPct(value, { sign: true })}</span>
+}
+
+/** 行内アクション。色は意味語彙から取る（決済=watch / 編集=focus / 削除=weak）。 */
+function ActionButton({
+  tone,
+  onClick,
+  children,
+  className = '',
+}: {
+  tone: SemanticTone
+  onClick: () => void
+  children: React.ReactNode
+  className?: string
+}) {
   return (
-    <span className={`font-mono text-xs font-semibold ${pnlColorClass(value)}`}>
-      {formatPct(value, { sign: true })}
-    </span>
+    <button
+      onClick={onClick}
+      style={toneStyle(tone)}
+      className={`px-2 py-1 text-caption rounded-lg hover:brightness-95 ${className}`}
+    >
+      {children}
+    </button>
   )
 }
 
@@ -61,6 +93,13 @@ async function fetchCurrentPrices(tickers: string[]): Promise<Record<string, num
   }
 }
 
+const HEADERS = [
+  'Ticker', 'Name', 'Sector', 'Entry Date', 'Entry Price', 'Shares', 'Stop Price',
+  'InitRisk%', 'Current', 'Unrealized ¥', 'Unrealized %', 'Target Price', 'Actions',
+]
+
+const LEFT_ALIGNED = new Set(['Ticker', 'Name', 'Sector', 'Entry Date'])
+
 export default function TradesTab({ positions, onRefresh }: Props) {
   const openTrades = positions.filter(p => p.status === 'open')
   const [prices, setPrices] = useState<Record<string, number | null>>({})
@@ -86,75 +125,94 @@ export default function TradesTab({ positions, onRefresh }: Props) {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-4">
-        <span className="text-sm text-gray-500">{openTrades.length} positions</span>
-        <span className="text-xs text-gray-400">追加はヘッダーの「＋ 新規トレード」から</span>
+      <div className="flex justify-between items-baseline mb-3">
+        <span className="text-small text-[var(--text-secondary)]">{openTrades.length} positions</span>
+        <span className="text-caption text-[var(--text-muted)]">追加はヘッダーの「＋ 新規トレード」から</span>
       </div>
 
       {/* Desktop table */}
-      <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm overflow-x-auto hidden sm:block">
-        <table className="w-full min-w-[1200px] text-sm">
-          <thead>
-            <tr className="bg-[var(--bg-card-hover)] border-b border-t border-[var(--border)]">
-              {['Ticker','Name','Sector','Entry Date','Entry Price','Shares','Stop Price','InitRisk%','Current','Unrealized ¥','Unrealized %','Target Price','Actions'].map(h => (
-                <th key={h} className={`px-3 py-2.5 text-xs font-medium text-[var(--text-secondary)] uppercase tracking-wide whitespace-nowrap ${h === 'Actions' ? 'text-right' : h === 'Ticker' || h === 'Name' || h === 'Sector' ? 'text-left' : 'text-right'}`}>
+      <div className="bg-[var(--bg-card)] rounded-xl border-[0.5px] border-[var(--border)] overflow-x-auto hidden sm:block">
+        <table className="w-full text-body">
+          <thead className="border-b-[0.5px] border-[var(--border)]">
+            <tr>
+              {HEADERS.map(h => (
+                <th
+                  key={h}
+                  className={`px-2.5 py-2 text-caption tracking-wide text-[var(--text-muted)] whitespace-nowrap ${
+                    LEFT_ALIGNED.has(h) ? 'text-left' : 'text-right'
+                  }`}
+                >
                   {h}
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {openTrades.map((pos, i) => {
+            {openTrades.map(pos => {
               const curPrice = prices[pos.ticker] ?? null
               const unrealizedPnl = curPrice != null ? (curPrice - pos.entry_price) * pos.shares : null
               const unrealizedPct = curPrice != null ? (curPrice - pos.entry_price) / pos.entry_price * 100 : null
               return (
                 <tr
                   key={pos.id}
-                  className={`border-b border-[var(--border-subtle)] hover:bg-[var(--bg-card-hover)] transition-colors ${i % 2 === 0 ? 'bg-[var(--bg-card)]' : 'bg-[var(--bg-card-hover)]'}`}
+                  className="border-t-[0.5px] border-[var(--border)] hover:bg-[var(--bg-card-hover)]"
                 >
-                  <td className="px-3 py-2.5 whitespace-nowrap">
-                    <a href={`https://jp.tradingview.com/chart/?symbol=TSE:${pos.ticker}`} target="_blank" rel="noreferrer"
-                       className="font-mono font-bold text-blue-600 hover:underline text-xs">{pos.ticker}</a>
+                  <td className="px-2.5 py-2 whitespace-nowrap">
+                    <a href={tradingViewUrl(pos.ticker)} target="_blank" rel="noopener noreferrer"
+                       title={`${pos.ticker}（TradingView を開く）`}
+                       className="font-mono font-medium text-[var(--sem-focus-fg)] hover:underline">{pos.ticker}</a>
                   </td>
-                  <td className="px-3 py-2.5 whitespace-nowrap text-xs text-gray-700">
+                  <td className="px-2.5 py-2 whitespace-nowrap text-small text-[var(--text-secondary)]">
                     {pos.company_name ? (
-                      <a href={`https://shikiho.toyokeizai.net/stocks/${pos.ticker}`} target="_blank" rel="noreferrer" className="hover:underline">{pos.company_name}</a>
+                      <a href={shikihoUrl(pos.ticker)} target="_blank" rel="noopener noreferrer"
+                         title={`${pos.company_name}（四季報を開く）`}
+                         className="hover:text-[var(--sem-focus-fg)] hover:underline">{pos.company_name}</a>
                     ) : '—'}
                   </td>
-                  <td className="px-3 py-2.5 whitespace-nowrap text-xs text-gray-600">{pos.sector_s33 ?? '—'}</td>
-                  <td className="px-3 py-2.5 whitespace-nowrap text-xs font-mono text-gray-600">{pos.entry_date}</td>
-                  <td className="px-3 py-2.5 text-right font-mono text-xs whitespace-nowrap">¥{fmt(pos.entry_price)}</td>
-                  <td className="px-3 py-2.5 text-right font-mono text-xs whitespace-nowrap">{fmt(pos.shares)}</td>
-                  <td className="px-3 py-2.5 text-right font-mono text-xs whitespace-nowrap">{pos.stop_price != null ? `¥${fmt(pos.stop_price)}` : '—'}</td>
-                  <td className="px-3 py-2.5 text-right font-mono text-xs whitespace-nowrap">
-                    {pos.init_risk_pct != null ? <span className="text-orange-600">{formatPct(pos.init_risk_pct)}</span> : '—'}
+                  <td className="px-2.5 py-2 whitespace-nowrap text-small text-[var(--text-secondary)]">{pos.sector_s33 ?? '—'}</td>
+                  <td className="px-2.5 py-2 whitespace-nowrap font-mono text-small text-[var(--text-secondary)]">{pos.entry_date}</td>
+                  <td className="px-2.5 py-2 text-right whitespace-nowrap">
+                    <span className="num text-[var(--text-secondary)]">¥{fmt(pos.entry_price)}</span>
                   </td>
-                  <td className="px-3 py-2.5 text-right font-mono text-xs whitespace-nowrap">
-                    {curPrice != null ? `¥${fmt(curPrice)}` : '—'}
+                  <td className="px-2.5 py-2 text-right whitespace-nowrap">
+                    <span className="num text-[var(--text-secondary)]">{fmt(pos.shares)}</span>
                   </td>
-                  <td className="px-3 py-2.5 text-right whitespace-nowrap"><PnlCell value={unrealizedPnl} /></td>
-                  <td className="px-3 py-2.5 text-right whitespace-nowrap"><PctCell value={unrealizedPct} /></td>
-                  <td className="px-3 py-2.5 text-right font-mono text-xs whitespace-nowrap">
+                  <td className="px-2.5 py-2 text-right whitespace-nowrap">
+                    {pos.stop_price != null
+                      ? <span className="num text-[var(--text-secondary)]">¥{fmt(pos.stop_price)}</span>
+                      : <Missing />}
+                  </td>
+                  <td className="px-2.5 py-2 text-right whitespace-nowrap">
+                    {pos.init_risk_pct != null
+                      ? <span className="num text-[var(--sem-watch-fg)]">{formatPct(pos.init_risk_pct)}</span>
+                      : <Missing />}
+                  </td>
+                  <td className="px-2.5 py-2 text-right whitespace-nowrap">
+                    {curPrice != null
+                      ? <span className="num text-[var(--text-primary)]">¥{fmt(curPrice)}</span>
+                      : <Missing />}
+                  </td>
+                  <td className="px-2.5 py-2 text-right whitespace-nowrap"><PnlCell value={unrealizedPnl} /></td>
+                  <td className="px-2.5 py-2 text-right whitespace-nowrap"><PctCell value={unrealizedPct} /></td>
+                  <td className="px-2.5 py-2 text-right whitespace-nowrap">
                     {pos.target_price != null ? (
-                      <>
+                      <span className="num text-[var(--text-secondary)]">
                         ¥{fmt(pos.target_price)}
                         {pos.entry_price > 0 && (
                           <span className="text-[var(--positive)]">
                             {' '}({formatPct((pos.target_price - pos.entry_price) / pos.entry_price * 100, { digits: 1, sign: true })})
                           </span>
                         )}
-                      </>
-                    ) : pos.target_r != null ? `${pos.target_r}R` : '—'}
+                      </span>
+                    ) : pos.target_r != null
+                      ? <span className="num text-[var(--text-secondary)]">{pos.target_r}R</span>
+                      : <Missing />}
                   </td>
-                  <td className="px-3 py-2.5 whitespace-nowrap">
+                  <td className="px-2.5 py-2 whitespace-nowrap">
                     <div className="flex justify-end gap-1">
-                      <button onClick={() => setClosePos(pos)}
-                        className="px-2 py-1 text-xs font-medium text-orange-600 bg-orange-50 border border-orange-200 rounded hover:bg-orange-100">決済</button>
-                      <button onClick={() => setEditPos(pos)}
-                        className="px-2 py-1 text-xs font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded hover:bg-blue-100">編集</button>
-                      <button onClick={() => setDeletePos(pos)}
-                        className="px-2 py-1 text-xs font-medium text-red-600 bg-red-50 border border-red-200 rounded hover:bg-red-100">削除</button>
+                      <ActionButton tone="watch" onClick={() => setClosePos(pos)}>決済</ActionButton>
+                      <ActionButton tone="focus" onClick={() => setEditPos(pos)}>編集</ActionButton>
+                      <ActionButton tone="weak" onClick={() => setDeletePos(pos)}>削除</ActionButton>
                     </div>
                   </td>
                 </tr>
@@ -163,47 +221,47 @@ export default function TradesTab({ positions, onRefresh }: Props) {
           </tbody>
         </table>
         {openTrades.length === 0 && (
-          <div className="py-10 text-center text-gray-400 text-sm">No open positions</div>
+          <div className="py-10 text-center text-small text-[var(--text-muted)]">No open positions</div>
         )}
       </div>
 
       {/* Mobile cards */}
       <div className="block sm:hidden space-y-3">
         {openTrades.length === 0 && (
-          <p className="text-center text-gray-400 text-sm py-8">No open positions</p>
+          <p className="text-center text-small text-[var(--text-muted)] py-8">No open positions</p>
         )}
         {openTrades.map(pos => {
           const curPrice = prices[pos.ticker] ?? null
           const unrealizedPnl = curPrice != null ? (curPrice - pos.entry_price) * pos.shares : null
           const unrealizedPct = curPrice != null ? (curPrice - pos.entry_price) / pos.entry_price * 100 : null
           return (
-            <div key={pos.id} className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-4">
+            <div key={pos.id} className="bg-[var(--bg-card)] rounded-xl border-[0.5px] border-[var(--border)] p-4">
               <div className="flex justify-between items-start mb-3">
                 <div>
-                  <a href={`https://jp.tradingview.com/chart/?symbol=TSE:${pos.ticker}`} target="_blank" rel="noreferrer"
-                     className="font-mono font-bold text-blue-600 text-base">{pos.ticker}</a>
-                  {pos.company_name && <span className="ml-2 text-xs text-gray-600">{pos.company_name}</span>}
+                  <a href={tradingViewUrl(pos.ticker)} target="_blank" rel="noopener noreferrer"
+                     className="font-mono font-medium text-[var(--sem-focus-fg)] text-lead">{pos.ticker}</a>
+                  {pos.company_name && (
+                    <a href={shikihoUrl(pos.ticker)} target="_blank" rel="noopener noreferrer"
+                       className="ml-2 text-small text-[var(--text-muted)] hover:underline">{pos.company_name}</a>
+                  )}
                 </div>
                 <div className="text-right">
                   {unrealizedPnl != null && <PnlCell value={unrealizedPnl} />}
                   {unrealizedPct != null && <div><PctCell value={unrealizedPct} /></div>}
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-2 text-xs text-gray-600 mb-3">
-                <div><span className="text-gray-400 block">Entry</span><span className="font-mono">¥{fmt(pos.entry_price)}</span></div>
-                <div><span className="text-gray-400 block">Shares</span><span className="font-mono">{fmt(pos.shares)}</span></div>
-                <div><span className="text-gray-400 block">Current</span><span className="font-mono">{curPrice != null ? `¥${fmt(curPrice)}` : '—'}</span></div>
-                <div><span className="text-gray-400 block">Stop</span><span className="font-mono">{pos.stop_price != null ? `¥${fmt(pos.stop_price)}` : '—'}</span></div>
-                <div><span className="text-gray-400 block">InitRisk</span><span className="font-mono">{pos.init_risk_pct != null ? formatPct(pos.init_risk_pct, { digits: 1 }) : '—'}</span></div>
-                <div><span className="text-gray-400 block">Target</span><span className="font-mono">{pos.target_price != null ? `¥${fmt(pos.target_price)}` : pos.target_r != null ? `${pos.target_r}R` : '—'}</span></div>
+              <div className="grid grid-cols-3 gap-2 text-small text-[var(--text-secondary)] mb-3">
+                <div><span className="text-caption text-[var(--text-muted)] block">Entry</span><span className="num">¥{fmt(pos.entry_price)}</span></div>
+                <div><span className="text-caption text-[var(--text-muted)] block">Shares</span><span className="num">{fmt(pos.shares)}</span></div>
+                <div><span className="text-caption text-[var(--text-muted)] block">Current</span><span className="num">{curPrice != null ? `¥${fmt(curPrice)}` : '—'}</span></div>
+                <div><span className="text-caption text-[var(--text-muted)] block">Stop</span><span className="num">{pos.stop_price != null ? `¥${fmt(pos.stop_price)}` : '—'}</span></div>
+                <div><span className="text-caption text-[var(--text-muted)] block">InitRisk</span><span className="num">{pos.init_risk_pct != null ? formatPct(pos.init_risk_pct, { digits: 1 }) : '—'}</span></div>
+                <div><span className="text-caption text-[var(--text-muted)] block">Target</span><span className="num">{pos.target_price != null ? `¥${fmt(pos.target_price)}` : pos.target_r != null ? `${pos.target_r}R` : '—'}</span></div>
               </div>
               <div className="flex gap-2">
-                <button onClick={() => setClosePos(pos)}
-                  className="flex-1 py-2 text-xs font-medium text-orange-600 bg-orange-50 border border-orange-200 rounded-lg">決済</button>
-                <button onClick={() => setEditPos(pos)}
-                  className="px-3 py-2 text-xs font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-lg">編集</button>
-                <button onClick={() => setDeletePos(pos)}
-                  className="px-3 py-2 text-xs font-medium text-red-600 bg-red-50 border border-red-200 rounded-lg">削除</button>
+                <ActionButton tone="watch" onClick={() => setClosePos(pos)} className="flex-1 py-2">決済</ActionButton>
+                <ActionButton tone="focus" onClick={() => setEditPos(pos)} className="px-3 py-2">編集</ActionButton>
+                <ActionButton tone="weak" onClick={() => setDeletePos(pos)} className="px-3 py-2">削除</ActionButton>
               </div>
             </div>
           )
