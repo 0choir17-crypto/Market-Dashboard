@@ -76,8 +76,6 @@ type Props<Row> = {
    * 同値が並ぶ列（グループ別の順位など）で並びを決定的にしたいときに使う。
    */
   tieBreak?: (a: Row, b: Row) => number
-  /** 全列ビューのときだけ必要な最小幅。要約ビューは min-w を持たない。 */
-  fullMinWidth?: number
   /** 要約 / 全列トグルを出すか。false なら常に全列。 */
   summaryToggle?: boolean
 }
@@ -96,14 +94,14 @@ export default function DataTable<Row>({
   expandOnRowClick = false,
   rowClassName,
   tieBreak,
-  fullMinWidth,
   summaryToggle = true,
 }: Props<Row>) {
   const [sortKey, setSortKey] = useState(defaultSort.key)
   const [sortDir, setSortDir] = useState<SortDirection>(defaultSort.dir)
   const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set(defaultCollapsed))
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set())
-  const [showAll, setShowAll] = useState(!summaryToggle)
+  // 既定は全列。実測で全列でも横スクロールは出ないため、要約は「絞りたいときの選択肢」。
+  const [showAll, setShowAll] = useState(true)
 
   const hasSummary = columns.some(c => c.summary === false)
   const visible = showAll || !hasSummary ? columns : columns.filter(c => c.summary !== false)
@@ -238,10 +236,9 @@ export default function DataTable<Row>({
       )}
 
       <div className="bg-[var(--bg-card)] rounded-xl border-[0.5px] border-[var(--border)] overflow-x-auto">
-        <table
-          className="w-full text-body"
-          style={showAll && fullMinWidth ? { minWidth: `${fullMinWidth}px` } : undefined}
-        >
+        {/* 幅は内容が決める。min-width を固定すると全列でも横スクロールが出るので置かない。
+            画面が狭いときだけ、外側の overflow-x-auto が効く。 */}
+        <table className="w-full text-body">
           <thead className="border-b-[0.5px] border-[var(--border)]">
             <tr>
               {visible.map(c =>
