@@ -10,7 +10,7 @@ import {
   createChart,
 } from 'lightweight-charts'
 import type { OhlcvBar, VolumeBar } from '@/types/chart'
-import { ema, toSeries, type SeriesPoint } from '@/lib/indicators'
+import { ema, sma, toSeries, type SeriesPoint } from '@/lib/indicators'
 import { cssVar } from '@/lib/cssVar'
 import { monthlyTickMarkFormatter } from '@/components/market/TimeSeriesChart'
 import { formatShares, formatVolumeRatio } from '@/lib/format'
@@ -27,22 +27,33 @@ import { CHART, EMA_COLORS, GRID_LINE, emaLineColor } from '@/lib/chartColors'
 // 線は 30% 不透明（emaLineColor）で引き、凡例の文字だけ原色を使う。
 // 50 は 75 から変更した。移動平均は bars から都度計算しているので、
 // 期間を変えるだけで別途データを取りに行く必要はない。
-export const MA_CONFIG: { length: 10 | 21 | 50 | 150; color: string; label: string }[] = [
-  { length: 10, color: EMA_COLORS[10], label: 'EMA10' },
-  { length: 21, color: EMA_COLORS[21], label: 'EMA21' },
-  { length: 50, color: EMA_COLORS[50], label: 'EMA50' },
-  { length: 150, color: EMA_COLORS[150], label: 'EMA150' },
+//
+// 50 だけ SMA。ダッシュボードの他の場所で「50MA」と書いているもの
+// （Ext R (50MA) / セクター表の >50MA % / 構造ピボットのユニバース条件）は
+// すべて Supabase 側で SMA50 として計算されている。チャートの線だけ EMA だと
+// 「50MA の上」という判定と目で見た位置がずれる。データ側は Pine / Supabase の
+// 管轄で本リポジトリからは直せないので、線の方を合わせる。
+export const MA_CONFIG: {
+  length: 10 | 21 | 50 | 150
+  kind: 'ema' | 'sma'
+  color: string
+  label: string
+}[] = [
+  { length: 10, kind: 'ema', color: EMA_COLORS[10], label: 'EMA10' },
+  { length: 21, kind: 'ema', color: EMA_COLORS[21], label: 'EMA21' },
+  { length: 50, kind: 'sma', color: EMA_COLORS[50], label: 'SMA50' },
+  { length: 150, kind: 'ema', color: EMA_COLORS[150], label: 'EMA150' },
 ]
 
-// チャート内の細い線だけでは EMA の色が判別しづらいため、
+// チャート内の細い線だけでは移動平均の色が判別しづらいため、
 // セクションヘッダー直下に置く独立した凡例ストリップとして見せる。
 export function MaLegend({ className = '' }: { className?: string }) {
   return (
     <div
       className={`inline-flex items-center gap-3 flex-wrap rounded-lg border border-[var(--border)] bg-[var(--bg-card-hover)] px-3 py-1.5 ${className}`}
     >
-      <span className="text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-        EMA
+      <span className="text-caption font-medium uppercase tracking-wide text-[var(--text-muted)]">
+        MA
       </span>
       {MA_CONFIG.map((m) => (
         <span key={m.length} className="flex items-center gap-1.5">
@@ -50,8 +61,8 @@ export function MaLegend({ className = '' }: { className?: string }) {
             className="inline-block w-6 h-[3px] rounded-full"
             style={{ backgroundColor: emaLineColor(m.length) }}
           />
-          <span className="text-xs font-semibold font-mono" style={{ color: m.color }}>
-            {m.length}
+          <span className="text-caption font-medium font-mono" style={{ color: m.color }}>
+            {m.label}
           </span>
         </span>
       ))}
@@ -71,7 +82,7 @@ export function VolumeLegend({ className = '' }: { className?: string }) {
     <div
       className={`inline-flex items-center gap-3 flex-wrap rounded-lg border border-[var(--border)] bg-[var(--bg-card-hover)] px-3 py-1.5 ${className}`}
     >
-      <span className="text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+      <span className="text-caption font-medium uppercase tracking-wide text-[var(--text-muted)]">
         出来高
       </span>
       {items.map((it) => (
@@ -80,7 +91,7 @@ export function VolumeLegend({ className = '' }: { className?: string }) {
             className="inline-block w-3 h-3 rounded-[2px]"
             style={{ backgroundColor: it.color }}
           />
-          <span className="text-xs font-mono text-[var(--text-secondary)]">{it.label}</span>
+          <span className="text-caption font-mono text-[var(--text-secondary)]">{it.label}</span>
         </span>
       ))}
     </div>
@@ -178,7 +189,7 @@ export default function SectorCandleChart({
 
     const closes = bars.map((b) => b.close)
     // MA は candlestick の背後に来るよう先に追加する。
-    // title を付けると価格軸に EMA10/21/50/150 のバッジが積み上がって
+    // title を付けると価格軸に EMA10/21 SMA50 EMA150 のバッジが積み上がって
     // 値動きを隠すため付けない（色の対応はヘッダーの MaLegend で示す）。
     for (const m of MA_CONFIG) {
       const line = chart.addSeries(LineSeries, {
@@ -188,7 +199,9 @@ export default function SectorCandleChart({
         lastValueVisible: false,
         crosshairMarkerVisible: false,
       })
-      line.setData(toSeries(bars, ema(closes, m.length)))
+      line.setData(
+        toSeries(bars, m.kind === 'sma' ? sma(closes, m.length) : ema(closes, m.length)),
+      )
     }
 
     // ローソク足は白黒（TradingView 側の設定に合わせる）。陽線は白抜き、
@@ -286,7 +299,7 @@ export default function SectorCandleChart({
   if (bars.length === 0) {
     return (
       <div
-        className="flex items-center justify-center bg-[var(--bg-card-hover)] rounded-md text-sm text-[var(--text-muted)]"
+        className="flex items-center justify-center bg-[var(--bg-card-hover)] rounded-md text-small text-[var(--text-muted)]"
         style={{ height }}
       >
         指数データがありません
@@ -304,17 +317,17 @@ export default function SectorCandleChart({
       {/* 出来高の現在値。チャートにはツールチップが無く、バーは色でしか読めないため
           最新日の実数と平常比をバッジで出す。 */}
       {latestVolume && (
-        <div className="absolute left-2 top-2 flex items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--bg-card)] px-1.5 py-0.5 text-[10px] font-mono tabular-nums pointer-events-none">
+        <div className="absolute left-2 top-2 flex items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--bg-card)] px-1.5 py-0.5 text-caption font-mono tabular-nums pointer-events-none">
           <span
             className="inline-block w-2 h-2 rounded-[2px]"
             style={{ backgroundColor: volumeBarColor(latestVolume.ratio) }}
           />
           <span className="text-[var(--text-muted)]">{volumeLabel}</span>
-          <span className="text-[var(--text-secondary)] font-semibold">
+          <span className="text-[var(--text-secondary)] font-medium">
             {formatShares(latestVolume.volume)}
           </span>
           <span
-            className="font-semibold"
+            className="font-medium"
             style={{
               color:
                 (latestVolume.ratio ?? 0) >= VOLUME_HEAVY_RATIO

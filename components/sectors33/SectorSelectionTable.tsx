@@ -75,11 +75,11 @@ function ReturnsBlock({ row }: { row: SectorSelectionRow }) {
           key={p.label}
           className="rounded-md border border-[var(--border)] bg-[var(--bg-card)] px-2 py-1.5 text-center"
         >
-          <p className="text-[10px] text-[var(--text-muted)] font-mono">{p.label}</p>
-          <p className="text-sm font-mono font-semibold tabular-nums" style={{ color: pctColor(p.ret) }}>
+          <p className="text-caption text-[var(--text-muted)] font-mono">{p.label}</p>
+          <p className="text-small font-mono font-medium tabular-nums" style={{ color: pctColor(p.ret) }}>
             {fmtSignedPct(p.ret)}
           </p>
-          <p className="text-[10px] font-mono tabular-nums" style={{ color: pctColor(p.exc) }}>
+          <p className="text-caption font-mono tabular-nums" style={{ color: pctColor(p.exc) }}>
             <span className="text-[var(--text-muted)]">vs TPX </span>
             {fmtSignedPct(p.exc)}
           </p>
@@ -99,7 +99,7 @@ function MiniBar({ value }: { value: number | null | undefined }) {
         <div className="h-full rounded-full" style={{ width: `${safe}%`, backgroundColor: color }} />
       </div>
       <span
-        className="font-mono text-[10px] tabular-nums w-6 text-right"
+        className="font-mono text-caption tabular-nums w-6 text-right"
         style={{ color: isNum(value) ? 'var(--text-primary)' : 'var(--sem-idle-fg)' }}
       >
         {label}
@@ -110,7 +110,7 @@ function MiniBar({ value }: { value: number | null | undefined }) {
 
 function MomentumBadge({ m }: { m: SectorMomentum | null }) {
   if (!m || !MOMENTUM_CONFIG[m]) {
-    return <span className="text-xs text-[var(--text-muted)]">—</span>
+    return <span className="text-caption text-[var(--text-muted)]">—</span>
   }
   const cfg = MOMENTUM_CONFIG[m]
   return (
@@ -127,7 +127,7 @@ function CompositeCell({ score }: { score: number | null | undefined }) {
   const v = isNum(score) ? score.toFixed(1) : '—'
   return (
     <span
-      className="inline-block min-w-[52px] text-center px-2 py-1 rounded-md font-mono text-sm font-bold tabular-nums"
+      className="inline-block min-w-[52px] text-center px-2 py-1 rounded-md font-mono text-small font-medium tabular-nums"
       style={{ backgroundColor: bg, color: text }}
     >
       {v}
@@ -146,14 +146,14 @@ function DrilldownBody({ row }: { row: SectorSelectionRow }) {
           {/* Left: 5 component bars */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <p className="text-xs font-semibold text-[var(--text-secondary)]">
+              <p className="text-caption font-medium text-[var(--text-secondary)]">
                 スコア内訳 — {row.sector_name_s33}
                 {row.sector_code_s33 && (
                   <span className="ml-2 text-[var(--text-muted)] font-mono">[{row.sector_code_s33}]</span>
                 )}
               </p>
-              <p className="text-xs text-[var(--text-secondary)]">
-                合計 <span className="font-mono font-bold text-[var(--text-primary)]">{total}</span>
+              <p className="text-caption text-[var(--text-secondary)]">
+                合計 <span className="font-mono font-medium text-[var(--text-primary)]">{total}</span>
               </p>
             </div>
             <div className="space-y-2">
@@ -163,10 +163,10 @@ function DrilldownBody({ row }: { row: SectorSelectionRow }) {
                 const safe = isNum(value) ? Math.max(0, Math.min(100, value)) : 0
                 const color = componentColor(value)
                 return (
-                  <div key={meta.key} className="flex items-center gap-3 text-xs">
+                  <div key={meta.key} className="flex items-center gap-3 text-caption">
                     <div className="w-32 flex items-center gap-1 shrink-0">
                       <Tooltip content={meta.tooltip}>
-                        <span className="font-semibold text-[var(--text-primary)]">{meta.label}</span>
+                        <span className="font-medium text-[var(--text-primary)]">{meta.label}</span>
                       </Tooltip>
                       <span className="text-[var(--text-muted)] font-mono">(×{weight.toFixed(2)})</span>
                     </div>
@@ -192,7 +192,7 @@ function DrilldownBody({ row }: { row: SectorSelectionRow }) {
           </div>
 
           {/* Right: contextual stats */}
-          <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+          <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-caption">
             <Stat label="RS 21d" value={fmt(row.sector_rs_21d_s33, 1)} />
             <Stat label="RS 63d" value={fmt(row.sector_rs_63d_s33, 1)} />
             <Stat label="RS加速" value={fmt(row.sector_rs_acc_s33, 2)} />
@@ -210,7 +210,7 @@ function DrilldownBody({ row }: { row: SectorSelectionRow }) {
 
         {/* 期間リターン / TOPIX超過 */}
         <div className="mt-5">
-          <p className="text-xs font-semibold text-[var(--text-secondary)] mb-2">
+          <p className="text-caption font-medium text-[var(--text-secondary)] mb-2">
             期間リターン / TOPIX超過
           </p>
           <ReturnsBlock row={row} />
@@ -219,10 +219,10 @@ function DrilldownBody({ row }: { row: SectorSelectionRow }) {
         {/* 空売り内訳（当日） */}
         <div className="mt-5">
           <div className="flex items-baseline gap-3 mb-2">
-            <p className="text-xs font-semibold text-[var(--text-secondary)]">空売り内訳（当日）</p>
-            <p className="text-xs text-[var(--text-secondary)]">
+            <p className="text-caption font-medium text-[var(--text-secondary)]">空売り内訳（当日）</p>
+            <p className="text-caption text-[var(--text-secondary)]">
               比率{' '}
-              <span className="font-mono font-bold text-[var(--text-primary)]">
+              <span className="font-mono font-medium text-[var(--text-primary)]">
                 {fmtRatioPct(row.sector_short_va_ratio_s33)}
               </span>
               <span className="ml-2 text-[var(--text-muted)]">
@@ -230,7 +230,7 @@ function DrilldownBody({ row }: { row: SectorSelectionRow }) {
               </span>
             </p>
           </div>
-          <div className="grid grid-cols-3 gap-2 text-xs">
+          <div className="grid grid-cols-3 gap-2 text-caption">
             <Stat label="空売り以外(円)" value={fmtOku(row.sector_sell_ex_short_va_s33)} />
             <Stat label="規制有 空売り(円)" value={fmtOku(row.sector_shrt_with_res_va_s33)} />
             <Stat label="規制無 空売り(円)" value={fmtOku(row.sector_shrt_no_res_va_s33)} />
@@ -362,7 +362,7 @@ export default function SectorSelectionTable({
     <div>
       {/* Toolbar */}
       <div className="flex items-center gap-3 px-4 pt-4 pb-3 flex-wrap">
-        <p className="text-sm font-semibold text-[var(--text-primary)]">セクター選別ランキング</p>
+        <p className="text-small font-medium text-[var(--text-primary)]">セクター選別ランキング</p>
         <span className="ml-auto">
           <MoversOnlyToggle
             checked={moversOnly}
@@ -370,7 +370,7 @@ export default function SectorSelectionTable({
             count={moverCount}
           />
         </span>
-        <label className="flex items-center gap-2 text-xs text-[var(--text-secondary)] cursor-pointer select-none">
+        <label className="flex items-center gap-2 text-caption text-[var(--text-secondary)] cursor-pointer select-none">
           <input
             type="checkbox"
             checked={hideLowConf}
@@ -416,7 +416,7 @@ export default function SectorSelectionTable({
       )}
 
       {/* Legend */}
-      <div className="flex items-center justify-center gap-5 py-3 text-[11px] border-t border-[var(--border-subtle)] flex-wrap">
+      <div className="flex items-center justify-center gap-5 py-3 text-caption border-t border-[var(--border-subtle)] flex-wrap">
         <span className="text-[var(--text-secondary)]">Score:</span>
         <span className="flex items-center gap-1">
           <span className="inline-block w-2.5 h-2.5 rounded" style={{ backgroundColor: 'var(--sem-strong-bg)' }} />

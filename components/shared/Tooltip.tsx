@@ -79,7 +79,7 @@ export default function Tooltip({ content, children }: Props) {
         onKeyDown={e => {
           if (e.key === 'Escape') hide()
         }}
-        className="w-3.5 h-3.5 rounded-full bg-[var(--bg-primary)] text-[var(--text-secondary)] text-[10px] flex items-center justify-center cursor-help select-none flex-shrink-0"
+        className="w-3.5 h-3.5 rounded-full bg-[var(--bg-primary)] text-[var(--text-secondary)] text-caption flex items-center justify-center cursor-help select-none flex-shrink-0"
       >
         ?
       </span>
@@ -88,7 +88,7 @@ export default function Tooltip({ content, children }: Props) {
           <div
             id={tooltipId}
             role="tooltip"
-            className="fixed z-[100] bg-[var(--text-primary)] text-white text-xs rounded-lg py-2 px-3 w-56 shadow-lg pointer-events-none normal-case font-normal tracking-normal leading-snug"
+            className="fixed z-[100] bg-[var(--text-primary)] text-white text-caption rounded-lg py-2 px-3 w-56 shadow-lg pointer-events-none normal-case font-normal tracking-normal leading-snug"
             style={{ top: pos.top, left: pos.left }}
           >
             {content}

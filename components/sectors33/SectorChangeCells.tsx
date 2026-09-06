@@ -49,9 +49,9 @@ export function SectorChangeInline({
         return (
           <Tooltip key={p.key} content={tooltipFor(p.label, p.tradingDays, entry, p.key)}>
             <span className="inline-flex items-baseline gap-1 whitespace-nowrap">
-              <span className="text-[10px] text-[var(--text-muted)] font-mono">{p.label}</span>
+              <span className="text-caption text-[var(--text-muted)] font-mono">{p.label}</span>
               <span
-                className="font-mono text-[11px] font-semibold tabular-nums"
+                className="font-mono text-caption font-medium tabular-nums"
                 style={{ color: pctColor(c?.pct) }}
               >
                 {fmtSignedPct(c?.pct)}
@@ -82,12 +82,12 @@ export function SectorChangeStrip({
             className="rounded-md border border-[var(--border)] bg-[var(--bg-card)] px-1.5 py-1 text-center"
           >
             <Tooltip content={tooltipFor(p.label, p.tradingDays, entry, p.key)}>
-              <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wide">
+              <p className="text-caption text-[var(--text-muted)] uppercase tracking-wide">
                 {p.label}
               </p>
             </Tooltip>
             <p
-              className="text-sm font-mono font-bold tabular-nums"
+              className="text-small font-mono font-medium tabular-nums"
               style={{ color: pctColor(c?.pct) }}
             >
               {fmtSignedPct(c?.pct)}

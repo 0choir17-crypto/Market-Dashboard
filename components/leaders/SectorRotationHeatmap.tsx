@@ -38,7 +38,7 @@ export default function SectorRotationHeatmap({ rotation, loading }: Props) {
   if (loading && weeks.length === 0) {
     return (
       <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-8 text-center text-[var(--text-muted)]">
-        <p className="text-sm">Loading...</p>
+        <p className="text-small">Loading...</p>
       </div>
     )
   }
@@ -46,7 +46,7 @@ export default function SectorRotationHeatmap({ rotation, loading }: Props) {
   if (weeks.length === 0) {
     return (
       <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-8 text-center text-[var(--text-muted)]">
-        <p className="text-sm">ヒートマップ用データなし</p>
+        <p className="text-small">ヒートマップ用データなし</p>
       </div>
     )
   }
@@ -58,8 +58,8 @@ export default function SectorRotationHeatmap({ rotation, loading }: Props) {
   return (
     <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-5 overflow-x-auto">
       <div className="mb-4">
-        <p className="text-sm font-semibold text-[var(--text-primary)]">セクターローテーション タイムライン</p>
-        <p className="text-xs text-[var(--text-secondary)] mt-0.5">
+        <p className="text-small font-medium text-[var(--text-primary)]">セクターローテーション タイムライン</p>
+        <p className="text-caption text-[var(--text-secondary)] mt-0.5">
           縦軸 = S33 セクター、横軸 = 週、セル色 = Top50 に入った銘柄数。
           先月→今週で資金の移動が見える。
         </p>
@@ -69,13 +69,13 @@ export default function SectorRotationHeatmap({ rotation, loading }: Props) {
         <table className="border-separate" style={{ borderSpacing: '2px' }}>
           <thead>
             <tr>
-              <th className="text-left text-[11px] font-semibold text-[var(--text-secondary)] px-2 py-1 sticky left-0 bg-[var(--bg-card)] z-10">
+              <th className="text-left text-caption font-medium text-[var(--text-secondary)] px-2 py-1 sticky left-0 bg-[var(--bg-card)] z-10">
                 Sector
               </th>
               {weeks.map(w => (
                 <th
                   key={w}
-                  className="text-center text-[10px] font-mono text-[var(--text-secondary)] px-1 py-1 whitespace-nowrap"
+                  className="text-center text-caption font-mono text-[var(--text-secondary)] px-1 py-1 whitespace-nowrap"
                   title={w}
                 >
                   {fmtWeek(w)}
@@ -86,7 +86,7 @@ export default function SectorRotationHeatmap({ rotation, loading }: Props) {
           <tbody>
             {sectors.map(s => (
               <tr key={s}>
-                <td className="text-xs text-[var(--text-primary)] px-2 py-1 sticky left-0 bg-[var(--bg-card)] whitespace-nowrap font-medium">
+                <td className="text-caption text-[var(--text-primary)] px-2 py-1 sticky left-0 bg-[var(--bg-card)] whitespace-nowrap font-medium">
                   {s}
                 </td>
                 {weeks.map(w => {
@@ -94,7 +94,7 @@ export default function SectorRotationHeatmap({ rotation, loading }: Props) {
                   return (
                     <td
                       key={w}
-                      className="text-center text-[10px] font-mono font-semibold tabular-nums"
+                      className="text-center text-caption font-mono font-medium tabular-nums"
                       style={{
                         backgroundColor: cellColor(c, globalMax),
                         color: cellTextColor(c, globalMax),
@@ -114,7 +114,7 @@ export default function SectorRotationHeatmap({ rotation, loading }: Props) {
         </table>
       </div>
 
-      <div className="flex items-center justify-center gap-3 mt-4 text-[11px]">
+      <div className="flex items-center justify-center gap-3 mt-4 text-caption">
         <span className="text-[var(--text-secondary)]">少 ←</span>
         {['var(--bg-primary)', ...GREEN_RAMP].map(c => (
           <span key={c} className="inline-block w-5 h-3 rounded-sm" style={{ backgroundColor: c }} />

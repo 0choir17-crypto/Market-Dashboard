@@ -69,7 +69,7 @@ export default function SectorBarChart33({ history }: Props) {
   if (seriesList.length === 0) {
     return (
       <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-8 text-center text-[var(--text-muted)]">
-        <p className="text-sm">Bar Chart 用のデータがありません</p>
+        <p className="text-small">Bar Chart 用のデータがありません</p>
       </div>
     )
   }
@@ -77,13 +77,13 @@ export default function SectorBarChart33({ history }: Props) {
   return (
     <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-5">
       <div className="flex flex-wrap items-center gap-3 mb-3">
-        <p className="text-sm font-semibold text-[var(--text-primary)] mr-auto">
+        <p className="text-small font-medium text-[var(--text-primary)] mr-auto">
           RS Bar Chart{' '}
           <span className="font-normal text-[var(--text-muted)]">
             — 各セクター composite_score 推移（<span className="font-mono">{dates.length}</span> 営業日）
           </span>
         </p>
-        <div className="flex items-center gap-1 text-xs">
+        <div className="flex items-center gap-1 text-caption">
           <span className="text-[var(--text-muted)]">並び:</span>
           {(
             [
@@ -94,9 +94,9 @@ export default function SectorBarChart33({ history }: Props) {
             <button
               key={o.k}
               onClick={() => setSortKey(o.k)}
-              className={`px-2 py-0.5 rounded border text-xs ${
+              className={`px-2 py-0.5 rounded border text-caption ${
                 sortKey === o.k
-                  ? 'bg-[var(--accent-bg)] border-[var(--accent)] text-[var(--accent)] font-semibold'
+                  ? 'bg-[var(--accent-bg)] border-[var(--accent)] text-[var(--accent)] font-medium'
                   : 'bg-[var(--bg-card)] border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)]'
               }`}
             >
@@ -124,14 +124,14 @@ export default function SectorBarChart33({ history }: Props) {
             >
               <div className="flex items-center justify-between">
                 <span
-                  className="text-xs font-medium truncate"
+                  className="text-caption font-medium truncate"
                   style={{ color: 'var(--text-primary)' }}
                   title={card.sector}
                 >
                   {card.sector}
                 </span>
                 <span
-                  className="text-sm font-bold font-mono tabular-nums ml-1 shrink-0"
+                  className="text-small font-medium font-mono tabular-nums ml-1 shrink-0"
                   style={{ color: scoreColor }}
                 >
                   {card.latest != null ? card.latest.toFixed(0) : '—'}
@@ -172,7 +172,7 @@ export default function SectorBarChart33({ history }: Props) {
 
               <div className="flex items-center justify-between">
                 <span
-                  className="text-[10px] font-mono"
+                  className="text-caption font-mono"
                   style={{ color: 'var(--text-muted)' }}
                 >
                   {validCount}d
@@ -181,7 +181,7 @@ export default function SectorBarChart33({ history }: Props) {
                   )}
                 </span>
                 <span
-                  className="text-[10px] font-mono font-semibold"
+                  className="text-caption font-mono font-medium"
                   style={{
                     color:
                       card.delta21d == null
@@ -207,7 +207,7 @@ export default function SectorBarChart33({ history }: Props) {
         })}
       </div>
 
-      <div className="flex items-center justify-center gap-5 mt-3 text-[11px]">
+      <div className="flex items-center justify-center gap-5 mt-3 text-caption">
         <span className="flex items-center gap-1">
           <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: 'var(--sem-strong-fg)' }} />
           <span style={{ color: 'var(--text-secondary)' }}>Leader (≥60)</span>

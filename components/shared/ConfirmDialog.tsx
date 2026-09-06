@@ -29,7 +29,7 @@ export default function ConfirmDialog({
   return (
     <Modal open={open} onClose={onCancel} title="Confirm">
       <div className="px-6 py-5">
-        <p className="text-[var(--text-primary)] text-sm mb-6">{message}</p>
+        <p className="text-[var(--text-primary)] text-small mb-6">{message}</p>
         <div className="flex justify-end gap-3">
           <button
             onClick={onCancel}
@@ -39,7 +39,7 @@ export default function ConfirmDialog({
           </button>
           <button
             onClick={onConfirm}
-            className={`px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors min-h-[44px] ${confirmClass}`}
+            className={`px-4 py-2 text-small font-medium text-white rounded-lg transition-colors min-h-[44px] ${confirmClass}`}
           >
             {confirmLabel}
           </button>

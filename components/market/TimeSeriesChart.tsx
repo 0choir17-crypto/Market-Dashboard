@@ -220,7 +220,7 @@ export function TimeSeriesChart({
   if (data.length === 0) {
     return (
       <div
-        className="flex items-center justify-center bg-[var(--bg-card-hover)] rounded-md text-sm text-[var(--text-muted)]"
+        className="flex items-center justify-center bg-[var(--bg-card-hover)] rounded-md text-small text-[var(--text-muted)]"
         style={{ height }}
       >
         データがありません
@@ -234,7 +234,7 @@ export function TimeSeriesChart({
     <div>
       {/* 系列凡例: 価格軸のバッジを廃したぶん、色の対応をここで示す */}
       {(name || (hasSecondary && secondaryName)) && (
-        <div className="flex items-center gap-3 flex-wrap text-[11px] mb-1">
+        <div className="flex items-center gap-3 flex-wrap text-caption mb-1">
           {name && (
             <span className="flex items-center gap-1">
               <span

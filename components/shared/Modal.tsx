@@ -40,10 +40,10 @@ export default function Modal({ open, onClose, children, title }: Props) {
       >
         {title && (
           <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border)]">
-            <h2 className="text-lg font-semibold text-[var(--text-primary)]">{title}</h2>
+            <h2 className="text-title font-medium text-[var(--text-primary)]">{title}</h2>
             <button
               onClick={onClose}
-              className="text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors text-2xl leading-none font-light w-8 h-8 flex items-center justify-center rounded-md hover:bg-[var(--bg-card-hover)]"
+              className="text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors text-title leading-none font-light w-8 h-8 flex items-center justify-center rounded-md hover:bg-[var(--bg-card-hover)]"
               aria-label="閉じる"
             >
               ×

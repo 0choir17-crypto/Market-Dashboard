@@ -118,20 +118,20 @@ export default function EmaSetupsSection({
   }
 
   const selectClass =
-    'text-xs px-2 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg-card)] text-[var(--text-primary)] cursor-pointer'
+    'text-caption px-2 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg-card)] text-[var(--text-primary)] cursor-pointer'
 
   return (
     <section className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-4">
       <div className="flex items-baseline gap-2 flex-wrap mb-1">
-        <h2 className="text-lg font-bold text-[var(--text-primary)]">{title}</h2>
-        <span className="text-xs text-[var(--text-muted)]">
+        <h2 className="text-title font-medium text-[var(--text-primary)]">{title}</h2>
+        <span className="text-caption text-[var(--text-muted)]">
           <span className="font-mono">{sorted.length} / {rows.length}</span> 銘柄
           <span className="ml-1.5 font-mono" title="DB 上の行数（1タッチ=1行）。同じ銘柄が複数 EMA にタッチすると銘柄数より多くなる">
             （{touchCount} タッチ）
           </span>
         </span>
       </div>
-      <p className="text-xs text-[var(--text-secondary)] mb-3">{subtitle}</p>
+      <p className="text-caption text-[var(--text-secondary)] mb-3">{subtitle}</p>
 
       {/* フィルタ / ソート */}
       <div className="flex flex-wrap items-center gap-2 mb-4">
@@ -169,7 +169,7 @@ export default function EmaSetupsSection({
 
         <button
           onClick={() => setFreshOnly(v => !v)}
-          className={`text-xs font-medium px-2.5 py-1.5 rounded-lg border transition-colors ${
+          className={`text-caption font-medium px-2.5 py-1.5 rounded-lg border transition-colors ${
             freshOnly
               ? 'bg-[var(--sem-watch-fg)] text-white border-[var(--sem-watch-bd)]'
               : 'bg-[var(--bg-card)] text-[var(--sem-watch-fg)] border-[var(--sem-watch-bd)] hover:bg-[var(--sem-watch-bg)]'
@@ -180,7 +180,7 @@ export default function EmaSetupsSection({
         </button>
 
         <label
-          className="flex items-center gap-1.5 text-[11px] text-[var(--text-muted)]"
+          className="flex items-center gap-1.5 text-caption text-[var(--text-muted)]"
           title="対TOPIX RS の下限。配信側は下限を掛けずに全件出しているので既定は「なし」。EMA50 のタッチは深く押した銘柄が多く、RS 下限を上げると大きく削れる"
         >
           <span className="whitespace-nowrap">RS ≥</span>
@@ -198,7 +198,7 @@ export default function EmaSetupsSection({
         </label>
 
         <span className="ml-auto flex items-center gap-1.5">
-          <span className="text-[11px] text-[var(--text-muted)]">並び:</span>
+          <span className="text-caption text-[var(--text-muted)]">並び:</span>
           <select value={sortKey} onChange={e => setSortKey(e.target.value)} className={selectClass}>
             {SORTS.map(s => (
               <option key={s.key} value={s.key}>
@@ -210,16 +210,16 @@ export default function EmaSetupsSection({
       </div>
 
       {tableMissing ? (
-        <div className="py-8 text-center text-sm text-[var(--text-muted)]">
+        <div className="py-8 text-center text-small text-[var(--text-muted)]">
           <p className="font-medium text-[var(--text-secondary)]">
             <code className="font-mono">ema_setups</code> テーブルがまだ Supabase にありません。
           </p>
-          <p className="mt-1 text-xs">
+          <p className="mt-1 text-caption">
             配信側（jquants-scanner）の DDL 実行待ちです。エラーではありません。
           </p>
         </div>
       ) : sorted.length === 0 ? (
-        <div className="py-8 text-center text-sm text-[var(--text-muted)]">
+        <div className="py-8 text-center text-small text-[var(--text-muted)]">
           {rows.length === 0
             ? '本日は該当なし。'
             : '絞り込み条件に一致する銘柄がありません。'}

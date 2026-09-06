@@ -38,7 +38,7 @@ export default function SectorConcentration({ rows }: Props) {
   if (buckets.length === 0) {
     return (
       <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-8 text-center text-[var(--text-muted)]">
-        <p className="text-sm">セクターデータなし</p>
+        <p className="text-small">セクターデータなし</p>
       </div>
     )
   }
@@ -47,12 +47,12 @@ export default function SectorConcentration({ rows }: Props) {
     <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-5">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <p className="text-sm font-semibold text-[var(--text-primary)]">セクター集中度 — 資金フロー観測</p>
-          <p className="text-xs text-[var(--text-secondary)] mt-0.5">
+          <p className="text-small font-medium text-[var(--text-primary)]">セクター集中度 — 資金フロー観測</p>
+          <p className="text-caption text-[var(--text-secondary)] mt-0.5">
             Top 50 銘柄が S33 セクター別にどう分布しているか。最多セクター = 資金集中の中心。
           </p>
         </div>
-        <span className="text-xs text-[var(--text-muted)]">{buckets.length} セクター / {total} 銘柄</span>
+        <span className="text-caption text-[var(--text-muted)]">{buckets.length} セクター / {total} 銘柄</span>
       </div>
 
       <div className="space-y-1.5">
@@ -60,7 +60,7 @@ export default function SectorConcentration({ rows }: Props) {
           const pct = (b.count / max) * 100
           const sharePct = (b.count / total) * 100
           return (
-            <div key={b.sector} className="flex items-center gap-3 text-xs">
+            <div key={b.sector} className="flex items-center gap-3 text-caption">
               <span className="w-36 text-right text-[var(--text-primary)] truncate" title={b.sector}>
                 {b.sector}
               </span>
@@ -76,14 +76,14 @@ export default function SectorConcentration({ rows }: Props) {
                   }}
                 />
                 <span
-                  className="absolute inset-0 flex items-center px-2 text-[11px] font-mono font-semibold tabular-nums"
+                  className="absolute inset-0 flex items-center px-2 text-caption font-mono font-medium tabular-nums"
                   style={{ color: pct > 30 ? 'var(--bg-card)' : 'var(--text-primary)' }}
                 >
                   {b.count} 銘柄 ({sharePct.toFixed(0)}%)
                 </span>
               </div>
               <span
-                className="text-[10px] text-[var(--text-muted)] truncate w-44"
+                className="text-caption text-[var(--text-muted)] truncate w-44"
                 title={b.codes.map(c => `${c.code} ${c.coname ?? ''}`).join(', ')}
               >
                 {b.codes.slice(0, 3).map(c => c.code).join(', ')}
@@ -94,7 +94,7 @@ export default function SectorConcentration({ rows }: Props) {
         })}
       </div>
 
-      <p className="text-[11px] text-[var(--text-muted)] mt-4 text-center">
+      <p className="text-caption text-[var(--text-muted)] mt-4 text-center">
         例: 電気機器が 19 銘柄 = 半導体クラスタへの資金集中
       </p>
     </div>

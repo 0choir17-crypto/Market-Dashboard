@@ -83,9 +83,9 @@ export default function EarningsPage() {
         refreshing={loading}
       >
         {latestAvailable && (
-          <span className="inline-flex items-center gap-2 text-sm">
+          <span className="inline-flex items-center gap-2 text-small">
             <span className="text-[var(--text-muted)]">最新開示日:</span>
-            <span className="font-mono font-semibold text-[var(--text-primary)]">
+            <span className="font-mono font-medium text-[var(--text-primary)]">
               {latestAvailable}
             </span>
             <FreshnessBadge latestDate={latestAvailable} />
@@ -95,10 +95,10 @@ export default function EarningsPage() {
           <select
             value={selectedDate ?? snapshot.latestDate ?? ''}
             onChange={e => fetchData(e.target.value)}
-            className={`text-xs font-mono px-2 py-1 rounded border cursor-pointer ${
+            className={`text-caption font-mono px-2 py-1 rounded border cursor-pointer ${
               isLatest
                 ? 'border-[var(--border)] bg-[var(--bg-card)] text-[var(--text-primary)]'
-                : 'border-[var(--sem-watch-bd)] bg-[var(--sem-watch-bg)] text-[var(--sem-watch-fg)] font-semibold'
+                : 'border-[var(--sem-watch-bd)] bg-[var(--sem-watch-bg)] text-[var(--sem-watch-fg)] font-medium'
             }`}
           >
             {snapshot.availableDates.map(d => (
@@ -111,7 +111,7 @@ export default function EarningsPage() {
         {!isLatest && snapshot.availableDates[0] && (
           <button
             onClick={() => fetchData(snapshot.availableDates[0])}
-            className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--sem-watch-fg)] text-white hover:brightness-110 transition-colors font-medium"
+            className="text-caption px-1.5 py-0.5 rounded bg-[var(--sem-watch-fg)] text-white hover:brightness-110 transition-colors font-medium"
           >
             最新に戻る
           </button>
@@ -119,13 +119,13 @@ export default function EarningsPage() {
       </PageHeader>
 
       {showQuietBanner && fresh && latestAvailable && (
-        <div className="mb-4 px-4 py-2.5 rounded-lg bg-[var(--sem-weak-bg)] border border-[var(--sem-weak-bd)] text-[var(--sem-weak-fg)] text-sm flex items-start gap-2">
-          <span className="text-base leading-tight">⚠️</span>
+        <div className="mb-4 px-4 py-2.5 rounded-lg bg-[var(--sem-weak-bg)] border border-[var(--sem-weak-bd)] text-[var(--sem-weak-fg)] text-small flex items-start gap-2">
+          <span className="text-lead leading-tight">⚠️</span>
           <div>
-            <p className="font-semibold">
+            <p className="font-medium">
               表示中のデータは {latestAvailable} ({fresh.bdays} 営業日前) のものです
             </p>
-            <p className="text-xs text-[var(--sem-weak-fg)] mt-0.5">
+            <p className="text-caption text-[var(--sem-weak-fg)] mt-0.5">
               現在は決算閑散期 (3/6/9/12 月) のため、本スキャナー対象 (1Q-3Q + FY) の新規開示がありません。
               「直近の開示日」のデータが残り続けるため、「今日のデータ」ではない点にご注意ください。
             </p>
@@ -134,7 +134,7 @@ export default function EarningsPage() {
       )}
 
       {!isLatest && selectedDate && (
-        <div className="mb-4 px-4 py-2 rounded-lg bg-[var(--sem-watch-bg)] border border-[var(--sem-watch-bd)] text-[var(--sem-watch-fg)] text-sm font-medium">
+        <div className="mb-4 px-4 py-2 rounded-lg bg-[var(--sem-watch-bg)] border border-[var(--sem-watch-bd)] text-[var(--sem-watch-fg)] text-small font-medium">
           {selectedDate} のスナップショットを表示中
         </div>
       )}
@@ -148,7 +148,7 @@ export default function EarningsPage() {
           className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-8 text-center"
           style={{ color: 'var(--text-muted)' }}
         >
-          <p className="text-lg font-medium">読み込み中…</p>
+          <p className="text-title font-medium">読み込み中…</p>
         </div>
       )}
 
@@ -157,8 +157,8 @@ export default function EarningsPage() {
           className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-8 text-center"
           style={{ color: 'var(--text-muted)' }}
         >
-          <p className="text-lg font-medium mb-2">データが見つかりません</p>
-          <p className="text-sm">
+          <p className="text-title font-medium mb-2">データが見つかりません</p>
+          <p className="text-small">
             Supabase の <code className="font-mono">earnings_quality</code> テーブルにデータがあるか確認してください。
             <br />
             毎営業日 18:23 JST に jquants-scanner から自動 push されます。

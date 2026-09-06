@@ -34,7 +34,7 @@ export default function LoginModal({ open, onClose }: Props) {
   return (
     <Modal open={open} onClose={onClose} title="ログイン">
       <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
-        <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
+        <p className="text-caption text-[var(--text-secondary)] leading-relaxed">
           記録の追加・編集にはログインが必要です（閲覧はログイン不要）。
           セッションは端末に保存されるため、ログインは端末ごとに初回のみです。
         </p>

@@ -38,7 +38,7 @@ function ChangePill({ label, value }: { label: string; value: number | null | un
       <span className="text-[var(--text-muted)]">{label}</span>
       {isNum(value) ? (
         <span
-          className="font-mono text-sm font-semibold tabular-nums"
+          className="font-mono text-small font-medium tabular-nums"
           style={{ color: value >= 0 ? 'var(--positive)' : 'var(--negative)' }}
         >
           {value >= 0 ? '+' : ''}
@@ -54,14 +54,14 @@ function ChangePill({ label, value }: { label: string; value: number | null | un
 function SmaBadge({ above, label }: { above: boolean | null | undefined; label: string }) {
   if (above === null || above === undefined) {
     return (
-      <span className="px-1.5 py-0.5 rounded text-xs bg-[var(--bg-primary)] text-[var(--text-muted)]">
+      <span className="px-1.5 py-0.5 rounded text-caption bg-[var(--bg-primary)] text-[var(--text-muted)]">
         {label} N/A
       </span>
     )
   }
   return (
     <span
-      className="px-1.5 py-0.5 rounded text-xs font-medium"
+      className="px-1.5 py-0.5 rounded text-caption font-medium"
       style={
         above
           ? { backgroundColor: 'var(--positive-bg)', color: 'var(--positive)' }
@@ -113,8 +113,8 @@ export default function TopixChart({ market, height = 380 }: Props) {
     <div className="card p-6">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
         <div>
-          <h2 className="text-lg font-semibold text-[var(--text-primary)]">TOPIX</h2>
-          <p className="text-xs text-[var(--text-muted)] mt-0.5">
+          <h2 className="text-title font-medium text-[var(--text-primary)]">TOPIX</h2>
+          <p className="text-caption text-[var(--text-muted)] mt-0.5">
             東証株価指数（指数ポイント）と市場出来高
           </p>
         </div>
@@ -132,19 +132,19 @@ export default function TopixChart({ market, height = 380 }: Props) {
       <div className="flex flex-col lg:flex-row gap-5">
         {/* 左: 数値（既存の TOPIX 系カラム） */}
         <div className="flex-shrink-0 lg:w-[220px]">
-          <div className="text-3xl font-bold font-mono tabular-nums text-[var(--text-primary)]">
+          <div className="text-title font-medium font-mono tabular-nums text-[var(--text-primary)]">
             {fmtIndex(market?.topix_price)}
           </div>
-          <p className="text-[10px] text-[var(--text-muted)] mb-4">指数ポイント（終値）</p>
+          <p className="text-caption text-[var(--text-muted)] mb-4">指数ポイント（終値）</p>
 
-          <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+          <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-small">
             <ChangePill label="1W" value={market?.topix_chg_1w} />
             <ChangePill label="1M" value={market?.topix_chg_1m} />
             <ChangePill label="YTD" value={market?.topix_chg_ytd} />
             <ChangePill label="1Y" value={market?.topix_chg_1y} />
           </div>
 
-          <div className="mt-3 pt-3 border-t border-[var(--border)] text-xs flex justify-between">
+          <div className="mt-3 pt-3 border-t border-[var(--border)] text-caption flex justify-between">
             <span className="text-[var(--text-muted)]">To 52W High</span>
             <span className="font-mono font-medium tabular-nums text-[var(--text-secondary)]">
               {isNum(pct52wh) ? `${pct52wh.toFixed(2)}%` : '—'}
@@ -154,16 +154,16 @@ export default function TopixChart({ market, height = 380 }: Props) {
           {/* 市場出来高 — TOPIX 指数の出来高ではないので名前を分けて示す */}
           <div className="mt-3 pt-3 border-t border-[var(--border)]">
             <Tooltip content="個別株（ETF/ETN/JDR/REIT を除く）の出来高を全銘柄合算した値。TOPIX 指数そのものに出来高データは存在しない。">
-              <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wide">
+              <p className="text-caption text-[var(--text-muted)] uppercase tracking-wide">
                 市場出来高（東証・個別株）
               </p>
             </Tooltip>
             <div className="flex items-baseline justify-between mt-1">
-              <span className="font-mono text-lg font-semibold tabular-nums text-[var(--text-primary)]">
+              <span className="font-mono text-title font-medium tabular-nums text-[var(--text-primary)]">
                 {formatShares(volume)}
               </span>
               <span
-                className="font-mono text-sm font-semibold tabular-nums"
+                className="font-mono text-small font-medium tabular-nums"
                 style={{
                   color:
                     (volumeRatio ?? 0) >= VOLUME_HEAVY_RATIO
@@ -174,7 +174,7 @@ export default function TopixChart({ market, height = 380 }: Props) {
                 平常比 {formatVolumeRatio(volumeRatio)}
               </span>
             </div>
-            <p className="text-[10px] text-[var(--text-muted)] mt-0.5">
+            <p className="text-caption text-[var(--text-muted)] mt-0.5">
               20日平均 {formatShares(volumeMa20)}
             </p>
           </div>
@@ -183,7 +183,7 @@ export default function TopixChart({ market, height = 380 }: Props) {
         {/* 右: ローソク足 + 出来高 */}
         <div className="flex-1 min-w-0">
           <div className="flex justify-end mb-2">
-            <div className="inline-flex rounded-lg border border-[var(--border)] overflow-hidden text-xs">
+            <div className="inline-flex rounded-lg border border-[var(--border)] overflow-hidden text-caption">
               {TOPIX_RANGES.map((r, i) => (
                 <button
                   key={r.key}
@@ -202,14 +202,14 @@ export default function TopixChart({ market, height = 380 }: Props) {
 
           {data.error ? (
             <div
-              className="flex items-center justify-center rounded-md bg-[var(--sem-weak-bg)] text-sm text-[var(--sem-weak-fg)] px-4 text-center"
+              className="flex items-center justify-center rounded-md bg-[var(--sem-weak-bg)] text-small text-[var(--sem-weak-fg)] px-4 text-center"
               style={{ height }}
             >
               TOPIX チャート取得エラー: {data.error}
             </div>
           ) : loading && data.bars.length === 0 ? (
             <div
-              className="flex items-center justify-center rounded-md bg-[var(--bg-card-hover)] text-sm text-[var(--text-muted)]"
+              className="flex items-center justify-center rounded-md bg-[var(--bg-card-hover)] text-small text-[var(--text-muted)]"
               style={{ height }}
             >
               読み込み中…

@@ -66,7 +66,7 @@ export default function Page() {
 
       {/* 過去日バナー */}
       {!isLatest && selectedDate && (
-        <div className="mb-6 px-4 py-2 rounded-lg bg-[var(--sem-watch-bg)] border border-[var(--sem-watch-bd)] text-[var(--sem-watch-fg)] text-sm font-medium">
+        <div className="mb-6 px-4 py-2 rounded-lg bg-[var(--sem-watch-bg)] border border-[var(--sem-watch-bd)] text-[var(--sem-watch-fg)] text-small font-medium">
           {selectedDate} のスナップショットを表示中
         </div>
       )}
@@ -74,21 +74,21 @@ export default function Page() {
       {/* ローディング */}
       {loading && !market && (
         <div className="card p-8 text-center" style={{ color: 'var(--text-muted)' }}>
-          <p className="text-lg font-medium">読み込み中…</p>
+          <p className="text-title font-medium">読み込み中…</p>
         </div>
       )}
 
       {/* データなし */}
       {!loading && !market && (
         <div className="card p-8 text-center" style={{ color: 'var(--text-muted)' }}>
-          <p className="text-lg font-medium mb-2">データが見つかりません</p>
-          <p className="text-sm">
+          <p className="text-title font-medium mb-2">データが見つかりません</p>
+          <p className="text-small">
             {isLatest
               ? 'Supabase の market_conditions テーブルにデータを挿入してください。'
               : `${selectedDate} のマーケットデータはありません。`}
           </p>
           {error && (
-            <p className="text-xs mt-3 text-[var(--negative)] break-all">
+            <p className="text-caption mt-3 text-[var(--negative)] break-all">
               Supabase error: {error}
             </p>
           )}

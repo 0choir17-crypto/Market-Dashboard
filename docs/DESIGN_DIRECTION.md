@@ -208,6 +208,26 @@ TradingView の既定フォントスタックは以下（Lightweight Charts の 
   ファミリーが揃い、`tnum` を正式にサポートしている。TradingView への見た目の近さは
   Trebuchet MS に劣るが、**桁が揃わない表は方針 3 に反するため桁揃えを優先する**
 
+> **2026-09-06 実施**: 4.3 の検証は Windows 実機で完了。現行の `--font-sans`
+> （TradingView スタック）のままで桁が揃うため、IBM Plex Sans への差し替えは不要。
+>
+> タイプスケールの適用も完了した。`/journal` に先行適用したあと全ページへ横展開し、
+> 合わせて **718 箇所 / 45 ファイル**。
+>
+> | 前 | 後 |
+> |---|---|
+> | `text-[9px]` / `[10px]` / `[11px]` / `text-xs` | `text-caption` (11px) |
+> | `text-sm` | `text-small` (12px) |
+> | `text-base` | `text-lead` (15px) |
+> | `text-lg` / `xl` / `2xl` / `3xl` | `text-title` (18px) |
+> | `font-bold` / `semibold` / `extrabold` | `font-medium` (500) |
+>
+> サイズは 13 段 → 5 段、ウェイトは 5 段 → 2 段。例外は 2 つだけ。
+>
+> - `components/shared/form.tsx` の `fieldClass` は `text-base`（16px）のまま。
+>   iOS Safari が 16px 未満の入力欄で自動ズームするため
+> - `app/debug/font/page.tsx` は px 指定そのものが検証対象なので触らない
+
 ### 4.4 等幅を使う範囲を限定する
 
 等幅は「文字単位で読む識別子」にのみ使う。

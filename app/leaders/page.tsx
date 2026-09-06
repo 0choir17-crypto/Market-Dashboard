@@ -68,10 +68,10 @@ export default function LeadersPage() {
           <select
             value={selectedDate ?? snapshot.latestDate ?? ''}
             onChange={e => loadSnapshot(e.target.value)}
-            className={`text-xs font-mono px-2 py-1 rounded border cursor-pointer ${
+            className={`text-caption font-mono px-2 py-1 rounded border cursor-pointer ${
               isLatest
                 ? 'border-[var(--border)] bg-[var(--bg-card)] text-[var(--text-primary)]'
-                : 'border-[var(--sem-watch-bd)] bg-[var(--sem-watch-bg)] text-[var(--sem-watch-fg)] font-semibold'
+                : 'border-[var(--sem-watch-bd)] bg-[var(--sem-watch-bg)] text-[var(--sem-watch-fg)] font-medium'
             }`}
           >
             {snapshot.availableDates.map(d => (
@@ -84,7 +84,7 @@ export default function LeadersPage() {
         {!isLatest && latestAvailable && (
           <button
             onClick={() => loadSnapshot(latestAvailable)}
-            className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--sem-watch-fg)] text-white hover:brightness-110 transition-colors font-medium"
+            className="text-caption px-1.5 py-0.5 rounded bg-[var(--sem-watch-fg)] text-white hover:brightness-110 transition-colors font-medium"
           >
             最新に戻る
           </button>
@@ -94,12 +94,12 @@ export default function LeadersPage() {
           value={query}
           onChange={e => setQuery(e.target.value)}
           placeholder="検索: 銘柄コード / 銘柄名"
-          className="text-xs px-3 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg-card)] w-56 focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+          className="text-caption px-3 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg-card)] w-56 focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
         />
       </PageHeader>
 
       {!isLatest && selectedDate && (
-        <div className="mb-4 px-4 py-2 rounded-lg bg-[var(--sem-watch-bg)] border border-[var(--sem-watch-bd)] text-[var(--sem-watch-fg)] text-sm font-medium">
+        <div className="mb-4 px-4 py-2 rounded-lg bg-[var(--sem-watch-bg)] border border-[var(--sem-watch-bd)] text-[var(--sem-watch-fg)] text-small font-medium">
           {selectedDate} のスナップショットを表示中
         </div>
       )}
@@ -113,7 +113,7 @@ export default function LeadersPage() {
           className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-8 text-center"
           style={{ color: 'var(--text-muted)' }}
         >
-          <p className="text-lg font-medium">読み込み中…</p>
+          <p className="text-title font-medium">読み込み中…</p>
         </div>
       )}
 
@@ -122,8 +122,8 @@ export default function LeadersPage() {
           className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-8 text-center"
           style={{ color: 'var(--text-muted)' }}
         >
-          <p className="text-lg font-medium mb-2">データが見つかりません</p>
-          <p className="text-sm">
+          <p className="text-title font-medium mb-2">データが見つかりません</p>
+          <p className="text-small">
             Supabase の <code className="font-mono">market_leaders</code> テーブルにデータがあるか確認してください。
             <br />
             毎営業日 18:23 JST に jquants-scanner から自動 push されます。

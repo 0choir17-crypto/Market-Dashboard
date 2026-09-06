@@ -40,7 +40,7 @@ export function RankDeltaBadge({
   /** sm=テーブル行 / md=チャートカード見出し */
   size?: 'sm' | 'md'
 }) {
-  const text = size === 'md' ? 'text-[11px]' : 'text-[10px]'
+  const text = size === 'md' ? 'text-caption' : 'text-caption'
   const pad = size === 'md' ? 'px-1.5 py-0.5' : 'px-1 py-0'
 
   let body: string
@@ -52,7 +52,7 @@ export function RankDeltaBadge({
     body = 'NEW'
     color = 'var(--accent)'
     bg = 'var(--accent-bg)'
-    weight = 'font-bold'
+    weight = 'font-medium'
   } else if (delta?.delta === null || delta === undefined) {
     body = '—'
   } else if (delta.delta === 0) {
@@ -63,7 +63,7 @@ export function RankDeltaBadge({
     color = up ? 'var(--positive)' : 'var(--negative)'
     if (isBigMove(delta)) {
       bg = up ? 'var(--positive-bg)' : 'var(--negative-bg)'
-      weight = 'font-bold'
+      weight = 'font-medium'
     }
   }
 
@@ -90,7 +90,7 @@ export function RankDeltaPeriodToggle({
   onChange: (v: RankDeltaPeriodKey) => void
 }) {
   return (
-    <span className="inline-flex items-center gap-1 text-xs">
+    <span className="inline-flex items-center gap-1 text-caption">
       <Tooltip content={`ランク変動の比較期間。${BIG_MOVE_THRESHOLD}位以上動いた業種は色付きで強調されます`}>
         <span className="text-[var(--text-muted)]">ランク変動:</span>
       </Tooltip>
@@ -101,7 +101,7 @@ export function RankDeltaPeriodToggle({
             onClick={() => onChange(p.key)}
             className={`px-2 py-0.5 font-mono ${
               value === p.key
-                ? 'bg-[var(--accent-bg)] text-[var(--accent)] font-bold'
+                ? 'bg-[var(--accent-bg)] text-[var(--accent)] font-medium'
                 : 'bg-[var(--bg-card)] text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)]'
             } ${i > 0 ? 'border-l border-[var(--border)]' : ''}`}
           >
@@ -126,7 +126,7 @@ export function MoversOnlyToggle({
   count: number
 }) {
   return (
-    <label className="flex items-center gap-2 text-xs text-[var(--text-secondary)] cursor-pointer select-none">
+    <label className="flex items-center gap-2 text-caption text-[var(--text-secondary)] cursor-pointer select-none">
       <input
         type="checkbox"
         checked={checked}
