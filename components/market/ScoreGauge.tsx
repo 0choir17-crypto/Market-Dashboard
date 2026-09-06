@@ -1,25 +1,26 @@
 import { MarketConditions } from '@/types/market'
+import { CHART, REGIME_RAMP } from '@/lib/chartColors'
 
 type Regime = MarketConditions['scorecard_regime']
 
 const REGIME_CONFIG: Record<NonNullable<Regime>, { color: string; label: string }> = {
-  strong_bull: { color: '#639922', label: 'Strong Bull' },
-  bull:         { color: '#97C459', label: 'Bull' },
-  neutral:      { color: '#B4B2A9', label: 'Neutral' },
-  bear:         { color: '#F09595', label: 'Bear' },
-  strong_bear:  { color: '#E24B4A', label: 'Strong Bear' },
+  strong_bull: { color: REGIME_RAMP.strongBull, label: 'Strong Bull' },
+  bull:         { color: REGIME_RAMP.bull, label: 'Bull' },
+  neutral:      { color: REGIME_RAMP.neutral, label: 'Neutral' },
+  bear:         { color: REGIME_RAMP.bear, label: 'Bear' },
+  strong_bear:  { color: REGIME_RAMP.strongBear, label: 'Strong Bear' },
 }
 
 const MARKET_REGIME_CONFIG: Record<string, { color: string; label: string }> = {
-  bull:    { color: '#639922', label: 'Bull' },
-  neutral: { color: '#B4B2A9', label: 'Neutral' },
-  bear:    { color: '#E24B4A', label: 'Bear' },
+  bull:    { color: REGIME_RAMP.bull, label: 'Bull' },
+  neutral: { color: REGIME_RAMP.neutral, label: 'Neutral' },
+  bear:    { color: REGIME_RAMP.bear, label: 'Bear' },
 }
 
 const BREADTH_REGIME_CONFIG: Record<string, { color: string; label: string }> = {
-  strong: { color: '#639922', label: 'Strong' },
-  normal: { color: '#B4B2A9', label: 'Normal' },
-  weak:   { color: '#E24B4A', label: 'Weak' },
+  strong: { color: REGIME_RAMP.strongBull, label: 'Strong' },
+  normal: { color: REGIME_RAMP.neutral, label: 'Normal' },
+  weak:   { color: REGIME_RAMP.strongBear, label: 'Weak' },
 }
 
 type Props = {
@@ -36,7 +37,7 @@ export default function ScoreGauge({
   marketRegime, breadthRegime,
   mcV4Score, divergenceFlag,
 }: Props) {
-  const config = regime ? REGIME_CONFIG[regime] : { color: '#9ca3af', label: '\u2014' }
+  const config = regime ? REGIME_CONFIG[regime] : { color: CHART.textMuted, label: '\u2014' }
 
   const hasScore = mcV4Score != null
   const scoreDisplay = hasScore ? Number(mcV4Score).toFixed(1) : null
@@ -45,9 +46,9 @@ export default function ScoreGauge({
   const trendCfg   = marketRegime  ? MARKET_REGIME_CONFIG[marketRegime]   : null
   const breadthCfg = breadthRegime ? BREADTH_REGIME_CONFIG[breadthRegime] : null
 
-  const trendColor        = trendCfg?.color   ?? '#9ca3af'
+  const trendColor        = trendCfg?.color   ?? CHART.textMuted
   const marketRegimeLabel = trendCfg?.label   ?? '\u2014'
-  const breadthColor      = breadthCfg?.color ?? '#9ca3af'
+  const breadthColor      = breadthCfg?.color ?? CHART.textMuted
   const breadthRegimeLabel = breadthCfg?.label ?? '\u2014'
 
   // SVG semi-circle gauge
@@ -79,7 +80,7 @@ export default function ScoreGauge({
         <path
           d={`M ${bgStart.x} ${bgStart.y} A ${r} ${r} 0 1 1 ${bgEnd.x} ${bgEnd.y}`}
           fill="none"
-          stroke="#e6e8eb"
+          stroke={CHART.border}
           strokeWidth={strokeWidth}
           strokeLinecap="round"
         />
@@ -114,7 +115,7 @@ export default function ScoreGauge({
           y={cy + 16}
           textAnchor="middle"
           fontSize="11"
-          fill="#6b7280"
+          fill={CHART.textSecondary}
           fontFamily="var(--font-mono, monospace)"
         >
           {scoreDisplay ?? '\u2014'} / 100
@@ -126,7 +127,7 @@ export default function ScoreGauge({
           y={cy + 30}
           textAnchor="middle"
           fontSize="11"
-          fill="#9ca3af"
+          fill={CHART.textMuted}
           fontFamily="var(--font-mono, monospace)"
         >
           {pct.toFixed(1)}%
@@ -148,9 +149,9 @@ export default function ScoreGauge({
       {/* Divergence warning */}
       {divergenceFlag === 1 && (
         <div className="mt-2 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium"
-          style={{ backgroundColor: '#FAEEDA', color: '#633806', border: '1px solid #F0D9A8' }}>
+          style={{ backgroundColor: 'var(--sem-watch-bg)', color: 'var(--sem-watch-fg)', border: '0.5px solid var(--sem-watch-bd)' }}>
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-            <path d="M8 1L15 14H1L8 1Z" fill="#EF9F27" />
+            <path d="M8 1L15 14H1L8 1Z" fill={CHART.watchFg} />
             <text x="8" y="12" textAnchor="middle" fontSize="9" fill="white" fontWeight="bold">!</text>
           </svg>
           Divergence
@@ -159,18 +160,18 @@ export default function ScoreGauge({
 
       {/* Sub-regimes (MC v4 \u3068\u306F\u5225\u7CFB\u7D71\u306E regime) */}
       <div className="mt-4 w-full">
-        <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">
+        <p className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-1.5">
           Sub-regimes
         </p>
         <div className="rounded-lg border border-[var(--border)] overflow-hidden text-sm">
           <div className="flex items-center justify-between px-4 py-2 border-b border-[var(--border)]">
-            <span className="text-gray-500 font-medium">Index Trend</span>
+            <span className="text-[var(--text-secondary)] font-medium">Index Trend</span>
             <span className="flex items-center gap-1.5 font-semibold" style={{ color: trendColor }}>
               {'\u25CF'} {marketRegimeLabel}
             </span>
           </div>
           <div className="flex items-center justify-between px-4 py-2">
-            <span className="text-gray-500 font-medium">Market Breadth</span>
+            <span className="text-[var(--text-secondary)] font-medium">Market Breadth</span>
             <span className="flex items-center gap-1.5 font-semibold" style={{ color: breadthColor }}>
               {'\u25CF'} {breadthRegimeLabel}
             </span>

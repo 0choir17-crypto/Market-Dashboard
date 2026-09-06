@@ -5,6 +5,7 @@ import { LineStyle } from 'lightweight-charts'
 import { TimeSeriesChart, type TimeSeriesPoint } from './TimeSeriesChart'
 import { fetchAdvDecRatioTimeSeries } from '@/lib/marketChartData'
 import { useDate } from '@/contexts/DateContext'
+import { SERIES } from '@/lib/chartColors'
 
 export function AdvDecRatioChart({ height = 180 }: { height?: number }) {
   const { selectedDate, isLatest } = useDate()
@@ -58,7 +59,7 @@ export function AdvDecRatioChart({ height = 180 }: { height?: number }) {
     <div className="mt-3">
       <TimeSeriesChart
         data={data}
-        color="#8b5cf6"
+        color={SERIES.secondary}
         name="10D"
         height={height}
         horizontalLines={horizontalLines}

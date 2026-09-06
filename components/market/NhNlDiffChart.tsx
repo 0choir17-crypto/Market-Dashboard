@@ -5,6 +5,7 @@ import { LineStyle } from 'lightweight-charts'
 import { TimeSeriesChart, type TimeSeriesPoint } from './TimeSeriesChart'
 import { fetchNhNlDiffTimeSeries } from '@/lib/marketChartData'
 import { useDate } from '@/contexts/DateContext'
+import { SERIES } from '@/lib/chartColors'
 
 export function NhNlDiffChart({ height = 180 }: { height?: number }) {
   const { selectedDate, isLatest } = useDate()
@@ -46,7 +47,7 @@ export function NhNlDiffChart({ height = 180 }: { height?: number }) {
     <div className="mt-3">
       <TimeSeriesChart
         data={data}
-        color="#f59e0b"
+        color={SERIES.alt}
         name="NH-NL"
         height={height}
         horizontalLines={horizontalLines}

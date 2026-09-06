@@ -135,7 +135,7 @@ export default function JournalStats({ trades }: Props) {
         <Stat
           label="🔍 Unreviewed"
           value={`${unreviewedCount}`}
-          valueClass={unreviewedCount > 0 ? 'text-amber-600' : 'text-[var(--text-muted)]'}
+          valueClass={unreviewedCount > 0 ? 'text-[var(--sem-watch-fg)]' : 'text-[var(--text-muted)]'}
         />
       </div>
 

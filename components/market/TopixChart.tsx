@@ -54,7 +54,7 @@ function ChangePill({ label, value }: { label: string; value: number | null | un
 function SmaBadge({ above, label }: { above: boolean | null | undefined; label: string }) {
   if (above === null || above === undefined) {
     return (
-      <span className="px-1.5 py-0.5 rounded text-xs bg-gray-100 text-gray-400">
+      <span className="px-1.5 py-0.5 rounded text-xs bg-[var(--bg-primary)] text-[var(--text-muted)]">
         {label} N/A
       </span>
     )
@@ -202,7 +202,7 @@ export default function TopixChart({ market, height = 380 }: Props) {
 
           {data.error ? (
             <div
-              className="flex items-center justify-center rounded-md bg-red-50 text-sm text-red-700 px-4 text-center"
+              className="flex items-center justify-center rounded-md bg-[var(--sem-weak-bg)] text-sm text-[var(--sem-weak-fg)] px-4 text-center"
               style={{ height }}
             >
               TOPIX チャート取得エラー: {data.error}

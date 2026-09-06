@@ -13,6 +13,7 @@ import {
 } from 'recharts'
 import { Trade } from '@/types/trades'
 import { formatYen } from '@/lib/format'
+import { CHART } from '@/lib/chartColors'
 
 type Props = {
   trades: Trade[]
@@ -53,7 +54,7 @@ export default function EquityCurveChart({ trades }: Props) {
 
   if (data.length < 2) {
     return (
-      <div className="mb-6 bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-6 text-center text-sm text-gray-400">
+      <div className="mb-6 bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-6 text-center text-sm text-[var(--text-muted)]">
         資産推移チャートを表示するには 2 件以上のクローズ済みトレードが必要です。
       </div>
     )
@@ -74,8 +75,8 @@ export default function EquityCurveChart({ trades }: Props) {
   }
 
   const isUp = final >= 0
-  const GREEN = '#10b981'
-  const RED = '#ef4444'
+  const GREEN = CHART.positive
+  const RED = CHART.negative
 
   // Gradient offset for the 0 line: positions where y=0 sits inside the chart
   // (0 at top, 1 at bottom). When the curve never crosses 0, the gradient
@@ -88,26 +89,26 @@ export default function EquityCurveChart({ trades }: Props) {
   return (
     <div className="mb-6 bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-3 mb-3">
-        <h3 className="text-sm font-semibold text-gray-700">
-          Equity Curve <span className="text-xs font-normal text-gray-400">(累積 PnL)</span>
+        <h3 className="text-sm font-semibold text-[var(--text-primary)]">
+          Equity Curve <span className="text-xs font-normal text-[var(--text-muted)]">(累積 PnL)</span>
         </h3>
         <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs font-mono">
           <span>
-            <span className="text-gray-500">Final: </span>
+            <span className="text-[var(--text-secondary)]">Final: </span>
             <strong className={isUp ? 'text-[var(--positive)]' : 'text-[var(--negative)]'}>
               {formatYen(final, { sign: true })}
             </strong>
           </span>
           <span>
-            <span className="text-gray-500">Peak: </span>
-            <strong className="text-gray-700">{formatYen(peak, { sign: true })}</strong>
+            <span className="text-[var(--text-secondary)]">Peak: </span>
+            <strong className="text-[var(--text-primary)]">{formatYen(peak, { sign: true })}</strong>
           </span>
           <span>
-            <span className="text-gray-500">Trough: </span>
-            <strong className="text-gray-700">{formatYen(trough, { sign: true })}</strong>
+            <span className="text-[var(--text-secondary)]">Trough: </span>
+            <strong className="text-[var(--text-primary)]">{formatYen(trough, { sign: true })}</strong>
           </span>
           <span>
-            <span className="text-gray-500">Max DD: </span>
+            <span className="text-[var(--text-secondary)]">Max DD: </span>
             <strong className="text-[var(--negative)]">{formatYen(maxDrawdown, { sign: true })}</strong>
           </span>
         </div>
@@ -129,16 +130,16 @@ export default function EquityCurveChart({ trades }: Props) {
                 <stop offset="100%" stopColor={RED} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e6e8eb" />
-            <ReferenceLine y={0} stroke="#9ca3af" strokeDasharray="2 2" />
+            <CartesianGrid strokeDasharray="3 3" stroke={CHART.border} />
+            <ReferenceLine y={0} stroke={CHART.textMuted} strokeDasharray="2 2" />
             <XAxis
               dataKey="date"
-              tick={{ fontSize: 10, fill: '#9ca3af' }}
+              tick={{ fontSize: 10, fill: CHART.textMuted }}
               tickMargin={6}
             />
             <YAxis
               tickFormatter={fmtAxis}
-              tick={{ fontSize: 10, fill: '#9ca3af' }}
+              tick={{ fontSize: 10, fill: CHART.textMuted }}
               width={48}
             />
             <Tooltip

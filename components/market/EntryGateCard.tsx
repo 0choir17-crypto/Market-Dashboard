@@ -5,6 +5,7 @@ import { MarketConditions } from '@/types/market'
 import { TimeSeriesChart, type TimeSeriesPoint } from './TimeSeriesChart'
 import { fetchGateScoreTimeSeries } from '@/lib/marketChartData'
 import { useDate } from '@/contexts/DateContext'
+import { CHART, SERIES } from '@/lib/chartColors'
 
 type GateState = NonNullable<MarketConditions['gate_state']>
 
@@ -12,24 +13,24 @@ const GATE_CONFIG: Record<GateState, { label: string; jp: string; color: string;
   attack: {
     label: 'ATTACK',
     jp: '攻める',
-    color: '#1a9850',
+    color: CHART.strongFg,
     note: '主導株が新高値を更新中。期待値・勝率が最も高い局面。厚めに張る。',
   },
   normal: {
     label: 'NORMAL',
     jp: '普通',
-    color: '#f1c40f',
+    color: CHART.watchFg,
     note: 'TOPIX は SMA50 の上だが主導株は平常。通常運用。',
   },
   rest: {
     label: 'REST',
     jp: '休む',
-    color: '#e24b4a',
+    color: CHART.negative,
     note: 'TOPIX が SMA50 の下＝弱気相場。ブレイクはだましやすい。新規は見送り/極小。',
   },
 }
 
-const FALLBACK = { color: '#9ca3af', label: '—', jp: '—', note: 'データがありません。' }
+const FALLBACK = { color: CHART.textMuted, label: '—', jp: '—', note: 'データがありません。' }
 
 function isNum(v: number | null | undefined): v is number {
   return v !== null && v !== undefined && Number.isFinite(v)
@@ -72,7 +73,7 @@ function ScoreGauge({ score, color }: { score: number | null; color: string }) {
       <path
         d={`M ${bgStart.x} ${bgStart.y} A ${r} ${r} 0 1 1 ${bgEnd.x} ${bgEnd.y}`}
         fill="none"
-        stroke="#e6e8eb"
+        stroke={CHART.border}
         strokeWidth={strokeWidth}
         strokeLinecap="round"
       />
@@ -101,7 +102,7 @@ function ScoreGauge({ score, color }: { score: number | null; color: string }) {
         y={cy + 12}
         textAnchor="middle"
         fontSize="11"
-        fill="#9ca3af"
+        fill={CHART.textMuted}
         fontFamily="var(--font-mono, monospace)"
       >
         gate_score / 100
@@ -144,7 +145,7 @@ function GateTrend({ height = 120 }: { height?: number }) {
   return (
     <TimeSeriesChart
       data={data}
-      color="#639922"
+      color={SERIES.primary}
       name="gate_score"
       height={height}
       yMin={0}
@@ -198,14 +199,31 @@ export default function EntryGateCard({ market }: { market: MarketConditions | n
       <div
         className="mt-4 flex items-center justify-between px-4 py-2.5 rounded-lg border"
         style={{
-          borderColor: aboveSma50 == null ? 'var(--border)' : aboveSma50 ? '#63992240' : '#e24b4a40',
-          backgroundColor: aboveSma50 == null ? '#f8fafc' : aboveSma50 ? '#63992212' : '#e24b4a12',
+          borderColor:
+            aboveSma50 == null
+              ? 'var(--border)'
+              : aboveSma50
+                ? 'var(--sem-strong-bd)'
+                : 'var(--sem-weak-bd)',
+          backgroundColor:
+            aboveSma50 == null
+              ? 'var(--bg-primary)'
+              : aboveSma50
+                ? 'var(--sem-ok-bg)'
+                : 'var(--sem-weak-bg)',
         }}
       >
         <span className="text-sm text-[var(--text-secondary)] font-medium">TOPIX vs SMA50（大枠の門）</span>
         <span
           className="text-sm font-bold"
-          style={{ color: aboveSma50 == null ? '#9ca3af' : aboveSma50 ? '#639922' : '#e24b4a' }}
+          style={{
+            color:
+              aboveSma50 == null
+                ? 'var(--text-muted)'
+                : aboveSma50
+                  ? 'var(--sem-strong-fg)'
+                  : 'var(--negative)',
+          }}
         >
           {aboveSma50 == null ? '—' : aboveSma50 ? '▲ 上' : '▼ 下'}
         </span>

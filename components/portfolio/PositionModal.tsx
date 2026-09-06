@@ -9,6 +9,7 @@ import { fetchSectorNames33 } from '@/lib/sectorNames'
 import { todayJST } from '@/lib/dates'
 import { formatYen, formatPct } from '@/lib/format'
 import Modal from '@/components/shared/Modal'
+import { btnPrimary, btnSecondary, fieldClass, labelClass, requiredClass } from '@/components/shared/form'
 
 type Props = {
   open: boolean
@@ -212,46 +213,46 @@ export default function PositionModal({ open, onClose, onSaved, initial }: Props
     <Modal open={open} onClose={onClose} title={title}>
       <div className="px-6 py-5 space-y-4">
         {error && (
-          <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>
+          <p className="text-sm text-[var(--negative)] bg-[var(--sem-weak-bg)] px-3 py-2 rounded-lg">{error}</p>
         )}
         {warning && (
-          <p className="text-sm text-amber-800 bg-amber-50 border border-amber-200 px-3 py-2 rounded-lg">{warning}</p>
+          <p className="text-sm text-[var(--sem-watch-fg)] bg-[var(--sem-watch-bg)] border border-[var(--sem-watch-bd)] px-3 py-2 rounded-lg">{warning}</p>
         )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {/* Ticker */}
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">
-              Ticker <span className="text-red-500">*</span>
+            <label className={labelClass}>
+              Ticker <span className={requiredClass}>*</span>
             </label>
             <input
               type="text"
               value={ticker}
               onChange={e => setTicker(e.target.value)}
               placeholder="例: 7203"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={fieldClass}
             />
           </div>
 
           {/* Company Name */}
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Name</label>
+            <label className={labelClass}>Name</label>
             <input
               type="text"
               value={companyName}
               onChange={e => setCompanyName(e.target.value)}
               placeholder="例: トヨタ自動車"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={fieldClass}
             />
           </div>
 
           {/* Sector (33業種プルダウン) */}
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Sector (33業種)</label>
+            <label className={labelClass}>Sector (33業種)</label>
             <select
               value={sector}
               onChange={e => setSector(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 bg-[var(--bg-card)]"
+              className={fieldClass}
             >
               <option value="">-- Select --</option>
               {/* 既存値が一覧に無い場合も選択を保持 */}
@@ -266,11 +267,11 @@ export default function PositionModal({ open, onClose, onSaved, initial }: Props
 
           {/* Screen */}
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Screen</label>
+            <label className={labelClass}>Screen</label>
             <select
               value={screenName}
               onChange={e => setScreenName(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 bg-[var(--bg-card)]"
+              className={fieldClass}
             >
               <option value="">-- Select --</option>
               {/* 既存値が選択肢に無い場合も保持 */}
@@ -286,21 +287,21 @@ export default function PositionModal({ open, onClose, onSaved, initial }: Props
 
           {/* Entry Date */}
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">
-              Entry Date <span className="text-red-500">*</span>
+            <label className={labelClass}>
+              Entry Date <span className={requiredClass}>*</span>
             </label>
             <input
               type="date"
               value={entryDate}
               onChange={e => setEntryDate(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={fieldClass}
             />
           </div>
 
           {/* Entry Price */}
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">
-              Entry Price <span className="text-red-500">*</span>
+            <label className={labelClass}>
+              Entry Price <span className={requiredClass}>*</span>
             </label>
             <input
               type="number"
@@ -308,14 +309,14 @@ export default function PositionModal({ open, onClose, onSaved, initial }: Props
               value={entryPrice}
               onChange={e => setEntryPrice(e.target.value)}
               placeholder="例: 2500"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={fieldClass}
             />
           </div>
 
           {/* Shares */}
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">
-              Shares <span className="text-red-500">*</span>
+            <label className={labelClass}>
+              Shares <span className={requiredClass}>*</span>
             </label>
             <input
               type="number"
@@ -323,29 +324,29 @@ export default function PositionModal({ open, onClose, onSaved, initial }: Props
               value={shares}
               onChange={e => setShares(e.target.value)}
               placeholder="例: 100"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={fieldClass}
             />
           </div>
 
           {/* Cost Basis */}
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Cost Basis (incl. fees, optional)</label>
+            <label className={labelClass}>Cost Basis (incl. fees, optional)</label>
             <input
               type="number"
               inputMode="numeric"
               value={costBasis}
               onChange={e => setCostBasis(e.target.value)}
               placeholder="例: 250500"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={fieldClass}
             />
           </div>
 
           {/* Stop Price（Entry比%を自動表示） */}
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">
+            <label className={labelClass}>
               Stop Price
               {stopPctFromEntry != null && (
-                <span className="ml-1 font-normal font-mono text-orange-600">
+                <span className="ml-1 font-normal font-mono text-[var(--sem-watch-fg)]">
                   （Entry比 {formatPct(stopPctFromEntry, { sign: true })}）
                 </span>
               )}
@@ -356,16 +357,16 @@ export default function PositionModal({ open, onClose, onSaved, initial }: Props
               value={stopPrice}
               onChange={e => setStopPrice(e.target.value)}
               placeholder="例: 2350"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={fieldClass}
             />
           </div>
 
           {/* Target Price（Entry比%を自動表示） */}
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">
+            <label className={labelClass}>
               Target Price (目標株価)
               {targetPctFromEntry != null && (
-                <span className="ml-1 font-normal font-mono text-emerald-600">
+                <span className="ml-1 font-normal font-mono text-[var(--positive)]">
                   （Entry比 {formatPct(targetPctFromEntry, { sign: true })}）
                 </span>
               )}
@@ -376,71 +377,71 @@ export default function PositionModal({ open, onClose, onSaved, initial }: Props
               value={targetPrice}
               onChange={e => setTargetPrice(e.target.value)}
               placeholder="例: 2900"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={fieldClass}
             />
           </div>
         </div>
 
         {/* Memo */}
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Buy thesis</label>
+          <label className={labelClass}>Buy thesis</label>
           <textarea
             value={memo}
             onChange={e => setMemo(e.target.value)}
             rows={3}
             placeholder="エントリー理由・注意点など"
-            className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+            className={`${fieldClass} resize-none`}
           />
         </div>
 
         {/* Exit（任意）: 入力すると closed として確定。空ければ open のまま */}
-        <div className="border border-dashed border-gray-300 rounded-lg p-4 space-y-3">
-          <p className="text-xs font-semibold text-gray-500">
+        <div className="border border-dashed border-[var(--border-strong)] rounded-lg p-4 space-y-3">
+          <p className="text-xs font-semibold text-[var(--text-secondary)]">
             イグジット（売り・任意）
-            <span className="ml-1 font-normal text-gray-400">— 入力すると「確定（closed）」として保存し損益を自動計算</span>
+            <span className="ml-1 font-normal text-[var(--text-muted)]">— 入力すると「確定（closed）」として保存し損益を自動計算</span>
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             {/* Exit Date */}
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Exit Date</label>
+              <label className={labelClass}>Exit Date</label>
               <input
                 type="date"
                 value={exitDate}
                 onChange={e => setExitDate(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={fieldClass}
               />
             </div>
             {/* Exit Price */}
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Exit Price</label>
+              <label className={labelClass}>Exit Price</label>
               <input
                 type="number"
                 inputMode="numeric"
                 value={exitPrice}
                 onChange={e => setExitPrice(e.target.value)}
                 placeholder="例: 4100"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={fieldClass}
               />
             </div>
             {/* Exit Shares */}
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Shares</label>
+              <label className={labelClass}>Shares</label>
               <input
                 type="number"
                 inputMode="numeric"
                 value={exitShares}
                 onChange={e => setExitShares(e.target.value)}
                 placeholder={shares !== '' ? `${shares}（全株）` : '例: 100'}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={fieldClass}
               />
             </div>
             {/* Exit Reason */}
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Exit Reason</label>
+              <label className={labelClass}>Exit Reason</label>
               <select
                 value={exitReason}
                 onChange={e => setExitReason(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 bg-[var(--bg-card)]"
+                className={fieldClass}
               >
                 {EXIT_REASONS.map(r => (
                   <option key={r} value={r}>{r}</option>
@@ -450,10 +451,10 @@ export default function PositionModal({ open, onClose, onSaved, initial }: Props
           </div>
 
           {exitPreview && (() => {
-            const bg = exitPreview.result === 'WIN' ? 'bg-emerald-50'
-              : exitPreview.result === 'LOSS' ? 'bg-red-50' : 'bg-gray-100'
-            const fgStrong = exitPreview.result === 'WIN' ? 'text-emerald-700'
-              : exitPreview.result === 'LOSS' ? 'text-red-700' : 'text-gray-700'
+            const bg = exitPreview.result === 'WIN' ? 'bg-[var(--sem-ok-bg)]'
+              : exitPreview.result === 'LOSS' ? 'bg-[var(--sem-weak-bg)]' : 'bg-[var(--bg-primary)]'
+            const fgStrong = exitPreview.result === 'WIN' ? 'text-[var(--sem-strong-fg)]'
+              : exitPreview.result === 'LOSS' ? 'text-[var(--sem-weak-fg)]' : 'text-[var(--text-primary)]'
             return (
               <div className={`rounded-lg px-4 py-2 text-center ${bg}`}>
                 <span className={`text-base font-bold font-mono ${fgStrong}`}>
@@ -469,14 +470,14 @@ export default function PositionModal({ open, onClose, onSaved, initial }: Props
         <div className="flex justify-end gap-3 pt-2">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-[var(--bg-card-hover)] transition-colors min-h-[44px]"
+            className={btnSecondary}
           >
             キャンセル
           </button>
           <button
             onClick={handleSave}
             disabled={saving}
-            className="px-5 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors min-h-[44px] disabled:opacity-50"
+            className={btnPrimary}
           >
             {saving ? '保存中…' : '保存'}
           </button>

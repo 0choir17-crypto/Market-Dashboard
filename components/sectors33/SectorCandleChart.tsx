@@ -11,6 +11,7 @@ import {
 } from 'lightweight-charts'
 import type { OhlcvBar, VolumeBar } from '@/types/chart'
 import { ema, toSeries, type SeriesPoint } from '@/lib/indicators'
+import { cssVar } from '@/lib/cssVar'
 import { monthlyTickMarkFormatter } from '@/components/market/TimeSeriesChart'
 import { formatShares, formatVolumeRatio } from '@/lib/format'
 import {
@@ -19,16 +20,15 @@ import {
   VOLUME_SURGE_RATIO,
   volumeBarColor,
 } from '@/lib/volume'
+import { CHART, EMA_COLORS } from '@/lib/chartColors'
 
-const UP = '#16a34a'
-const DOWN = '#dc2626'
 
 // EMA 期間と色は 21EMA Cockpit+（TradingView）の指定に合わせる。
 export const MA_CONFIG: { length: number; color: string; label: string }[] = [
-  { length: 10, color: '#eab308', label: 'EMA10' }, // ゴールド/イエロー
-  { length: 21, color: '#a855f7', label: 'EMA21' }, // パープル
-  { length: 75, color: '#3b82f6', label: 'EMA75' }, // ブルー
-  { length: 150, color: '#22c55e', label: 'EMA150' }, // グリーン
+  { length: 10, color: EMA_COLORS[10], label: 'EMA10' },
+  { length: 21, color: EMA_COLORS[21], label: 'EMA21' },
+  { length: 75, color: EMA_COLORS[75], label: 'EMA75' },
+  { length: 150, color: EMA_COLORS[150], label: 'EMA150' },
 ]
 
 // チャート内の細い線だけでは EMA の色が判別しづらいため、
@@ -131,7 +131,7 @@ export default function SectorCandleChart({
       height,
       layout: {
         background: { type: ColorType.Solid, color: 'transparent' },
-        textColor: '#64748b',
+        textColor: CHART.textSecondary,
         attributionLogo: false,
       },
       grid: {
@@ -140,11 +140,11 @@ export default function SectorCandleChart({
       },
       timeScale: {
         timeVisible: false,
-        borderColor: '#cbd5e1',
+        borderColor: CHART.borderStrong,
         tickMarkFormatter: monthlyTickMarkFormatter,
       },
       rightPriceScale: {
-        borderColor: '#cbd5e1',
+        borderColor: CHART.borderStrong,
         // 指標オーバーレイ / 出来高を置くときは価格を上寄せして描画域を分ける
         scaleMargins:
           metric && hasVolume
@@ -188,13 +188,19 @@ export default function SectorCandleChart({
       line.setData(toSeries(bars, ema(closes, m.length)))
     }
 
+    // ローソク足は白黒（TradingView 側の設定に合わせる）。陽線は白抜き、
+    // 陰線は塗り、枠とヒゲはどちらも黒。値動きの向きは実体の塗りで読む。
+    // 色は globals.css の --candle-* が持ち、canvas 用に実値へ解決して渡す。
+    const up = cssVar('--candle-up', CHART.candleUp)
+    const down = cssVar('--candle-down', CHART.candleDown)
+    const edge = cssVar('--candle-line', CHART.candleLine)
     const candle = chart.addSeries(CandlestickSeries, {
-      upColor: UP,
-      downColor: DOWN,
-      borderUpColor: UP,
-      borderDownColor: DOWN,
-      wickUpColor: UP,
-      wickDownColor: DOWN,
+      upColor: up,
+      downColor: down,
+      borderUpColor: edge,
+      borderDownColor: edge,
+      wickUpColor: edge,
+      wickDownColor: edge,
       priceLineVisible: false,
     })
     candle.setData(

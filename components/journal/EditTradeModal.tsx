@@ -7,6 +7,7 @@ import { SCREEN_NAME_MAP } from '@/lib/screenNames'
 import { classifyResult } from '@/lib/tradeResult'
 import { formatYen, formatPct } from '@/lib/format'
 import Modal from '@/components/shared/Modal'
+import { btnPrimary, btnSecondary, fieldClass, labelClass, requiredClass } from '@/components/shared/form'
 
 type Props = {
   open: boolean
@@ -153,41 +154,41 @@ export default function EditTradeModal({ open, onClose, onSaved, trade }: Props)
     <Modal open={open} onClose={onClose} title="Edit Trade">
       <div className="px-6 py-5 space-y-4">
         {error && (
-          <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>
+          <p className="text-sm text-[var(--negative)] bg-[var(--sem-weak-bg)] px-3 py-2 rounded-lg">{error}</p>
         )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {/* Ticker */}
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">
-              Ticker <span className="text-red-500">*</span>
+            <label className={labelClass}>
+              Ticker <span className={requiredClass}>*</span>
             </label>
             <input
               type="text"
               value={ticker}
               onChange={e => setTicker(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={fieldClass}
             />
           </div>
 
           {/* Company Name */}
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Name</label>
+            <label className={labelClass}>Name</label>
             <input
               type="text"
               value={companyName}
               onChange={e => setCompanyName(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={fieldClass}
             />
           </div>
 
           {/* Screen Name */}
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Screen</label>
+            <label className={labelClass}>Screen</label>
             <select
               value={screenName}
               onChange={e => setScreenName(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 bg-[var(--bg-card)]"
+              className={fieldClass}
             >
               <option value="">-- Select --</option>
               {SCREEN_OPTIONS.map(o => (
@@ -199,42 +200,42 @@ export default function EditTradeModal({ open, onClose, onSaved, trade }: Props)
 
           {/* Entry Date */}
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">
-              Entry Date <span className="text-red-500">*</span>
+            <label className={labelClass}>
+              Entry Date <span className={requiredClass}>*</span>
             </label>
             <input
               type="date"
               value={entryDate}
               onChange={e => setEntryDate(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={fieldClass}
             />
           </div>
 
           {/* Entry Price */}
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">
-              Entry Price <span className="text-red-500">*</span>
+            <label className={labelClass}>
+              Entry Price <span className={requiredClass}>*</span>
             </label>
             <input
               type="number"
               inputMode="numeric"
               value={entryPrice}
               onChange={e => setEntryPrice(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={fieldClass}
             />
           </div>
 
           {/* Shares */}
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">
-              Shares <span className="text-red-500">*</span>
+            <label className={labelClass}>
+              Shares <span className={requiredClass}>*</span>
             </label>
             <input
               type="number"
               inputMode="numeric"
               value={shares}
               onChange={e => setShares(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={fieldClass}
             />
           </div>
         </div>
@@ -242,30 +243,30 @@ export default function EditTradeModal({ open, onClose, onSaved, trade }: Props)
         {/* Exit fields for CLOSED trades */}
         {isClosed && (
           <>
-            <div className="border-t border-gray-200 pt-4">
-              <p className="text-xs font-semibold text-gray-500 mb-3">Exit</p>
+            <div className="border-t border-[var(--border)] pt-4">
+              <p className="text-xs font-semibold text-[var(--text-secondary)] mb-3">Exit</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">
-                    Exit Date <span className="text-red-500">*</span>
+                  <label className={labelClass}>
+                    Exit Date <span className={requiredClass}>*</span>
                   </label>
                   <input
                     type="date"
                     value={exitDate}
                     onChange={e => setExitDate(e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className={fieldClass}
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">
-                    Exit Price <span className="text-red-500">*</span>
+                  <label className={labelClass}>
+                    Exit Price <span className={requiredClass}>*</span>
                   </label>
                   <input
                     type="number"
                     inputMode="numeric"
                     value={exitPrice}
                     onChange={e => setExitPrice(e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className={fieldClass}
                   />
                 </div>
               </div>
@@ -273,15 +274,15 @@ export default function EditTradeModal({ open, onClose, onSaved, trade }: Props)
 
             {/* PnL preview */}
             {preview && (() => {
-              const bg = preview.result === 'WIN' ? 'bg-emerald-50'
-                : preview.result === 'LOSS' ? 'bg-red-50'
+              const bg = preview.result === 'WIN' ? 'bg-[var(--sem-ok-bg)]'
+                : preview.result === 'LOSS' ? 'bg-[var(--sem-weak-bg)]'
                 : 'bg-[var(--bg-card-hover)]'
-              const fgStrong = preview.result === 'WIN' ? 'text-emerald-700'
-                : preview.result === 'LOSS' ? 'text-red-700'
-                : 'text-gray-700'
-              const fgWeak = preview.result === 'WIN' ? 'text-emerald-600'
-                : preview.result === 'LOSS' ? 'text-red-600'
-                : 'text-gray-600'
+              const fgStrong = preview.result === 'WIN' ? 'text-[var(--sem-strong-fg)]'
+                : preview.result === 'LOSS' ? 'text-[var(--sem-weak-fg)]'
+                : 'text-[var(--text-primary)]'
+              const fgWeak = preview.result === 'WIN' ? 'text-[var(--positive)]'
+                : preview.result === 'LOSS' ? 'text-[var(--negative)]'
+                : 'text-[var(--text-secondary)]'
               return (
                 <div className={`rounded-lg px-4 py-3 text-center ${bg}`}>
                   <p className={`text-lg font-bold font-mono ${fgStrong}`}>
@@ -299,21 +300,21 @@ export default function EditTradeModal({ open, onClose, onSaved, trade }: Props)
         )}
 
         {/* Signal Snapshot */}
-        <div className="border-t border-gray-200 pt-4">
-          <p className="text-xs font-semibold text-gray-500 mb-3">📝 Signal Snapshot</p>
+        <div className="border-t border-[var(--border)] pt-4">
+          <p className="text-xs font-semibold text-[var(--text-secondary)] mb-3">📝 Signal Snapshot</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Signal Price</label>
+              <label className={labelClass}>Signal Price</label>
               <input
                 type="number"
                 inputMode="decimal"
                 value={signalPrice}
                 onChange={e => setSignalPrice(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={fieldClass}
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">RS (0-100)</label>
+              <label className={labelClass}>RS (0-100)</label>
               <input
                 type="number"
                 min={0}
@@ -321,66 +322,66 @@ export default function EditTradeModal({ open, onClose, onSaved, trade }: Props)
                 step="0.1"
                 value={rsAtEntry}
                 onChange={e => setRsAtEntry(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={fieldClass}
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">RVOL</label>
+              <label className={labelClass}>RVOL</label>
               <input
                 type="number"
                 step="0.1"
                 value={rvolAtEntry}
                 onChange={e => setRvolAtEntry(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={fieldClass}
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">ADR%</label>
+              <label className={labelClass}>ADR%</label>
               <input
                 type="number"
                 step="0.1"
                 value={adrAtEntry}
                 onChange={e => setAdrAtEntry(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={fieldClass}
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">EMA21 Dist (R)</label>
+              <label className={labelClass}>EMA21 Dist (R)</label>
               <input
                 type="number"
                 step="0.1"
                 value={distEma21AtEntry}
                 onChange={e => setDistEma21AtEntry(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={fieldClass}
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Stop%</label>
+              <label className={labelClass}>Stop%</label>
               <input
                 type="number"
                 step="0.1"
                 value={stopPctAtEntry}
                 onChange={e => setStopPctAtEntry(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={fieldClass}
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">MC Condition</label>
+              <label className={labelClass}>MC Condition</label>
               <input
                 type="text"
                 value={mcConditionAtEntry}
                 onChange={e => setMcConditionAtEntry(e.target.value)}
                 placeholder="例: MC≤9"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={fieldClass}
               />
             </div>
             <div className="flex items-end">
-              <label className="inline-flex items-center gap-2 text-sm text-gray-700 py-2">
+              <label className="inline-flex items-center gap-2 text-sm text-[var(--text-primary)] py-2">
                 <input
                   type="checkbox"
                   checked={mcMetAtEntry}
                   onChange={e => setMcMetAtEntry(e.target.checked)}
-                  className="w-4 h-4 accent-blue-600"
+                  className="w-4 h-4 accent-[var(--sem-focus-fg)]"
                 />
                 MC Met
               </label>
@@ -390,27 +391,27 @@ export default function EditTradeModal({ open, onClose, onSaved, trade }: Props)
 
         {/* Memo */}
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Memo</label>
+          <label className={labelClass}>Memo</label>
           <textarea
             value={memo}
             onChange={e => setMemo(e.target.value)}
             rows={2}
             placeholder="エントリー理由など"
-            className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+            className={`${fieldClass} resize-none`}
           />
         </div>
 
         <div className="flex justify-end gap-3 pt-2">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-[var(--bg-card-hover)] transition-colors min-h-[44px]"
+            className={btnSecondary}
           >
             キャンセル
           </button>
           <button
             onClick={handleSave}
             disabled={saving}
-            className="px-5 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors min-h-[44px] disabled:opacity-50"
+            className={btnPrimary}
           >
             {saving ? '保存中…' : '保存'}
           </button>

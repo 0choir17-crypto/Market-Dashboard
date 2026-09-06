@@ -12,6 +12,7 @@ import {
   type Time,
 } from 'lightweight-charts'
 import { useEffect, useRef, useState } from 'react'
+import { CHART, SERIES } from '@/lib/chartColors'
 
 // 月ラベルを毎月表示させるための共通フォーマッタ。
 // lightweight-charts のデフォルトは横幅が狭いと月を間引く（2ヶ月ごと等）ため、
@@ -81,8 +82,8 @@ type ChartHandles = {
 export function TimeSeriesChart({
   data,
   secondaryData,
-  color = '#10b981',
-  secondaryColor = '#3b82f6',
+  color = SERIES.primary,
+  secondaryColor = SERIES.secondary,
   name,
   secondaryName,
   horizontalLines = NO_LINES,
@@ -107,7 +108,7 @@ export function TimeSeriesChart({
       height,
       layout: {
         background: { type: ColorType.Solid, color: 'transparent' },
-        textColor: '#64748b',
+        textColor: CHART.textSecondary,
         attributionLogo: false,
       },
       grid: {
@@ -116,11 +117,11 @@ export function TimeSeriesChart({
       },
       timeScale: {
         timeVisible: false,
-        borderColor: '#cbd5e1',
+        borderColor: CHART.borderStrong,
         tickMarkFormatter: monthlyTickMarkFormatter,
       },
       rightPriceScale: {
-        borderColor: '#cbd5e1',
+        borderColor: CHART.borderStrong,
       },
       crosshair: { mode: 1 },
       autoSize: true,

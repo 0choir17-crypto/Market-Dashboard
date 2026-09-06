@@ -9,6 +9,7 @@ import { classifyResult, nextLossStreak } from '@/lib/tradeResult'
 import { todayJST } from '@/lib/dates'
 import { formatYen, formatPct } from '@/lib/format'
 import Modal from '@/components/shared/Modal'
+import { btnPrimary, btnSecondary, fieldClass, labelClass, requiredClass } from '@/components/shared/form'
 
 type Props = {
   open: boolean
@@ -133,15 +134,15 @@ export default function CloseTradeModal({ open, onClose, onSaved, trade }: Props
     <Modal open={open} onClose={onClose} title="Close Trade">
       <div className="px-6 py-5 space-y-4">
         {error && (
-          <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>
+          <p className="text-sm text-[var(--negative)] bg-[var(--sem-weak-bg)] px-3 py-2 rounded-lg">{error}</p>
         )}
 
         {/* トレード情報 */}
         <div className="bg-[var(--bg-card-hover)] rounded-lg px-4 py-3 space-y-1">
-          <p className="text-sm font-semibold text-gray-900">
+          <p className="text-sm font-semibold text-[var(--text-primary)]">
             {trade.ticker} {trade.company_name ?? ''}
           </p>
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-[var(--text-secondary)]">
             {screenDisplay} &middot; Entry: {trade.entry_date} &middot; &yen;{trade.entry_price.toLocaleString()} &times; {trade.shares} sh
           </p>
         </div>
@@ -149,21 +150,21 @@ export default function CloseTradeModal({ open, onClose, onSaved, trade }: Props
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {/* Exit Date */}
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">
-              Exit Date <span className="text-red-500">*</span>
+            <label className={labelClass}>
+              Exit Date <span className={requiredClass}>*</span>
             </label>
             <input
               type="date"
               value={exitDate}
               onChange={e => setExitDate(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={fieldClass}
             />
           </div>
 
           {/* Exit Price */}
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">
-              Exit Price <span className="text-red-500">*</span>
+            <label className={labelClass}>
+              Exit Price <span className={requiredClass}>*</span>
             </label>
             <input
               type="number"
@@ -173,17 +174,17 @@ export default function CloseTradeModal({ open, onClose, onSaved, trade }: Props
               value={exitPrice}
               onChange={e => setExitPrice(e.target.value)}
               placeholder="例: 4100"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={fieldClass}
             />
           </div>
 
           {/* Exit Reason */}
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Exit Reason</label>
+            <label className={labelClass}>Exit Reason</label>
             <select
               value={exitReason}
               onChange={e => setExitReason(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 bg-[var(--bg-card)]"
+              className={fieldClass}
             >
               {EXIT_REASONS.map(r => (
                 <option key={r} value={r}>{r}</option>
@@ -194,15 +195,15 @@ export default function CloseTradeModal({ open, onClose, onSaved, trade }: Props
 
         {/* リアルタイム損益プレビュー */}
         {preview && (() => {
-          const bg = preview.result === 'WIN' ? 'bg-emerald-50'
-            : preview.result === 'LOSS' ? 'bg-red-50'
+          const bg = preview.result === 'WIN' ? 'bg-[var(--sem-ok-bg)]'
+            : preview.result === 'LOSS' ? 'bg-[var(--sem-weak-bg)]'
             : 'bg-[var(--bg-card-hover)]'
-          const fgStrong = preview.result === 'WIN' ? 'text-emerald-700'
-            : preview.result === 'LOSS' ? 'text-red-700'
-            : 'text-gray-700'
-          const fgWeak = preview.result === 'WIN' ? 'text-emerald-600'
-            : preview.result === 'LOSS' ? 'text-red-600'
-            : 'text-gray-600'
+          const fgStrong = preview.result === 'WIN' ? 'text-[var(--sem-strong-fg)]'
+            : preview.result === 'LOSS' ? 'text-[var(--sem-weak-fg)]'
+            : 'text-[var(--text-primary)]'
+          const fgWeak = preview.result === 'WIN' ? 'text-[var(--positive)]'
+            : preview.result === 'LOSS' ? 'text-[var(--negative)]'
+            : 'text-[var(--text-secondary)]'
           return (
             <div className={`rounded-lg px-4 py-3 text-center ${bg}`}>
               <p className={`text-lg font-bold font-mono ${fgStrong}`}>
@@ -220,14 +221,14 @@ export default function CloseTradeModal({ open, onClose, onSaved, trade }: Props
         <div className="flex justify-end gap-3 pt-2">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-[var(--bg-card-hover)] transition-colors min-h-[44px]"
+            className={btnSecondary}
           >
             キャンセル
           </button>
           <button
             onClick={handleSave}
             disabled={saving}
-            className="px-5 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors min-h-[44px] disabled:opacity-50"
+            className={btnPrimary}
           >
             {saving ? '処理中…' : '決済を確定'}
           </button>

@@ -9,6 +9,7 @@ import { calculateMfeMae, type MfeMaeResult } from '@/lib/mfeMae'
 import { todayJST } from '@/lib/dates'
 import { formatYen, formatR, pnlColorClass } from '@/lib/format'
 import Modal from '@/components/shared/Modal'
+import { btnSecondary, fieldClass, labelClass, requiredClass } from '@/components/shared/form'
 
 type Props = {
   open: boolean
@@ -236,21 +237,21 @@ export default function CloseModal({ open, onClose, onSaved, position }: Props) 
     <Modal open={open} onClose={onClose} title={`Close: ${position.ticker}`}>
       <div className="px-6 py-5 space-y-4">
         {/* Position summary */}
-        <div className="bg-[var(--bg-card-hover)] rounded-lg px-4 py-3 text-xs text-gray-600 grid grid-cols-3 gap-2">
-          <div><span className="text-gray-400 block">Entry Price</span><span className="font-mono">¥{position.entry_price.toLocaleString()}</span></div>
-          <div><span className="text-gray-400 block">Shares</span><span className="font-mono">{position.shares.toLocaleString()} sh</span></div>
-          <div><span className="text-gray-400 block">Stop</span><span className="font-mono">{position.stop_price != null ? `¥${position.stop_price.toLocaleString()}` : '—'}</span></div>
+        <div className="bg-[var(--bg-card-hover)] rounded-lg px-4 py-3 text-xs text-[var(--text-secondary)] grid grid-cols-3 gap-2">
+          <div><span className="text-[var(--text-muted)] block">Entry Price</span><span className="font-mono">¥{position.entry_price.toLocaleString()}</span></div>
+          <div><span className="text-[var(--text-muted)] block">Shares</span><span className="font-mono">{position.shares.toLocaleString()} sh</span></div>
+          <div><span className="text-[var(--text-muted)] block">Stop</span><span className="font-mono">{position.stop_price != null ? `¥${position.stop_price.toLocaleString()}` : '—'}</span></div>
         </div>
 
         {error && (
-          <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>
+          <p className="text-sm text-[var(--negative)] bg-[var(--sem-weak-bg)] px-3 py-2 rounded-lg">{error}</p>
         )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {/* Exit Price */}
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">
-              Exit Price <span className="text-red-500">*</span>
+            <label className={labelClass}>
+              Exit Price <span className={requiredClass}>*</span>
             </label>
             <input
               type="number"
@@ -260,16 +261,16 @@ export default function CloseModal({ open, onClose, onSaved, position }: Props) 
               value={exitPrice}
               onChange={e => setExitPrice(e.target.value)}
               placeholder="例: 2800"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={fieldClass}
               autoFocus
             />
           </div>
 
           {/* Sell Shares (100株単位、部分売却対応) */}
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">
-              売却株数 <span className="text-red-500">*</span>
-              <span className="ml-1 text-[10px] text-gray-400">（{SHARE_LOT}株単位）</span>
+            <label className={labelClass}>
+              売却株数 <span className={requiredClass}>*</span>
+              <span className="ml-1 text-[10px] text-[var(--text-muted)]">（{SHARE_LOT}株単位）</span>
             </label>
             <input
               type="number"
@@ -280,12 +281,12 @@ export default function CloseModal({ open, onClose, onSaved, position }: Props) 
               max={position.shares}
               step={SHARE_LOT}
               placeholder={String(position.shares)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={fieldClass}
             />
-            <p className="mt-1 text-[10px] text-gray-400">
+            <p className="mt-1 text-[10px] text-[var(--text-muted)]">
               保有: {position.shares.toLocaleString()} sh
               {isPartial && effectiveSellShares > 0 && (
-                <span className="ml-2 text-orange-600 font-semibold">
+                <span className="ml-2 text-[var(--sem-watch-fg)] font-semibold">
                   部分売却 → 残 {(position.shares - effectiveSellShares).toLocaleString()} sh
                 </span>
               )}
@@ -294,24 +295,24 @@ export default function CloseModal({ open, onClose, onSaved, position }: Props) 
 
           {/* Exit Date */}
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">
-              Exit Date <span className="text-red-500">*</span>
+            <label className={labelClass}>
+              Exit Date <span className={requiredClass}>*</span>
             </label>
             <input
               type="date"
               value={exitDate}
               onChange={e => setExitDate(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={fieldClass}
             />
           </div>
 
           {/* Exit Reason */}
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Exit Reason</label>
+            <label className={labelClass}>Exit Reason</label>
             <select
               value={exitReason}
               onChange={e => setExitReason(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 bg-[var(--bg-card)]"
+              className={fieldClass}
             >
               {EXIT_REASONS.map(r => (
                 <option key={r} value={r}>{r}</option>
@@ -324,7 +325,7 @@ export default function CloseModal({ open, onClose, onSaved, position }: Props) 
         {realizedPnl != null && (
           <div className="bg-[var(--bg-card-hover)] rounded-lg px-4 py-3 grid grid-cols-2 gap-4">
             <div>
-              <span className="text-xs text-gray-400 block mb-0.5">Realized PnL</span>
+              <span className="text-xs text-[var(--text-muted)] block mb-0.5">Realized PnL</span>
               <span
                 className={`text-lg font-bold font-mono ${pnlColorClass(realizedPnl)}`}
               >
@@ -333,7 +334,7 @@ export default function CloseModal({ open, onClose, onSaved, position }: Props) 
             </div>
             {rMultiple != null && (
               <div>
-                <span className="text-xs text-gray-400 block mb-0.5">R Multiple</span>
+                <span className="text-xs text-[var(--text-muted)] block mb-0.5">R Multiple</span>
                 <span
                   className={`text-lg font-bold font-mono ${pnlColorClass(rMultiple)}`}
                 >
@@ -347,14 +348,14 @@ export default function CloseModal({ open, onClose, onSaved, position }: Props) 
         <div className="flex justify-end gap-3 pt-2">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-[var(--bg-card-hover)] transition-colors min-h-[44px]"
+            className={btnSecondary}
           >
             キャンセル
           </button>
           <button
             onClick={handleClose}
             disabled={saving}
-            className="px-5 py-2 text-sm font-medium text-white bg-orange-600 rounded-lg hover:bg-orange-700 transition-colors min-h-[44px] disabled:opacity-50"
+            className="px-5 py-2 text-small font-medium text-white bg-[var(--sem-watch-fg)] rounded-lg hover:brightness-110 min-h-[44px] disabled:opacity-50"
           >
             {saving
               ? '処理中…'

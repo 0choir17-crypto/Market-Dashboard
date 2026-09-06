@@ -14,6 +14,7 @@ import {
 } from 'lightweight-charts'
 import { Trade } from '@/types/trades'
 import { fetchTradeChartData, ChartDataPoint } from '@/lib/chartData'
+import { CHART, SERIES } from '@/lib/chartColors'
 
 interface Props {
   trade: Trade
@@ -68,7 +69,7 @@ export default function TradeChart({ trade }: Props) {
       height: 320,
       layout: {
         background: { type: ColorType.Solid, color: 'transparent' },
-        textColor: '#475569',
+        textColor: CHART.textSecondary,
       },
       grid: {
         vertLines: { color: 'rgba(148, 163, 184, 0.15)' },
@@ -76,17 +77,17 @@ export default function TradeChart({ trade }: Props) {
       },
       timeScale: {
         timeVisible: false,
-        borderColor: '#cbd5e1',
+        borderColor: CHART.borderStrong,
       },
       rightPriceScale: {
-        borderColor: '#cbd5e1',
+        borderColor: CHART.borderStrong,
       },
       crosshair: { mode: 1 },
       autoSize: true,
     })
 
     const series = chart.addSeries(LineSeries, {
-      color: '#2563eb',
+      color: SERIES.secondary,
       lineWidth: 2,
       priceLineVisible: false,
       lastValueVisible: true,
@@ -143,7 +144,7 @@ export default function TradeChart({ trade }: Props) {
       markers.push({
         time: entryTime as Time,
         position: 'belowBar',
-        color: '#3b82f6',
+        color: SERIES.secondary,
         shape: 'arrowUp',
         text: `Entry ¥${trade.entry_price?.toLocaleString() ?? ''}`,
       })
@@ -153,7 +154,7 @@ export default function TradeChart({ trade }: Props) {
       markers.push({
         time: mfeTime as Time,
         position: 'aboveBar',
-        color: '#f59e0b',
+        color: CHART.watchFg,
         shape: 'circle',
         text: `MFE ${trade.mfe_pct >= 0 ? '+' : ''}${trade.mfe_pct.toFixed(1)}%`,
       })
@@ -163,7 +164,7 @@ export default function TradeChart({ trade }: Props) {
       markers.push({
         time: maeTime as Time,
         position: 'belowBar',
-        color: '#ef4444',
+        color: CHART.negative,
         shape: 'circle',
         text: `MAE ${trade.mae_pct.toFixed(1)}%`,
       })
@@ -173,7 +174,7 @@ export default function TradeChart({ trade }: Props) {
       markers.push({
         time: exitTime as Time,
         position: 'aboveBar',
-        color: '#10b981',
+        color: CHART.positive,
         shape: 'arrowDown',
         text: `Exit ¥${trade.exit_price?.toLocaleString() ?? ''}`,
       })
@@ -185,7 +186,7 @@ export default function TradeChart({ trade }: Props) {
 
   if (!loading && fetchError) {
     return (
-      <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+      <div className="text-xs text-[var(--negative)] bg-[var(--sem-weak-bg)] border border-[var(--sem-weak-bd)] rounded-lg px-3 py-2">
         ⚠️ チャートの取得に失敗しました（通信エラー。再読み込みしてください）
       </div>
     )
@@ -193,7 +194,7 @@ export default function TradeChart({ trade }: Props) {
 
   if (!loading && data.length === 0) {
     return (
-      <div className="text-xs text-gray-500 bg-[var(--bg-card)] border border-gray-200 rounded-lg px-3 py-2">
+      <div className="text-xs text-[var(--text-secondary)] bg-[var(--bg-card)] border border-[var(--border)] rounded-lg px-3 py-2">
         📈 チャートデータなし（daily_signalsに該当期間のデータがありません）
       </div>
     )
@@ -207,47 +208,47 @@ export default function TradeChart({ trade }: Props) {
             type="checkbox"
             checked={visible.entry}
             onChange={e => setVisible(v => ({ ...v, entry: e.target.checked }))}
-            className="accent-blue-600"
+            className="accent-[var(--sem-focus-fg)]"
           />
-          <span className="text-blue-600 font-medium">📍 Entry</span>
+          <span className="text-[var(--sem-focus-fg)] font-medium">📍 Entry</span>
         </label>
         <label className="inline-flex items-center gap-1 cursor-pointer">
           <input
             type="checkbox"
             checked={visible.mfe}
             onChange={e => setVisible(v => ({ ...v, mfe: e.target.checked }))}
-            className="accent-amber-500"
+            className="accent-[var(--sem-watch-fg)]"
           />
-          <span className="text-amber-600 font-medium">🔝 MFE</span>
+          <span className="text-[var(--sem-watch-fg)] font-medium">🔝 MFE</span>
         </label>
         <label className="inline-flex items-center gap-1 cursor-pointer">
           <input
             type="checkbox"
             checked={visible.mae}
             onChange={e => setVisible(v => ({ ...v, mae: e.target.checked }))}
-            className="accent-red-500"
+            className="accent-[var(--negative)]"
           />
-          <span className="text-red-600 font-medium">💥 MAE</span>
+          <span className="text-[var(--negative)] font-medium">💥 MAE</span>
         </label>
         <label className="inline-flex items-center gap-1 cursor-pointer">
           <input
             type="checkbox"
             checked={visible.exit}
             onChange={e => setVisible(v => ({ ...v, exit: e.target.checked }))}
-            className="accent-emerald-500"
+            className="accent-[var(--positive)]"
           />
-          <span className="text-emerald-600 font-medium">📍 Exit</span>
+          <span className="text-[var(--positive)] font-medium">📍 Exit</span>
         </label>
       </div>
 
       {loading ? (
-        <div className="h-80 flex items-center justify-center bg-[var(--bg-card)] border border-gray-200 rounded-lg">
-          <div className="text-sm text-gray-500">📈 チャート読み込み中…</div>
+        <div className="h-80 flex items-center justify-center bg-[var(--bg-card)] border border-[var(--border)] rounded-lg">
+          <div className="text-sm text-[var(--text-secondary)]">📈 チャート読み込み中…</div>
         </div>
       ) : (
         <div
           ref={containerRef}
-          className="w-full bg-[var(--bg-card)] border border-gray-200 rounded-lg"
+          className="w-full bg-[var(--bg-card)] border border-[var(--border)] rounded-lg"
           style={{ height: 320 }}
         />
       )}

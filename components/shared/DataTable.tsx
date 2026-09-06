@@ -276,8 +276,11 @@ export default function DataTable<Row>({
                 key={group.key}
                 className="border-b-[0.5px] border-[var(--border)] last:border-b-0"
               >
-                <tr className="bg-[var(--bg-primary)]">
-                  <td colSpan={colSpan} className="px-2.5 py-1.5">
+                {/* 区切りは「面の色」ではなく余白と罫線で作る。地（--bg-primary）と
+                    カード（白）の差は 1 段しかなく、それだけでは群の切れ目が読めない。
+                    上下に罫線を引き、上側に余白を多めに取って帯として独立させる。 */}
+                <tr className="bg-[var(--bg-primary)] border-y-[0.5px] border-[var(--border)]">
+                  <td colSpan={colSpan} className="px-2.5 pt-3.5 pb-2">
                     <button
                       onClick={() => toggle(collapsed, setCollapsed, group.key)}
                       aria-expanded={!collapsed.has(group.key)}
@@ -285,16 +288,18 @@ export default function DataTable<Row>({
                     >
                       <span
                         aria-hidden
-                        className={`text-caption text-[var(--sem-idle-fg)] inline-block transition-transform ${
+                        className={`text-caption text-[var(--text-muted)] inline-block transition-transform ${
                           collapsed.has(group.key) ? '' : 'rotate-90'
                         }`}
                       >
                         ▶
                       </span>
                       {renderGroupHeader?.(group.key, group.rows.length) ?? (
-                        <span className="text-caption tracking-wide text-[var(--text-secondary)]">
+                        <span className="text-small font-medium tracking-wide text-[var(--text-primary)]">
                           {group.key}
-                          <span className="ml-2 text-[var(--text-muted)]">{group.rows.length}</span>
+                          <span className="ml-2 text-caption text-[var(--text-muted)]">
+                            {group.rows.length}
+                          </span>
                         </span>
                       )}
                     </button>

@@ -45,7 +45,11 @@ function fmtHitDate(d: string | null): string {
 }
 
 // signal ラベル色（1st=建玉ライン=インディゴ / 2nd=ブレイク=ブルー）。
-const SIG_COLOR: Record<'1st' | '2nd', string> = { '1st': '#4f46e5', '2nd': '#2563eb' }
+// 1st / 2nd の差は「注目の強さ」なので、青を 2 色使わずに濃さで分ける。
+const SIG_COLOR: Record<'1st' | '2nd', string> = {
+  '1st': 'var(--sem-focus-fg)',
+  '2nd': 'var(--text-secondary)',
+}
 
 // 1st / 2nd それぞれの直近ヒット日を1マスで表示。本日ヒットは緑で強調。
 function HitCell({
@@ -64,8 +68,8 @@ function HitCell({
     <div
       className="rounded px-1.5 py-1 border"
       style={{
-        backgroundColor: today ? 'var(--positive-bg, #ecfdf5)' : 'transparent',
-        borderColor: today ? '#86efac' : 'var(--border-subtle)',
+        backgroundColor: today ? 'var(--sem-ok-bg)' : 'transparent',
+        borderColor: today ? 'var(--sem-strong-bd)' : 'var(--border-subtle)',
       }}
       title={title}
     >
@@ -114,8 +118,8 @@ export default function StructurePivotCard({
   onAddPosition,
 }: Props) {
   // 枠/背景: 複数シグナル重複（黄）を最優先 → hotセクター（緑）→ 既定。
-  const borderColor = multiHit ? '#fbbf24' : hot ? '#86efac' : 'var(--border)'
-  const backgroundColor = multiHit ? '#fef9c3' : hot ? '#f0fdf4' : 'var(--bg-card)'
+  const borderColor = multiHit ? 'var(--sem-watch-bd)' : hot ? 'var(--sem-strong-bd)' : 'var(--border)'
+  const backgroundColor = multiHit ? 'var(--sem-watch-bg)' : hot ? 'var(--sem-ok-bg)' : 'var(--bg-card)'
 
   // 本日ヒットしたシグナルのラベル（複数可）。カード上部に明示する。
   const todayTags: ('1st' | '2nd')[] = []
@@ -177,7 +181,7 @@ export default function StructurePivotCard({
                 <span
                   key={sig}
                   className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold leading-none"
-                  style={{ backgroundColor: '#ecfdf5', color: SIG_COLOR[sig], border: `1px solid ${SIG_COLOR[sig]}33` }}
+                  style={{ backgroundColor: 'var(--sem-focus-bg)', color: SIG_COLOR[sig], border: '0.5px solid var(--sem-focus-bd)' }}
                 >
                   本日{sig}
                 </span>
@@ -242,7 +246,7 @@ export default function StructurePivotCard({
         {onAddPosition && (
           <button
             onClick={() => onAddPosition(row)}
-            className="px-2 py-1 text-[10px] font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded transition-colors"
+            className="px-2 py-1 text-[10px] font-medium text-[var(--sem-strong-fg)] bg-[var(--sem-ok-bg)] hover:brightness-95 border border-[var(--sem-strong-bd)] rounded transition-colors"
             title="Position として保存"
           >
             ＋ Position

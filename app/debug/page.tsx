@@ -30,7 +30,7 @@ const TABLES = [
 export default function DebugPage() {
   if (process.env.NODE_ENV === 'production') {
     return (
-      <main className="p-8 text-sm text-gray-500">
+      <main className="p-8 text-sm text-[var(--text-secondary)]">
         Debug ページは開発ビルドでのみ利用できます。
       </main>
     )
@@ -100,9 +100,9 @@ function DebugPageInner() {
 
       <section className="mb-6 p-4 bg-[var(--bg-card)] rounded border">
         <h2 className="font-semibold mb-2">Env</h2>
-        <div>NEXT_PUBLIC_SUPABASE_URL: <span className="text-blue-700 break-all">{envUrl || '(unset)'}</span></div>
-        <div>NEXT_PUBLIC_SUPABASE_ANON_KEY: <span className="text-blue-700">{envKeyTail}</span></div>
-        <ul className="mt-2 text-xs text-gray-600 list-disc pl-5">
+        <div>NEXT_PUBLIC_SUPABASE_URL: <span className="text-[var(--sem-focus-fg)] break-all">{envUrl || '(unset)'}</span></div>
+        <div>NEXT_PUBLIC_SUPABASE_ANON_KEY: <span className="text-[var(--sem-focus-fg)]">{envKeyTail}</span></div>
+        <ul className="mt-2 text-xs text-[var(--text-secondary)] list-disc pl-5">
           <li>URL の末尾に <code>/rest/v1/</code> や <code>/</code> が付いていないか確認</li>
           <li>URL は <code>https://xxxxxxxx.supabase.co</code> の形が正しい</li>
           <li>key は通常 200 文字超。短い場合は anon ではなく別物</li>
@@ -130,17 +130,17 @@ function DebugPageInner() {
                 <td className="py-1 pr-4">{p.label}</td>
                 <td className={
                   'py-1 pr-4 font-semibold ' +
-                  (p.status === 'ok' ? 'text-green-700'
-                    : p.status === 'empty' ? 'text-amber-700'
-                    : p.status === 'error' ? 'text-red-700'
-                    : 'text-gray-500')
+                  (p.status === 'ok' ? 'text-[var(--sem-strong-fg)]'
+                    : p.status === 'empty' ? 'text-[var(--sem-watch-fg)]'
+                    : p.status === 'error' ? 'text-[var(--sem-weak-fg)]'
+                    : 'text-[var(--text-secondary)]')
                 }>{p.status}</td>
                 <td className="py-1 break-all">{p.detail}</td>
               </tr>
             ))}
           </tbody>
         </table>
-        <ul className="mt-3 text-xs text-gray-600 list-disc pl-5">
+        <ul className="mt-3 text-xs text-[var(--text-secondary)] list-disc pl-5">
           <li><b>error 401 / 42501</b> → そのテーブルの RLS が anon を拒否</li>
           <li><b>empty (count=0)</b> → RLS は通っているが行が0 (= 書き込みが service_role で行われ RLS によって SELECT のみ拒否されているケースもここに含まれる)</li>
           <li><b>ok</b> → 正常に読める</li>

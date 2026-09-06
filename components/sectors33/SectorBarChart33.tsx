@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from 'react'
 import type { SectorHistoryResponse } from '@/lib/sectorSelectionHistoryFetch'
-import { compositeColor } from '@/types/sectorSelection'
+import { compositeTone } from '@/types/sectorSelection'
+import { toneVars } from '@/types/semantic'
 
 type Props = {
   history: SectorHistoryResponse
@@ -10,27 +11,15 @@ type Props = {
 
 type SortKey = 'score' | 'delta'
 
-// 閾値は types/sectorSelection.ts の compositeColor (green>=60 / yellow>=30) に
-// 一元化。SectorSelectionTable・ホットセクター判定 (>=60) と同じ色分けになる。
-// バー用に淡色 bg → 濃色 hex へマップするだけで、判定自体は共有関数に委譲する。
-const BAR_COLOR: Record<string, string> = {
-  '#dcfce7': '#22c55e', // green (>=60)
-  '#fef3c7': '#eab308', // yellow (>=30)
-  '#fee2e2': '#ef4444', // red (<30)
-}
-
-const BAR_BORDER: Record<string, string> = {
-  '#dcfce7': '#16a34a',
-  '#fef3c7': '#ca8a04',
-  '#fee2e2': '#dc2626',
-}
-
+// 閾値は types/sectorSelection.ts の compositeTone (>=60 / >=30) に一元化。
+// SectorSelectionTable のバッジ・ホットセクター判定 (>=60) と同じ段階になる。
+// バーは濃い方（fg）で塗り、カードの輪郭は淡い方（bd）を使う。
 function phaseColor(score: number): string {
-  return BAR_COLOR[compositeColor(score).bg] ?? '#9ca3af'
+  return toneVars(compositeTone(score)).fg
 }
 
 function phaseBorder(score: number): string {
-  return BAR_BORDER[compositeColor(score).bg] ?? '#d1d5db'
+  return toneVars(compositeTone(score)).bd
 }
 
 type SectorSeries = {
@@ -122,8 +111,8 @@ export default function SectorBarChart33({ history }: Props) {
         style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))' }}
       >
         {sorted.map(card => {
-          const borderColor = card.latest != null ? phaseBorder(card.latest) : '#d1d5db'
-          const scoreColor = card.latest != null ? phaseColor(card.latest) : '#9ca3af'
+          const borderColor = card.latest != null ? phaseBorder(card.latest) : 'var(--border-strong)'
+          const scoreColor = card.latest != null ? phaseColor(card.latest) : 'var(--text-muted)'
           const validCount = card.points.filter(p => p.v != null).length
           const recentCutoff = card.points.length - 5
 
@@ -159,7 +148,7 @@ export default function SectorBarChart33({ history }: Props) {
                       <div
                         key={p.date}
                         className="flex-1"
-                        style={{ height: 1, backgroundColor: '#f3f4f6' }}
+                        style={{ height: 1, backgroundColor: 'var(--border-subtle)' }}
                         title={`${p.date}: —`}
                       />
                     )
@@ -220,15 +209,15 @@ export default function SectorBarChart33({ history }: Props) {
 
       <div className="flex items-center justify-center gap-5 mt-3 text-[11px]">
         <span className="flex items-center gap-1">
-          <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: '#22c55e' }} />
+          <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: 'var(--sem-strong-fg)' }} />
           <span style={{ color: 'var(--text-secondary)' }}>Leader (≥60)</span>
         </span>
         <span className="flex items-center gap-1">
-          <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: '#eab308' }} />
+          <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: 'var(--sem-watch-fg)' }} />
           <span style={{ color: 'var(--text-secondary)' }}>Neutral (30–60)</span>
         </span>
         <span className="flex items-center gap-1">
-          <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: '#ef4444' }} />
+          <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: 'var(--sem-weak-fg)' }} />
           <span style={{ color: 'var(--text-secondary)' }}>Lagging (&lt;30)</span>
         </span>
       </div>

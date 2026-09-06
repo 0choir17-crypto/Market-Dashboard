@@ -81,14 +81,14 @@ type SortDir = 'asc' | 'desc'
 
 // ── Type / Kind badge colors ─────────────────────────────────────────────────
 const TYPE_BADGE: Record<string, string> = {
-  always_on: 'bg-blue-100 text-blue-700 border-blue-300',
-  bull:      'bg-green-100 text-green-700 border-green-300',
-  bear:      'bg-red-100 text-red-700 border-red-300',
+  always_on: 'bg-[var(--sem-focus-bg)] text-[var(--sem-focus-fg)] border-[var(--sem-focus-bd)]',
+  bull:      'bg-[var(--sem-strong-bg)] text-[var(--sem-strong-fg)] border-[var(--sem-strong-bd)]',
+  bear:      'bg-[var(--sem-weak-bg)] text-[var(--sem-weak-fg)] border-[var(--sem-weak-bd)]',
 }
 
 const KIND_BADGE: Record<string, string> = {
-  factor: 'bg-purple-100 text-purple-700 border-purple-300',
-  event:  'bg-orange-100 text-orange-700 border-orange-300',
+  factor: 'bg-[var(--sem-focus-bg)] text-[var(--sem-focus-fg)] border-[var(--sem-focus-bd)]',
+  event:  'bg-[var(--sem-watch-bg)] text-[var(--sem-watch-fg)] border-[var(--sem-watch-bd)]',
 }
 
 function fmtNum(v: number | null | undefined): string {
@@ -147,9 +147,9 @@ function GuideSortTh({
   return (
     <th
       onClick={() => onSort(key)}
-      className={`px-3 py-2.5 text-xs font-semibold uppercase tracking-wide whitespace-nowrap cursor-pointer select-none hover:bg-gray-100 transition-colors ${
+      className={`px-3 py-2.5 text-xs font-semibold uppercase tracking-wide whitespace-nowrap cursor-pointer select-none hover:bg-[var(--bg-card-hover)] transition-colors ${
         align === 'right' ? 'text-right' : 'text-left'
-      } ${active ? 'text-[var(--accent)]' : 'text-gray-500'}`}
+      } ${active ? 'text-[var(--accent)]' : 'text-[var(--text-secondary)]'}`}
     >
       {label}<span className="text-[10px] opacity-50">{indicator}</span>
     </th>
@@ -210,16 +210,16 @@ export default function GuidePage() {
         <h2 className="text-lg font-bold mb-3" style={{ color: 'var(--text-primary)' }}>
           Daily Watch — 今日の候補
         </h2>
-        <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-5 text-sm text-gray-700 space-y-3">
+        <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-5 text-sm text-[var(--text-primary)] space-y-3">
           <p>
             <strong>&quot;候補&quot;</strong>を毎日（平日引け後 ~18:00 JST）に更新。最新日が「今日の候補」です。
-            <span className="text-gray-500">
+            <span className="text-[var(--text-secondary)]">
               いずれも買いシグナルではなく、チャートを開く銘柄を絞り込むためのリストです（執行は手動判断）。
               気になった銘柄はカードの <span className="font-mono">⧉ TSE:XXXX</span> ボタンでティッカーをコピーし、
               <strong>TradingView 側のウォッチリストに追加</strong>してください（ダッシュボードから登録する機能はありません）。
             </span>
             <br />
-            <span className="text-gray-500 text-xs">
+            <span className="text-[var(--text-secondary)] text-xs">
               2026-08-29 の配信側スキャナー刷新により、Coil Pullback / MA Pullback / Volume Ignition /
               Momentum Spring / Box Breakout および Momentum タブ（生の上昇率ランキング）は廃止し、
               ダッシュボードから削除しました。後継は EMA Setups です。
@@ -227,16 +227,16 @@ export default function GuidePage() {
           </p>
           <ul className="list-disc pl-5 space-y-1.5">
             <li>
-              <strong className="text-gray-900">Structure Pivot（構造ピボット・最上段）</strong> — 押し安値切り上がり
+              <strong className="text-[var(--text-primary)]">Structure Pivot（構造ピボット・最上段）</strong> — 押し安値切り上がり
               （<span className="font-mono">HL</span>）から作る構造の <strong>1st</strong>（建玉ライン＝HL+0.618 戻し） /
               <strong> 2nd</strong>（スイングハイ）ヒット。<strong>本日ヒットした銘柄のみ</strong>表示。
               <strong>本日どちら（1st / 2nd）にヒットしたか</strong>を明示し、1st・2nd それぞれの
               <strong>直近ヒット日</strong>を併記（本日ヒットは緑で強調）。RS・52週高値乖離・ADR%・出来高比も表示。
               終了済み（<span className="font-mono">TP2 / Stop</span>）は除外。
-              <span className="text-gray-500">買い指示ではなくウォッチリスト（執行は手動チャート判断）。</span>
+              <span className="text-[var(--text-secondary)]">買い指示ではなくウォッチリスト（執行は手動チャート判断）。</span>
             </li>
             <li>
-              <strong className="text-gray-900">EMA Setups（EMA への到達）</strong> — 下落してきて
+              <strong className="text-[var(--text-primary)]">EMA Setups（EMA への到達）</strong> — 下落してきて
               <strong> EMA 9 / 21 / 50</strong> にちょうど到達し、当日安値が
               <strong>「EMA のすぐ下 0.1ATR」の薄い帯</strong>に収まって踏みとどまった日。
               帯を下に抜けた日（EMA を明確に割った日）は含みません。
@@ -249,7 +249,7 @@ export default function GuidePage() {
             </li>
           </ul>
           <div className="bg-[var(--bg-card-hover)] rounded-lg p-3">
-            <p className="font-semibold text-gray-800 mb-1.5">EMA Setups の位置づけ（重要）</p>
+            <p className="font-semibold text-[var(--text-primary)] mb-1.5">EMA Setups の位置づけ（重要）</p>
             <ul className="list-disc pl-5 space-y-1">
               <li>
                 <strong>このスキャナーに統計的エッジはありません。</strong>検証済みで、承知の上で採用しています。
@@ -284,38 +284,38 @@ export default function GuidePage() {
         <h2 className="text-lg font-bold mb-3" style={{ color: 'var(--text-primary)' }}>
           Watchlist Journal — TradingView の操作記録
         </h2>
-        <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-5 text-sm text-gray-700 space-y-3">
+        <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-5 text-sm text-[var(--text-primary)] space-y-3">
           <p>
             候補の管理は<strong>ダッシュボードではなく TradingView</strong> で行い、
             その操作（追加・セクション移動・削除）が <strong>30 分おきのスナップショット</strong>から
             自動で記録されます。<strong>この画面は読み取り専用</strong>で、追加・編集・削除はできません。
             <br />
-            <span className="text-gray-500 text-xs">
+            <span className="text-[var(--text-secondary)] text-xs">
               かつてダッシュボードに手入力する Watchlist 画面がありましたが、1 件も入力されないまま
               2026-09-05 に廃止しました（手入力は続かない、というのが実測結果です）。
             </span>
           </p>
           <ul className="list-disc pl-5 space-y-1.5">
             <li>
-              <strong className="text-gray-900">現在の状態</strong> —
+              <strong className="text-[var(--text-primary)]">現在の状態</strong> —
               <span className="font-mono"> HOLD / READY / FOCUS / SECOND / SHORT / OTHERS / INBOX / SOLD</span>{' '}
               ごとに現在のリストを表示。既定は<strong>滞在日数の長い順</strong>で、
               「READY で何日止まっているか」が一目で分かるようにしています。
             </li>
             <li>
-              <strong className="text-gray-900">差分</strong> — 選んだ日の
+              <strong className="text-[var(--text-primary)]">差分</strong> — 選んだ日の
               新規 / 昇格 / 降格 / 削除を時系列で。優先度は
               <span className="font-mono"> HOLD &gt; READY &gt; FOCUS &gt; SECOND &gt; OTHERS &gt; INBOX</span> で、
               <strong>READY → HOLD（実際に買った）</strong>が最も強い昇格として出ます。
             </li>
             <li>
-              <strong className="text-gray-900">見逃しボード</strong> — Watch list に入れたのに
+              <strong className="text-[var(--text-primary)]">見逃しボード</strong> — Watch list に入れたのに
               <strong>買わないまま落とした銘柄</strong>を、落とした後の最大上昇順に並べます。
               <strong>READY からの離脱</strong>（エントリー可と判断しておいて買わなかった）が最も重い見逃しです。
             </li>
           </ul>
           <div className="bg-[var(--bg-card-hover)] rounded-lg p-3">
-            <p className="font-semibold text-gray-800 mb-1.5">読むときの注意</p>
+            <p className="font-semibold text-[var(--text-primary)] mb-1.5">読むときの注意</p>
             <ul className="list-disc pl-5 space-y-1">
               <li>
                 <strong>勝率・PF・期待値は出していません。</strong>2026-08-13 開始でサンプルが少なく、
@@ -344,11 +344,11 @@ export default function GuidePage() {
         <h2 className="text-lg font-bold mb-3" style={{ color: 'var(--text-primary)' }}>
           Trading — トレード記録
         </h2>
-        <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-5 text-sm text-gray-700 space-y-3">
+        <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-5 text-sm text-[var(--text-primary)] space-y-3">
           <p>
             <strong>Positions</strong>（保有中） / <strong>Journal</strong>（確定トレード＋分析） /
             <strong>Risk</strong>（連敗・リスク設定）の 3 タブ。記録はヘッダーの
-            <strong className="text-blue-600">「＋ 新規トレード」</strong> から。
+            <strong className="text-[var(--sem-focus-fg)]">「＋ 新規トレード」</strong> から。
           </p>
           <ul className="list-disc pl-5 space-y-1.5">
             <li>
@@ -380,14 +380,14 @@ export default function GuidePage() {
                 <GuideSortTh label="Screen"    sortKey="name"     {...sp} />
                 <GuideSortTh label="Type"      sortKey="type"     {...sp} />
                 <GuideSortTh label="Kind"      sortKey="kind"     {...sp} />
-                <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 whitespace-nowrap">MC</th>
+                <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-[var(--text-secondary)] whitespace-nowrap">MC</th>
                 <GuideSortTh label="Hold"      sortKey="holdDays" {...sp} align="right" />
-                <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 whitespace-nowrap">Conditions</th>
-                <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 whitespace-nowrap">Role</th>
+                <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-[var(--text-secondary)] whitespace-nowrap">Conditions</th>
+                <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-[var(--text-secondary)] whitespace-nowrap">Role</th>
                 <GuideSortTh label="OOS PF"    sortKey="oos_pf"   {...sp} align="right" />
                 <GuideSortTh label="OOS WR"    sortKey="oos_wr"   {...sp} align="right" />
                 <GuideSortTh label="SPD"       sortKey="spd"      {...sp} align="right" />
-                <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 whitespace-nowrap">WF</th>
+                <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-[var(--text-secondary)] whitespace-nowrap">WF</th>
               </tr>
             </thead>
             <tbody>
@@ -396,7 +396,7 @@ export default function GuidePage() {
                   key={s.dbName}
                   className={`border-b border-[var(--border-subtle)] hover:bg-[var(--bg-card-hover)] transition-colors ${i % 2 === 0 ? 'bg-[var(--bg-card)]' : 'bg-[var(--bg-card-hover)]'}`}
                 >
-                  <td className="px-3 py-2.5 font-mono text-xs text-gray-500 text-center">{s.rank}</td>
+                  <td className="px-3 py-2.5 font-mono text-xs text-[var(--text-secondary)] text-center">{s.rank}</td>
                   <td className="px-3 py-2.5 font-bold text-sm whitespace-nowrap">{s.name}</td>
                   <td className="px-3 py-2.5">
                     <span className={`text-[10px] font-semibold px-2 py-0.5 rounded border ${TYPE_BADGE[s.type]}`}>
@@ -411,21 +411,21 @@ export default function GuidePage() {
                   <td className="px-3 py-2.5">
                     <span className={`text-[10px] font-semibold px-2 py-0.5 rounded border ${
                       s.type === 'always_on'
-                        ? 'bg-blue-50 text-blue-600 border-blue-200'
+                        ? 'bg-[var(--sem-focus-bg)] text-[var(--sem-focus-fg)] border-[var(--sem-focus-bd)]'
                         : s.type === 'bear'
-                        ? 'bg-red-50 text-red-600 border-red-200'
-                        : 'bg-green-50 text-green-600 border-green-200'
+                        ? 'bg-[var(--sem-weak-bg)] text-[var(--negative)] border-[var(--sem-weak-bd)]'
+                        : 'bg-[var(--sem-ok-bg)] text-[var(--positive)] border-[var(--sem-strong-bd)]'
                     }`}>
                       {s.mcCondition}
                     </span>
                   </td>
                   <td className="px-3 py-2.5 text-right font-mono text-xs">{s.holdDays}d</td>
-                  <td className="px-3 py-2.5 text-xs text-gray-600 max-w-[220px]">{s.conditions}</td>
-                  <td className="px-3 py-2.5 text-xs text-gray-600 max-w-[260px]">{s.role}</td>
+                  <td className="px-3 py-2.5 text-xs text-[var(--text-secondary)] max-w-[220px]">{s.conditions}</td>
+                  <td className="px-3 py-2.5 text-xs text-[var(--text-secondary)] max-w-[260px]">{s.role}</td>
                   <td className="px-3 py-2.5 text-right font-mono text-xs font-semibold">{fmtNum(s.backtest.oos_pf)}</td>
                   <td className="px-3 py-2.5 text-right font-mono text-xs font-semibold">{fmtPct(s.backtest.oos_wr)}</td>
                   <td className="px-3 py-2.5 text-right font-mono text-xs">{s.backtest.spd.toFixed(1)}</td>
-                  <td className="px-3 py-2.5 text-[11px] text-gray-600 whitespace-nowrap">{s.backtest.wf || '\u2014'}</td>
+                  <td className="px-3 py-2.5 text-[11px] text-[var(--text-secondary)] whitespace-nowrap">{s.backtest.wf || '\u2014'}</td>
                 </tr>
               ))}
             </tbody>
@@ -439,24 +439,24 @@ export default function GuidePage() {
           Market Condition (MC)
         </h2>
         <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-5">
-          <p className="text-sm text-gray-600 mb-3">
+          <p className="text-sm text-[var(--text-secondary)] mb-3">
             画面上部のバッジはマーケット全体の状態を示します。MC v4 は 8 ファクター加重平均で市場環境を 0〜100 点で評価します
             （v4 未集計の古い日付は v3 にフォールバック）。
           </p>
-          <ul className="space-y-2 text-sm text-gray-700">
-            <li><strong className="text-gray-900">Trend</strong> — TOPIXの位置関係（Bull / Neutral / Bear）</li>
-            <li><strong className="text-gray-900">Scorecard</strong> — MC v4 スコア（0-100）。レジーム境界 80 / 60 / 40 / 20 で strong_bull / bull / neutral / bear / strong_bear</li>
-            <li><strong className="text-gray-900">Breadth</strong> — 値上がり銘柄比率の強度（Strong / Normal / Weak）</li>
-            <li><strong className="text-gray-900">Divergence</strong> — 指数↑ × Breadth↓ の天井警告フラグ（v4 では現状無効化中。効果検証で統計的有意性なしのため）</li>
+          <ul className="space-y-2 text-sm text-[var(--text-primary)]">
+            <li><strong className="text-[var(--text-primary)]">Trend</strong> — TOPIXの位置関係（Bull / Neutral / Bear）</li>
+            <li><strong className="text-[var(--text-primary)]">Scorecard</strong> — MC v4 スコア（0-100）。レジーム境界 80 / 60 / 40 / 20 で strong_bull / bull / neutral / bear / strong_bear</li>
+            <li><strong className="text-[var(--text-primary)]">Breadth</strong> — 値上がり銘柄比率の強度（Strong / Normal / Weak）</li>
+            <li><strong className="text-[var(--text-primary)]">Divergence</strong> — 指数↑ × Breadth↓ の天井警告フラグ（v4 では現状無効化中。効果検証で統計的有意性なしのため）</li>
           </ul>
           <div className="mt-4 rounded-lg bg-[var(--bg-card-hover)] border border-[var(--border)] p-4">
-            <p className="text-xs font-semibold text-gray-700 mb-2">Screen Activation Category</p>
-            <ul className="space-y-1.5 text-xs text-gray-600">
-              <li><span className="inline-block w-16 font-semibold text-blue-600">Always-on</span>MC スコアに関係なく常に発動（4本）</li>
-              <li><span className="inline-block w-16 font-semibold text-red-600">Bear</span>MC スコアが閾値以下で発動 — 下落相場で有効（3本）</li>
-              <li><span className="inline-block w-16 font-semibold text-green-600">Bull</span>MC スコアが閾値以上で発動 — 上昇相場で有効（3本）</li>
+            <p className="text-xs font-semibold text-[var(--text-primary)] mb-2">Screen Activation Category</p>
+            <ul className="space-y-1.5 text-xs text-[var(--text-secondary)]">
+              <li><span className="inline-block w-16 font-semibold text-[var(--sem-focus-fg)]">Always-on</span>MC スコアに関係なく常に発動（4本）</li>
+              <li><span className="inline-block w-16 font-semibold text-[var(--negative)]">Bear</span>MC スコアが閾値以下で発動 — 下落相場で有効（3本）</li>
+              <li><span className="inline-block w-16 font-semibold text-[var(--positive)]">Bull</span>MC スコアが閾値以上で発動 — 上昇相場で有効（3本）</li>
             </ul>
-            <p className="text-xs text-gray-500 mt-3">
+            <p className="text-xs text-[var(--text-secondary)] mt-3">
               ※ Screen 判定は Shadow Mode のため現状 v3 (0-21) ベース。v4 観察期間後に v4 ベースで再最適化予定。
             </p>
           </div>
@@ -469,9 +469,9 @@ export default function GuidePage() {
           8 Factors (v4) — 各ファクターの中身
         </h2>
         <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-5">
-          <p className="text-sm text-gray-600 mb-4">
+          <p className="text-sm text-[var(--text-secondary)] mb-4">
             FactorGrid に表示される 8 ファクターは TOPIX / 日経225 / グロース250 の 3 指数と全銘柄ブレッド・需給データを源に計算され、
-            それぞれ過去 252 営業日の自分の分布に対する <strong className="text-gray-900">パーセンタイルランク (0-100)</strong> として表示されます。
+            それぞれ過去 252 営業日の自分の分布に対する <strong className="text-[var(--text-primary)]">パーセンタイルランク (0-100)</strong> として表示されます。
             数値が高いほど「過去 1 年で見て上位」を意味します。
           </p>
 
@@ -479,100 +479,100 @@ export default function GuidePage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-[var(--bg-card-hover)] border-b border-[var(--border)]">
-                  <th className="text-left px-3 py-2 font-semibold text-gray-700">ID</th>
-                  <th className="text-left px-3 py-2 font-semibold text-gray-700">名称</th>
-                  <th className="text-right px-3 py-2 font-semibold text-gray-700">重み</th>
-                  <th className="text-left px-3 py-2 font-semibold text-gray-700">何を測っているか</th>
-                  <th className="text-left px-3 py-2 font-semibold text-gray-700">入力</th>
+                  <th className="text-left px-3 py-2 font-semibold text-[var(--text-primary)]">ID</th>
+                  <th className="text-left px-3 py-2 font-semibold text-[var(--text-primary)]">名称</th>
+                  <th className="text-right px-3 py-2 font-semibold text-[var(--text-primary)]">重み</th>
+                  <th className="text-left px-3 py-2 font-semibold text-[var(--text-primary)]">何を測っているか</th>
+                  <th className="text-left px-3 py-2 font-semibold text-[var(--text-primary)]">入力</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--border)]">
-                <tr className="bg-emerald-50/30">
-                  <td className="px-3 py-2 font-mono font-bold text-emerald-700">M1</td>
-                  <td className="px-3 py-2 text-gray-800 font-semibold">短期モメンタム</td>
-                  <td className="px-3 py-2 text-right font-mono text-gray-700">20%</td>
-                  <td className="px-3 py-2 text-gray-600">
+                <tr className="bg-[var(--sem-ok-bg)]/30">
+                  <td className="px-3 py-2 font-mono font-bold text-[var(--sem-strong-fg)]">M1</td>
+                  <td className="px-3 py-2 text-[var(--text-primary)] font-semibold">短期モメンタム</td>
+                  <td className="px-3 py-2 text-right font-mono text-[var(--text-primary)]">20%</td>
+                  <td className="px-3 py-2 text-[var(--text-secondary)]">
                     直近 1 週間の指数リターンと値上がり銘柄比率を組み合わせた短期勢い
                   </td>
-                  <td className="px-3 py-2 text-xs text-gray-500 font-mono">
+                  <td className="px-3 py-2 text-xs text-[var(--text-secondary)] font-mono">
                     0.6 × avg(chg_1w) + 0.4 × (adv_pct−50)/10
                   </td>
                 </tr>
-                <tr className="bg-emerald-50/30">
-                  <td className="px-3 py-2 font-mono font-bold text-emerald-700">M2</td>
-                  <td className="px-3 py-2 text-gray-800 font-semibold">中期トレンド</td>
-                  <td className="px-3 py-2 text-right font-mono text-gray-700">10%</td>
-                  <td className="px-3 py-2 text-gray-600">
+                <tr className="bg-[var(--sem-ok-bg)]/30">
+                  <td className="px-3 py-2 font-mono font-bold text-[var(--sem-strong-fg)]">M2</td>
+                  <td className="px-3 py-2 text-[var(--text-primary)] font-semibold">中期トレンド</td>
+                  <td className="px-3 py-2 text-right font-mono text-[var(--text-primary)]">10%</td>
+                  <td className="px-3 py-2 text-[var(--text-secondary)]">
                     3 指数のうち何本が SMA50 上にあるか + 全銘柄の SMA50 越え比率
                   </td>
-                  <td className="px-3 py-2 text-xs text-gray-500 font-mono">
+                  <td className="px-3 py-2 text-xs text-[var(--text-secondary)] font-mono">
                     above_count(0-3) + pct_above_sma50/100
                   </td>
                 </tr>
-                <tr className="bg-emerald-50/30">
-                  <td className="px-3 py-2 font-mono font-bold text-emerald-700">M3</td>
-                  <td className="px-3 py-2 text-gray-800 font-semibold">EMA21 真 slope</td>
-                  <td className="px-3 py-2 text-right font-mono text-gray-700">20%</td>
-                  <td className="px-3 py-2 text-gray-600">
+                <tr className="bg-[var(--sem-ok-bg)]/30">
+                  <td className="px-3 py-2 font-mono font-bold text-[var(--sem-strong-fg)]">M3</td>
+                  <td className="px-3 py-2 text-[var(--text-primary)] font-semibold">EMA21 真 slope</td>
+                  <td className="px-3 py-2 text-right font-mono text-[var(--text-primary)]">20%</td>
+                  <td className="px-3 py-2 text-[var(--text-secondary)]">
                     EMA21 自身の 5 日変化率を 3 指数で平均。トレンド転換を 1〜3 日早く検知
                   </td>
-                  <td className="px-3 py-2 text-xs text-gray-500 font-mono">
+                  <td className="px-3 py-2 text-xs text-[var(--text-secondary)] font-mono">
                     mean[3idx] of (EMA21_t − EMA21_t-5) / EMA21_t-5
                   </td>
                 </tr>
-                <tr className="bg-amber-50/30">
-                  <td className="px-3 py-2 font-mono font-bold text-amber-700">C1</td>
-                  <td className="px-3 py-2 text-gray-800 font-semibold">長期確認統合</td>
-                  <td className="px-3 py-2 text-right font-mono text-gray-700">5%</td>
-                  <td className="px-3 py-2 text-gray-600">
+                <tr className="bg-[var(--sem-watch-bg)]/30">
+                  <td className="px-3 py-2 font-mono font-bold text-[var(--sem-watch-fg)]">C1</td>
+                  <td className="px-3 py-2 text-[var(--text-primary)] font-semibold">長期確認統合</td>
+                  <td className="px-3 py-2 text-right font-mono text-[var(--text-primary)]">5%</td>
+                  <td className="px-3 py-2 text-[var(--text-secondary)]">
                     YTD・1 年リターン・52 週高値からの距離を統合した長期コンファーム
                   </td>
-                  <td className="px-3 py-2 text-xs text-gray-500 font-mono">
+                  <td className="px-3 py-2 text-xs text-[var(--text-secondary)] font-mono">
                     0.35 × YTD + 0.35 × 1Y + 0.30 × pct_52wh
                   </td>
                 </tr>
-                <tr className="bg-blue-50/30">
-                  <td className="px-3 py-2 font-mono font-bold text-blue-700">B1</td>
-                  <td className="px-3 py-2 text-gray-800 font-semibold">ブレッド独立</td>
-                  <td className="px-3 py-2 text-right font-mono text-gray-700">15%</td>
-                  <td className="px-3 py-2 text-gray-600">
+                <tr className="bg-[var(--sem-focus-bg)]/30">
+                  <td className="px-3 py-2 font-mono font-bold text-[var(--sem-focus-fg)]">B1</td>
+                  <td className="px-3 py-2 text-[var(--text-primary)] font-semibold">ブレッド独立</td>
+                  <td className="px-3 py-2 text-right font-mono text-[var(--text-primary)]">15%</td>
+                  <td className="px-3 py-2 text-[var(--text-secondary)]">
                     値上がり銘柄比率 (adv_pct) と SMA50 上比率の単純平均。指数とは独立した市場の幅
                   </td>
-                  <td className="px-3 py-2 text-xs text-gray-500 font-mono">
+                  <td className="px-3 py-2 text-xs text-[var(--text-secondary)] font-mono">
                     0.5 × adv_pct + 0.5 × pct_above_sma50
                   </td>
                 </tr>
-                <tr className="bg-violet-50/30">
-                  <td className="px-3 py-2 font-mono font-bold text-violet-700">S1</td>
-                  <td className="px-3 py-2 text-gray-800 font-semibold">フロー (売買 + 海外勢)</td>
-                  <td className="px-3 py-2 text-right font-mono text-gray-700">15%</td>
-                  <td className="px-3 py-2 text-gray-600">
+                <tr className="bg-[var(--sem-focus-bg)]/30">
+                  <td className="px-3 py-2 font-mono font-bold text-[var(--sem-focus-fg)]">S1</td>
+                  <td className="px-3 py-2 text-[var(--text-primary)] font-semibold">フロー (売買 + 海外勢)</td>
+                  <td className="px-3 py-2 text-right font-mono text-[var(--text-primary)]">15%</td>
+                  <td className="px-3 py-2 text-[var(--text-secondary)]">
                     売り圧力 5 日平均 (低いほど良い) と海外投資家ネット買い 4 週平均 (高いほど良い) を平均
                   </td>
-                  <td className="px-3 py-2 text-xs text-gray-500 font-mono">
+                  <td className="px-3 py-2 text-xs text-[var(--text-secondary)] font-mono">
                     avg(rank↓ sell_pressure_5d, rank↑ frgn_bal_4w_avg)
                   </td>
                 </tr>
-                <tr className="bg-violet-50/30">
-                  <td className="px-3 py-2 font-mono font-bold text-violet-700">S2</td>
-                  <td className="px-3 py-2 text-gray-800 font-semibold">IV (恐怖指数)</td>
-                  <td className="px-3 py-2 text-right font-mono text-gray-700">10%</td>
-                  <td className="px-3 py-2 text-gray-600">
+                <tr className="bg-[var(--sem-focus-bg)]/30">
+                  <td className="px-3 py-2 font-mono font-bold text-[var(--sem-focus-fg)]">S2</td>
+                  <td className="px-3 py-2 text-[var(--text-primary)] font-semibold">IV (恐怖指数)</td>
+                  <td className="px-3 py-2 text-right font-mono text-[var(--text-primary)]">10%</td>
+                  <td className="px-3 py-2 text-[var(--text-secondary)]">
                     日経 225 オプション ATM 5 銘柄の BaseVol 加重平均。低い = 落ち着き = 高スコア。
                     5 日で 10% 超急騰したら −20 ペナルティ
                   </td>
-                  <td className="px-3 py-2 text-xs text-gray-500 font-mono">
+                  <td className="px-3 py-2 text-xs text-[var(--text-secondary)] font-mono">
                     rank↓ market_iv, then penalty if Δ5d &gt; +10%
                   </td>
                 </tr>
-                <tr className="bg-violet-50/30">
-                  <td className="px-3 py-2 font-mono font-bold text-violet-700">S3</td>
-                  <td className="px-3 py-2 text-gray-800 font-semibold">空売り + 先物 Basis</td>
-                  <td className="px-3 py-2 text-right font-mono text-gray-700">5%</td>
-                  <td className="px-3 py-2 text-gray-600">
+                <tr className="bg-[var(--sem-focus-bg)]/30">
+                  <td className="px-3 py-2 font-mono font-bold text-[var(--sem-focus-fg)]">S3</td>
+                  <td className="px-3 py-2 text-[var(--text-primary)] font-semibold">空売り + 先物 Basis</td>
+                  <td className="px-3 py-2 text-right font-mono text-[var(--text-primary)]">5%</td>
+                  <td className="px-3 py-2 text-[var(--text-secondary)]">
                     業種別空売り比率 (低いほどリスクオン) と TOPIX 先物 Basis% (Contango = 強気) を平均
                   </td>
-                  <td className="px-3 py-2 text-xs text-gray-500 font-mono">
+                  <td className="px-3 py-2 text-xs text-[var(--text-secondary)] font-mono">
                     avg(rank↓ short_ratio, rank↑ basis_pct)
                   </td>
                 </tr>
@@ -581,20 +581,20 @@ export default function GuidePage() {
           </div>
 
           <div className="mt-4 rounded-lg bg-[var(--bg-card-hover)] border border-[var(--border)] p-4">
-            <p className="text-xs font-semibold text-gray-700 mb-2">Tier 構造</p>
-            <ul className="space-y-1 text-xs text-gray-600">
-              <li><span className="inline-block w-32 font-semibold text-emerald-700">Tier 1 (50%)</span>Core Price Action — M1 + M2 + M3</li>
-              <li><span className="inline-block w-32 font-semibold text-amber-700">Tier 2 ( 5%)</span>Confirming — C1</li>
-              <li><span className="inline-block w-32 font-semibold text-blue-700">Tier 3 (15%)</span>Independent Breadth — B1</li>
-              <li><span className="inline-block w-32 font-semibold text-violet-700">Tier 4 (30%)</span>Sentiment & Risk — S1 + S2 + S3</li>
+            <p className="text-xs font-semibold text-[var(--text-primary)] mb-2">Tier 構造</p>
+            <ul className="space-y-1 text-xs text-[var(--text-secondary)]">
+              <li><span className="inline-block w-32 font-semibold text-[var(--sem-strong-fg)]">Tier 1 (50%)</span>Core Price Action — M1 + M2 + M3</li>
+              <li><span className="inline-block w-32 font-semibold text-[var(--sem-watch-fg)]">Tier 2 ( 5%)</span>Confirming — C1</li>
+              <li><span className="inline-block w-32 font-semibold text-[var(--sem-focus-fg)]">Tier 3 (15%)</span>Independent Breadth — B1</li>
+              <li><span className="inline-block w-32 font-semibold text-[var(--sem-focus-fg)]">Tier 4 (30%)</span>Sentiment & Risk — S1 + S2 + S3</li>
             </ul>
-            <p className="text-xs text-gray-500 mt-3">
+            <p className="text-xs text-[var(--text-secondary)] mt-3">
               スコアの色は <code className="bg-[var(--bg-card)] px-1 rounded">≥80</code> 緑 (strong_bull) /{' '}
               <code className="bg-[var(--bg-card)] px-1 rounded">≥60</code> 薄緑 (bull) /{' '}
               <code className="bg-[var(--bg-card)] px-1 rounded">40-59</code> グレー (neutral) /{' '}
               <code className="bg-[var(--bg-card)] px-1 rounded">≤39</code> 赤系 (bear) で MC v4 の regime 境界に整合。
             </p>
-            <p className="text-xs text-gray-500 mt-2">
+            <p className="text-xs text-[var(--text-secondary)] mt-2">
               <strong>valid_weight</strong>: 各日に有効だったファクターの重み合計。
               現状 daily_screener が IV / 空売り / Basis を取得していないため S2 + S3 (15%) が欠損し、
               通常 85% で推移。Premium データ取得追加で 100% に上がる予定。
@@ -609,10 +609,10 @@ export default function GuidePage() {
           Dynamics (v4) — Velocity / Duration / Shock
         </h2>
         <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-5">
-          <p className="text-sm text-gray-600 mb-4">
-            8 Factors が「現在の市場が <strong className="text-gray-900">どこにいるか</strong>」を測るのに対し、
-            Dynamics は「<strong className="text-gray-900">どう動いているか</strong>」を 3 軸 13 列で捉えます。
-            ダッシュボード上段 (Scorecard / IndexCards) の下に <code className="bg-gray-100 px-1 rounded">Velocity / Duration / Shock</code>{' '}
+          <p className="text-sm text-[var(--text-secondary)] mb-4">
+            8 Factors が「現在の市場が <strong className="text-[var(--text-primary)]">どこにいるか</strong>」を測るのに対し、
+            Dynamics は「<strong className="text-[var(--text-primary)]">どう動いているか</strong>」を 3 軸 13 列で捉えます。
+            ダッシュボード上段 (Scorecard / IndexCards) の下に <code className="bg-[var(--bg-primary)] px-1 rounded">Velocity / Duration / Shock</code>{' '}
             の 3 Card で表示。
           </p>
 
@@ -620,102 +620,102 @@ export default function GuidePage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-[var(--bg-card-hover)] border-b border-[var(--border)]">
-                  <th className="text-left px-3 py-2 font-semibold text-gray-700">軸</th>
-                  <th className="text-left px-3 py-2 font-semibold text-gray-700">列名</th>
-                  <th className="text-left px-3 py-2 font-semibold text-gray-700">単位</th>
-                  <th className="text-left px-3 py-2 font-semibold text-gray-700">何を測っているか</th>
+                  <th className="text-left px-3 py-2 font-semibold text-[var(--text-primary)]">軸</th>
+                  <th className="text-left px-3 py-2 font-semibold text-[var(--text-primary)]">列名</th>
+                  <th className="text-left px-3 py-2 font-semibold text-[var(--text-primary)]">単位</th>
+                  <th className="text-left px-3 py-2 font-semibold text-[var(--text-primary)]">何を測っているか</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--border)]">
-                <tr className="bg-emerald-50/30">
-                  <td className="px-3 py-2 font-mono font-bold text-emerald-700" rowSpan={4}>Velocity</td>
-                  <td className="px-3 py-2 font-mono text-xs text-gray-700">mc_v4_delta_1d</td>
-                  <td className="px-3 py-2 text-xs text-gray-500">±score</td>
-                  <td className="px-3 py-2 text-gray-600">前日比の MC v4 変化。当日勢いの大小</td>
+                <tr className="bg-[var(--sem-ok-bg)]/30">
+                  <td className="px-3 py-2 font-mono font-bold text-[var(--sem-strong-fg)]" rowSpan={4}>Velocity</td>
+                  <td className="px-3 py-2 font-mono text-xs text-[var(--text-primary)]">mc_v4_delta_1d</td>
+                  <td className="px-3 py-2 text-xs text-[var(--text-secondary)]">±score</td>
+                  <td className="px-3 py-2 text-[var(--text-secondary)]">前日比の MC v4 変化。当日勢いの大小</td>
                 </tr>
-                <tr className="bg-emerald-50/30">
-                  <td className="px-3 py-2 font-mono text-xs text-gray-700">mc_v4_delta_5d</td>
-                  <td className="px-3 py-2 text-xs text-gray-500">±score</td>
-                  <td className="px-3 py-2 text-gray-600">5 営業日変化。週内のレジーム傾き</td>
+                <tr className="bg-[var(--sem-ok-bg)]/30">
+                  <td className="px-3 py-2 font-mono text-xs text-[var(--text-primary)]">mc_v4_delta_5d</td>
+                  <td className="px-3 py-2 text-xs text-[var(--text-secondary)]">±score</td>
+                  <td className="px-3 py-2 text-[var(--text-secondary)]">5 営業日変化。週内のレジーム傾き</td>
                 </tr>
-                <tr className="bg-emerald-50/30">
-                  <td className="px-3 py-2 font-mono text-xs text-gray-700">mc_v4_delta_10d</td>
-                  <td className="px-3 py-2 text-xs text-gray-500">±score</td>
-                  <td className="px-3 py-2 text-gray-600">10 営業日変化。中期トレンド方向</td>
+                <tr className="bg-[var(--sem-ok-bg)]/30">
+                  <td className="px-3 py-2 font-mono text-xs text-[var(--text-primary)]">mc_v4_delta_10d</td>
+                  <td className="px-3 py-2 text-xs text-[var(--text-secondary)]">±score</td>
+                  <td className="px-3 py-2 text-[var(--text-secondary)]">10 営業日変化。中期トレンド方向</td>
                 </tr>
-                <tr className="bg-emerald-50/30">
-                  <td className="px-3 py-2 font-mono text-xs text-gray-700">mc_v4_volatility_20d</td>
-                  <td className="px-3 py-2 text-xs text-gray-500">stdev</td>
-                  <td className="px-3 py-2 text-gray-600">過去 20 日の MC v4 標準偏差。レジーム揺れの大きさ</td>
+                <tr className="bg-[var(--sem-ok-bg)]/30">
+                  <td className="px-3 py-2 font-mono text-xs text-[var(--text-primary)]">mc_v4_volatility_20d</td>
+                  <td className="px-3 py-2 text-xs text-[var(--text-secondary)]">stdev</td>
+                  <td className="px-3 py-2 text-[var(--text-secondary)]">過去 20 日の MC v4 標準偏差。レジーム揺れの大きさ</td>
                 </tr>
-                <tr className="bg-amber-50/30">
-                  <td className="px-3 py-2 font-mono font-bold text-amber-700" rowSpan={3}>Duration</td>
-                  <td className="px-3 py-2 font-mono text-xs text-gray-700">regime_run_length</td>
-                  <td className="px-3 py-2 text-xs text-gray-500">days</td>
-                  <td className="px-3 py-2 text-gray-600">現レジームに連続滞在している営業日数</td>
+                <tr className="bg-[var(--sem-watch-bg)]/30">
+                  <td className="px-3 py-2 font-mono font-bold text-[var(--sem-watch-fg)]" rowSpan={3}>Duration</td>
+                  <td className="px-3 py-2 font-mono text-xs text-[var(--text-primary)]">regime_run_length</td>
+                  <td className="px-3 py-2 text-xs text-[var(--text-secondary)]">days</td>
+                  <td className="px-3 py-2 text-[var(--text-secondary)]">現レジームに連続滞在している営業日数</td>
                 </tr>
-                <tr className="bg-amber-50/30">
-                  <td className="px-3 py-2 font-mono text-xs text-gray-700">days_since_regime_shift</td>
-                  <td className="px-3 py-2 text-xs text-gray-500">days</td>
-                  <td className="px-3 py-2 text-gray-600">直近のレジーム転換からの経過日数</td>
+                <tr className="bg-[var(--sem-watch-bg)]/30">
+                  <td className="px-3 py-2 font-mono text-xs text-[var(--text-primary)]">days_since_regime_shift</td>
+                  <td className="px-3 py-2 text-xs text-[var(--text-secondary)]">days</td>
+                  <td className="px-3 py-2 text-[var(--text-secondary)]">直近のレジーム転換からの経過日数</td>
                 </tr>
-                <tr className="bg-amber-50/30">
-                  <td className="px-3 py-2 font-mono text-xs text-gray-700">regime_shift_event</td>
-                  <td className="px-3 py-2 text-xs text-gray-500">flag</td>
-                  <td className="px-3 py-2 text-gray-600">当日にレジーム転換が起きたか (1 = shift, 0 = no shift)</td>
+                <tr className="bg-[var(--sem-watch-bg)]/30">
+                  <td className="px-3 py-2 font-mono text-xs text-[var(--text-primary)]">regime_shift_event</td>
+                  <td className="px-3 py-2 text-xs text-[var(--text-secondary)]">flag</td>
+                  <td className="px-3 py-2 text-[var(--text-secondary)]">当日にレジーム転換が起きたか (1 = shift, 0 = no shift)</td>
                 </tr>
-                <tr className="bg-rose-50/30">
-                  <td className="px-3 py-2 font-mono font-bold text-rose-700" rowSpan={6}>Shock</td>
-                  <td className="px-3 py-2 font-mono text-xs text-gray-700">panic_flag_10</td>
-                  <td className="px-3 py-2 text-xs text-gray-500">flag</td>
-                  <td className="px-3 py-2 text-gray-600">10 日窓のパニック (急落・急変動) 検知</td>
+                <tr className="bg-[var(--sem-weak-bg)]/30">
+                  <td className="px-3 py-2 font-mono font-bold text-[var(--sem-weak-fg)]" rowSpan={6}>Shock</td>
+                  <td className="px-3 py-2 font-mono text-xs text-[var(--text-primary)]">panic_flag_10</td>
+                  <td className="px-3 py-2 text-xs text-[var(--text-secondary)]">flag</td>
+                  <td className="px-3 py-2 text-[var(--text-secondary)]">10 日窓のパニック (急落・急変動) 検知</td>
                 </tr>
-                <tr className="bg-rose-50/30">
-                  <td className="px-3 py-2 font-mono text-xs text-gray-700">panic_flag_15</td>
-                  <td className="px-3 py-2 text-xs text-gray-500">flag</td>
-                  <td className="px-3 py-2 text-gray-600">15 日窓のパニック検知</td>
+                <tr className="bg-[var(--sem-weak-bg)]/30">
+                  <td className="px-3 py-2 font-mono text-xs text-[var(--text-primary)]">panic_flag_15</td>
+                  <td className="px-3 py-2 text-xs text-[var(--text-secondary)]">flag</td>
+                  <td className="px-3 py-2 text-[var(--text-secondary)]">15 日窓のパニック検知</td>
                 </tr>
-                <tr className="bg-rose-50/30">
-                  <td className="px-3 py-2 font-mono text-xs text-gray-700">panic_flag_20</td>
-                  <td className="px-3 py-2 text-xs text-gray-500">flag</td>
-                  <td className="px-3 py-2 text-gray-600">20 日窓のパニック検知</td>
+                <tr className="bg-[var(--sem-weak-bg)]/30">
+                  <td className="px-3 py-2 font-mono text-xs text-[var(--text-primary)]">panic_flag_20</td>
+                  <td className="px-3 py-2 text-xs text-[var(--text-secondary)]">flag</td>
+                  <td className="px-3 py-2 text-[var(--text-secondary)]">20 日窓のパニック検知</td>
                 </tr>
-                <tr className="bg-rose-50/30">
-                  <td className="px-3 py-2 font-mono text-xs text-gray-700">relief_flag_10</td>
-                  <td className="px-3 py-2 text-xs text-gray-500">flag</td>
-                  <td className="px-3 py-2 text-gray-600">10 日窓のリリーフ (急回復・急騰) 検知</td>
+                <tr className="bg-[var(--sem-weak-bg)]/30">
+                  <td className="px-3 py-2 font-mono text-xs text-[var(--text-primary)]">relief_flag_10</td>
+                  <td className="px-3 py-2 text-xs text-[var(--text-secondary)]">flag</td>
+                  <td className="px-3 py-2 text-[var(--text-secondary)]">10 日窓のリリーフ (急回復・急騰) 検知</td>
                 </tr>
-                <tr className="bg-rose-50/30">
-                  <td className="px-3 py-2 font-mono text-xs text-gray-700">relief_flag_15</td>
-                  <td className="px-3 py-2 text-xs text-gray-500">flag</td>
-                  <td className="px-3 py-2 text-gray-600">15 日窓のリリーフ検知</td>
+                <tr className="bg-[var(--sem-weak-bg)]/30">
+                  <td className="px-3 py-2 font-mono text-xs text-[var(--text-primary)]">relief_flag_15</td>
+                  <td className="px-3 py-2 text-xs text-[var(--text-secondary)]">flag</td>
+                  <td className="px-3 py-2 text-[var(--text-secondary)]">15 日窓のリリーフ検知</td>
                 </tr>
-                <tr className="bg-rose-50/30">
-                  <td className="px-3 py-2 font-mono text-xs text-gray-700">relief_flag_20</td>
-                  <td className="px-3 py-2 text-xs text-gray-500">flag</td>
-                  <td className="px-3 py-2 text-gray-600">20 日窓のリリーフ検知</td>
+                <tr className="bg-[var(--sem-weak-bg)]/30">
+                  <td className="px-3 py-2 font-mono text-xs text-[var(--text-primary)]">relief_flag_20</td>
+                  <td className="px-3 py-2 text-xs text-[var(--text-secondary)]">flag</td>
+                  <td className="px-3 py-2 text-[var(--text-secondary)]">20 日窓のリリーフ検知</td>
                 </tr>
               </tbody>
             </table>
           </div>
 
           <div className="mt-4 rounded-lg bg-[var(--bg-card-hover)] border border-[var(--border)] p-4">
-            <p className="text-xs font-semibold text-gray-700 mb-2">読み方</p>
-            <ul className="space-y-1.5 text-xs text-gray-600">
+            <p className="text-xs font-semibold text-[var(--text-primary)] mb-2">読み方</p>
+            <ul className="space-y-1.5 text-xs text-[var(--text-secondary)]">
               <li>
-                <span className="inline-block w-20 font-semibold text-emerald-700">Velocity</span>
+                <span className="inline-block w-20 font-semibold text-[var(--sem-strong-fg)]">Velocity</span>
                 1d &gt; 0 で当日反発、5d/10d 全て正なら中期も上向き。Volatility 20d は揺れの絶対量で、急騰急落どちらでも増える
               </li>
               <li>
-                <span className="inline-block w-20 font-semibold text-amber-700">Duration</span>
+                <span className="inline-block w-20 font-semibold text-[var(--sem-watch-fg)]">Duration</span>
                 run_length が長いほど現レジームが安定。shift_event = 1 の日はレジーム転換当日 = エントリー機会の可能性
               </li>
               <li>
-                <span className="inline-block w-20 font-semibold text-rose-700">Shock</span>
+                <span className="inline-block w-20 font-semibold text-[var(--sem-weak-fg)]">Shock</span>
                 Card 上部の表示は最短窓 (10d) を優先。Panic 検知中 → リスクオフ、Relief 検知中 → 回復過程、いずれも OFF → Calm
               </li>
             </ul>
-            <p className="text-xs text-gray-500 mt-3">
+            <p className="text-xs text-[var(--text-secondary)] mt-3">
               ※ 現状は最新日のみ表示。過去日選択時の Dynamics 表示は別 task で対応予定。
             </p>
           </div>
@@ -731,8 +731,8 @@ export default function GuidePage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-[var(--bg-card-hover)] border-b border-[var(--border)]">
-                <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 w-[140px]">Term</th>
-                <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Description</th>
+                <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-[var(--text-secondary)] w-[140px]">Term</th>
+                <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-[var(--text-secondary)]">Description</th>
               </tr>
             </thead>
             <tbody>
@@ -741,8 +741,8 @@ export default function GuidePage() {
                   key={g.term}
                   className={`border-b border-[var(--border-subtle)] ${i % 2 === 0 ? 'bg-[var(--bg-card)]' : 'bg-[var(--bg-card-hover)]'}`}
                 >
-                  <td className="px-4 py-2 font-mono text-xs font-bold text-gray-900">{g.term}</td>
-                  <td className="px-4 py-2 text-xs text-gray-600">{g.desc}</td>
+                  <td className="px-4 py-2 font-mono text-xs font-bold text-[var(--text-primary)]">{g.term}</td>
+                  <td className="px-4 py-2 text-xs text-[var(--text-secondary)]">{g.desc}</td>
                 </tr>
               ))}
             </tbody>

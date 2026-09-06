@@ -199,7 +199,7 @@ function SectorCard({
                   ? text
                   : isNum(value)
                     ? componentColor(value)
-                    : '#9ca3af'
+                    : 'var(--text-muted)'
               }
               active={metricKey === m.key}
             />
@@ -301,7 +301,7 @@ export default function SectorChartGallery({
           ))}
         </div>
 
-        <label className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer select-none">
+        <label className="flex items-center gap-2 text-xs text-[var(--text-secondary)] cursor-pointer select-none">
           <input
             type="checkbox"
             checked={hideLowConf}
@@ -328,7 +328,7 @@ export default function SectorChartGallery({
       </div>
 
       {error && (
-        <div className="mb-4 px-3 py-2 rounded-md bg-red-50 text-sm text-red-700">
+        <div className="mb-4 px-3 py-2 rounded-md bg-[var(--sem-weak-bg)] text-sm text-[var(--sem-weak-fg)]">
           指数チャート取得エラー: {error}
         </div>
       )}

@@ -199,9 +199,9 @@ export default function NotesPage() {
       >
         <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
           {dirty ? (
-            <span className="text-amber-600">編集中…</span>
+            <span className="text-[var(--sem-watch-fg)]">編集中…</span>
           ) : savedAt ? (
-            <span className="text-emerald-600">保存済み <span className="font-mono">{fmtTime(savedAt)}</span></span>
+            <span className="text-[var(--positive)]">保存済み <span className="font-mono">{fmtTime(savedAt)}</span></span>
           ) : (
             <span>—</span>
           )}
@@ -230,7 +230,7 @@ export default function NotesPage() {
             </button>
             <div className="flex-1 overflow-y-auto -mx-1 px-1">
               {notes.length === 0 ? (
-                <p className="text-xs text-gray-400 text-center py-6">メモはありません。</p>
+                <p className="text-xs text-[var(--text-muted)] text-center py-6">メモはありません。</p>
               ) : (
                 <ul className="flex flex-col gap-1.5">
                   {notes.map(n => {
@@ -241,18 +241,18 @@ export default function NotesPage() {
                           onClick={() => selectNote(n)}
                           className={`w-full text-left rounded-lg border px-3 py-2 transition-colors ${
                             active
-                              ? 'border-[var(--accent)] bg-blue-50'
-                              : 'border-[#eef0f2] bg-[var(--bg-card)] hover:bg-[var(--bg-card-hover)]'
+                              ? 'border-[var(--accent)] bg-[var(--sem-focus-bg)]'
+                              : 'border-[var(--border)] bg-[var(--bg-card)] hover:bg-[var(--bg-card-hover)]'
                           }`}
                         >
                           <div className="flex items-center gap-1.5 min-w-0">
                             {n.pinned && <span aria-hidden className="text-[11px]">📌</span>}
-                            <span className="text-sm font-semibold text-gray-800 truncate">
+                            <span className="text-sm font-semibold text-[var(--text-primary)] truncate">
                               {n.title?.trim() || '無題'}
                             </span>
                           </div>
-                          <p className="mt-0.5 text-[11px] text-gray-400 truncate">{snippet(n.body)}</p>
-                          <p className="mt-0.5 text-[10px] text-gray-300 tabular-nums">{fmtUpdated(n.updated_at)}</p>
+                          <p className="mt-0.5 text-[11px] text-[var(--text-muted)] truncate">{snippet(n.body)}</p>
+                          <p className="mt-0.5 text-[10px] text-[var(--text-muted)] tabular-nums">{fmtUpdated(n.updated_at)}</p>
                         </button>
                       </li>
                     )
@@ -271,15 +271,15 @@ export default function NotesPage() {
                     value={title}
                     onChange={e => setTitle(e.target.value)}
                     placeholder="タイトル（未入力なら本文先頭が一覧に表示）"
-                    className="flex-1 min-w-0 rounded-lg border border-gray-200 bg-[var(--bg-card)] px-3 py-2 text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="flex-1 min-w-0 rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-3 py-2 text-sm font-semibold text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--sem-focus-fg)]"
                   />
                   <button
                     onClick={togglePin}
                     title={selectedNote.pinned ? 'ピンを外す' : 'ピン留め'}
                     className={`px-2.5 py-2 rounded-lg border text-sm transition-colors ${
                       selectedNote.pinned
-                        ? 'border-amber-300 bg-amber-50 text-amber-700'
-                        : 'border-gray-200 bg-[var(--bg-card)] text-gray-400 hover:bg-[var(--bg-card-hover)]'
+                        ? 'border-[var(--sem-watch-bd)] bg-[var(--sem-watch-bg)] text-[var(--sem-watch-fg)]'
+                        : 'border-[var(--border)] bg-[var(--bg-card)] text-[var(--text-muted)] hover:bg-[var(--bg-card-hover)]'
                     }`}
                   >
                     📌
@@ -287,7 +287,7 @@ export default function NotesPage() {
                   <button
                     onClick={() => setConfirmDelete(true)}
                     title="このメモを削除"
-                    className="px-2.5 py-2 rounded-lg border border-gray-200 bg-[var(--bg-card)] text-red-500 hover:bg-red-50 transition-colors text-sm"
+                    className="px-2.5 py-2 rounded-lg border border-[var(--border)] bg-[var(--bg-card)] text-[var(--sem-weak-fg)] hover:bg-[var(--sem-weak-bg)] transition-colors text-sm"
                   >
                     🗑
                   </button>
@@ -297,15 +297,15 @@ export default function NotesPage() {
                   onChange={e => setBody(e.target.value)}
                   placeholder={PLACEHOLDER}
                   spellCheck={false}
-                  className="w-full min-h-[64vh] resize-y rounded-lg border border-gray-200 bg-[#fcfcfd] px-4 py-3 text-sm leading-relaxed text-gray-800 font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full min-h-[64vh] resize-y rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-4 py-3 text-sm leading-relaxed text-[var(--text-primary)] font-mono focus:outline-none focus:ring-2 focus:ring-[var(--sem-focus-fg)]"
                 />
-                <div className="flex items-center justify-between px-1 pt-2 text-[11px] text-gray-400">
+                <div className="flex items-center justify-between px-1 pt-2 text-[11px] text-[var(--text-muted)]">
                   <span>{body.length.toLocaleString()} 文字</span>
                   <span>自動保存（全端末で同期）</span>
                 </div>
               </>
             ) : (
-              <div className="py-16 text-center text-sm text-gray-400">
+              <div className="py-16 text-center text-sm text-[var(--text-muted)]">
                 <p className="mb-3">メモを選択するか、新規作成してください。</p>
                 <button
                   onClick={handleNew}

@@ -70,8 +70,8 @@ export default function LeadersPage() {
             onChange={e => loadSnapshot(e.target.value)}
             className={`text-xs font-mono px-2 py-1 rounded border cursor-pointer ${
               isLatest
-                ? 'border-gray-200 bg-[var(--bg-card)] text-gray-700'
-                : 'border-amber-400 bg-amber-100 text-amber-800 font-semibold'
+                ? 'border-[var(--border)] bg-[var(--bg-card)] text-[var(--text-primary)]'
+                : 'border-[var(--sem-watch-bd)] bg-[var(--sem-watch-bg)] text-[var(--sem-watch-fg)] font-semibold'
             }`}
           >
             {snapshot.availableDates.map(d => (
@@ -84,7 +84,7 @@ export default function LeadersPage() {
         {!isLatest && latestAvailable && (
           <button
             onClick={() => loadSnapshot(latestAvailable)}
-            className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500 text-white hover:bg-amber-600 transition-colors font-medium"
+            className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--sem-watch-fg)] text-white hover:brightness-110 transition-colors font-medium"
           >
             最新に戻る
           </button>
@@ -99,7 +99,7 @@ export default function LeadersPage() {
       </PageHeader>
 
       {!isLatest && selectedDate && (
-        <div className="mb-4 px-4 py-2 rounded-lg bg-amber-50 border border-amber-300 text-amber-800 text-sm font-medium">
+        <div className="mb-4 px-4 py-2 rounded-lg bg-[var(--sem-watch-bg)] border border-[var(--sem-watch-bd)] text-[var(--sem-watch-fg)] text-sm font-medium">
           {selectedDate} のスナップショットを表示中
         </div>
       )}
