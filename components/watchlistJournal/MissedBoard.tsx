@@ -1,25 +1,26 @@
 'use client'
 
-// §3.3 見逃しボード — この画面の主役。
+// Missed Board — この画面の主役。
 //
-// 「見逃し」= Watch list に入れたが HOLD に至らないまま落とした銘柄。
-// HOLD 判定はその exit より前に限る（後から買い直した銘柄も、その時点では
-// 確かに落としているので行として残す。lib/watchlistJournalFetch.ts#buildMissed）。
+// 「見逃し」= Watch list に入れたが、その exit の date より前に HOLD に
+// なっていない銘柄（lib/watchlistJournalFetch.ts#buildMissed）。
+// 同一 code の exit は畳まず全件出す（1 回ごとが独立した判断）。
 //
 // from_state 別にグループ化し、READY からの離脱を最も重く扱う
-// （エントリー可と判断しておいて買わなかった）。並びは max_ret_pct 降順 =
+// （エントリー可と判断しておいて買わなかった）。並びの既定は Max Gain 降順 =
 // 「落とした後に伸びた順」。
 //
-// §3.4: 勝率・PF・期待値のタイルは置かない。2026-08-13 開始で HOLD/SOLD は
-// まだ 5 件ずつしかなく、この家では素の勝率が繰り返し ADR%20 の影武者になる
-// ことが確認されている。集計は中央値までに留め、件数の少なさを明記する。
+// 勝率・PF・期待値のタイルは置かない。2026-08-13 開始でサンプルが少なく、
+// この家では素の勝率が繰り返し ADR%20 の影武者になることが確認されている。
+// 集計は中央値までに留め、件数の少なさを明記する。
 
 import { useMemo, useState } from 'react'
 import type { WatchlistEvent } from '@/types/watchlistJournal'
 import { formatPct } from '@/lib/format'
-import { NumCell, PctCell, SampleSizeNote, StateLabel, TickerCell, YenCell, median } from './atoms'
+import DataTable, { type Column } from '@/components/shared/DataTable'
+import { NumCell, PctCell, SampleSizeNote, TickerCell, YenCell, median } from './atoms'
 
-// READY からの離脱が最も重い。この順で並べ、READY だけ枠を強調する。
+// READY からの離脱が最も重い。この順で並べる。
 const FROM_STATE_ORDER = ['READY', 'FOCUS', 'SECOND', 'SHORT', 'OTHERS', 'INBOX']
 
 function fromStateIndex(state: string | null): number {
@@ -27,33 +28,101 @@ function fromStateIndex(state: string | null): number {
   return i < 0 ? FROM_STATE_ORDER.length : i
 }
 
-// テーブルの列順に合わせて並べてある。
-type SortKey =
-  | 'date'
-  | 'bars_since'
-  | 'code'
-  | 'close_adj'
-  | 'sector_s33'
-  | 'from_state'
-  | 'dwell_days'
-  | 'ret_since_pct'
-  | 'max_ret_pct'
-  | 'min_ret_pct'
-  | 'adr_pct_20'
+const COLUMNS: Column<WatchlistEvent>[] = [
+  {
+    key: 'date',
+    label: 'Date',
+    tooltip: 'Watch list から落とした日',
+    align: 'left',
+    value: r => r.date,
+    render: r => <span className="font-mono text-small text-[var(--text-secondary)]">{r.date}</span>,
+  },
+  {
+    key: 'bars_since',
+    label: 'Days',
+    tooltip: '落とした日からの経過営業日数。右の 3 つの % を測った期間の長さ',
+    value: r => r.bars_since,
+    render: r => <NumCell value={r.bars_since} digits={0} />,
+  },
+  {
+    key: 'code',
+    label: 'Code / Name',
+    tooltip: '銘柄コード → TradingView / 銘柄名 → 四季報',
+    align: 'left',
+    value: r => r.code,
+    render: r => <TickerCell code={r.code} name={r.co_name} />,
+  },
+  {
+    key: 'close_adj',
+    label: 'Price',
+    tooltip: '落とした日の終値。Return / Max Gain / Max Draw はこの値が基準',
+    value: r => r.close_adj,
+    render: r => <YenCell value={r.close_adj} />,
+  },
+  {
+    key: 'from_state',
+    label: 'From',
+    tooltip: 'どの状態から落としたか（READY が最も重い順で並ぶ）',
+    align: 'left',
+    // 五十音ではなく見逃しの重み順で並べる
+    value: r => fromStateIndex(r.from_state),
+    render: r => (
+      <span className="text-caption tracking-wide text-[var(--text-secondary)]">
+        {r.from_state ?? '—'}
+      </span>
+    ),
+  },
+  {
+    key: 'ret_since_pct',
+    label: 'Return',
+    tooltip: '落としてから現在までの変化%',
+    value: r => r.ret_since_pct,
+    render: r => <PctCell value={r.ret_since_pct} />,
+  },
+  {
+    key: 'max_ret_pct',
+    label: 'Max Gain',
+    tooltip: '期間中の最大上昇%（終値ベース）',
+    value: r => r.max_ret_pct,
+    render: r => <PctCell value={r.max_ret_pct} />,
+  },
 
-const SORT_VALUE: Record<SortKey, (r: WatchlistEvent) => string | number | null> = {
-  date: r => r.date,
-  bars_since: r => r.bars_since,
-  code: r => r.code,
-  close_adj: r => r.close_adj,
-  sector_s33: r => r.sector_s33,
-  from_state: r => fromStateIndex(r.from_state), // 状態は五十音ではなく重みの順で並べる
-  dwell_days: r => r.dwell_days,
-  ret_since_pct: r => r.ret_since_pct,
-  max_ret_pct: r => r.max_ret_pct,
-  min_ret_pct: r => r.min_ret_pct,
-  adr_pct_20: r => r.adr_pct_20,
-}
+  // ── 詳細行だけ ────────────────────────────────────────────────────────
+  {
+    key: 'sector_s33',
+    label: 'Sector',
+    summary: false,
+    align: 'left',
+    value: r => r.sector_s33,
+    render: r => (
+      <span className="text-small text-[var(--text-secondary)]">{r.sector_s33 ?? '—'}</span>
+    ),
+  },
+  {
+    key: 'dwell_days',
+    label: 'Stay',
+    tooltip: '落とす前にその状態に居た暦日数',
+    summary: false,
+    value: r => r.dwell_days,
+    render: r => <NumCell value={r.dwell_days} digits={0} />,
+  },
+  {
+    key: 'min_ret_pct',
+    label: 'Max Draw',
+    tooltip: '期間中の最大下落%（安値ベース）',
+    summary: false,
+    value: r => r.min_ret_pct,
+    render: r => <PctCell value={r.min_ret_pct} />,
+  },
+  {
+    key: 'adr_pct_20',
+    label: 'ADR %',
+    tooltip: '落とした日の ADR% 20日',
+    summary: false,
+    value: r => r.adr_pct_20,
+    render: r => <NumCell value={r.adr_pct_20} suffix="%" />,
+  },
+]
 
 type Props = {
   rows: WatchlistEvent[]
@@ -62,17 +131,6 @@ type Props = {
 export default function MissedBoard({ rows }: Props) {
   // 既定は「全部」。from_state を選ぶと絞り込む。
   const [filter, setFilter] = useState<string | null>(null)
-  // 既定は「落とした後に伸びた順」（max_ret_pct 降順）。lib 側の並びと一致させる。
-  const [sortKey, setSortKey] = useState<SortKey>('max_ret_pct')
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
-
-  function handleSort(key: SortKey) {
-    if (sortKey === key) setSortDir(d => (d === 'asc' ? 'desc' : 'asc'))
-    else {
-      setSortKey(key)
-      setSortDir('desc')
-    }
-  }
 
   const groups = useMemo(() => {
     const byState = new Map<string, WatchlistEvent[]>()
@@ -92,43 +150,15 @@ export default function MissedBoard({ rows }: Props) {
       }))
   }, [rows])
 
-  const visible = useMemo(() => {
-    const filtered = filter ? rows.filter(r => (r.from_state ?? '（不明）') === filter) : rows
-    const getValue = SORT_VALUE[sortKey]
-    return [...filtered].sort((a, b) => {
-      const av = getValue(a)
-      const bv = getValue(b)
-      // NULL は常に末尾。当日 exit（値動き未測定）を先頭に居座らせないため、
-      // 昇順・降順のどちらでも末尾に置く。
-      if (av == null && bv == null) return 0
-      if (av == null) return 1
-      if (bv == null) return -1
-      // code は英字混じり（278A）なので文字列比較。数値としてパースしない。
-      const c =
-        typeof av === 'string' || typeof bv === 'string'
-          ? String(av).localeCompare(String(bv))
-          : av - bv
-      return sortDir === 'asc' ? c : -c
-    })
-  }, [rows, filter, sortKey, sortDir])
-
-  const th = (
-    key: SortKey,
-    label: string,
-    title: string,
-    align: 'left' | 'right' = 'right',
-  ) => (
-    <th
-      onClick={() => handleSort(key)}
-      title={title}
-      className={`px-2.5 py-2 ${align === 'left' ? 'text-left' : 'text-right'} text-caption tracking-wide cursor-pointer select-none whitespace-nowrap ${
-        sortKey === key ? 'text-[var(--sem-focus-fg)]' : 'text-[var(--text-muted)]'
-      }`}
-    >
-      {label}
-      {sortKey === key ? (sortDir === 'asc' ? ' ↑' : ' ↓') : ' ↕'}
-    </th>
+  const visible = useMemo(
+    () => (filter ? rows.filter(r => (r.from_state ?? '（不明）') === filter) : rows),
+    [rows, filter],
   )
+
+  // 選択中の 1 組だけ中央値を大きく出す。タイルに 2 つ詰めると窮屈だった。
+  const selected = filter ? groups.find(g => g.state === filter) : null
+  const medRet = selected ? selected.medRet : median(rows.map(r => r.ret_since_pct))
+  const medMax = selected ? selected.medMax : median(rows.map(r => r.max_ret_pct))
 
   if (rows.length === 0) {
     return (
@@ -144,140 +174,75 @@ export default function MissedBoard({ rows }: Props) {
     )
   }
 
+  const chip = (key: string | null, label: string, count: number, heavy = false) => {
+    const active = filter === key
+    return (
+      <button
+        key={key ?? 'all'}
+        onClick={() => setFilter(active ? null : key)}
+        title={heavy ? 'エントリー可と判断しておいて買わなかった — 最も重い見逃し' : undefined}
+        className={`inline-flex items-baseline gap-1.5 px-2.5 py-1 rounded-lg border-[0.5px] whitespace-nowrap ${
+          active
+            ? 'border-[var(--sem-focus-bd)] bg-[var(--sem-focus-bg)]'
+            : 'border-[var(--border)] bg-[var(--bg-card)] hover:bg-[var(--bg-card-hover)]'
+        }`}
+        style={heavy ? { borderLeft: '2px solid var(--sem-focus-fg)' } : undefined}
+      >
+        <span className="text-caption tracking-wide text-[var(--text-secondary)]">{label}</span>
+        <span className="num text-body text-[var(--text-primary)]">{count}</span>
+      </button>
+    )
+  }
+
   return (
     <section>
       <div className="flex flex-wrap items-baseline justify-between gap-2 mb-3">
         <h2 className="text-caption tracking-wide text-[var(--text-muted)]">Missed Board</h2>
         <p className="text-caption text-[var(--text-muted)]">
-          Watch list に入れたのに、買わないまま落とした銘柄がその後どうなったか{' '}
-          <span>
-            — 並び順は列見出しをクリック（既定: 落とした後に伸びた順）
-          </span>
+          Watch list に入れたのに、買わないまま落とした銘柄がその後どうなったか
         </p>
       </div>
 
-      {/* from_state 別サマリ。クリックで絞り込み。中央値だけを出す（§3.4）。 */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 mb-4">
-        <button
-          onClick={() => setFilter(null)}
-          className={`text-left px-3 py-2 rounded-lg border-[0.5px] ${
-            filter === null
-              ? 'border-[var(--sem-focus-bd)] bg-[var(--sem-focus-bg)]'
-              : 'border-[var(--border)] bg-[var(--bg-card)] hover:bg-[var(--bg-card-hover)]'
-          }`}
-        >
-          <p className="text-caption text-[var(--text-muted)]">All</p>
-          <p className="text-lead num text-[var(--text-primary)]">{rows.length}</p>
-        </button>
-
-        {groups.map(g => {
-          const isReady = g.state === 'READY'
-          const active = filter === g.state
-          return (
-            <button
-              key={g.state}
-              onClick={() => setFilter(active ? null : g.state)}
-              className={`text-left px-3 py-2 rounded-lg border-[0.5px] ${
-                active
-                  ? 'border-[var(--sem-focus-bd)] bg-[var(--sem-focus-bg)]'
-                  : 'border-[var(--border)] bg-[var(--bg-card)] hover:bg-[var(--bg-card-hover)]'
-              }`}
-              style={
-                isReady ? { borderLeft: '2px solid var(--sem-focus-fg)' } : undefined
-              }
-              title={
-                isReady
-                  ? 'エントリー可と判断しておいて買わなかった — 最も重い見逃し'
-                  : undefined
-              }
-            >
-              <span className="flex items-baseline gap-1.5">
-                <StateLabel state={g.state} />
-                <span className="text-lead num text-[var(--text-primary)]">{g.count}</span>
-              </span>
-              <p className="text-caption text-[var(--text-muted)] mt-1 num">
-                中央 現在 {formatPct(g.medRet, { digits: 2, sign: true })} / 最大{' '}
-                {formatPct(g.medMax, { digits: 2, sign: true })}
-              </p>
-            </button>
-          )
-        })}
+      {/* from_state 別の絞り込み。件数だけを水平 1 行に並べ、中央値は
+          選択中の 1 組を下に大きく出す（タイルに 2 つ詰めると窮屈だった）。 */}
+      <div className="flex flex-wrap items-center gap-1.5">
+        {chip(null, 'All', rows.length)}
+        {groups.map(g => chip(g.state, g.state, g.count, g.state === 'READY'))}
       </div>
 
-      <SampleSizeNote n={rows.length}>
-        。「現在」「最大」は落とした日の終値を基準にした変化率で、当日落とした銘柄は翌営業日まで
+      <div className="flex flex-wrap items-baseline gap-x-6 gap-y-1 mt-3">
+        <span className="text-caption text-[var(--text-muted)]">
+          {filter ?? 'All'} の中央値
+        </span>
+        <span className="inline-flex items-baseline gap-1.5">
+          <span className="text-caption text-[var(--text-muted)]">現在</span>
+          <span className="text-lead num text-[var(--text-primary)]">
+            {formatPct(medRet, { digits: 2, sign: true })}
+          </span>
+        </span>
+        <span className="inline-flex items-baseline gap-1.5">
+          <span className="text-caption text-[var(--text-muted)]">最大上昇</span>
+          <span className="text-lead num text-[var(--text-primary)]">
+            {formatPct(medMax, { digits: 2, sign: true })}
+          </span>
+        </span>
+      </div>
+
+      <SampleSizeNote n={visible.length}>
+        。Return / Max Gain は落とした日の終値を基準にした変化率で、当日落とした銘柄は翌営業日まで
         <span className="font-mono mx-0.5">—</span>になります
       </SampleSizeNote>
 
-      <div className="mt-3 bg-[var(--bg-card)] rounded-xl border-[0.5px] border-[var(--border)] overflow-x-auto">
-        <table className="w-full min-w-[980px] text-body">
-          <thead className="border-b-[0.5px] border-[var(--border)]">
-            <tr>
-              {th('date', 'Date', 'Watch list から落とした日', 'left')}
-              {th('bars_since', 'Days', '落とした日からの経過営業日数。右の 3 つの % を測った期間の長さ')}
-              {th('code', 'Code / Name', '銘柄コード → TradingView / 銘柄名 → 四季報', 'left')}
-              {th('close_adj', 'Price', '落とした日の終値。Return / Max Gain / Max Draw はこの値が基準')}
-              {th('sector_s33', 'Sector', '33 業種', 'left')}
-              {th('from_state', 'From', 'どの状態から落としたか（READY が最も重い順で並ぶ）', 'left')}
-              {th('dwell_days', 'Stay', '落とす前にその状態に居た暦日数')}
-              {th('ret_since_pct', 'Return', '落としてから現在までの変化%')}
-              {th('max_ret_pct', 'Max Gain', '期間中の最大上昇%（終値ベース）')}
-              {th('min_ret_pct', 'Max Draw', '期間中の最大下落%（安値ベース）')}
-              {th('adr_pct_20', 'ADR %', '落とした日の ADR% 20日')}
-            </tr>
-          </thead>
-          <tbody>
-            {visible.map(r => (
-              <tr
-                key={`${r.snapshot_id}-${r.code}`}
-                className="border-t-[0.5px] border-[var(--border)] hover:bg-[var(--bg-card-hover)]"
-              >
-                {/* READY からの離脱が最も重い。塗りではなく左端のレールで示す */}
-                <td
-                  className="px-2.5 py-2 font-mono text-small text-[var(--text-secondary)] whitespace-nowrap border-l-2"
-                  style={{
-                    borderLeftColor:
-                      r.from_state === 'READY' ? 'var(--sem-focus-fg)' : 'transparent',
-                  }}
-                >
-                  {r.date}
-                </td>
-                <td className="px-2.5 py-2 text-right">
-                  {/* 単位は Current State の Days に揃えて「日」。中身は営業日数なので
-                      ツールチップで明示する（Stay の暦日数とは数え方が違う）。 */}
-                  <NumCell value={r.bars_since} digits={0} suffix="日" title="落とした日からの経過営業日数" />
-                </td>
-                <td className="px-2.5 py-2">
-                  <TickerCell code={r.code} name={r.co_name} />
-                </td>
-                <td className="px-2.5 py-2 text-right">
-                  <YenCell value={r.close_adj} title="落とした日の終値" />
-                </td>
-                <td className="px-2.5 py-2 text-small text-[var(--text-secondary)] whitespace-nowrap">
-                  {r.sector_s33 ?? '—'}
-                </td>
-                <td className="px-2.5 py-2">
-                  <StateLabel state={r.from_state} />
-                </td>
-                <td className="px-2.5 py-2 text-right">
-                  <NumCell value={r.dwell_days} digits={0} suffix="日" title="落とす前にその状態に居た暦日数" />
-                </td>
-                <td className="px-2.5 py-2 text-right">
-                  <PctCell value={r.ret_since_pct} />
-                </td>
-                <td className="px-2.5 py-2 text-right">
-                  <PctCell value={r.max_ret_pct} title="期間中の最大上昇%（終値ベース）" />
-                </td>
-                <td className="px-2.5 py-2 text-right">
-                  <PctCell value={r.min_ret_pct} title="期間中の最大下落%（安値ベース）" />
-                </td>
-                <td className="px-2.5 py-2 text-right">
-                  <NumCell value={r.adr_pct_20} suffix="%" />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="mt-3">
+        <DataTable
+          rows={visible}
+          columns={COLUMNS}
+          rowKey={r => `${r.snapshot_id}-${r.code}`}
+          defaultSort={{ key: 'max_ret_pct', dir: 'desc' }}
+          // 重みは塗りではなく左端のレールで示す
+          rail={r => (r.from_state === 'READY' ? 'var(--sem-focus-fg)' : null)}
+          fullMinWidth={980}
+        />
       </div>
     </section>
   )

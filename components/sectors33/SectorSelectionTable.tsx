@@ -22,6 +22,7 @@ import {
   type RankDeltaPeriodKey,
 } from '@/lib/sectorRankDelta'
 import Dot from '@/components/shared/Dot'
+import SortTh from '@/components/shared/SortTh'
 
 type SortKey = 'rank' | 'sector_name_s33' | 'composite_score' | ComponentKey | 'sector_stock_count_s33'
 type SortDir = 'asc' | 'desc'
@@ -136,46 +137,6 @@ function CompositeCell({ score }: { score: number | null | undefined }) {
   )
 }
 
-function SortTh({
-  label,
-  tooltip,
-  hint,
-  sortKey,
-  currentKey,
-  currentDir,
-  onSort,
-  align = 'right',
-  className = '',
-}: {
-  label: string
-  tooltip?: string
-  /** ラベルの右に添える補足（並び替え対象ではない列内の中身の説明など） */
-  hint?: React.ReactNode
-  sortKey: SortKey
-  currentKey: SortKey
-  currentDir: SortDir
-  onSort: (k: SortKey) => void
-  align?: 'left' | 'right' | 'center'
-  className?: string
-}) {
-  const active = currentKey === sortKey
-  const indicator = active ? (currentDir === 'asc' ? ' ↑' : ' ↓') : ' ↕'
-  const alignClass = align === 'left' ? 'text-left' : align === 'center' ? 'text-center' : 'text-right'
-  const inner = tooltip ? <Tooltip content={tooltip}>{label}</Tooltip> : <>{label}</>
-  return (
-    <th
-      onClick={() => onSort(sortKey)}
-      aria-sort={active ? (currentDir === 'asc' ? 'ascending' : 'descending') : 'none'}
-      className={`px-3 py-2.5 text-xs font-medium uppercase tracking-wide whitespace-nowrap cursor-pointer select-none hover:bg-gray-100 transition-colors ${alignClass} ${
-        active ? 'text-[var(--accent)]' : 'text-[var(--text-secondary)]'
-      } ${className}`}
-    >
-      {inner}
-      <span className="text-[10px] opacity-50">{indicator}</span>
-      {hint}
-    </th>
-  )
-}
 
 // ── Drilldown: 5 horizontal bars with weight annotation ─────────────────────
 function DrilldownRow({ row, colSpan }: { row: SectorSelectionRow; colSpan: number }) {
