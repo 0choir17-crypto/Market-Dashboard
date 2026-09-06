@@ -1,8 +1,8 @@
 # Watchlist Journal 設計書（`/watchlist`・2026-09-05 時点）
 
-> ⚠️ **2026-09-05: `DESIGN_DIRECTION.md` の step 0〜4 を適用済み。**
-> 色（意味語彙 7 トークン）・フォント・面・タイプスケールが変わっています。
-> §7 の配色表と §4 の鮮度バッジは更新済み。列構成（§5 / §6）は step 7 で変わる予定です。
+> ⚠️ **2026-09-05: `DESIGN_DIRECTION.md` の step 0〜8 を適用済み。**
+> 色（意味語彙 7 トークン）・フォント・面・タイプスケール・表の共通化・要約ビューが
+> すべて入っています。両テーブルは `components/shared/DataTable.tsx` の上に載っています。
 
 デザイン見直しのベースとして、**実装から起こした現状**をまとめたもの。
 「なぜそうなっているか」を併記してあるので、変える前に読んで、意図ごと置き換えるか
@@ -125,28 +125,30 @@ min-w-[1320px] / 横スクロール
   （売却済アーカイブで現在のウォッチ対象ではなく、記録開始前からの建玉が混ざるため）
 - `STATE_ORDER` に無い状態が来たら末尾に「（不明）」で出し、表の下に警告文を出す
 
-### 列（15 列）
+### 列 — 要約 7 列 + 詳細行 8 列
 
-| # | 見出し | 元データ | 表示 | 揃え |
-|---|---|---|---|---|
-| 1 | `Code / Name` | `code` / `co_name` | コード=等幅 accent 色、名前=小さいミュート色 | 左 |
-| 2 | `Sector` | `sector_s33` | text-xs secondary | 左 |
-| 3 | `Since` | `since` | 等幅 text-xs | 左 |
-| 4 | `Days` | `days` | `12日`（暦日） | 右 |
-| 5 | `Entry → Now` | `close_at_since` → `close_adj` | `4,110 → 4,250` | 右 |
-| 6 | `Return` | `ret_since_pct` | 損益色 + 符号 | 右 |
-| 7 | `ADR %` | `adr_pct_20` | `4.5%` | 右 |
-| 8 | `ATR14` | `atr_14` | `278.1` | 右 |
-| 9 | `1R（21EMA Low）` | `dist_ema21_low_yen` | `¥915`（整数丸め） | 右 |
-| 10 | `1R %（21EMA Low）` | 派生 `100 × #9 ÷ close_adj` | `22.25%` **中立色** | 右 |
-| 11 | `RR2（21EMA Low）` | `rr2_ema21_low_yen` | `¥1,829` | 右 |
-| 12 | `RR2 %（21EMA Low）` | 派生 | `44.51%` **中立色** | 右 |
-| 13 | `RS` | `rs_vs_topix_avg` | `71` | 右 |
-| 14 | `52W High` | `dist_from_high_pct` | `-10.9%` | 右 |
-| 15 | `Ext R (50MA)` | `ext_r` | `2.7R` | 右 |
+一覧は比較のため、詳細は決断のため（設計原則 3）。**22 行を横断比較しない数値**は
+一覧から外し、行を開いたときだけ出す。要約ビューは `min-w` を持たず横スクロールしない。
 
-**並びの意図**: 銘柄の身元（1-3）→ 経過と成績（4-6）→ **速さとリスク**（7-12）→ 相場強弱（13-15）。
-ATR 系 5 列を隣接させ、`Ext R` は 50MA 基準で 21EMA 基準の `1R` とは別物なので見出しに基準を書く。
+**要約（既定）**
+
+| # | 見出し | 元データ | 表示 |
+|---|---|---|---|
+| 1 | `Code / Name` | `code` / `co_name` | コード → TradingView / 名前 → 四季報 |
+| 2 | `Days` | `days` | `12`（暦日・単位は見出しが持つ） |
+| 3 | `Price` | `close_adj` / `close_at_since` | `4,250 / 4,110` — 現在値が主、入った日の値は従属 |
+| 4 | `Return` | `ret_since_pct` | 損益色 + 符号 |
+| 5 | `1R %` | 派生 `100 × dist_ema21_low_yen ÷ close_adj` | `22.25%` **中立色** |
+| 6 | `RS` | `rs_vs_topix_avg` | `71` |
+| 7 | `52W High` | `dist_from_high_pct` | `-10.9%` |
+
+**詳細行（行を開くと出る）**
+
+`Sector` / `Since` / `ADR %` / `ATR14` / `1R（21EMA Low）` / `RR2（21EMA Low）` /
+`RR2 %（21EMA Low）` / `Ext R (50MA)`
+
+ヘッダー右の **`要約 / 全 15 列` トグル**で従来の 15 列一覧にも戻せる
+（そのときだけ `min-w-[1320px]` が付く）。
 
 ---
 
@@ -160,11 +162,9 @@ ATR 系 5 列を隣接させ、`Ext R` は 50MA 基準で 21EMA 基準の `1R` �
 ```
 Missed Board          Watch list に入れたのに、買わないまま落とした銘柄がその後どうなったか
                                         — 並び順は列見出しをクリック（既定: 落とした後に伸びた順）
-┌────────┬────────┬────────┬────────┬────────┬────────┐  ← from_state 別サマリ
-│ 全部   │ READY  │ FOCUS  │ SECOND │ OTHERS │ …      │     クリックで絞り込み
-│ 146    │ [21]   │ [31]   │ [44]   │ [49]   │        │     READY は青枠で強調
-│        │ 中央 現在 -2.46% / 最大 +1.69%                │
-└────────┴────────┴────────┴────────┴────────┴────────┘
+[All 146] [READY 21] [FOCUS 31] [SECOND 44] [OTHERS 49] …   ← 水平 1 行・件数だけ
+                                                    READY は左端レール
+All の中央値   現在 -2.46%   最大上昇 +1.69%        ← 選択中の 1 組だけ大きく
 n=146 — 件数がまだ少ないため中央値のみ。勝率・PF・期待値は出しません
 ┌──────────────────────────────────────────────────────┐
 │ [列見出し 11 列 / クリックでソート]                    │
@@ -173,31 +173,21 @@ n=146 — 件数がまだ少ないため中央値のみ。勝率・PF・期待�
 min-w-[980px]
 ```
 
-### 列（11 列）
+### 列 — 要約 7 列 + 詳細行 4 列
 
-| # | 見出し | 元データ | 表示 | 揃え |
-|---|---|---|---|---|
-| 1 | `Date` | `date` | 等幅 text-xs（落とした日） | 左 |
-| 2 | `Days` | `bars_since` | `14日` — **営業日**数 | 右 |
-| 3 | `Code / Name` | `code` / `co_name` | Current State と同じ | 左 |
-| 4 | `Price` | `close_adj` | `¥2,140`（落とした日の終値・右 3 列の基準） | 右 |
-| 5 | `Sector` | `sector_s33` | text-xs secondary | 左 |
-| 6 | `From` | `from_state` | 状態バッジ | 左 |
-| 7 | `Stay` | `dwell_days` | `3日` — **暦日**数 | 右 |
-| 8 | `Return` | `ret_since_pct` | 損益色 + 符号 | 右 |
-| 9 | `Max Gain` | `max_ret_pct` | 損益色 + 符号・`font-semibold` | 右 |
-| 10 | `Max Draw` | `min_ret_pct` | 損益色 + 符号 | 右 |
-| 11 | `ADR %` | `adr_pct_20` | `4.5%` | 右 |
+**要約（既定）**: `Date` / `Days`（経過営業日）/ `Code / Name` / `Price` /
+`From` / `Return` / `Max Gain`（既定ソート・降順）
 
-> ⚠️ **`Days` と `Stay` は数え方が違う**（営業日 vs 暦日）。表記を Current State に揃えた結果
-> どちらも「日」になっているので、ツールチップで明示している。デザイン見直しで
-> 単位を見分けさせたいなら `Days` を「営業日」表記にする余地がある。
+**詳細行**: `Sector` / `Stay`（居た暦日）/ `Max Draw` / `ADR %`
+
+> ⚠️ **`Days` と `Stay` は数え方が違う**（営業日 vs 暦日）。単位は見出しではなく
+> ツールチップで明示している。
 
 ### グループ順と強調
 
 - サマリの並び `READY → FOCUS → SECOND → SHORT → OTHERS → INBOX`
 - **`READY` が最も重い**（エントリー可と判断しておいて買わなかった）。
-  サマリタイルは青枠（`border-blue-300 bg-blue-50/60`）、行は `bg-blue-50/40`
+  チップと行の**左端 2px のレール**（`--sem-focus-fg`）で示す。塗りは使わない
 - ソートの `From` 列だけは五十音順ではなく**この重み順**で並ぶ
 
 ---
@@ -308,9 +298,12 @@ app/watchlist/page.tsx                            ページ本体・取得と状
 lib/watchlistJournalFetch.ts                      4 クエリ + 見逃し判定 buildMissed()
 types/watchlistJournal.ts                         型 / STATE_ORDER / stateColors /
                                                   riskPct() / classifySnapshotFreshness()
+components/shared/DataTable.tsx                   表の骨格（ソート / グループ / 折りたたみ /
+                                                  要約・全列トグル / 詳細行）
+components/shared/SortTh.tsx                      ソート可能な列見出し — 唯一の定義
 components/watchlistJournal/
-  ├─ CurrentStateTable.tsx                        15 列・グループ化・ソート・折りたたみ
-  ├─ MissedBoard.tsx                              サマリタイル + 11 列・ソート・絞り込み
+  ├─ CurrentStateTable.tsx                        列定義とグループ見出しだけ
+  ├─ MissedBoard.tsx                              列定義 + 絞り込みチップと中央値
   ├─ SnapshotFreshnessBadge.tsx                   実時間ベースの鮮度
   └─ atoms.tsx                                    StateBadge / ScannerTags / PctCell /
                                                   NumCell / YenCell / TickerCell /

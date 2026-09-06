@@ -1,5 +1,4 @@
 import type { SemanticTone } from '@/types/semantic'
-
 // Watchlist Journal — TradingView の操作記録。
 //
 // 旧 `watchlist` テーブル（ダッシュボードへの手入力）は 0 行のまま 2026-09-05 に
@@ -36,27 +35,6 @@ export const STATE_ORDER: WatchState[] = [
 export function stateOrderIndex(state: string | null | undefined): number {
   const i = STATE_ORDER.indexOf((state ?? '') as WatchState)
   return i < 0 ? STATE_ORDER.length : i
-}
-
-/**
- * 状態 → 意味語彙の対応。
- *
- * `OTHERS` / `SECOND` / `INBOX` は「未整理・未評価」であって警戒ではないので
- * `idle`（無彩色）。琥珀＝`watch` は「警戒」の一語だけを指す。
- */
-const STATE_TONE: Record<WatchState, SemanticTone> = {
-  HOLD: 'strong',   // 保有中
-  READY: 'focus',   // エントリー可＝注目
-  FOCUS: 'focus',   // 注目
-  SECOND: 'idle',   // 二軍・様子見
-  SHORT: 'weak',    // 空売り候補（買い方向としては弱い）
-  OTHERS: 'idle',   // その他＝未整理
-  INBOX: 'idle',    // 未仕分け
-  SOLD: 'archive',  // 売却済アーカイブ
-}
-
-export function stateTone(state: string | null | undefined): SemanticTone {
-  return STATE_TONE[state as WatchState] ?? 'idle'
 }
 
 /**

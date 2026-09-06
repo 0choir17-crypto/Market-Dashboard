@@ -1,64 +1,10 @@
 'use client'
 
-// Watchlist Journal の 3 セクション（現在の状態 / 今日の差分 / 見逃しボード）で
-// 共有する小物。旧 /watchlist の ScreenTagBadge に相当する部品群。
+// Watchlist Journal の 2 セクション（Current State / Missed Board）で共有するセル。
+// 表そのものの骨格（ソート・グループ・要約/詳細）は components/shared/DataTable.tsx。
 
-import { stateTone } from '@/types/watchlistJournal'
-import { toneVars } from '@/types/semantic'
 import { formatPct, formatYen } from '@/lib/format'
 import { shikihoUrl, tradingViewUrl } from '@/lib/tickerLinks'
-
-/**
- * 状態のラベル。
- *
- * バッジ（塗り + 枠）はやめてテキストにした。Current State は既に state で
- * グループ化されており、その中の全行に同じ色のバッジを置くのは同じ情報の
- * 二重描画になる。重みは色ではなく行左端のレール（`READY` のみ）で表す。
- */
-export function StateLabel({ state }: { state: string | null | undefined }) {
-  if (!state) return <span className="text-[var(--sem-idle-fg)]">—</span>
-  return (
-    <span className="text-caption tracking-wide text-[var(--text-secondary)]">{state}</span>
-  )
-}
-
-/** 語彙の色を面として使う数少ない場所（鮮度バッジなど）向けのインラインスタイル。 */
-export function toneStyle(state: string | null | undefined) {
-  const t = toneVars(stateTone(state))
-  return { backgroundColor: t.bg, color: t.fg, border: `0.5px solid ${t.bd}` }
-}
-
-/**
- * その日ヒットしていたスキャナー名。
- *
- * 空欄は「自力発見」と断定できない: ①どのスキャナーも拾えていなかった のほかに
- * ②その日スキャナーリストを TradingView に貼らなかった が混ざっていて区別できない。
- * ラベルを付けると誤解を招くので `—` に留める（集計もしない）。
- */
-export function ScannerTags({ names }: { names: string[] | null | undefined }) {
-  if (!names || names.length === 0) {
-    return (
-      <span
-        className="text-[var(--sem-idle-fg)]"
-        title="スキャナー名の記録なし（どのスキャナーも拾えていない場合と、その日リストを貼らなかった場合が区別できません）"
-      >
-        —
-      </span>
-    )
-  }
-  return (
-    <span className="inline-flex flex-wrap gap-1">
-      {names.map(n => (
-        <span
-          key={n}
-          className="inline-block px-1.5 py-0.5 rounded text-caption bg-[var(--sem-idle-bg)] text-[var(--sem-idle-fg)] whitespace-nowrap"
-        >
-          {n}
-        </span>
-      ))}
-    </span>
-  )
-}
 
 /**
  * 損益率セル。NULL は「0%」ではなく欠損として出す（§6）。
@@ -164,7 +110,7 @@ export function TickerCell({
         href={tradingViewUrl(code)}
         target="_blank"
         rel="noopener noreferrer"
-        className="font-mono font-semibold text-[var(--accent)] hover:underline flex-shrink-0"
+        className="font-mono font-medium text-[var(--sem-focus-fg)] hover:underline flex-shrink-0"
         title={`${code}（TradingView を開く）`}
       >
         {code}
@@ -173,7 +119,7 @@ export function TickerCell({
         href={shikihoUrl(code)}
         target="_blank"
         rel="noopener noreferrer"
-        className="text-xs text-[var(--text-muted)] hover:text-[var(--accent)] hover:underline truncate min-w-0"
+        className="text-small text-[var(--text-muted)] hover:text-[var(--sem-focus-fg)] hover:underline truncate min-w-0"
         title={`${name ?? '—'}（四季報を開く）`}
       >
         {name ?? '—'}
@@ -185,7 +131,7 @@ export function TickerCell({
 /** 件数が少ないことを明示する注記。勝率・PF・期待値は出さない（§3.4）。 */
 export function SampleSizeNote({ n, children }: { n: number; children?: React.ReactNode }) {
   return (
-    <p className="text-[11px] text-[var(--text-muted)] mt-2">
+    <p className="text-caption text-[var(--text-muted)] mt-2">
       n={n} — 件数がまだ少ないため中央値のみ。勝率・PF・期待値は出しません
       {children}
     </p>

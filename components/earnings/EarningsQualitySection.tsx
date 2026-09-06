@@ -22,7 +22,7 @@ import {
 import type { EarningsQualitySnapshot } from '@/lib/earningsQualityFetch'
 import { formatPct } from '@/lib/format'
 import { shikihoUrl, tradingViewUrl } from '@/lib/tickerLinks'
-import Tooltip from '@/components/shared/Tooltip'
+import SortTh from '@/components/shared/SortTh'
 
 type SortKey =
   | 'rank_in_day'
@@ -243,44 +243,7 @@ function DiscTimeCell({ t }: { t: string | null }) {
   )
 }
 
-// ── ソート可能ヘッダ ───────────────────────────────────────────────────────
-function SortTh({
-  label,
-  tooltip,
-  sortKey,
-  currentKey,
-  currentDir,
-  onSort,
-  align = 'right',
-  className = '',
-}: {
-  label: string
-  tooltip?: string
-  sortKey: SortKey
-  currentKey: SortKey
-  currentDir: SortDir
-  onSort: (k: SortKey) => void
-  align?: 'left' | 'right' | 'center'
-  className?: string
-}) {
-  const active = currentKey === sortKey
-  const indicator = active ? (currentDir === 'asc' ? ' ↑' : ' ↓') : ' ↕'
-  const alignClass =
-    align === 'left' ? 'text-left' : align === 'center' ? 'text-center' : 'text-right'
-  const inner = tooltip ? <Tooltip content={tooltip}>{label}</Tooltip> : <>{label}</>
-  return (
-    <th
-      onClick={() => onSort(sortKey)}
-      aria-sort={active ? (currentDir === 'asc' ? 'ascending' : 'descending') : 'none'}
-      className={`px-2 py-2.5 text-xs font-medium uppercase tracking-wide whitespace-nowrap cursor-pointer select-none hover:bg-gray-100 transition-colors ${alignClass} ${
-        active ? 'text-[var(--accent)]' : 'text-[var(--text-secondary)]'
-      } ${className}`}
-    >
-      {inner}
-      <span className="text-[10px] opacity-50">{indicator}</span>
-    </th>
-  )
-}
+
 
 // Q バッジ色。FY は四半期と質が違う (本決算) ので独立した色を割り当てる。
 function qBadgeClass(q: CurPerType): string {
