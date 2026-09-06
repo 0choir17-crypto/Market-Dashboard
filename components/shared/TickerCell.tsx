@@ -30,7 +30,7 @@ export default function TickerCell({
         href={shikihoUrl(code)}
         target="_blank"
         rel="noopener noreferrer"
-        className="text-small text-[var(--text-muted)] hover:text-[var(--sem-focus-fg)] hover:underline truncate min-w-0"
+        className="text-small text-[var(--text-secondary)] hover:text-[var(--sem-focus-fg)] hover:underline truncate min-w-0"
         title={`${name ?? '—'}（四季報を開く）`}
       >
         {name ?? '—'}

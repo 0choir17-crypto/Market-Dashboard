@@ -17,8 +17,8 @@ export const CHART = {
   ground: '#f6f7f9', // --bg-primary
   card: '#ffffff', // --bg-card
   textPrimary: '#1a1d23', // --text-primary
-  textSecondary: '#6b7280', // --text-secondary
-  textMuted: '#9ca3af', // --text-muted
+  textSecondary: '#4b5563', // --text-secondary
+  textMuted: '#6b7280', // --text-muted
   positive: '#16a34a', // --positive
   negative: '#dc2626', // --negative
   strongFg: '#15803d', // --sem-strong-fg
