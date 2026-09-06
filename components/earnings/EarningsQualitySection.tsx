@@ -770,7 +770,6 @@ export default function EarningsQualitySection({
           // 満点の行は左端のレールで示す（面を塗ると当日の全行が緑に沈む）
           rail={r => (r.score3 >= maxScoreFor(r.cur_per_type) ? 'var(--sem-strong-fg)' : null)}
           tieBreak={tieBreak}
-          fullMinWidth={1500}
         />
 
         {deduped.length === 0 && (

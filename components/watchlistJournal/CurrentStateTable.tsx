@@ -209,7 +209,6 @@ export default function CurrentStateTable({ rows }: Props) {
             )}
           </span>
         )}
-        fullMinWidth={1320}
       />
     </section>
   )

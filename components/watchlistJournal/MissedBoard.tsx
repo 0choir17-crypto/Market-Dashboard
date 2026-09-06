@@ -242,7 +242,6 @@ export default function MissedBoard({ rows }: Props) {
           defaultSort={{ key: 'max_ret_pct', dir: 'desc' }}
           // 重みは塗りではなく左端のレールで示す
           rail={r => (r.from_state === 'READY' ? 'var(--sem-focus-fg)' : null)}
-          fullMinWidth={980}
         />
       </div>
     </section>

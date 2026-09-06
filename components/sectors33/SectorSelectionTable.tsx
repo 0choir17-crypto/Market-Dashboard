@@ -411,7 +411,6 @@ export default function SectorSelectionTable({
           }}
           // 信頼度低（銘柄数が少なくノイズが大きい）は減光して沈める
           rowClassName={row => (row.confidence_low === 1 ? 'opacity-60' : '')}
-          fullMinWidth={1100}
           summaryToggle={false}
         />
       )}

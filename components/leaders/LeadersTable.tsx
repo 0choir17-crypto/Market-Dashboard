@@ -359,7 +359,6 @@ export default function LeadersTable({ rows, hitsMap, query }: Props) {
           columns={columns}
           rowKey={r => r.code}
           defaultSort={{ key: 'market_rank', dir: 'asc' }}
-          fullMinWidth={1360}
         />
       )}
 
