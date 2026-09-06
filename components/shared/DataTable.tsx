@@ -30,6 +30,8 @@ export type Column<Row> = {
   sortable?: boolean
   /** ソートに使う値。省略時はソート不可として扱う。 */
   value?: (row: Row) => string | number | null
+  /** その列を初めて選んだときの向き。順位や名前は昇順で見たいので 'asc' を指定する。 */
+  defaultDir?: SortDirection
   render: (row: Row) => ReactNode
   /**
    * 要約ビューに出すか。false の列は詳細行にだけ現れる。
@@ -65,6 +67,15 @@ type Props<Row> = {
 
   /** 詳細行に出す追加の中身（summary:false の列の下に置かれる）。 */
   renderDetail?: (row: Row) => ReactNode
+  /** 行全体のクリックで詳細を開閉する（専用ボタンを出さない）。 */
+  expandOnRowClick?: boolean
+  /** 行に足すクラス。信頼度の低い行を減光する、といった用途。 */
+  rowClassName?: (row: Row) => string
+  /**
+   * ソート値が同値のときの決定規則。指定しないと元の順序のまま（安定ソート）。
+   * 同値が並ぶ列（グループ別の順位など）で並びを決定的にしたいときに使う。
+   */
+  tieBreak?: (a: Row, b: Row) => number
   /** 全列ビューのときだけ必要な最小幅。要約ビューは min-w を持たない。 */
   fullMinWidth?: number
   /** 要約 / 全列トグルを出すか。false なら常に全列。 */
@@ -82,6 +93,9 @@ export default function DataTable<Row>({
   defaultCollapsed = [],
   rail,
   renderDetail,
+  expandOnRowClick = false,
+  rowClassName,
+  tieBreak,
   fullMinWidth,
   summaryToggle = true,
 }: Props<Row>) {
@@ -94,14 +108,17 @@ export default function DataTable<Row>({
   const hasSummary = columns.some(c => c.summary === false)
   const visible = showAll || !hasSummary ? columns : columns.filter(c => c.summary !== false)
   const hiddenInSummary = columns.filter(c => c.summary === false)
-  // 詳細行を開けるのは、隠れている列があるか renderDetail があるときだけ
-  const detailAvailable = !showAll && (hiddenInSummary.length > 0 || renderDetail != null)
+  // 詳細行を開けるのは、隠れている列があるか renderDetail があるとき。
+  // renderDetail は列の出し分けとは独立した中身なので、全列ビューでも開ける。
+  const detailAvailable = renderDetail != null || (!showAll && hiddenInSummary.length > 0)
+  // 行クリックで開く場合は専用ボタンの列を作らない
+  const detailButton = detailAvailable && !expandOnRowClick
 
   function handleSort(key: string) {
     if (sortKey === key) setSortDir(d => (d === 'asc' ? 'desc' : 'asc'))
     else {
       setSortKey(key)
-      setSortDir('desc')
+      setSortDir(columns.find(c => c.key === key)?.defaultDir ?? 'desc')
     }
   }
 
@@ -115,8 +132,10 @@ export default function DataTable<Row>({
   const groups: Group<Row>[] = useMemo(() => {
     const col = columns.find(c => c.key === sortKey)
     const getValue = col?.value
-    const cmp = (a: Row, b: Row) =>
-      getValue ? compareValues(getValue(a), getValue(b), sortDir) : 0
+    const cmp = (a: Row, b: Row) => {
+      const c = getValue ? compareValues(getValue(a), getValue(b), sortDir) : 0
+      return c !== 0 ? c : (tieBreak?.(a, b) ?? 0)
+    }
 
     if (!groupBy) return [{ key: '', rows: [...rows].sort(cmp) }]
 
@@ -130,9 +149,9 @@ export default function DataTable<Row>({
     const entries = [...byKey.entries()]
     if (groupRank) entries.sort((a, b) => groupRank(a[0]) - groupRank(b[0]))
     return entries.map(([key, list]) => ({ key, rows: [...list].sort(cmp) }))
-  }, [rows, columns, sortKey, sortDir, groupBy, groupRank])
+  }, [rows, columns, sortKey, sortDir, groupBy, groupRank, tieBreak])
 
-  const colSpan = visible.length + (detailAvailable ? 1 : 0)
+  const colSpan = visible.length + (detailButton ? 1 : 0)
 
   const body = (group: Group<Row>) =>
     group.rows.map(row => {
@@ -141,7 +160,12 @@ export default function DataTable<Row>({
       const open = expanded.has(id)
       return (
         <Fragment key={id}>
-          <tr className="border-t-[0.5px] border-[var(--border)] hover:bg-[var(--bg-card-hover)]">
+          <tr
+            onClick={expandOnRowClick && detailAvailable ? () => toggle(expanded, setExpanded, id) : undefined}
+            className={`border-t-[0.5px] border-[var(--border)] hover:bg-[var(--bg-card-hover)] ${
+              expandOnRowClick && detailAvailable ? 'cursor-pointer' : ''
+            } ${rowClassName?.(row) ?? ''}`}
+          >
             {visible.map((c, i) => (
               <td
                 key={c.key}
@@ -153,7 +177,7 @@ export default function DataTable<Row>({
                 {c.render(row)}
               </td>
             ))}
-            {detailAvailable && (
+            {detailButton && (
               <td className="px-2.5 py-2 text-right">
                 <button
                   onClick={() => toggle(expanded, setExpanded, id)}
@@ -171,7 +195,7 @@ export default function DataTable<Row>({
             <tr className="border-t-[0.5px] border-[var(--border)] bg-[var(--bg-primary)]">
               <td colSpan={colSpan} className="px-4 py-3">
                 {/* 一覧に置かなかった列を、決断のための面としてここに並べる */}
-                {hiddenInSummary.length > 0 && (
+                {!showAll && hiddenInSummary.length > 0 && (
                   <dl className="grid gap-x-6 gap-y-1.5 grid-cols-[repeat(auto-fill,minmax(180px,1fr))]">
                     {hiddenInSummary.map(c => (
                       <div key={c.key} className="flex items-baseline justify-between gap-2">
@@ -245,7 +269,7 @@ export default function DataTable<Row>({
                   </th>
                 ),
               )}
-              {detailAvailable && <th className="w-8" aria-label="詳細" />}
+              {detailButton && <th className="w-8" aria-label="詳細" />}
             </tr>
           </thead>
 

@@ -15,7 +15,8 @@
 import type { WatchlistCurrentRow } from '@/types/watchlistJournal'
 import { riskPct, stateOrderIndex } from '@/types/watchlistJournal'
 import DataTable, { type Column } from '@/components/shared/DataTable'
-import { NumCell, PctCell, TickerCell, YenCell } from './atoms'
+import TickerCell from '@/components/shared/TickerCell'
+import { NumCell, PctCell, YenCell } from './atoms'
 
 type Props = {
   rows: WatchlistCurrentRow[]

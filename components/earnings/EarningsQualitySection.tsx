@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import type { CurPerType, EarningsQualityRow } from '@/types/earningsQuality'
 import {
   CUR_PER_TYPES,
@@ -21,21 +21,9 @@ import {
 } from '@/types/earningsQuality'
 import type { EarningsQualitySnapshot } from '@/lib/earningsQualityFetch'
 import { formatPct } from '@/lib/format'
-import { shikihoUrl, tradingViewUrl } from '@/lib/tickerLinks'
-import SortTh from '@/components/shared/SortTh'
+import DataTable, { type Column } from '@/components/shared/DataTable'
+import TickerCell from '@/components/shared/TickerCell'
 
-type SortKey =
-  | 'rank_in_day'
-  | 'score3'
-  | 'co_name'
-  | 'sector_s33'
-  | 'div_change_pct'
-  | 'eps_yoy_pct'
-  | 'sales_yoy_pct'
-  | 'fop_rev_pct'
-  | 'progress_excess_pct'
-  | 'turnover_oku'
-type SortDir = 'asc' | 'desc'
 
 function isNum(v: number | null | undefined): v is number {
   return v != null && Number.isFinite(v)
@@ -262,144 +250,223 @@ function qBadgeClass(q: CurPerType): string {
 }
 
 // ── 行 (1 銘柄) ───────────────────────────────────────────────────────────
-function Row({
-  row,
-  dup,
-  collapsed,
-}: {
-  row: EarningsQualityRow
-  dup?: DupInfo
-  collapsed: boolean
-}) {
-  const noQoq = !hasQoq(row.cur_per_type)
-  const max = maxScoreFor(row.cur_per_type)
-  const isPerfect = row.score3 >= max
-  const isTop1pct = isNum(row.pct_rank_in_day) && row.pct_rank_in_day <= TOP_1PCT_THRESHOLD
-  const qGroup = qGroupOf(row.cur_per_type)
-
-  return (
-    <tr
-      className={`border-b border-[var(--border-subtle)] transition-colors hover:bg-[var(--bg-card-hover)] ${
-        isPerfect ? 'bg-emerald-50/60' : 'bg-[var(--bg-card)]'
-      }`}
-    >
-      <td
-        className="px-2 py-2 text-center font-mono text-xs text-gray-500 tabular-nums"
-        title={`当日の ${qGroup} グループ内での順位 (1Q / 2Q3Q / FY は上限点が違うため別ランキング。同じ日に 1 位が最大 3 行出ます)`}
-      >
-        <div className="flex flex-col items-center leading-tight">
-          <span>
-            {row.rank_in_day ?? '—'}
-            {isTop1pct && (
+/**
+ * 列定義を作る。
+ *
+ * 表の骨格（ソート・要約/詳細・行の装飾）は components/shared/DataTable.tsx が持つ。
+ * ここは「どの列を、どう描くか」だけを持つ。
+ *
+ * 要約 7 列は「当日の全行を横断比較するための数値」に絞った（設計原則 3）。
+ * 終値・売買代金・SMA200・開示時刻・セクター・Verdict・Q は 1 銘柄を決めるための
+ * 情報なので詳細行に落とし、1500px の横スクロールを解消する。
+ */
+function buildColumns(
+  dupMap: Map<string, DupInfo>,
+  collapsed: boolean,
+): Column<EarningsQualityRow>[] {
+  return [
+    {
+      key: 'rank_in_day',
+      label: '順位',
+      tooltip:
+        'rank_in_day — 当日の 1Q / 2Q3Q / FY それぞれの中での score3 降順順位 (1=トップ)。上限点が違う群を混ぜないための分割で、同じ日に 1 位が最大 3 行出ます',
+      align: 'center',
+      value: r => r.rank_in_day,
+      defaultDir: 'asc',
+      className: 'w-16',
+      render: r => {
+        const isTop1pct = isNum(r.pct_rank_in_day) && r.pct_rank_in_day <= TOP_1PCT_THRESHOLD
+        return (
+          <div className="flex flex-col items-center leading-tight num text-[var(--text-secondary)]">
+            <span>
+              {r.rank_in_day ?? '—'}
+              {isTop1pct && (
+                <span
+                  title="当日 Q別 Top 1% (検証 end_per_risk 1.131 / +20%到達 28.9%)"
+                  className="ml-0.5 text-[var(--sem-watch-fg)]"
+                >
+                  ★
+                </span>
+              )}
+            </span>
+            <span className="text-caption text-[var(--text-muted)]">{qGroupOf(r.cur_per_type)}</span>
+          </div>
+        )
+      },
+    },
+    {
+      key: 'score3',
+      label: 'Score',
+      tooltip:
+        'score3 = s_div + s_eps + s_sales + s_guide (0-9)。1Q は QoQ 2軸が、FY は予想修正軸が構造的に無く最大 7 — 表示は常に score/最大点',
+      align: 'center',
+      value: r => r.score3,
+      className: 'w-20',
+      render: r => <Score3Badge row={r} />,
+    },
+    {
+      key: 'code',
+      label: 'Code / 銘柄名',
+      tooltip: '銘柄コード → TradingView / 銘柄名 → 四季報',
+      align: 'left',
+      value: r => r.code,
+      defaultDir: 'asc',
+      render: r => {
+        const dup = dupMap.get(r.code)
+        return (
+          <div className="flex items-center gap-1.5 min-w-0">
+            <TickerCell code={r.code} name={r.co_name} />
+            {dup && dup.count > 1 && (
               <span
-                title="当日 Q別 Top 1% (検証 end_per_risk 1.131 / +20%到達 28.9%)"
-                className="ml-0.5 text-amber-500"
+                className="px-1 rounded text-caption bg-[var(--sem-idle-bg)] text-[var(--sem-idle-fg)] whitespace-nowrap shrink-0"
+                title={
+                  `同日に ${dup.count} 本の決算を開示 (${dup.types.join(' / ')})。` +
+                  (collapsed
+                    ? `\n最新の ${r.cur_per_type} を代表として表示中 — 他は「1銘柄1行」を解除すると出ます`
+                    : '\n決算を延期していた企業がまとめて開示したケースなどで、いずれも別々の開示です')
+                }
               >
-                ⭐
+                {collapsed ? `他${dup.count - 1}` : `同日${dup.count}`}
               </span>
             )}
-          </span>
-          <span className="text-[9px] text-gray-400">{qGroup}</span>
-        </div>
-      </td>
-      <td className="px-2 py-2 text-center whitespace-nowrap">
-        <Score3Badge row={row} />
-      </td>
-      <td className="px-2 py-2 whitespace-nowrap text-[11px] text-gray-700">
-        {row.verdict ?? <span className="text-gray-400">—</span>}
-      </td>
-      <td className="px-2 py-2 whitespace-nowrap">
-        <div className="flex items-center gap-1">
-          <a
-            href={tradingViewUrl(row.code)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="font-mono text-xs text-[var(--accent)] hover:underline"
-          >
-            {row.code}
-          </a>
-          {dup && dup.count > 1 && (
-            <span
-              className="px-1 rounded text-[9px] font-semibold bg-slate-200 text-slate-600 whitespace-nowrap"
-              title={
-                `同日に ${dup.count} 本の決算を開示 (${dup.types.join(' / ')})。` +
-                (collapsed
-                  ? `\n最新の ${row.cur_per_type} を代表として表示中 — 他は「1銘柄1行」を解除すると出ます`
-                  : '\n決算を延期していた企業がまとめて開示したケースなどで、いずれも別々の開示です')
-              }
-            >
-              {collapsed ? `他${dup.count - 1}` : `同日${dup.count}`}
-            </span>
-          )}
-        </div>
-      </td>
-      <td className="px-2 py-2 whitespace-nowrap text-xs text-gray-800 max-w-[200px] truncate">
-        <a
-          href={shikihoUrl(row.code)}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="hover:underline"
-          title={row.co_name ?? undefined}
-        >
-          {row.co_name ?? '—'}
-        </a>
-      </td>
-      <td className="px-2 py-2 whitespace-nowrap text-[11px] text-gray-600">
-        {row.sector_s33 ?? <span className="text-gray-400">—</span>}
-      </td>
-      <td className="px-2 py-2 text-right">
-        <YoyQoqCell yoy={row.sales_yoy_pct} qoq={row.sales_qoq_pct} q1Note={noQoq} />
-      </td>
-      <td className="px-2 py-2 text-right">
-        <YoyQoqCell yoy={row.eps_yoy_pct} qoq={row.eps_qoq_pct} q1Note={noQoq} />
-      </td>
-      <td className="px-2 py-2 text-right whitespace-nowrap">
-        <DivCell row={row} />
-      </td>
-      <td className="px-2 py-2 text-right whitespace-nowrap">
-        <OpCell row={row} />
-      </td>
-      <td className="px-2 py-2 text-right whitespace-nowrap">
-        <ProgressCell row={row} />
-      </td>
-      <td className="px-2 py-2 text-right font-mono text-xs text-gray-700 tabular-nums">
-        {fmtNum(row.close, 0)}
-      </td>
-      <td className="px-2 py-2 text-right font-mono text-xs text-gray-700 tabular-nums">
-        {isNum(row.turnover_oku) ? `${row.turnover_oku.toFixed(1)}億` : '—'}
-      </td>
-      <td className="px-2 py-2 text-center text-xs">
-        {row.above_sma200 === true ? (
+          </div>
+        )
+      },
+    },
+    {
+      key: 'sales_yoy_pct',
+      label: '売上 YoY/QoQ',
+      tooltip: '上: sales_yoy_pct (単Q 前年同期比 %) / 下: sales_qoq_pct (前期単Q比 %)',
+      value: r => r.sales_yoy_pct,
+      render: r => (
+        <YoyQoqCell yoy={r.sales_yoy_pct} qoq={r.sales_qoq_pct} q1Note={!hasQoq(r.cur_per_type)} />
+      ),
+    },
+    {
+      key: 'eps_yoy_pct',
+      label: 'EPS YoY/QoQ',
+      tooltip:
+        '上: eps_yoy_pct (単Q 前年同期比 %) / 下: eps_qoq_pct (前期単Q比 %。1Q は計算不能で n/a)',
+      value: r => r.eps_yoy_pct,
+      render: r => (
+        <YoyQoqCell yoy={r.eps_yoy_pct} qoq={r.eps_qoq_pct} q1Note={!hasQoq(r.cur_per_type)} />
+      ),
+    },
+    {
+      key: 'div_change_pct',
+      label: '配当',
+      tooltip:
+        'div_change_pct — s_div の根拠。1Q-3Q は年間配当予想の増減率 % / FY は期末の配当上積み (実績年間配当 vs 同FY直近予想)。>=10 で「大」。FY は実績の前期比 (div_yoy_pct) を下段に併記',
+      value: r => r.div_change_pct,
+      render: r => <DivCell row={r} />,
+    },
+    {
+      key: 'fop_rev_pct',
+      label: '通期 OP',
+      tooltip:
+        '1Q-3Q: fop_rev_pct — 通期予想 OP 上方修正率 % (同 FY 前回 FOP 比)。s_guide 軸の根拠で、加点された行は加点数を表示。FY: 修正対象の通期予想が無いため代わりに op_beat_pct (着地 beat) をスコア非対象として表示',
+      value: r => r.fop_rev_pct,
+      render: r => <OpCell row={r} />,
+    },
+
+    // ── ここから下は詳細行だけ（1 銘柄を決めるための情報）────────────────
+    {
+      key: 'progress_excess_pct',
+      label: '進捗超過',
+      tooltip: 'progress_excess_pct — 実進捗 − 期待ペース (pt)。FY は進捗の概念が無く対象外',
+      summary: false,
+      value: r => r.progress_excess_pct,
+      render: r => <ProgressCell row={r} />,
+    },
+    {
+      key: 'verdict',
+      label: 'Verdict',
+      summary: false,
+      align: 'left',
+      value: r => r.verdict,
+      render: r => (
+        <span className="text-small text-[var(--text-secondary)]">
+          {r.verdict ?? <span className="text-[var(--sem-idle-fg)]">—</span>}
+        </span>
+      ),
+    },
+    {
+      key: 'sector_s33',
+      label: 'セクター',
+      summary: false,
+      align: 'left',
+      value: r => r.sector_s33,
+      render: r => (
+        <span className="text-small text-[var(--text-secondary)]">
+          {r.sector_s33 ?? <span className="text-[var(--sem-idle-fg)]">—</span>}
+        </span>
+      ),
+    },
+    {
+      key: 'close',
+      label: '終値',
+      summary: false,
+      value: r => r.close,
+      render: r => <span className="num text-[var(--text-secondary)]">{fmtNum(r.close, 0)}</span>,
+    },
+    {
+      key: 'turnover_oku',
+      label: '売買代金',
+      tooltip: 'turnover_oku — 20 日平均売買代金 (億円)',
+      summary: false,
+      value: r => r.turnover_oku,
+      render: r => (
+        <span className="num text-[var(--text-secondary)]">
+          {isNum(r.turnover_oku) ? `${r.turnover_oku.toFixed(1)}億` : '—'}
+        </span>
+      ),
+    },
+    {
+      key: 'above_sma200',
+      label: 'SMA200',
+      summary: false,
+      align: 'center',
+      render: r =>
+        r.above_sma200 === true ? (
           <span className="text-[var(--positive)]" title=">200日SMA">
-            ✓
+            上
           </span>
-        ) : row.above_sma200 === false ? (
+        ) : r.above_sma200 === false ? (
           <span className="text-[var(--negative)]" title="<200日SMA">
-            ✗
+            下
           </span>
         ) : (
-          <span className="text-gray-400">—</span>
-        )}
-      </td>
-      <td className="px-2 py-2 text-center">
-        <DiscTimeCell t={row.disc_time} />
-      </td>
-      <td className="px-2 py-2 text-center">
+          <span className="text-[var(--sem-idle-fg)]">—</span>
+        ),
+    },
+    {
+      key: 'disc_time',
+      label: '開示時刻',
+      summary: false,
+      align: 'center',
+      render: r => <DiscTimeCell t={r.disc_time} />,
+    },
+    {
+      key: 'cur_per_type',
+      label: 'Q',
+      summary: false,
+      align: 'center',
+      render: r => (
         <span
-          className={`inline-block px-2 py-0.5 rounded-full text-[11px] font-mono font-semibold ${qBadgeClass(
-            row.cur_per_type,
+          className={`inline-block px-2 py-0.5 rounded-full text-caption num ${qBadgeClass(
+            r.cur_per_type,
           )}`}
           title={
-            row.cur_per_type === 'FY'
+            r.cur_per_type === 'FY'
               ? 'FY = 通期本決算。増配軸は「期末の配当上積み」、通期予想修正軸は対象外 (上限 7 点)'
               : undefined
           }
         >
-          {row.cur_per_type}
+          {r.cur_per_type}
         </span>
-      </td>
-    </tr>
-  )
+      ),
+    },
+  ]
 }
 
 // ── マルチセレクトチップ ───────────────────────────────────────────────────
@@ -478,10 +545,6 @@ function collapseByCode(rows: EarningsQualityRow[]): EarningsQualityRow[] {
 // ソート用の値。「通期 OP」列は FY で fop_rev_pct が常に NULL のため表示値
 // (op_beat_pct) を返す。意味は違うが、列に出ている値と並び順を一致させる方が
 // 誤解が少ない (FY と四半期が同日に混在するのは訂正開示くらいで稀)。
-function sortValue(row: EarningsQualityRow, key: SortKey): number | null | undefined {
-  if (key === 'fop_rev_pct' && row.cur_per_type === 'FY') return row.op_beat_pct
-  return row[key] as number | null | undefined
-}
 
 // ── メインセクション ───────────────────────────────────────────────────────
 export default function EarningsQualitySection({
@@ -500,8 +563,6 @@ export default function EarningsQualitySection({
   const [sectorSelected, setSectorSelected] = useState<Set<string>>(new Set())
   // 同日に複数 Q を開示した銘柄を 1 行に畳むか。既定は OFF (データどおり全件表示)
   const [collapsed, setCollapsed] = useState(false)
-  const [sortKey, setSortKey] = useState<SortKey>('score3')
-  const [sortDir, setSortDir] = useState<SortDir>('desc')
 
   function toggleSet<T>(s: Set<T>, v: T): Set<T> {
     const ns = new Set(s)
@@ -510,14 +571,6 @@ export default function EarningsQualitySection({
     return ns
   }
 
-  function handleSort(k: SortKey) {
-    if (sortKey === k) {
-      setSortDir(d => (d === 'asc' ? 'desc' : 'asc'))
-    } else {
-      setSortKey(k)
-      setSortDir(k === 'rank_in_day' || k === 'co_name' || k === 'sector_s33' ? 'asc' : 'desc')
-    }
-  }
 
   const dupMap = useMemo(() => buildDupMap(rows), [rows])
   // 同日に複数開示した銘柄が 1 つも無ければトグル自体を出さない
@@ -559,42 +612,17 @@ export default function EarningsQualitySection({
     [filtered, collapsed],
   )
 
-  const sorted = useMemo(() => {
-    const arr = [...deduped]
-    arr.sort((a, b) => {
-      let av: number | string
-      let bv: number | string
-      if (sortKey === 'rank_in_day') {
-        av = a.rank_in_day ?? Number.POSITIVE_INFINITY
-        bv = b.rank_in_day ?? Number.POSITIVE_INFINITY
-      } else if (sortKey === 'co_name') {
-        const cmp = (a.co_name ?? '').localeCompare(b.co_name ?? '', 'ja')
-        return sortDir === 'asc' ? cmp : -cmp
-      } else if (sortKey === 'sector_s33') {
-        const cmp = (a.sector_s33 ?? '').localeCompare(b.sector_s33 ?? '', 'ja')
-        return sortDir === 'asc' ? cmp : -cmp
-      } else {
-        const aRaw = sortValue(a, sortKey)
-        const bRaw = sortValue(b, sortKey)
-        av = isNum(aRaw) ? aRaw : Number.NEGATIVE_INFINITY
-        bv = isNum(bRaw) ? bRaw : Number.NEGATIVE_INFINITY
-      }
-      if (av === bv) {
-        // tie-break: rank_in_day asc → score3 desc → code asc
-        // rank_in_day は Q グループ別なので同値が並ぶ (同じ日に 1 位が 2 行)。
-        // score3 と code まで見て順序を決定的にする。
-        const ar = a.rank_in_day ?? Number.POSITIVE_INFINITY
-        const br = b.rank_in_day ?? Number.POSITIVE_INFINITY
-        if (ar !== br) return ar - br
-        if (a.score3 !== b.score3) return b.score3 - a.score3
-        return a.code.localeCompare(b.code)
-      }
-      return sortDir === 'asc' ? (av > bv ? 1 : -1) : av < bv ? 1 : -1
-    })
-    return arr
-  }, [deduped, sortKey, sortDir])
+  const columns = useMemo(() => buildColumns(dupMap, collapsed), [dupMap, collapsed])
 
-  const sp = { currentKey: sortKey, currentDir: sortDir, onSort: handleSort }
+  // 同値のときの決定規則: rank_in_day 昇順 → score3 降順 → code 昇順。
+  // rank_in_day は Q グループ別なので同値が並ぶ（同じ日に 1 位が最大 3 行）。
+  const tieBreak = useCallback((a: EarningsQualityRow, b: EarningsQualityRow) => {
+    const ar = a.rank_in_day ?? Number.POSITIVE_INFINITY
+    const br = b.rank_in_day ?? Number.POSITIVE_INFINITY
+    if (ar !== br) return ar - br
+    if (a.score3 !== b.score3) return b.score3 - a.score3
+    return a.code.localeCompare(b.code)
+  }, [])
 
   return (
     <>
@@ -606,7 +634,6 @@ export default function EarningsQualitySection({
       {/* ── 旧スコア (v2 バックフィル前) の注意 ─────────────────────── */}
       {scoreData.state !== 'ok' && (
         <div className="mb-5 px-4 py-2.5 rounded-lg bg-amber-50 border border-amber-300 text-amber-900 text-sm flex items-start gap-2">
-          <span className="text-base leading-tight">⚠️</span>
           <div>
             {scoreData.state === 'column-missing' ? (
               <>
@@ -726,49 +753,27 @@ export default function EarningsQualitySection({
             </label>
           )}
           <span className="ml-auto text-xs text-[var(--text-muted)]">
-            <span className="font-mono">{sorted.length} / {rows.length}</span> 件表示
-            {collapsed && filtered.length > sorted.length && (
+            <span className="font-mono">{deduped.length} / {rows.length}</span> 件表示
+            {collapsed && filtered.length > deduped.length && (
               <span className="ml-1 text-[10px]">
-                (同日重複 {filtered.length - sorted.length} 件を集約)
+                (同日重複 {filtered.length - deduped.length} 件を集約)
               </span>
             )}
           </span>
         </div>
 
-        <table className="w-full min-w-[1500px] text-sm">
-          <thead>
-            <tr className="bg-[var(--bg-card-hover)] border-y border-[var(--border)]">
-              <SortTh label="順位" tooltip="rank_in_day — 当日の 1Q / 2Q3Q / FY それぞれの中での score3 降順順位 (1=トップ)。上限点が違う群を混ぜないための分割で、同じ日に 1 位が最大 3 行出ます" sortKey="rank_in_day" {...sp} align="center" className="w-16" />
-              <SortTh label="Score" tooltip="score3 = s_div + s_eps + s_sales + s_guide (0-9)。1Q は QoQ 2軸が、FY は予想修正軸が構造的に無く最大 7 — 表示は常に score/最大点" sortKey="score3" {...sp} align="center" className="w-20" />
-              <th className="px-2 py-2.5 text-xs font-medium uppercase tracking-wide text-left text-[var(--text-secondary)]">Verdict</th>
-              <th className="px-2 py-2.5 text-xs font-medium uppercase tracking-wide text-left text-[var(--text-secondary)] w-20">Code</th>
-              <SortTh label="銘柄名" sortKey="co_name" {...sp} align="left" className="min-w-[180px]" />
-              <SortTh label="セクター" sortKey="sector_s33" {...sp} align="left" className="min-w-[110px]" />
-              <SortTh label="売上 YoY/QoQ" tooltip="上: sales_yoy_pct (単Q 前年同期比 %) / 下: sales_qoq_pct (前期単Q比 %)" sortKey="sales_yoy_pct" {...sp} />
-              <SortTh label="EPS YoY/QoQ" tooltip="上: eps_yoy_pct (単Q 前年同期比 %) / 下: eps_qoq_pct (前期単Q比 %。1Q は計算不能で n/a)" sortKey="eps_yoy_pct" {...sp} />
-              <SortTh label="配当" tooltip="div_change_pct — s_div の根拠。1Q-3Q は年間配当予想の増減率 % / FY は期末の配当上積み (実績年間配当 vs 同FY直近予想)。>=10 で「大」★。FY は実績の前期比 (div_yoy_pct) を下段に併記" sortKey="div_change_pct" {...sp} />
-              <SortTh label="通期 OP" tooltip="1Q-3Q: fop_rev_pct — 通期予想 OP 上方修正率 % (同 FY 前回 FOP 比)。s_guide 軸の根拠で、加点された行は太字＋加点数を表示。FY: 修正対象の通期予想が無いため代わりに op_beat_pct (着地 beat) をスコア非対象として表示" sortKey="fop_rev_pct" {...sp} />
-              <SortTh label="進捗超過" tooltip="progress_excess_pct — 実進捗 − 期待ペース (pt)。FY は進捗の概念が無く対象外" sortKey="progress_excess_pct" {...sp} />
-              <th className="px-2 py-2.5 text-xs font-medium uppercase tracking-wide text-right text-[var(--text-secondary)]">終値</th>
-              <SortTh label="売買代金" tooltip="turnover_oku — 20 日平均売買代金 (億円)" sortKey="turnover_oku" {...sp} />
-              <th className="px-2 py-2.5 text-xs font-medium uppercase tracking-wide text-center text-[var(--text-secondary)]">SMA200</th>
-              <th className="px-2 py-2.5 text-xs font-medium uppercase tracking-wide text-center text-[var(--text-secondary)]">開示時刻</th>
-              <th className="px-2 py-2.5 text-xs font-medium uppercase tracking-wide text-center text-[var(--text-secondary)]">Q</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sorted.map(row => (
-              <Row
-                key={`${row.code}-${row.cur_per_type}`}
-                row={row}
-                dup={dupMap.get(row.code)}
-                collapsed={collapsed}
-              />
-            ))}
-          </tbody>
-        </table>
+        <DataTable
+          rows={deduped}
+          columns={columns}
+          rowKey={r => `${r.code}-${r.cur_per_type}`}
+          defaultSort={{ key: 'score3', dir: 'desc' }}
+          // 満点の行は左端のレールで示す（面を塗ると当日の全行が緑に沈む）
+          rail={r => (r.score3 >= maxScoreFor(r.cur_per_type) ? 'var(--sem-strong-fg)' : null)}
+          tieBreak={tieBreak}
+          fullMinWidth={1500}
+        />
 
-        {sorted.length === 0 && (
+        {deduped.length === 0 && (
           <div className="py-10 text-center text-[var(--text-muted)] text-sm">
             条件に合う銘柄はありません — フィルタを緩めてください
           </div>
@@ -778,24 +783,24 @@ export default function EarningsQualitySection({
         <div className="flex items-center justify-center gap-4 py-3 text-[11px] border-t border-[var(--border-subtle)] flex-wrap">
           <span className="text-[var(--text-secondary)]">Score:</span>
           <span className="flex items-center gap-1">
-            <span className="inline-block w-2.5 h-2.5 rounded" style={{ backgroundColor: '#86efac' }} />
+            <span className="inline-block w-2.5 h-2.5 rounded" style={{ backgroundColor: 'var(--sem-strong-fg)' }} />
             <span style={{ color: 'var(--text-secondary)' }}>満点</span>
           </span>
           <span className="flex items-center gap-1">
-            <span className="inline-block w-2.5 h-2.5 rounded" style={{ backgroundColor: '#dcfce7' }} />
+            <span className="inline-block w-2.5 h-2.5 rounded" style={{ backgroundColor: 'var(--sem-strong-bg)' }} />
             <span style={{ color: 'var(--text-secondary)' }}>強 7-8</span>
           </span>
           <span className="flex items-center gap-1">
-            <span className="inline-block w-2.5 h-2.5 rounded" style={{ backgroundColor: '#fef3c7' }} />
+            <span className="inline-block w-2.5 h-2.5 rounded" style={{ backgroundColor: 'var(--sem-ok-bg)' }} />
             <span style={{ color: 'var(--text-secondary)' }}>中 4-6</span>
           </span>
           <span className="flex items-center gap-1">
-            <span className="inline-block w-2.5 h-2.5 rounded" style={{ backgroundColor: '#f3f4f6' }} />
+            <span className="inline-block w-2.5 h-2.5 rounded" style={{ backgroundColor: 'var(--sem-idle-bg)' }} />
             <span style={{ color: 'var(--text-secondary)' }}>弱 0-3</span>
           </span>
           <span className="text-gray-300">|</span>
           <span className="flex items-center gap-1 text-gray-600">
-            <span className="text-amber-500">⭐</span> 当日 Q別 Top 1%
+            <span className="text-[var(--sem-watch-fg)]">★</span> 当日 Q別 Top 1%
           </span>
           <span className="text-gray-300">|</span>
           <span

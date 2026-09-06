@@ -1,6 +1,6 @@
 'use client'
 
-import { Fragment, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
   SectorSelectionRow,
   COMPONENT_META,
@@ -22,10 +22,8 @@ import {
   type RankDeltaPeriodKey,
 } from '@/lib/sectorRankDelta'
 import Dot from '@/components/shared/Dot'
-import SortTh from '@/components/shared/SortTh'
+import DataTable, { type Column } from '@/components/shared/DataTable'
 
-type SortKey = 'rank' | 'sector_name_s33' | 'composite_score' | ComponentKey | 'sector_stock_count_s33'
-type SortDir = 'asc' | 'desc'
 
 function isNum(v: number | null | undefined): v is number {
   return v !== null && v !== undefined && Number.isFinite(v)
@@ -102,7 +100,7 @@ function MiniBar({ value }: { value: number | null | undefined }) {
       </div>
       <span
         className="font-mono text-[10px] tabular-nums w-6 text-right"
-        style={{ color: isNum(value) ? '#374151' : '#9ca3af' }}
+        style={{ color: isNum(value) ? 'var(--text-primary)' : 'var(--sem-idle-fg)' }}
       >
         {label}
       </span>
@@ -139,11 +137,11 @@ function CompositeCell({ score }: { score: number | null | undefined }) {
 
 
 // ── Drilldown: 5 horizontal bars with weight annotation ─────────────────────
-function DrilldownRow({ row, colSpan }: { row: SectorSelectionRow; colSpan: number }) {
+// 行を開いたときの中身。表の骨格（tr / td / colSpan）は DataTable が持つ。
+function DrilldownBody({ row }: { row: SectorSelectionRow }) {
   const total = isNum(row.composite_score) ? row.composite_score.toFixed(2) : '—'
   return (
-    <tr className="bg-[#f8fafc] border-b border-[var(--border)]">
-      <td colSpan={colSpan} className="px-6 py-4">
+    <>
         <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-6">
           {/* Left: 5 component bars */}
           <div>
@@ -180,7 +178,7 @@ function DrilldownRow({ row, colSpan }: { row: SectorSelectionRow; colSpan: numb
                     </div>
                     <span
                       className="font-mono tabular-nums w-10 text-right text-gray-700"
-                      style={{ color: isNum(value) ? '#374151' : '#9ca3af' }}
+                      style={{ color: isNum(value) ? 'var(--text-primary)' : 'var(--sem-idle-fg)' }}
                     >
                       {isNum(value) ? value.toFixed(0) : '—'}
                     </span>
@@ -238,8 +236,7 @@ function DrilldownRow({ row, colSpan }: { row: SectorSelectionRow; colSpan: numb
             <Stat label="規制無 空売り(円)" value={fmtOku(row.sector_shrt_no_res_va_s33)} />
           </div>
         </div>
-      </td>
-    </tr>
+    </>
   )
 }
 
@@ -266,22 +263,9 @@ export default function SectorSelectionTable({
   rankDeltas?: RankDeltaMap
   deltaPeriod: RankDeltaPeriodKey
 }) {
-  const [sortKey, setSortKey] = useState<SortKey>('composite_score')
-  const [sortDir, setSortDir] = useState<SortDir>('desc')
-  const [expanded, setExpanded] = useState<string | null>(null)
   // 既定で信頼度低 (銘柄数<10) を除外する
   const [hideLowConf, setHideLowConf] = useState(true)
   const [moversOnly, setMoversOnly] = useState(false)
-
-  function handleSort(key: SortKey) {
-    if (sortKey === key) {
-      setSortDir(d => (d === 'asc' ? 'desc' : 'asc'))
-    } else {
-      setSortKey(key)
-      // rank ascending feels natural; everything else descending
-      setSortDir(key === 'rank' || key === 'sector_name_s33' ? 'asc' : 'desc')
-    }
-  }
 
   const filtered = useMemo(() => {
     let arr = hideLowConf ? rows.filter(r => r.confidence_low !== 1) : rows
@@ -289,39 +273,93 @@ export default function SectorSelectionTable({
     return arr
   }, [rows, hideLowConf, moversOnly, rankDeltas])
 
-  const sorted = useMemo(() => {
-    const arr = [...filtered]
-    arr.sort((a, b) => {
-      let av: number | string
-      let bv: number | string
-      if (sortKey === 'rank') {
-        av = a.composite_score_rank ?? Number.POSITIVE_INFINITY
-        bv = b.composite_score_rank ?? Number.POSITIVE_INFINITY
-      } else if (sortKey === 'sector_name_s33') {
-        const cmp = (a.sector_name_s33 ?? '').localeCompare(b.sector_name_s33 ?? '', 'ja')
-        return sortDir === 'asc' ? cmp : -cmp
-      } else {
-        const aRaw = a[sortKey]
-        const bRaw = b[sortKey]
-        av = isNum(aRaw) ? aRaw : Number.NEGATIVE_INFINITY
-        bv = isNum(bRaw) ? bRaw : Number.NEGATIVE_INFINITY
-      }
-      if (av === bv) return 0
-      return sortDir === 'asc' ? (av > bv ? 1 : -1) : av < bv ? 1 : -1
-    })
-    return arr
-  }, [filtered, sortKey, sortDir])
-
   const lowConfCount = rows.filter(r => r.confidence_low === 1).length
   const moverCount = useMemo(
     () => rows.filter(r => isBigMove(rankDeltas[r.sector_name_s33])).length,
     [rows, rankDeltas],
   )
-  const sp = { currentKey: sortKey, currentDir: sortDir, onSort: handleSort }
-  const COL_COUNT = 5 + COMPONENT_META.length + 1 // rank, sector, score, momentum, ...5 comp, stock_count
+  // 列定義。5 つの内訳バーはスコアの構成要素で横断比較に使うので一覧に残す。
+  const columns: Column<SectorSelectionRow>[] = useMemo(
+    () => [
+      {
+        key: 'rank',
+        label: '#',
+        tooltip: `composite_score_rank — 当日ランク (1=トップ)。右の ▲▼ は ${deltaPeriod.toUpperCase()} 前からの順位変動`,
+        align: 'center' as const,
+        value: (r: SectorSelectionRow) => r.composite_score_rank,
+        defaultDir: 'asc' as const,
+        className: 'w-24',
+        render: (r: SectorSelectionRow) => (
+          <span className="inline-flex items-center gap-1.5 num text-[var(--text-secondary)]">
+            <span>{r.composite_score_rank ?? '—'}</span>
+            <RankDeltaBadge delta={rankDeltas[r.sector_name_s33]} period={deltaPeriod} />
+          </span>
+        ),
+      },
+      {
+        key: 'sector_name_s33',
+        label: 'Sector',
+        tooltip: 'TOPIX-33 業種名。行をクリックすると内訳が開く',
+        align: 'left' as const,
+        value: (r: SectorSelectionRow) => r.sector_name_s33,
+        defaultDir: 'asc' as const,
+        render: (r: SectorSelectionRow) => (
+          <div className="flex items-center gap-4 whitespace-nowrap">
+            <span className="text-[var(--text-primary)]">
+              {r.sector_name_s33}
+              {r.confidence_low === 1 && (
+                <span
+                  className="ml-1.5 text-caption text-[var(--sem-watch-fg)]"
+                  title="信頼度低: 銘柄数が少ないためノイズ大"
+                >
+                  低
+                </span>
+              )}
+            </span>
+            <span className="ml-auto">
+              <SectorChangeInline entry={changes[r.sector_name_s33]} />
+            </span>
+          </div>
+        ),
+      },
+      {
+        key: 'composite_score',
+        label: 'Score',
+        tooltip: 'composite_score 0-100',
+        align: 'center' as const,
+        value: (r: SectorSelectionRow) => r.composite_score,
+        render: (r: SectorSelectionRow) => <CompositeCell score={r.composite_score} />,
+      },
+      {
+        key: 'sector_momentum_s33',
+        label: 'Trend',
+        align: 'left' as const,
+        render: (r: SectorSelectionRow) => <MomentumBadge m={r.sector_momentum_s33} />,
+      },
+      ...COMPONENT_META.map(m => ({
+        key: m.key,
+        label: m.label,
+        tooltip: `${m.tooltip} — 重み ×${COMPONENT_WEIGHTS[m.key].toFixed(2)}`,
+        value: (r: SectorSelectionRow) => r[m.key],
+        className: 'w-[110px]',
+        render: (r: SectorSelectionRow) => <MiniBar value={r[m.key]} />,
+      })),
+      {
+        key: 'sector_stock_count_s33',
+        label: 'N',
+        tooltip: 'セクター内銘柄数',
+        value: (r: SectorSelectionRow) => r.sector_stock_count_s33,
+        className: 'w-14',
+        render: (r: SectorSelectionRow) => (
+          <span className="num text-[var(--text-secondary)]">{r.sector_stock_count_s33 ?? '—'}</span>
+        ),
+      },
+    ],
+    [changes, rankDeltas, deltaPeriod],
+  )
 
   return (
-    <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm overflow-x-auto">
+    <div>
       {/* Toolbar */}
       <div className="flex items-center gap-3 px-4 pt-4 pb-3 flex-wrap">
         <p className="text-sm font-semibold text-[var(--text-primary)]">セクター選別ランキング</p>
@@ -344,141 +382,53 @@ export default function SectorSelectionTable({
             <span className="text-[var(--text-muted)]">（<span className="font-mono">{lowConfCount}</span> 件）</span>
           )}
         </label>
-        <span className="text-xs text-[var(--text-muted)]">
-          <span className="font-mono">{sorted.length}</span> セクター
+        <span className="text-caption text-[var(--text-muted)]">
+          <span className="num">{filtered.length}</span> セクター
         </span>
       </div>
 
-      <table className="w-full min-w-[1100px] text-sm">
-        <thead>
-          <tr className="bg-[var(--bg-card-hover)] border-y border-[var(--border)]">
-            <SortTh
-              label="#"
-              tooltip={`composite_score_rank — 当日ランク (1=トップ)。右の ▲▼ は ${deltaPeriod.toUpperCase()} 前からの順位変動`}
-              sortKey="rank"
-              {...sp}
-              align="center"
-              className="w-24"
-            />
-            <SortTh
-              label="Sector"
-              tooltip="TOPIX-33 業種名"
-              sortKey="sector_name_s33"
-              hint={
-                <span className="ml-3 float-right font-normal normal-case tracking-normal text-[10px] text-[var(--text-muted)]">
-                  業種指数 騰落率 1D / 1W / 1M / 6M / 1Y
-                </span>
-              }
-              {...sp}
-              align="left"
-            />
-            <SortTh label="Score"    tooltip="composite_score 0-100 (赤<30 / 黄30-60 / 緑≥60)" sortKey="composite_score"    {...sp} align="center" />
-            <th className="px-3 py-2.5 text-xs font-medium uppercase tracking-wide whitespace-nowrap text-left text-[var(--text-secondary)]">Trend</th>
-            {COMPONENT_META.map(m => (
-              <SortTh
-                key={m.key}
-                label={m.label}
-                tooltip={`${m.tooltip} — 重み ×${COMPONENT_WEIGHTS[m.key].toFixed(2)}`}
-                sortKey={m.key}
-                {...sp}
-                align="right"
-                className="w-[110px]"
-              />
-            ))}
-            <SortTh label="N" tooltip="セクター内銘柄数" sortKey="sector_stock_count_s33" {...sp} align="right" className="w-14" />
-          </tr>
-        </thead>
-        <tbody>
-          {sorted.map((row, i) => {
-            const isLow = row.confidence_low === 1
-            const isOpen = expanded === row.sector_name_s33
-            const rowKey = row.sector_name_s33
-            const delta = rankDeltas[rowKey]
-            const bigMove = isBigMove(delta)
-            // 大きく動いた行は左端に色帯を立てる（上昇=緑 / 下落=赤 / 新規=青）
-            const accent = !bigMove
-              ? undefined
-              : delta?.isNew
-                ? 'var(--accent)'
-                : (delta?.delta ?? 0) > 0
-                  ? 'var(--positive)'
-                  : 'var(--negative)'
-            return (
-              <Fragment key={rowKey}>
-                <tr
-                  onClick={() => setExpanded(isOpen ? null : rowKey)}
-                  className={`border-b border-[var(--border-subtle)] cursor-pointer transition-colors ${
-                    isOpen ? 'bg-blue-50/40' : i % 2 === 0 ? 'bg-[var(--bg-card)]' : 'bg-[var(--bg-card-hover)]'
-                  } hover:bg-gray-100 ${isLow ? 'opacity-60' : ''}`}
-                  title={isLow ? '信頼度低: 銘柄数が少ないためノイズ大' : undefined}
-                >
-                  <td
-                    className="px-3 py-2 text-center font-mono text-xs text-gray-500 tabular-nums"
-                    style={accent ? { boxShadow: `inset 3px 0 0 0 ${accent}` } : undefined}
-                  >
-                    <span className="inline-flex items-center gap-1.5">
-                      <span>{row.composite_score_rank ?? '—'}</span>
-                      <RankDeltaBadge delta={delta} period={deltaPeriod} />
-                    </span>
-                  </td>
-                  <td className="px-3 py-2 whitespace-nowrap text-xs font-medium text-gray-800">
-                    <div className="flex items-center gap-4">
-                      <span className="inline-flex items-center gap-1.5">
-                        <span className="text-gray-400 text-[10px] w-3 inline-block">
-                          {isOpen ? '▾' : '▸'}
-                        </span>
-                        {row.sector_name_s33}
-                        {isLow && <span title="信頼度低">⚠️</span>}
-                      </span>
-                      {/* 業種名の余白に業種指数の騰落率を並べる */}
-                      <span className="ml-auto">
-                        <SectorChangeInline entry={changes[rowKey]} />
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-3 py-2 text-center whitespace-nowrap">
-                    <CompositeCell score={row.composite_score} />
-                  </td>
-                  <td className="px-3 py-2 whitespace-nowrap">
-                    <MomentumBadge m={row.sector_momentum_s33} />
-                  </td>
-                  {COMPONENT_META.map(m => (
-                    <td key={m.key} className="px-3 py-2">
-                      <MiniBar value={row[m.key]} />
-                    </td>
-                  ))}
-                  <td className="px-3 py-2 text-right font-mono text-xs text-gray-600 tabular-nums">
-                    {row.sector_stock_count_s33 ?? '—'}
-                  </td>
-                </tr>
-                {isOpen && <DrilldownRow row={row} colSpan={COL_COUNT} />}
-              </Fragment>
-            )
-          })}
-        </tbody>
-      </table>
-
-      {sorted.length === 0 && (
-        <div className="py-10 text-center text-[var(--text-muted)] text-sm">
+      {filtered.length === 0 ? (
+        <div className="bg-[var(--bg-card)] rounded-xl border-[0.5px] border-[var(--border)] py-10 text-center text-[var(--text-muted)] text-small">
           {moversOnly
             ? `${deltaPeriod.toUpperCase()} で ±${BIG_MOVE_THRESHOLD}位以上動いたセクターはありません`
             : 'データがありません'}
         </div>
+      ) : (
+        <DataTable
+          rows={filtered}
+          columns={columns}
+          rowKey={r => r.sector_name_s33}
+          defaultSort={{ key: 'rank', dir: 'asc' }}
+          // 行のどこを押しても内訳が開く（専用ボタンは置かない）
+          expandOnRowClick
+          renderDetail={row => <DrilldownBody row={row} />}
+          // 大きく動いた行は左端に色帯を立てる（上昇=緑 / 下落=赤 / 新規=注目色）
+          rail={row => {
+            const d = rankDeltas[row.sector_name_s33]
+            if (!isBigMove(d)) return null
+            if (d?.isNew) return 'var(--sem-focus-fg)'
+            return (d?.delta ?? 0) > 0 ? 'var(--positive)' : 'var(--negative)'
+          }}
+          // 信頼度低（銘柄数が少なくノイズが大きい）は減光して沈める
+          rowClassName={row => (row.confidence_low === 1 ? 'opacity-60' : '')}
+          fullMinWidth={1100}
+          summaryToggle={false}
+        />
       )}
 
       {/* Legend */}
       <div className="flex items-center justify-center gap-5 py-3 text-[11px] border-t border-[var(--border-subtle)] flex-wrap">
         <span className="text-[var(--text-secondary)]">Score:</span>
         <span className="flex items-center gap-1">
-          <span className="inline-block w-2.5 h-2.5 rounded" style={{ backgroundColor: '#dcfce7' }} />
+          <span className="inline-block w-2.5 h-2.5 rounded" style={{ backgroundColor: 'var(--sem-strong-bg)' }} />
           <span style={{ color: 'var(--text-secondary)' }}>強 ≥60</span>
         </span>
         <span className="flex items-center gap-1">
-          <span className="inline-block w-2.5 h-2.5 rounded" style={{ backgroundColor: '#fef3c7' }} />
+          <span className="inline-block w-2.5 h-2.5 rounded" style={{ backgroundColor: 'var(--sem-ok-bg)' }} />
           <span style={{ color: 'var(--text-secondary)' }}>中 30-60</span>
         </span>
         <span className="flex items-center gap-1">
-          <span className="inline-block w-2.5 h-2.5 rounded" style={{ backgroundColor: '#fee2e2' }} />
+          <span className="inline-block w-2.5 h-2.5 rounded" style={{ backgroundColor: 'var(--sem-weak-bg)' }} />
           <span style={{ color: 'var(--text-secondary)' }}>弱 &lt;30</span>
         </span>
         <span className="text-gray-300">|</span>

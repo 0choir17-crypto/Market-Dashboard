@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import {
   MarketLeader,
   volColor,
@@ -8,23 +8,10 @@ import {
   emergingBarColor,
 } from '@/types/marketLeaders'
 import type { LeaderHits } from '@/lib/marketLeadersFetch'
-import { tradingViewUrl, shikihoUrl } from '@/lib/tickerLinks'
-import SortTh from '@/components/shared/SortTh'
+import DataTable, { type Column } from '@/components/shared/DataTable'
+import TickerCell from '@/components/shared/TickerCell'
+import type { SemanticTone } from '@/types/semantic'
 
-type SortKey =
-  | 'market_rank'
-  | 'hits'
-  | 'streak'
-  | 'code'
-  | 's33nm'
-  | 'cs_avg'
-  | 'emerging_cs'
-  | 'vol_5d'
-  | 'return_21d'
-  | 'return_63d'
-  | 'turnover_oku'
-  | 'mcap_oku'
-type SortDir = 'asc' | 'desc'
 
 const EMPTY_HITS: LeaderHits = { hits: 0, streak: 0, lastBeforeStreak: null }
 
@@ -48,12 +35,12 @@ function CsAvgCell({ value }: { value: number | null | undefined }) {
   return (
     <div className="flex items-center gap-2 min-w-[110px]">
       <span
-        className="font-mono text-xs tabular-nums w-9 text-right font-semibold"
-        style={{ color: isNum(value) ? '#1f2937' : '#9ca3af' }}
+        className="num w-9 text-right"
+        style={{ color: isNum(value) ? 'var(--text-primary)' : 'var(--sem-idle-fg)' }}
       >
         {isNum(value) ? value.toFixed(1) : '—'}
       </span>
-      <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+      <div className="flex-1 h-1.5 bg-[var(--sem-idle-bg)] rounded-full overflow-hidden">
         <div className="h-full rounded-full" style={{ width: `${safe}%`, backgroundColor: color }} />
       </div>
     </div>
@@ -83,12 +70,12 @@ function EmergingCell({
   return (
     <div className="flex items-center gap-2 min-w-[110px]" title={isNum(value) ? title : undefined}>
       <span
-        className="font-mono text-xs tabular-nums w-9 text-right font-semibold"
-        style={{ color: isNum(value) ? '#1f2937' : '#9ca3af' }}
+        className="num w-9 text-right"
+        style={{ color: isNum(value) ? 'var(--text-primary)' : 'var(--sem-idle-fg)' }}
       >
         {isNum(value) ? value.toFixed(0) : '—'}
       </span>
-      <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+      <div className="flex-1 h-1.5 bg-[var(--sem-idle-bg)] rounded-full overflow-hidden">
         {isNum(value) && (
           <div className="h-full rounded-full" style={{ width: `${safe}%`, backgroundColor: color }} />
         )}
@@ -102,7 +89,7 @@ function VolCell({ value }: { value: number | null | undefined }) {
   return (
     <span
       title={`${label} (${isNum(value) ? value.toFixed(2) : '—'})`}
-      className="inline-block min-w-[48px] text-center px-2 py-0.5 rounded-full text-xs font-mono font-semibold tabular-nums"
+      className="inline-block min-w-[48px] text-center px-2 py-0.5 rounded-full text-caption num"
       style={{ backgroundColor: bg, color: text }}
     >
       {isNum(value) ? value.toFixed(2) : '—'}
@@ -111,12 +98,12 @@ function VolCell({ value }: { value: number | null | undefined }) {
 }
 
 function ReturnCell({ value }: { value: number | null | undefined }) {
-  if (!isNum(value)) return <span className="text-[var(--text-muted)] text-xs">—</span>
+  if (!isNum(value)) return <span className="text-[var(--sem-idle-fg)]">—</span>
   // 損益色は CSS 変数に統一（rule: --positive / --negative）
   const color = value > 0 ? 'var(--positive)' : value < 0 ? 'var(--negative)' : 'var(--text-secondary)'
   const sign = value > 0 ? '+' : ''
   return (
-    <span className="font-mono text-xs tabular-nums" style={{ color }}>
+    <span className="num" style={{ color }}>
       {sign}{value.toFixed(1)}%
     </span>
   )
@@ -125,7 +112,7 @@ function ReturnCell({ value }: { value: number | null | undefined }) {
 function PassRouteBadge({ route }: { route: string | null | undefined }) {
   if (route === 'ipo') {
     return (
-      <span className="inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[var(--negative-bg)] text-[var(--negative)]">
+      <span className="inline-block px-2 py-0.5 rounded-full text-caption bg-[var(--sem-weak-bg)] text-[var(--sem-weak-fg)]">
         IPO
       </span>
     )
@@ -136,14 +123,18 @@ function PassRouteBadge({ route }: { route: string | null | undefined }) {
 // ヒット数バッジ: Top50 入りした通算営業日数 (実数, キャップ無し)
 // 色 (しきい値は据え置き): 30+ 水色 / 20+ 濃緑 / 10+ 緑 / 5+ 黄 / それ未満 灰
 function HitsCell({ hits }: { hits: number }) {
-  if (hits <= 0) return <span className="text-[var(--text-muted)] text-xs">—</span>
-  const bg =
-    hits >= 30 ? '#0ea5e9' : hits >= 20 ? '#16a34a' : hits >= 10 ? '#22c55e' : hits >= 5 ? '#eab308' : '#9ca3af'
+  if (hits <= 0) return <span className="text-[var(--sem-idle-fg)]">—</span>
+  // 通算日数は多いほど「確立している」。段階は 3 つに減らし、意味語彙で塗る
+  // （5 段階の色分けは分類であって強弱ではなかった）。
+  const tone = hits >= 20 ? 'strong' : hits >= 5 ? 'ok' : 'idle'
   return (
     <span
-      className="inline-block min-w-[36px] text-center px-2 py-0.5 rounded-full text-xs font-mono font-semibold tabular-nums text-white"
-      title={hits >= 30 ? '通算 30 日以上 Top50 入り' : undefined}
-      style={{ backgroundColor: bg }}
+      className="inline-block min-w-[36px] text-center px-2 py-0.5 rounded-full text-caption num"
+      title={hits >= 20 ? '通算 20 日以上 Top50 入り' : undefined}
+      style={{
+        backgroundColor: `var(--sem-${tone}-bg)`,
+        color: `var(--sem-${tone}-fg)`,
+      }}
     >
       {hits}
     </span>
@@ -159,7 +150,7 @@ function StreakCell({ hits }: { hits: LeaderHits }) {
   if (hits.streak >= 2) {
     return (
       <span
-        className="inline-block px-2 py-0.5 rounded-full text-xs font-mono font-semibold tabular-nums bg-emerald-100 text-emerald-800"
+        className="inline-block px-2 py-0.5 rounded-full text-caption num bg-[var(--sem-strong-bg)] text-[var(--sem-strong-fg)]"
         title={`${hits.streak} 営業日連続で Top50 入り`}
       >
         {hits.streak}日連続
@@ -170,7 +161,7 @@ function StreakCell({ hits }: { hits: LeaderHits }) {
     if (hits.lastBeforeStreak) {
       return (
         <span
-          className="inline-block px-2 py-0.5 rounded-full text-xs font-mono tabular-nums bg-gray-100 text-gray-700"
+          className="inline-block px-2 py-0.5 rounded-full text-caption num bg-[var(--sem-idle-bg)] text-[var(--sem-idle-fg)]"
           title={`前回 Top50 入り: ${hits.lastBeforeStreak}`}
         >
           前回 {shortDate(hits.lastBeforeStreak)}
@@ -179,14 +170,14 @@ function StreakCell({ hits }: { hits: LeaderHits }) {
     }
     return (
       <span
-        className="inline-block px-2 py-0.5 rounded-full text-xs font-mono font-semibold bg-rose-100 text-rose-700"
+        className="inline-block px-2 py-0.5 rounded-full text-caption bg-[var(--sem-focus-bg)] text-[var(--sem-focus-fg)]"
         title="全履歴で初の Top50 入り — 急浮上候補"
       >
         NEW
       </span>
     )
   }
-  return <span className="text-[var(--text-muted)] text-xs">—</span>
+  return <span className="text-[var(--sem-idle-fg)]">—</span>
 }
 
 
@@ -197,226 +188,212 @@ type Props = {
 }
 
 export default function LeadersTable({ rows, hitsMap, query }: Props) {
-  const [sortKey, setSortKey] = useState<SortKey>('market_rank')
-  const [sortDir, setSortDir] = useState<SortDir>('asc')
-
-  function handleSort(key: SortKey) {
-    if (sortKey === key) {
-      setSortDir(d => (d === 'asc' ? 'desc' : 'asc'))
-    } else {
-      setSortKey(key)
-      setSortDir(key === 'market_rank' || key === 'code' || key === 's33nm' ? 'asc' : 'desc')
-    }
-  }
-
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
     if (!q) return rows
     return rows.filter(
-      r =>
-        r.code.toLowerCase().includes(q) ||
-        (r.coname ?? '').toLowerCase().includes(q),
+      r => r.code.toLowerCase().includes(q) || (r.coname ?? '').toLowerCase().includes(q),
     )
   }, [rows, query])
 
-  const sorted = useMemo(() => {
-    const arr = [...filtered]
-    arr.sort((a, b) => {
-      if (sortKey === 'code') {
-        const cmp = a.code.localeCompare(b.code)
-        return sortDir === 'asc' ? cmp : -cmp
-      }
-      if (sortKey === 's33nm') {
-        const cmp = (a.s33nm ?? '').localeCompare(b.s33nm ?? '', 'ja')
-        return sortDir === 'asc' ? cmp : -cmp
-      }
-      let aRaw: number | null | undefined
-      let bRaw: number | null | undefined
-      if (sortKey === 'hits') {
-        aRaw = hitsMap.get(a.code)?.hits ?? 0
-        bRaw = hitsMap.get(b.code)?.hits ?? 0
-      } else if (sortKey === 'streak') {
-        aRaw = hitsMap.get(a.code)?.streak ?? 0
-        bRaw = hitsMap.get(b.code)?.streak ?? 0
-      } else {
-        aRaw = a[sortKey]
-        bRaw = b[sortKey]
-      }
-      const av = isNum(aRaw) ? aRaw : sortDir === 'asc' ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY
-      const bv = isNum(bRaw) ? bRaw : sortDir === 'asc' ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY
-      if (av === bv) return 0
-      return sortDir === 'asc' ? (av > bv ? 1 : -1) : av < bv ? 1 : -1
-    })
-    return arr
-  }, [filtered, sortKey, sortDir, hitsMap])
+  // hits / streak は行の外（hitsMap）にあるので、列定義は hitsMap に閉じる。
+  const columns: Column<MarketLeader>[] = useMemo(
+    () => [
+      {
+        key: 'market_rank',
+        label: '#',
+        tooltip: 'market_rank — 当日の市場ランク (1=トップ)',
+        align: 'center',
+        value: r => r.market_rank,
+        defaultDir: 'asc',
+        className: 'w-10',
+        render: r => <span className="num text-[var(--text-secondary)]">{r.market_rank ?? '—'}</span>,
+      },
+      {
+        key: 'code',
+        label: 'Code / Name',
+        tooltip: '銘柄コード → TradingView / 銘柄名 → 四季報',
+        align: 'left',
+        value: r => r.code,
+        defaultDir: 'asc',
+        render: r => <TickerCell code={r.code} name={r.coname} />,
+      },
+      {
+        key: 's33nm',
+        label: 'Sector',
+        tooltip: 'S33 業種名（五十音順ソート）',
+        align: 'left',
+        value: r => r.s33nm,
+        defaultDir: 'asc',
+        render: r => (
+          <span className="text-small text-[var(--text-secondary)]">{r.s33nm ?? '—'}</span>
+        ),
+      },
+      {
+        key: 'hits',
+        label: 'ヒット数',
+        tooltip: 'Top50 に入った通算営業日数（実数・表示日まで）',
+        align: 'center',
+        value: r => hitsMap.get(r.code)?.hits ?? 0,
+        className: 'w-20',
+        render: r => <HitsCell hits={hitsMap.get(r.code)?.hits ?? 0} />,
+      },
+      {
+        key: 'cs_avg',
+        label: 'cs_avg',
+        tooltip:
+          'クロスセクション RS 平均 0-100（主軸スコア = 確立度）。99.5 = Stage A 上位 0.5%。「どれだけ資金が向かっているか」。rs_topix_avg とは別物',
+        align: 'left',
+        value: r => r.cs_avg,
+        className: 'w-32',
+        render: r => <CsAvgCell value={r.cs_avg} />,
+      },
+      {
+        key: 'emerging_cs',
+        label: '初動',
+        tooltip:
+          'emerging_cs 0-100（初動スコア = 加速度）。高い = 今 RS が加速中（初動）/ 低い = 成熟・失速。hover で RS 加速度（21d / 5d）。過去日は — （本更新前）',
+        align: 'left',
+        value: r => r.emerging_cs,
+        className: 'w-32',
+        render: r => (
+          <EmergingCell value={r.emerging_cs} mom21={r.rs_topix_mom_21d} mom5={r.rs_topix_mom_5d} />
+        ),
+      },
+      {
+        key: 'vol_5d',
+        label: 'vol_5d',
+        tooltip: '直近 5 営業日の出来高比。≥1.5 機関買い継続 / <0.7 出来高枯渇',
+        align: 'center',
+        value: r => r.vol_5d,
+        className: 'w-20',
+        render: r => <VolCell value={r.vol_5d} />,
+      },
 
-  const sp = { currentKey: sortKey, currentDir: sortDir, onSort: handleSort }
+      // ── ここから下は詳細行だけ（50 行を横断比較する数値ではない）────────
+      {
+        key: 'streak',
+        label: '連続/直近',
+        tooltip:
+          '現在の連続 Top50 日数（実数・全履歴）。連続 = 1 の銘柄は直近の前回ヒット日、全履歴で初登場は NEW',
+        summary: false,
+        align: 'center',
+        value: r => hitsMap.get(r.code)?.streak ?? 0,
+        render: r => <StreakCell hits={hitsMap.get(r.code) ?? EMPTY_HITS} />,
+      },
+      {
+        key: 'close',
+        label: 'Close',
+        summary: false,
+        value: r => r.close,
+        render: r => (
+          <span className="num text-[var(--text-secondary)]">
+            {isNum(r.close) ? r.close.toLocaleString('ja-JP', { maximumFractionDigits: 1 }) : '—'}
+          </span>
+        ),
+      },
+      {
+        key: 'return_21d',
+        label: '21d %',
+        tooltip: 'return_21d — 21 営業日リターン',
+        summary: false,
+        value: r => r.return_21d,
+        render: r => <ReturnCell value={r.return_21d} />,
+      },
+      {
+        key: 'return_63d',
+        label: '63d %',
+        tooltip: 'return_63d — 63 営業日リターン',
+        summary: false,
+        value: r => r.return_63d,
+        render: r => <ReturnCell value={r.return_63d} />,
+      },
+      {
+        key: 'turnover_oku',
+        label: '売買代金',
+        tooltip: 'turnover_oku — 売買代金 20日平均（億円）',
+        summary: false,
+        value: r => r.turnover_oku,
+        render: r => (
+          <span className="num text-[var(--text-secondary)]">{fmt(r.turnover_oku, 0)}</span>
+        ),
+      },
+      {
+        key: 'mcap_oku',
+        label: '時価総額',
+        tooltip: 'mcap_oku — 時価総額（億円）',
+        summary: false,
+        value: r => r.mcap_oku,
+        render: r => <span className="num text-[var(--text-secondary)]">{fmt(r.mcap_oku, 0)}</span>,
+      },
+      {
+        key: 'pass_route',
+        label: 'Route',
+        summary: false,
+        align: 'center',
+        render: r => <PassRouteBadge route={r.pass_route} />,
+      },
+    ],
+    [hitsMap],
+  )
 
   return (
-    <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm overflow-x-auto">
-      <div className="flex items-center gap-3 px-4 pt-4 pb-3 flex-wrap">
-        <p className="text-sm font-semibold text-[var(--text-primary)]">市場リーダー Top 50</p>
-        <span className="text-[11px] text-[var(--text-muted)]">
-          cs_avg=確立（資金が向かう度）／ 初動=加速（今RSが伸びてるか）。観測テーブルで売買シグナルではない
+    <section>
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-3">
+        <h2 className="text-caption tracking-wide text-[var(--text-muted)]">市場リーダー Top 50</h2>
+        <span className="text-caption text-[var(--text-muted)]">
+          cs_avg = 確立（資金が向かう度）／ 初動 = 加速（今 RS が伸びてるか）。観測テーブルで売買シグナルではない
         </span>
-        <span className="ml-auto text-xs text-[var(--text-muted)]">
-          <span className="font-mono">{sorted.length}</span> 銘柄
+        <span className="ml-auto text-caption text-[var(--text-muted)]">
+          <span className="num">{filtered.length}</span> 銘柄
         </span>
       </div>
 
-      <table className="w-full min-w-[1360px] text-sm">
-        <thead>
-          <tr className="bg-[var(--bg-card-hover)] border-y border-[var(--border)]">
-            <SortTh label="#" tooltip="market_rank — 当日の市場ランク (1=トップ)" sortKey="market_rank" {...sp} align="center" className="w-10" />
-            <SortTh label="ヒット数" tooltip="Top50 に入った通算営業日数 (実数, 表示日まで)" sortKey="hits" {...sp} align="center" className="w-20" />
-            <SortTh label="連続/直近" tooltip="現在の連続 Top50 日数 (実数, 全履歴)。連続=1 の銘柄は直近の前回ヒット日 (前回 M/D)、全履歴で初登場は NEW。" sortKey="streak" {...sp} align="center" className="w-24" />
-            <SortTh label="Code" tooltip="銘柄コード (TradingView へリンク)" sortKey="code" {...sp} align="left" className="w-16" />
-            <th className="px-2 py-2 text-xs font-medium uppercase tracking-wide whitespace-nowrap text-left text-[var(--text-secondary)]">Name</th>
-            <SortTh label="Sector (S33)" tooltip="S33 業種名 (五十音順ソート)" sortKey="s33nm" {...sp} align="left" />
-            <th className="px-2 py-2 text-xs font-medium uppercase tracking-wide whitespace-nowrap text-right text-[var(--text-secondary)] w-20">Close</th>
-            <SortTh label="cs_avg" tooltip="クロスセクション RS 平均 0-100 (主軸スコア=確立度)。99.5=Stage A 上位 0.5%。「どれだけ資金が向かっているか」。rs_topix_avg とは別物。" sortKey="cs_avg" {...sp} align="left" className="w-32" />
-            <SortTh label="初動" tooltip="emerging_cs 0-100 (初動スコア=加速度)。高い=今RSが加速中（初動）/ 低い=成熟・失速。cs_avg の鏡像。hover で RS加速度 (21d/5d)。過去日は — (本更新前)。" sortKey="emerging_cs" {...sp} align="left" className="w-32" />
-            <SortTh label="vol_5d" tooltip="直近 5 営業日の出来高比。≥1.5 機関買い継続 / <0.7 出来高枯渇" sortKey="vol_5d" {...sp} align="center" className="w-20" />
-            <SortTh label="21d %" tooltip="return_21d — 21 営業日リターン" sortKey="return_21d" {...sp} align="right" className="w-20" />
-            <SortTh label="63d %" tooltip="return_63d — 63 営業日リターン" sortKey="return_63d" {...sp} align="right" className="w-20" />
-            <SortTh label="売買代金" tooltip="turnover_oku — 売買代金 20日平均 (億円)" sortKey="turnover_oku" {...sp} align="right" className="w-20" />
-            <SortTh label="時価総額" tooltip="mcap_oku — 時価総額 (億円)" sortKey="mcap_oku" {...sp} align="right" className="w-20" />
-            <th className="px-2 py-2 text-xs font-medium uppercase tracking-wide whitespace-nowrap text-center text-[var(--text-secondary)]">Route</th>
-          </tr>
-        </thead>
-        <tbody>
-          {sorted.map((r, i) => {
-            const hits = hitsMap.get(r.code) ?? EMPTY_HITS
-            return (
-              <tr
-                key={r.code}
-                className={`border-b border-[var(--border-subtle)] transition-colors ${
-                  i % 2 === 0 ? 'bg-[var(--bg-card)]' : 'bg-[var(--bg-card-hover)]'
-                } hover:bg-gray-100`}
-              >
-                <td className="px-2 py-1.5 text-center font-mono text-xs text-gray-700 tabular-nums font-semibold">
-                  {r.market_rank ?? '—'}
-                </td>
-                <td className="px-2 py-1.5 text-center">
-                  <HitsCell hits={hits.hits} />
-                </td>
-                <td className="px-2 py-1.5 text-center">
-                  <StreakCell hits={hits} />
-                </td>
-                <td className="px-2 py-1.5 whitespace-nowrap">
-                  <a
-                    href={tradingViewUrl(r.code)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-mono text-xs text-[var(--accent)] hover:underline"
-                  >
-                    {r.code}
-                  </a>
-                </td>
-                <td className="px-2 py-1.5 whitespace-nowrap text-xs">
-                  <a
-                    href={shikihoUrl(r.code)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-gray-800 hover:text-[var(--accent)] hover:underline"
-                  >
-                    {r.coname ?? '—'}
-                  </a>
-                </td>
-                <td className="px-2 py-1.5 whitespace-nowrap text-xs text-gray-600">
-                  {r.s33nm ?? '—'}
-                </td>
-                <td className="px-2 py-1.5 text-right font-mono text-xs text-gray-700 tabular-nums">
-                  {isNum(r.close) ? r.close.toLocaleString('ja-JP', { maximumFractionDigits: 1 }) : '—'}
-                </td>
-                <td className="px-2 py-1.5">
-                  <CsAvgCell value={r.cs_avg} />
-                </td>
-                <td className="px-2 py-1.5">
-                  <EmergingCell value={r.emerging_cs} mom21={r.rs_topix_mom_21d} mom5={r.rs_topix_mom_5d} />
-                </td>
-                <td className="px-2 py-1.5 text-center">
-                  <VolCell value={r.vol_5d} />
-                </td>
-                <td className="px-2 py-1.5 text-right">
-                  <ReturnCell value={r.return_21d} />
-                </td>
-                <td className="px-2 py-1.5 text-right">
-                  <ReturnCell value={r.return_63d} />
-                </td>
-                <td className="px-2 py-1.5 text-right font-mono text-xs text-gray-600 tabular-nums">
-                  {fmt(r.turnover_oku, 0)}
-                </td>
-                <td className="px-2 py-1.5 text-right font-mono text-xs text-gray-600 tabular-nums">
-                  {fmt(r.mcap_oku, 0)}
-                </td>
-                <td className="px-2 py-1.5 text-center">
-                  <PassRouteBadge route={r.pass_route} />
-                </td>
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
-
-      {sorted.length === 0 && (
-        <div className="py-10 text-center text-[var(--text-muted)] text-sm">
+      {filtered.length === 0 ? (
+        <div className="bg-[var(--bg-card)] rounded-xl border-[0.5px] border-[var(--border)] py-10 text-center text-[var(--text-muted)] text-small">
           {query ? `「${query}」に一致する銘柄はありません` : 'データがありません'}
         </div>
+      ) : (
+        <DataTable
+          rows={filtered}
+          columns={columns}
+          rowKey={r => r.code}
+          defaultSort={{ key: 'market_rank', dir: 'asc' }}
+          fullMinWidth={1360}
+        />
       )}
 
-      {/* Legend */}
-      <div className="flex items-center justify-center gap-4 py-3 text-[11px] border-t border-[var(--border-subtle)] flex-wrap">
-        <span className="text-[var(--text-secondary)]">初動 (emerging):</span>
-        <span className="flex items-center gap-1">
-          <span className="inline-block w-2.5 h-2.5 rounded" style={{ backgroundColor: '#16a34a' }} />
-          <span style={{ color: 'var(--text-secondary)' }}>≥80 加速中</span>
-        </span>
-        <span className="flex items-center gap-1">
-          <span className="inline-block w-2.5 h-2.5 rounded" style={{ backgroundColor: '#eab308' }} />
-          <span style={{ color: 'var(--text-secondary)' }}>55–80 中間</span>
-        </span>
-        <span className="flex items-center gap-1">
-          <span className="inline-block w-2.5 h-2.5 rounded" style={{ backgroundColor: '#9ca3af' }} />
-          <span style={{ color: 'var(--text-secondary)' }}>&lt;55 成熟・失速</span>
-        </span>
-        <span className="text-gray-300">|</span>
-        <span className="text-[var(--text-secondary)]">vol_5d:</span>
-        <span className="flex items-center gap-1">
-          <span className="inline-block w-2.5 h-2.5 rounded" style={{ backgroundColor: '#bbf7d0' }} />
-          <span style={{ color: 'var(--text-secondary)' }}>≥1.5 機関買い継続</span>
-        </span>
-        <span className="flex items-center gap-1">
-          <span className="inline-block w-2.5 h-2.5 rounded" style={{ backgroundColor: '#dcfce7' }} />
-          <span style={{ color: 'var(--text-secondary)' }}>1.0–1.5 通常</span>
-        </span>
-        <span className="flex items-center gap-1">
-          <span className="inline-block w-2.5 h-2.5 rounded" style={{ backgroundColor: '#fef3c7' }} />
-          <span style={{ color: 'var(--text-secondary)' }}>0.7–1.0 警戒</span>
-        </span>
-        <span className="flex items-center gap-1">
-          <span className="inline-block w-2.5 h-2.5 rounded" style={{ backgroundColor: '#fee2e2' }} />
-          <span style={{ color: 'var(--text-secondary)' }}>&lt;0.7 出来高枯渇</span>
-        </span>
-        <span className="text-gray-300">|</span>
-        <span className="text-[var(--text-secondary)]">ヒット数 (通算 Top50入り日数):</span>
-        <span className="flex items-center gap-1">
-          <span className="inline-block w-2.5 h-2.5 rounded" style={{ backgroundColor: '#0ea5e9' }} />
-          <span style={{ color: 'var(--text-secondary)' }}>30+</span>
-        </span>
-        <span className="flex items-center gap-1">
-          <span className="inline-block w-2.5 h-2.5 rounded" style={{ backgroundColor: '#16a34a' }} />
-          <span style={{ color: 'var(--text-secondary)' }}>20+</span>
-        </span>
-        <span className="flex items-center gap-1">
-          <span className="inline-block w-2.5 h-2.5 rounded" style={{ backgroundColor: '#22c55e' }} />
-          <span style={{ color: 'var(--text-secondary)' }}>10+</span>
-        </span>
-        <span className="flex items-center gap-1">
-          <span className="inline-block w-2.5 h-2.5 rounded" style={{ backgroundColor: '#eab308' }} />
-          <span style={{ color: 'var(--text-secondary)' }}>5+</span>
-        </span>
+      {/* 凡例 — 色は意味語彙から取るので、表の塗りと必ず一致する */}
+      <div className="flex items-center justify-center gap-4 py-3 mt-2 text-caption flex-wrap text-[var(--text-secondary)]">
+        <span>初動 (emerging):</span>
+        <LegendSwatch tone="strong" label="≥80 加速中" />
+        <LegendSwatch tone="ok" label="65–80 やや加速" />
+        <LegendSwatch tone="watch" label="55–65 中間" />
+        <LegendSwatch tone="idle" label="<55 成熟・失速" />
+        <span className="text-[var(--sem-idle-bd)]">|</span>
+        <span>vol_5d:</span>
+        <LegendSwatch tone="strong" label="≥1.5 機関買い継続" />
+        <LegendSwatch tone="ok" label="1.0–1.5 通常" />
+        <LegendSwatch tone="watch" label="0.7–1.0 警戒" />
+        <LegendSwatch tone="weak" label="<0.7 出来高枯渇" />
+        <span className="text-[var(--sem-idle-bd)]">|</span>
+        <span>ヒット数:</span>
+        <LegendSwatch tone="strong" label="20+" />
+        <LegendSwatch tone="ok" label="5+" />
+        <LegendSwatch tone="idle" label="<5" />
       </div>
-    </div>
+    </section>
+  )
+}
+
+function LegendSwatch({ tone, label }: { tone: SemanticTone; label: string }) {
+  return (
+    <span className="flex items-center gap-1">
+      <span
+        className="inline-block w-2.5 h-2.5 rounded"
+        style={{ backgroundColor: `var(--sem-${tone}-fg)` }}
+      />
+      <span>{label}</span>
+    </span>
   )
 }

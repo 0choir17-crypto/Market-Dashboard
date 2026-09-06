@@ -18,7 +18,8 @@ import { useMemo, useState } from 'react'
 import type { WatchlistEvent } from '@/types/watchlistJournal'
 import { formatPct } from '@/lib/format'
 import DataTable, { type Column } from '@/components/shared/DataTable'
-import { NumCell, PctCell, SampleSizeNote, TickerCell, YenCell, median } from './atoms'
+import TickerCell from '@/components/shared/TickerCell'
+import { NumCell, PctCell, SampleSizeNote, YenCell, median } from './atoms'
 
 // READY からの離脱が最も重い。この順で並べる。
 const FROM_STATE_ORDER = ['READY', 'FOCUS', 'SECOND', 'SHORT', 'OTHERS', 'INBOX']

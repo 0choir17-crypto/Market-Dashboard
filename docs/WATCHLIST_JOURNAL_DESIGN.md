@@ -299,8 +299,10 @@ lib/watchlistJournalFetch.ts                      4 クエリ + 見逃し判定 
 types/watchlistJournal.ts                         型 / STATE_ORDER / stateColors /
                                                   riskPct() / classifySnapshotFreshness()
 components/shared/DataTable.tsx                   表の骨格（ソート / グループ / 折りたたみ /
-                                                  要約・全列トグル / 詳細行）
+                                                  要約・全列トグル / 詳細行 / レール / タイブレーク）。
+                                                  Leaders・Earnings・Sectors・Watchlist の 4 画面が載る
 components/shared/SortTh.tsx                      ソート可能な列見出し — 唯一の定義
+components/shared/TickerCell.tsx                  コード → TradingView / 名前 → 四季報
 components/watchlistJournal/
   ├─ CurrentStateTable.tsx                        列定義とグループ見出しだけ
   ├─ MissedBoard.tsx                              列定義 + 絞り込みチップと中央値
