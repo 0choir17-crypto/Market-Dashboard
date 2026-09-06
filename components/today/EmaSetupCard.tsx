@@ -47,7 +47,7 @@ function TouchBadge({ touch }: { touch: EmaTouch }) {
   const typeLabel = type === 'BODY' ? '実体' : type === 'WICK' ? 'ヒゲ' : '—'
   return (
     <span
-      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold tabular-nums border"
+      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-caption font-medium tabular-nums border"
       style={{
         backgroundColor: filled ? 'var(--sem-idle-bd)' : 'transparent',
         color: 'var(--text-secondary)',
@@ -61,7 +61,7 @@ function TouchBadge({ touch }: { touch: EmaTouch }) {
     >
       <span className="font-mono">{touch.ema}</span>
       <span className="font-normal opacity-70">{typeLabel}</span>
-      {touch.fresh && <span className="text-[9px] text-[var(--sem-watch-fg)]" title="初回">初</span>}
+      {touch.fresh && <span className="text-caption text-[var(--sem-watch-fg)]" title="初回">初</span>}
     </span>
   )
 }
@@ -79,9 +79,9 @@ function Metric({
 }) {
   return (
     <div className="rounded bg-[var(--bg-card-hover)] border border-[var(--border-subtle)] px-2 py-1.5" title={title}>
-      <p className="text-[9px] font-medium uppercase tracking-wide text-[var(--text-secondary)] leading-tight">{label}</p>
+      <p className="text-caption font-medium uppercase tracking-wide text-[var(--text-secondary)] leading-tight">{label}</p>
       <p
-        className="mt-0.5 font-mono text-sm font-semibold leading-tight tabular-nums"
+        className="mt-0.5 font-mono text-small font-medium leading-tight tabular-nums"
         style={{ color: color ?? 'var(--text-primary)' }}
       >
         {value}
@@ -119,7 +119,7 @@ export default function EmaSetupCard({
               href={shikihoUrl(row.code)}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm font-semibold text-[var(--text-primary)] hover:underline truncate min-w-0 flex-1"
+              className="text-small font-medium text-[var(--text-primary)] hover:underline truncate min-w-0 flex-1"
               title={`${row.co_name ?? '—'}（四季報を開く）`}
             >
               {row.co_name ?? '—'}
@@ -128,14 +128,14 @@ export default function EmaSetupCard({
               href={tradingViewUrl(row.code)}
               target="_blank"
               rel="noopener noreferrer"
-              className="font-mono text-sm font-bold text-[var(--accent)] hover:underline flex-shrink-0"
+              className="font-mono text-small font-medium text-[var(--accent)] hover:underline flex-shrink-0"
               title={`${row.code}（TradingView を開く）`}
             >
               {row.code}
             </a>
           </div>
           <div
-            className="mt-0.5 text-[11px] truncate"
+            className="mt-0.5 text-caption truncate"
             style={{ color: hot ? 'var(--positive)' : 'var(--text-secondary)' }}
             title={row.sector_s33 ?? ''}
           >
@@ -143,8 +143,8 @@ export default function EmaSetupCard({
           </div>
         </div>
         <div className="flex-shrink-0 text-right">
-          <p className="text-[9px] font-medium uppercase tracking-wide text-[var(--text-muted)] leading-tight">Close</p>
-          <p className="font-mono text-sm font-semibold text-[var(--text-primary)] tabular-nums leading-tight">
+          <p className="text-caption font-medium uppercase tracking-wide text-[var(--text-muted)] leading-tight">Close</p>
+          <p className="font-mono text-small font-medium text-[var(--text-primary)] tabular-nums leading-tight">
             {fmtPrice(row.close)}
           </p>
         </div>
@@ -155,7 +155,7 @@ export default function EmaSetupCard({
         {row.touches.map(t => (
           <div
             key={t.ema}
-            className="flex items-baseline justify-between gap-2 text-[10px] text-[var(--text-secondary)] tabular-nums"
+            className="flex items-baseline justify-between gap-2 text-caption text-[var(--text-secondary)] tabular-nums"
           >
             <span className="font-mono">EMA{t.ema}</span>
             <span className="font-mono">{fmtPrice(t.ema_value)}</span>
@@ -184,7 +184,7 @@ export default function EmaSetupCard({
       </div>
 
       {/* 補助情報 */}
-      <div className="px-3 pt-1.5 flex items-center justify-between gap-2 text-[10px] text-[var(--text-muted)] tabular-nums">
+      <div className="px-3 pt-1.5 flex items-center justify-between gap-2 text-caption text-[var(--text-muted)] tabular-nums">
         <span className="font-mono" title="出来高比（対 20日平均）">
           出来高比 {fmt(row.vol_ratio, 2)}
         </span>
@@ -201,7 +201,7 @@ export default function EmaSetupCard({
         {onAddPosition && (
           <button
             onClick={() => onAddPosition(row)}
-            className="px-2 py-1 text-[10px] font-medium text-[var(--sem-strong-fg)] bg-[var(--sem-ok-bg)] hover:brightness-95 border border-[var(--sem-strong-bd)] rounded transition-colors"
+            className="px-2 py-1 text-caption font-medium text-[var(--sem-strong-fg)] bg-[var(--sem-ok-bg)] hover:brightness-95 border border-[var(--sem-strong-bd)] rounded transition-colors"
             title="Position として保存"
           >
             ＋ Position

@@ -73,16 +73,16 @@ function HitCell({
       }}
       title={title}
     >
-      <span className="text-[10px] font-bold" style={{ color: SIG_COLOR[sig] }}>
+      <span className="text-caption font-medium" style={{ color: SIG_COLOR[sig] }}>
         {sig}
       </span>
       <span
-        className="ml-1 font-mono text-xs font-semibold tabular-nums"
+        className="ml-1 font-mono text-caption font-medium tabular-nums"
         style={{ color: today ? 'var(--positive)' : 'var(--text-primary)' }}
       >
         {fmtHitDate(date)}
       </span>
-      {today && <span className="ml-1 text-[9px] font-bold" style={{ color: 'var(--positive)' }}>●</span>}
+      {today && <span className="ml-1 text-caption font-medium" style={{ color: 'var(--positive)' }}>●</span>}
     </div>
   )
 }
@@ -100,9 +100,9 @@ function Metric({
 }) {
   return (
     <div className="rounded bg-[var(--bg-card-hover)] border border-[var(--border-subtle)] px-2 py-1.5" title={title}>
-      <p className="text-[9px] font-medium uppercase tracking-wide text-[var(--text-secondary)] leading-tight">{label}</p>
+      <p className="text-caption font-medium uppercase tracking-wide text-[var(--text-secondary)] leading-tight">{label}</p>
       <p
-        className="mt-0.5 font-mono text-sm font-semibold leading-tight tabular-nums"
+        className="mt-0.5 font-mono text-small font-medium leading-tight tabular-nums"
         style={{ color: color ?? 'var(--text-primary)' }}
       >
         {value}
@@ -152,7 +152,7 @@ export default function StructurePivotCard({
               href={shikihoUrl(row.code)}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm font-semibold text-[var(--text-primary)] hover:underline truncate min-w-0 flex-1"
+              className="text-small font-medium text-[var(--text-primary)] hover:underline truncate min-w-0 flex-1"
               title={`${row.co_name ?? '—'}（四季報を開く）`}
             >
               {row.co_name ?? '—'}
@@ -161,7 +161,7 @@ export default function StructurePivotCard({
               href={tradingViewUrl(row.code)}
               target="_blank"
               rel="noopener noreferrer"
-              className="font-mono text-sm font-bold text-[var(--accent)] hover:underline flex-shrink-0"
+              className="font-mono text-small font-medium text-[var(--accent)] hover:underline flex-shrink-0"
               title={`${row.code}（TradingView を開く）`}
             >
               {row.code}
@@ -169,7 +169,7 @@ export default function StructurePivotCard({
           </div>
           <div className="mt-0.5 flex items-center gap-1.5 min-w-0">
             <span
-              className="text-[11px] truncate min-w-0"
+              className="text-caption truncate min-w-0"
               style={{ color: hot ? 'var(--positive)' : 'var(--text-secondary)' }}
               title={row.sector_s33 ?? ''}
             >
@@ -180,7 +180,7 @@ export default function StructurePivotCard({
               {todayTags.map(sig => (
                 <span
                   key={sig}
-                  className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold leading-none"
+                  className="inline-flex items-center px-1.5 py-0.5 rounded text-caption font-medium leading-none"
                   style={{ backgroundColor: 'var(--sem-focus-bg)', color: SIG_COLOR[sig], border: '0.5px solid var(--sem-focus-bd)' }}
                 >
                   本日{sig}
@@ -190,9 +190,9 @@ export default function StructurePivotCard({
           </div>
         </div>
         <div className="flex-shrink-0 text-right">
-          <p className="text-[9px] font-medium uppercase tracking-wide text-[var(--text-muted)] leading-tight">Close</p>
+          <p className="text-caption font-medium uppercase tracking-wide text-[var(--text-muted)] leading-tight">Close</p>
           <p
-            className="font-mono text-sm font-semibold text-[var(--text-primary)] tabular-nums leading-tight cursor-help"
+            className="font-mono text-small font-medium text-[var(--text-primary)] tabular-nums leading-tight cursor-help"
             title={levelsTitle || undefined}
           >
             {fmtPrice(row.close)}
@@ -203,7 +203,7 @@ export default function StructurePivotCard({
       {/* 直近ヒット日: 1st / 2nd それぞれのヒット日（本日ヒットは緑で強調） */}
       <div className="px-3 pt-2">
         <div className="rounded bg-[var(--bg-card-hover)] border border-[var(--border-subtle)] px-2 py-1.5">
-          <p className="text-[9px] font-medium uppercase tracking-wide text-[var(--text-secondary)] leading-tight">
+          <p className="text-caption font-medium uppercase tracking-wide text-[var(--text-secondary)] leading-tight">
             直近ヒット日
           </p>
           <div className="mt-1 grid grid-cols-2 gap-1.5">
@@ -246,7 +246,7 @@ export default function StructurePivotCard({
         {onAddPosition && (
           <button
             onClick={() => onAddPosition(row)}
-            className="px-2 py-1 text-[10px] font-medium text-[var(--sem-strong-fg)] bg-[var(--sem-ok-bg)] hover:brightness-95 border border-[var(--sem-strong-bd)] rounded transition-colors"
+            className="px-2 py-1 text-caption font-medium text-[var(--sem-strong-fg)] bg-[var(--sem-ok-bg)] hover:brightness-95 border border-[var(--sem-strong-bd)] rounded transition-colors"
             title="Position として保存"
           >
             ＋ Position

@@ -30,7 +30,7 @@ const TABLES = [
 export default function DebugPage() {
   if (process.env.NODE_ENV === 'production') {
     return (
-      <main className="p-8 text-sm text-[var(--text-secondary)]">
+      <main className="p-8 text-small text-[var(--text-secondary)]">
         Debug ページは開発ビルドでのみ利用できます。
       </main>
     )
@@ -95,14 +95,14 @@ function DebugPageInner() {
   }, [])
 
   return (
-    <main className="min-h-screen p-6 font-mono text-sm" style={{ backgroundColor: 'var(--bg-primary)' }}>
-      <h1 className="text-2xl font-bold mb-4">Supabase Debug</h1>
+    <main className="min-h-screen p-6 font-mono text-small" style={{ backgroundColor: 'var(--bg-primary)' }}>
+      <h1 className="text-title font-medium mb-4">Supabase Debug</h1>
 
       <section className="mb-6 p-4 bg-[var(--bg-card)] rounded border">
-        <h2 className="font-semibold mb-2">Env</h2>
+        <h2 className="font-medium mb-2">Env</h2>
         <div>NEXT_PUBLIC_SUPABASE_URL: <span className="text-[var(--sem-focus-fg)] break-all">{envUrl || '(unset)'}</span></div>
         <div>NEXT_PUBLIC_SUPABASE_ANON_KEY: <span className="text-[var(--sem-focus-fg)]">{envKeyTail}</span></div>
-        <ul className="mt-2 text-xs text-[var(--text-secondary)] list-disc pl-5">
+        <ul className="mt-2 text-caption text-[var(--text-secondary)] list-disc pl-5">
           <li>URL の末尾に <code>/rest/v1/</code> や <code>/</code> が付いていないか確認</li>
           <li>URL は <code>https://xxxxxxxx.supabase.co</code> の形が正しい</li>
           <li>key は通常 200 文字超。短い場合は anon ではなく別物</li>
@@ -110,12 +110,12 @@ function DebugPageInner() {
       </section>
 
       <section className="mb-6 p-4 bg-[var(--bg-card)] rounded border">
-        <h2 className="font-semibold mb-2">market_conditions latest probe</h2>
+        <h2 className="font-medium mb-2">market_conditions latest probe</h2>
         <div className="break-all">{latest || 'querying...'}</div>
       </section>
 
       <section className="p-4 bg-[var(--bg-card)] rounded border">
-        <h2 className="font-semibold mb-2">Per-table HEAD count (anon role)</h2>
+        <h2 className="font-medium mb-2">Per-table HEAD count (anon role)</h2>
         <table className="w-full text-left">
           <thead>
             <tr className="border-b">
@@ -129,7 +129,7 @@ function DebugPageInner() {
               <tr key={p.label} className="border-b">
                 <td className="py-1 pr-4">{p.label}</td>
                 <td className={
-                  'py-1 pr-4 font-semibold ' +
+                  'py-1 pr-4 font-medium ' +
                   (p.status === 'ok' ? 'text-[var(--sem-strong-fg)]'
                     : p.status === 'empty' ? 'text-[var(--sem-watch-fg)]'
                     : p.status === 'error' ? 'text-[var(--sem-weak-fg)]'
@@ -140,7 +140,7 @@ function DebugPageInner() {
             ))}
           </tbody>
         </table>
-        <ul className="mt-3 text-xs text-[var(--text-secondary)] list-disc pl-5">
+        <ul className="mt-3 text-caption text-[var(--text-secondary)] list-disc pl-5">
           <li><b>error 401 / 42501</b> → そのテーブルの RLS が anon を拒否</li>
           <li><b>empty (count=0)</b> → RLS は通っているが行が0 (= 書き込みが service_role で行われ RLS によって SELECT のみ拒否されているケースもここに含まれる)</li>
           <li><b>ok</b> → 正常に読める</li>

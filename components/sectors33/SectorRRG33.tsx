@@ -120,7 +120,7 @@ export default function SectorRRG33({ history }: Props) {
   if (dots.length === 0) {
     return (
       <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-8 text-center text-[var(--text-muted)]">
-        <p className="text-sm">RRG 表示用のデータが不足しています</p>
+        <p className="text-small">RRG 表示用のデータが不足しています</p>
       </div>
     )
   }
@@ -128,21 +128,21 @@ export default function SectorRRG33({ history }: Props) {
   return (
     <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-5">
       <div className="flex flex-wrap items-center gap-3 mb-3">
-        <p className="text-sm font-semibold text-[var(--text-primary)] mr-auto">
+        <p className="text-small font-medium text-[var(--text-primary)] mr-auto">
           Sector RRG{' '}
           <span className="font-normal text-[var(--text-muted)]">
             — X: RS (0-100) / Y: RS加速 (50=中立) · 軌跡=<span className="font-mono">{trailLen}</span>営業日
           </span>
         </p>
-        <div className="flex items-center gap-1 text-xs">
+        <div className="flex items-center gap-1 text-caption">
           <span className="text-[var(--text-muted)]">Trail:</span>
           {(['top6', 'top12', 'all', 'none'] as const).map(opt => (
             <button
               key={opt}
               onClick={() => setShowTrailFor(opt)}
-              className={`px-2 py-0.5 rounded border text-xs ${
+              className={`px-2 py-0.5 rounded border text-caption ${
                 showTrailFor === opt
-                  ? 'bg-[var(--accent-bg)] border-[var(--accent)] text-[var(--accent)] font-semibold'
+                  ? 'bg-[var(--accent-bg)] border-[var(--accent)] text-[var(--accent)] font-medium'
                   : 'bg-[var(--bg-card)] border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)]'
               }`}
             >
@@ -150,15 +150,15 @@ export default function SectorRRG33({ history }: Props) {
             </button>
           ))}
         </div>
-        <div className="flex items-center gap-1 text-xs">
+        <div className="flex items-center gap-1 text-caption">
           <span className="text-[var(--text-muted)]">期間:</span>
           {([5, 10, 21] as const).map(n => (
             <button
               key={n}
               onClick={() => setTrailLen(n)}
-              className={`px-2 py-0.5 rounded border text-xs ${
+              className={`px-2 py-0.5 rounded border text-caption ${
                 trailLen === n
-                  ? 'bg-[var(--accent-bg)] border-[var(--accent)] text-[var(--accent)] font-semibold'
+                  ? 'bg-[var(--accent-bg)] border-[var(--accent)] text-[var(--accent)] font-medium'
                   : 'bg-[var(--bg-card)] border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)]'
               }`}
             >
@@ -175,7 +175,7 @@ export default function SectorRRG33({ history }: Props) {
         hovered={hovered}
         onHover={setHovered}
       />
-      <div className="mt-3 flex flex-wrap items-center justify-center gap-4 text-[11px]">
+      <div className="mt-3 flex flex-wrap items-center justify-center gap-4 text-caption">
         <Legend label="Leading (RS↑ / 加速↑)" color={QUAD_COLOR.leading} />
         <Legend label="Improving (RS↓ / 加速↑)" color={QUAD_COLOR.improving} />
         <Legend label="Weakening (RS↑ / 加速↓)" color={QUAD_COLOR.weakening} />

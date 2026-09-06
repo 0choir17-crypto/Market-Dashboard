@@ -74,9 +74,9 @@ function MetricCell({
       }`}
     >
       <Tooltip content={tooltip}>
-        <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wide">{label}</p>
+        <p className="text-caption text-[var(--text-muted)] uppercase tracking-wide">{label}</p>
       </Tooltip>
-      <p className="text-sm font-mono font-bold tabular-nums" style={{ color }}>
+      <p className="text-small font-mono font-medium tabular-nums" style={{ color }}>
         {isNum(value) ? value.toFixed(0) : '—'}
       </p>
     </div>
@@ -130,14 +130,14 @@ function SectorCard({
     >
       {/* ヘッダー: ランク / 順位変動 / 業種名 / モメンタム / スコア */}
       <div className="flex items-center gap-2 mb-2">
-        <span className="font-mono text-xs text-[var(--text-muted)] tabular-nums shrink-0">
+        <span className="font-mono text-caption text-[var(--text-muted)] tabular-nums shrink-0">
           #{row.composite_score_rank ?? '—'}
         </span>
         <span className="shrink-0">
           <RankDeltaBadge delta={delta} period={deltaPeriod} size="md" />
         </span>
         <span
-          className="text-sm font-semibold text-[var(--text-primary)] truncate"
+          className="text-small font-medium text-[var(--text-primary)] truncate"
           title={row.sector_name_s33}
         >
           {row.sector_name_s33}
@@ -151,7 +151,7 @@ function SectorCard({
           </span>
         )}
         <span
-          className={`shrink-0 px-2 py-1 rounded-md font-mono text-sm font-bold tabular-nums ${
+          className={`shrink-0 px-2 py-1 rounded-md font-mono text-small font-medium tabular-nums ${
             momentumCfg ? '' : 'ml-auto'
           }`}
           style={{ backgroundColor: bg, color: text }}
@@ -177,7 +177,7 @@ function SectorCard({
         />
       ) : (
         <div
-          className="flex items-center justify-center bg-[var(--bg-card-hover)] rounded-md text-xs text-[var(--text-muted)] text-center px-3"
+          className="flex items-center justify-center bg-[var(--bg-card-hover)] rounded-md text-caption text-[var(--text-muted)] text-center px-3"
           style={{ height: 260 }}
         >
           指数データがありません
@@ -207,9 +207,9 @@ function SectorCard({
         })}
         <div className="rounded-md border border-[var(--border)] bg-[var(--bg-card)] px-1.5 py-1 text-center">
           <Tooltip content="セクター内銘柄数">
-            <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wide">N</p>
+            <p className="text-caption text-[var(--text-muted)] uppercase tracking-wide">N</p>
           </Tooltip>
-          <p className="text-sm font-mono font-bold tabular-nums text-[var(--text-secondary)]">
+          <p className="text-small font-mono font-medium tabular-nums text-[var(--text-secondary)]">
             {isNum(row.sector_stock_count_s33) ? row.sector_stock_count_s33.toFixed(0) : '—'}
           </p>
         </div>
@@ -268,7 +268,7 @@ export default function SectorChartGallery({
     <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-5">
       {/* ツールバー */}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-4">
-        <p className="text-sm font-semibold text-[var(--text-primary)]">
+        <p className="text-small font-medium text-[var(--text-primary)]">
           業種指数チャート
           <span className="ml-2 font-normal text-[var(--text-muted)]">
             — スコア順・ローソク足 + EMA + 業種出来高
@@ -279,7 +279,7 @@ export default function SectorChartGallery({
             業種間の勢い比較はバーの高さではなく色で読む） */}
         <VolumeLegend />
 
-        <div className="flex items-center gap-1 text-xs">
+        <div className="flex items-center gap-1 text-caption">
           <span className="text-[var(--text-muted)]">重ねる指標:</span>
           {(
             [
@@ -290,9 +290,9 @@ export default function SectorChartGallery({
             <button
               key={o.k}
               onClick={() => setMetricKey(o.k)}
-              className={`px-2 py-0.5 rounded border text-xs ${
+              className={`px-2 py-0.5 rounded border text-caption ${
                 metricKey === o.k
-                  ? 'bg-[var(--accent-bg)] border-[var(--accent)] text-[var(--accent)] font-semibold'
+                  ? 'bg-[var(--accent-bg)] border-[var(--accent)] text-[var(--accent)] font-medium'
                   : 'bg-[var(--bg-card)] border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)]'
               }`}
             >
@@ -301,7 +301,7 @@ export default function SectorChartGallery({
           ))}
         </div>
 
-        <label className="flex items-center gap-2 text-xs text-[var(--text-secondary)] cursor-pointer select-none">
+        <label className="flex items-center gap-2 text-caption text-[var(--text-secondary)] cursor-pointer select-none">
           <input
             type="checkbox"
             checked={hideLowConf}
@@ -322,19 +322,19 @@ export default function SectorChartGallery({
           count={moverCount}
         />
 
-        <span className="ml-auto text-xs text-[var(--text-muted)]">
+        <span className="ml-auto text-caption text-[var(--text-muted)]">
           <span className="font-mono">{sorted.length}</span> セクター
         </span>
       </div>
 
       {error && (
-        <div className="mb-4 px-3 py-2 rounded-md bg-[var(--sem-weak-bg)] text-sm text-[var(--sem-weak-fg)]">
+        <div className="mb-4 px-3 py-2 rounded-md bg-[var(--sem-weak-bg)] text-small text-[var(--sem-weak-fg)]">
           指数チャート取得エラー: {error}
         </div>
       )}
 
       {loading ? (
-        <div className="py-16 text-center text-sm text-[var(--text-muted)]">
+        <div className="py-16 text-center text-small text-[var(--text-muted)]">
           チャート読み込み中…
         </div>
       ) : (
@@ -355,7 +355,7 @@ export default function SectorChartGallery({
       )}
 
       {!loading && sorted.length === 0 && (
-        <div className="py-10 text-center text-[var(--text-muted)] text-sm">
+        <div className="py-10 text-center text-[var(--text-muted)] text-small">
           {moversOnly
             ? `${deltaPeriod.toUpperCase()} で ±${BIG_MOVE_THRESHOLD}位以上動いたセクターはありません`
             : 'データがありません'}

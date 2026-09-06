@@ -18,7 +18,7 @@ export default function ErrorBanner({ detail, message, onRetry }: Props) {
       role="alert"
       className="mb-4 px-4 py-2.5 rounded-lg bg-[var(--sem-weak-bg)] border-[0.5px] border-[var(--sem-weak-bd)] text-[var(--sem-weak-fg)] text-small flex items-start gap-2"
     >
-      <span aria-hidden className="text-base leading-tight">⚠️</span>
+      <span aria-hidden className="text-lead leading-tight">⚠️</span>
       <div className="flex-1 min-w-0">
         <p className="font-medium">
           {message ?? 'データ取得に失敗しました — 表示中の内容は不完全な可能性があります'}

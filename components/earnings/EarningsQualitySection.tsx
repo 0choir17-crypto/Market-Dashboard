@@ -65,13 +65,13 @@ function Score3Badge({ row }: { row: EarningsQualityRow }) {
     .join('\n')
   return (
     <span
-      className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full font-mono text-xs font-bold tabular-nums"
+      className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full font-mono text-caption font-medium tabular-nums"
       style={{ backgroundColor: bg, color: text, border: `1px solid ${border}` }}
       title={title}
     >
       {row.score3}
-      <span className="text-[9px] opacity-60">/{max}</span>
-      {isLegacy && <span className="text-[9px] font-normal opacity-70">旧</span>}
+      <span className="text-caption opacity-60">/{max}</span>
+      {isLegacy && <span className="text-caption font-normal opacity-70">旧</span>}
     </span>
   )
 }
@@ -89,18 +89,18 @@ function DivCell({ row }: { row: EarningsQualityRow }) {
     ? '配当上積み (実績年間配当 vs 同FY直近予想) — s_div の根拠'
     : '年間配当予想の増減率 — s_div の根拠'
   const main = !isNum(v) ? (
-    <span className="text-[var(--text-muted)] text-xs" title={scoreLabel}>
+    <span className="text-[var(--text-muted)] text-caption" title={scoreLabel}>
       —
     </span>
   ) : (
     <span
-      className="font-mono tabular-nums text-xs"
+      className="font-mono tabular-nums text-caption"
       style={{ color: pctColor(v), fontWeight: v >= 10 ? 700 : 500 }}
       title={scoreLabel}
     >
       {v > 0 ? '+' : ''}
       {v.toFixed(1)}%
-      {v >= 10 && <span className="ml-0.5 text-[9px]">★</span>}
+      {v >= 10 && <span className="ml-0.5 text-caption">★</span>}
     </span>
   )
 
@@ -110,7 +110,7 @@ function DivCell({ row }: { row: EarningsQualityRow }) {
     <div className="flex flex-col items-end leading-tight">
       {main}
       <span
-        className="font-mono tabular-nums text-[10px]"
+        className="font-mono tabular-nums text-caption"
         style={{ color: pctColor(row.div_yoy_pct) }}
         title="div_yoy_pct — 実績年間配当の前期比 % (FY 専用・スコア非対象)"
       >
@@ -134,13 +134,13 @@ function YoyQoqCell({
   return (
     <div className="flex flex-col items-end leading-tight">
       <span
-        className="font-mono tabular-nums text-xs"
+        className="font-mono tabular-nums text-caption"
         style={{ color: pctColor(yoy), fontWeight: isNum(yoy) && yoy > 0 ? 600 : 500 }}
       >
         {fmtPct(yoy)}
       </span>
       <span
-        className="font-mono tabular-nums text-[10px]"
+        className="font-mono tabular-nums text-caption"
         style={{ color: pctColor(qoq) }}
       >
         {q1Note && !isNum(qoq) ? (
@@ -167,14 +167,14 @@ function OpCell({ row }: { row: EarningsQualityRow }) {
       : ''
     if (!isNum(row.op_beat_pct)) {
       return (
-        <span className="text-[var(--text-muted)] text-xs" title={`FY は通期予想修正の対象外${nx}`}>
+        <span className="text-[var(--text-muted)] text-caption" title={`FY は通期予想修正の対象外${nx}`}>
           —
         </span>
       )
     }
     return (
       <span
-        className="font-mono tabular-nums text-xs"
+        className="font-mono tabular-nums text-caption"
         style={{ color: pctColor(row.op_beat_pct) }}
         title={`op_beat_pct — 当期実績 OP ÷ 同FY直近予想 − 1 (着地 beat)。FY はスコア非対象${nx}`}
       >
@@ -186,12 +186,12 @@ function OpCell({ row }: { row: EarningsQualityRow }) {
   const guideScored = isNum(row.s_guide) && row.s_guide >= 1
   return (
     <span
-      className="font-mono tabular-nums text-xs"
+      className="font-mono tabular-nums text-caption"
       style={{ color: pctColor(row.fop_rev_pct), fontWeight: guideScored ? 700 : 500 }}
       title={guideScored ? `通期予想修正でスコア +${row.s_guide} (s_guide)` : undefined}
     >
       {fmtPct(row.fop_rev_pct)}
-      {guideScored && <span className="ml-0.5 text-[9px] text-[var(--positive)]">+{row.s_guide}</span>}
+      {guideScored && <span className="ml-0.5 text-caption text-[var(--positive)]">+{row.s_guide}</span>}
     </span>
   )
 }
@@ -202,7 +202,7 @@ function ProgressCell({ row }: { row: EarningsQualityRow }) {
   const v = row.progress_excess_pct
   if (!isNum(v)) {
     return row.cur_per_type === 'FY' ? (
-      <span className="text-[var(--text-muted)] text-[10px]" title="FY (通期本決算) は進捗の概念が無いため対象外">
+      <span className="text-[var(--text-muted)] text-caption" title="FY (通期本決算) は進捗の概念が無いため対象外">
         対象外
       </span>
     ) : (
@@ -210,7 +210,7 @@ function ProgressCell({ row }: { row: EarningsQualityRow }) {
     )
   }
   return (
-    <span className="font-mono tabular-nums text-xs" style={{ color: pctColor(v) }}>
+    <span className="font-mono tabular-nums text-caption" style={{ color: pctColor(v) }}>
       {v > 0 ? `先行 +${v.toFixed(1)}pt` : v < 0 ? `遅延 ${v.toFixed(1)}pt` : '0pt'}
     </span>
   )
@@ -218,15 +218,15 @@ function ProgressCell({ row }: { row: EarningsQualityRow }) {
 
 // ── 開示時刻セル (引け後は強調) ──────────────────────────────────────────
 function DiscTimeCell({ t }: { t: string | null }) {
-  if (!t) return <span className="text-[var(--text-muted)] text-xs">—</span>
+  if (!t) return <span className="text-[var(--text-muted)] text-caption">—</span>
   const afterClose = isAfterClose(t)
   return (
     <span
-      className={`font-mono text-xs ${afterClose ? 'font-bold text-[var(--sem-watch-fg)]' : 'text-[var(--text-secondary)]'}`}
+      className={`font-mono text-caption ${afterClose ? 'font-medium text-[var(--sem-watch-fg)]' : 'text-[var(--text-secondary)]'}`}
       title={afterClose ? '引け後開示 → 翌営業日 (D+1) 寄り対象' : undefined}
     >
       {t}
-      {afterClose && <span className="ml-0.5 text-[9px]">⏰</span>}
+      {afterClose && <span className="ml-0.5 text-caption">⏰</span>}
     </span>
   )
 }
@@ -482,7 +482,7 @@ function ChipFilter({
   return (
     <button
       onClick={onToggle}
-      className={`text-[11px] px-2 py-1 rounded border transition-colors ${
+      className={`text-caption px-2 py-1 rounded border transition-colors ${
         selected
           ? 'bg-[var(--accent)] text-white border-[var(--accent)]'
           : 'bg-[var(--bg-card)] text-[var(--text-secondary)] border-[var(--border)] hover:bg-[var(--bg-card-hover)]'
@@ -633,12 +633,12 @@ export default function EarningsQualitySection({
 
       {/* ── 旧スコア (v2 バックフィル前) の注意 ─────────────────────── */}
       {scoreData.state !== 'ok' && (
-        <div className="mb-5 px-4 py-2.5 rounded-lg bg-[var(--sem-watch-bg)] border border-[var(--sem-watch-bd)] text-[var(--sem-watch-fg)] text-sm flex items-start gap-2">
+        <div className="mb-5 px-4 py-2.5 rounded-lg bg-[var(--sem-watch-bg)] border border-[var(--sem-watch-bd)] text-[var(--sem-watch-fg)] text-small flex items-start gap-2">
           <div>
             {scoreData.state === 'column-missing' ? (
               <>
-                <p className="font-semibold">スコアの内訳 (s_guide) が取得できません</p>
-                <p className="text-xs text-[var(--sem-watch-fg)] mt-0.5">
+                <p className="font-medium">スコアの内訳 (s_guide) が取得できません</p>
+                <p className="text-caption text-[var(--sem-watch-fg)] mt-0.5">
                   Supabase の <code className="font-mono">earnings_quality</code> に{' '}
                   <code className="font-mono">s_guide</code> 列がありません。
                   表示中のスコアは旧 0-7 スケールの可能性があります
@@ -647,18 +647,18 @@ export default function EarningsQualitySection({
               </>
             ) : scoreData.state === 'legacy' ? (
               <>
-                <p className="font-semibold">この日は旧スコア (0-7 / 3軸) のままです</p>
-                <p className="text-xs text-[var(--sem-watch-fg)] mt-0.5">
+                <p className="font-medium">この日は旧スコア (0-7 / 3軸) のままです</p>
+                <p className="text-caption text-[var(--sem-watch-fg)] mt-0.5">
                   通期予想修正軸 (s_guide) が未計算のため、満点・色の判定は 0-9 スケールでは正しく出ません。
                   供給側スキャナーを再実行するとこの日が新スコアに置き換わります。
                 </p>
               </>
             ) : (
               <>
-                <p className="font-semibold">
+                <p className="font-medium">
                   新旧スコアが混在しています — {rows.length} 件中 {scoreData.legacyCount} 件が旧スコア (0-7 / 3軸)
                 </p>
-                <p className="text-xs text-[var(--sem-watch-fg)] mt-0.5">
+                <p className="text-caption text-[var(--sem-watch-fg)] mt-0.5">
                   「旧」印の付いた行は通期予想修正軸 (s_guide) が未計算のため、他行と同じ土俵で比較できません。
                 </p>
               </>
@@ -668,10 +668,10 @@ export default function EarningsQualitySection({
       )}
 
       {isPeakDay && (
-        <div className="mb-5 px-4 py-2.5 rounded-lg bg-[var(--sem-focus-bg)] border border-[var(--sem-focus-bd)] text-[var(--sem-focus-fg)] text-sm flex items-center gap-2">
-          <span className="text-base">🔥</span>
-          <span className="font-semibold">集中日 (ピーク)</span>
-          <span className="text-xs text-[var(--sem-focus-fg)]">
+        <div className="mb-5 px-4 py-2.5 rounded-lg bg-[var(--sem-focus-bg)] border border-[var(--sem-focus-bd)] text-[var(--sem-focus-fg)] text-small flex items-center gap-2">
+          <span className="text-lead">🔥</span>
+          <span className="font-medium">集中日 (ピーク)</span>
+          <span className="text-caption text-[var(--sem-focus-fg)]">
             開示 {eventsInDay} 件 ≥ {PEAK_DAY_THRESHOLD} — 検証で Top の質が高い日
           </span>
         </div>
@@ -683,7 +683,7 @@ export default function EarningsQualitySection({
           {/* Q が 1 種類しか無い日はチップを出しても意味が無いので隠す */}
           {qOptions.length > 1 && (
             <div className="flex flex-wrap items-start gap-2">
-              <span className="text-[11px] font-semibold text-[var(--text-secondary)] uppercase w-14 shrink-0 mt-1">
+              <span className="text-caption font-medium text-[var(--text-secondary)] uppercase w-14 shrink-0 mt-1">
                 Q
               </span>
               <div className="flex flex-wrap gap-1.5 flex-1">
@@ -698,7 +698,7 @@ export default function EarningsQualitySection({
                 {qSelected.size > 0 && (
                   <button
                     onClick={() => setQSelected(new Set())}
-                    className="text-[10px] text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
+                    className="text-caption text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
                   >
                     クリア
                   </button>
@@ -708,7 +708,7 @@ export default function EarningsQualitySection({
           )}
           {sectorOptions.length > 0 && (
             <div className="flex flex-wrap items-start gap-2">
-              <span className="text-[11px] font-semibold text-[var(--text-secondary)] uppercase w-14 shrink-0 mt-1">
+              <span className="text-caption font-medium text-[var(--text-secondary)] uppercase w-14 shrink-0 mt-1">
                 セクター
               </span>
               <div className="flex flex-wrap gap-1.5 flex-1">
@@ -723,7 +723,7 @@ export default function EarningsQualitySection({
                 {sectorSelected.size > 0 && (
                   <button
                     onClick={() => setSectorSelected(new Set())}
-                    className="text-[10px] text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
+                    className="text-caption text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
                   >
                     クリア
                   </button>
@@ -737,10 +737,10 @@ export default function EarningsQualitySection({
       {/* ── テーブル ────────────────────────────────────────────── */}
       <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm overflow-x-auto">
         <div className="flex items-center gap-3 px-4 pt-4 pb-3 flex-wrap">
-          <p className="text-sm font-semibold text-[var(--text-primary)]">品質スコア ランキング</p>
+          <p className="text-small font-medium text-[var(--text-primary)]">品質スコア ランキング</p>
           {hasDup && (
             <label
-              className="flex items-center gap-1.5 text-[11px] text-[var(--text-secondary)] cursor-pointer select-none"
+              className="flex items-center gap-1.5 text-caption text-[var(--text-secondary)] cursor-pointer select-none"
               title="決算を延期していた企業などが同日に 1Q〜FY をまとめて開示すると、同じ銘柄が最大 4 行並びます。ON にすると最新の Q (FY > 3Q > 2Q > 1Q) の 1 行だけ残します"
             >
               <input
@@ -752,10 +752,10 @@ export default function EarningsQualitySection({
               1銘柄1行
             </label>
           )}
-          <span className="ml-auto text-xs text-[var(--text-muted)]">
+          <span className="ml-auto text-caption text-[var(--text-muted)]">
             <span className="font-mono">{deduped.length} / {rows.length}</span> 件表示
             {collapsed && filtered.length > deduped.length && (
-              <span className="ml-1 text-[10px]">
+              <span className="ml-1 text-caption">
                 (同日重複 {filtered.length - deduped.length} 件を集約)
               </span>
             )}
@@ -773,13 +773,13 @@ export default function EarningsQualitySection({
         />
 
         {deduped.length === 0 && (
-          <div className="py-10 text-center text-[var(--text-muted)] text-sm">
+          <div className="py-10 text-center text-[var(--text-muted)] text-small">
             条件に合う銘柄はありません — フィルタを緩めてください
           </div>
         )}
 
         {/* Legend */}
-        <div className="flex items-center justify-center gap-4 py-3 text-[11px] border-t border-[var(--border-subtle)] flex-wrap">
+        <div className="flex items-center justify-center gap-4 py-3 text-caption border-t border-[var(--border-subtle)] flex-wrap">
           <span className="text-[var(--text-secondary)]">Score:</span>
           <span className="flex items-center gap-1">
             <span className="inline-block w-2.5 h-2.5 rounded" style={{ backgroundColor: 'var(--sem-strong-fg)' }} />
@@ -806,7 +806,7 @@ export default function EarningsQualitySection({
             className="flex items-center gap-1 text-[var(--text-secondary)]"
             title="1Q は QoQ 2軸、FY は通期予想修正軸が構造的に無いため上限 7 点。満点色は 7/7 で付きます"
           >
-            <span className={`px-1.5 rounded-full text-[10px] font-mono font-semibold ${qBadgeClass('FY')}`}>
+            <span className={`px-1.5 rounded-full text-caption font-mono font-medium ${qBadgeClass('FY')}`}>
               FY
             </span>
             1Q・FY は上限 7 点
@@ -822,7 +822,7 @@ export default function EarningsQualitySection({
                 className="flex items-center gap-1 text-[var(--text-secondary)]"
                 title="PK が (date, code, cur_per_type) のため、同日に複数の決算を開示した銘柄は Q ごとに別行になります"
               >
-                <span className="px-1 rounded text-[9px] font-semibold bg-[var(--bg-primary)] text-[var(--text-secondary)]">
+                <span className="px-1 rounded text-caption font-medium bg-[var(--bg-primary)] text-[var(--text-secondary)]">
                   同日N
                 </span>
                 同一銘柄が同日に N 本開示
@@ -856,9 +856,9 @@ function StatCard({
           : 'text-[var(--text-primary)]'
   return (
     <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-3">
-      <p className="text-[10px] text-[var(--text-secondary)] uppercase tracking-wide font-medium">{label}</p>
-      <p className={`text-2xl font-bold font-mono tabular-nums mt-1 ${accentColor}`}>{value}</p>
-      {sub && <p className="text-[10px] text-[var(--text-muted)] mt-0.5 truncate" title={sub}>{sub}</p>}
+      <p className="text-caption text-[var(--text-secondary)] uppercase tracking-wide font-medium">{label}</p>
+      <p className={`text-title font-medium font-mono tabular-nums mt-1 ${accentColor}`}>{value}</p>
+      {sub && <p className="text-caption text-[var(--text-muted)] mt-0.5 truncate" title={sub}>{sub}</p>}
     </div>
   )
 }

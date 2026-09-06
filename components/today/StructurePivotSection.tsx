@@ -106,19 +106,19 @@ export default function StructurePivotSection({ rows, hotSectors, title, subtitl
   return (
     <section className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-4">
       <div className="flex items-baseline gap-2 flex-wrap mb-1">
-        <h2 className="text-lg font-bold text-[var(--text-primary)]">{title}</h2>
-        <span className="text-xs text-[var(--text-muted)]">
+        <h2 className="text-title font-medium text-[var(--text-primary)]">{title}</h2>
+        <span className="text-caption text-[var(--text-muted)]">
           <span className="font-mono">{sorted.length} / {rows.length}</span> 件
         </span>
       </div>
-      <p className="text-xs text-[var(--text-secondary)] mb-2">{subtitle}</p>
+      <p className="text-caption text-[var(--text-secondary)] mb-2">{subtitle}</p>
 
       {/* フィルタ / ソート */}
       <div className="flex flex-wrap items-center gap-2 mb-4">
         <select
           value={sector}
           onChange={e => setSector(e.target.value)}
-          className="text-xs px-2 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg-card)] text-[var(--text-primary)] cursor-pointer"
+          className="text-caption px-2 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg-card)] text-[var(--text-primary)] cursor-pointer"
         >
           <option value="all">全セクター</option>
           {sectorOptions.map(s => (
@@ -131,7 +131,7 @@ export default function StructurePivotSection({ rows, hotSectors, title, subtitl
         <select
           value={signal}
           onChange={e => setSignal(e.target.value as SignalFilter)}
-          className="text-xs px-2 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg-card)] text-[var(--text-primary)] cursor-pointer"
+          className="text-caption px-2 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg-card)] text-[var(--text-primary)] cursor-pointer"
         >
           <option value="all">本日 1st + 2nd</option>
           <option value="1st">本日 1st ヒット</option>
@@ -139,11 +139,11 @@ export default function StructurePivotSection({ rows, hotSectors, title, subtitl
         </select>
 
         <span className="ml-auto flex items-center gap-1.5">
-          <span className="text-[11px] text-[var(--text-muted)]">並び:</span>
+          <span className="text-caption text-[var(--text-muted)]">並び:</span>
           <select
             value={sortKey}
             onChange={e => setSortKey(e.target.value)}
-            className="text-xs px-2 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg-card)] text-[var(--text-primary)] cursor-pointer"
+            className="text-caption px-2 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg-card)] text-[var(--text-primary)] cursor-pointer"
           >
             {SORTS.map(s => (
               <option key={s.key} value={s.key}>
@@ -155,7 +155,7 @@ export default function StructurePivotSection({ rows, hotSectors, title, subtitl
       </div>
 
       {sorted.length === 0 ? (
-        <div className="py-8 text-center text-sm text-[var(--text-muted)]">
+        <div className="py-8 text-center text-small text-[var(--text-muted)]">
           {rows.length === 0
             ? '本日の Structure Pivot ヒットは 0 件です。'
             : '該当する銘柄がありません。'}

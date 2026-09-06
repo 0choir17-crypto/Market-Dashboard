@@ -102,11 +102,11 @@ export default function SectorSection({
       <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
         <div>
           {showHeading && (
-            <h2 className="text-lg font-semibold text-[var(--text-primary)]">
+            <h2 className="text-title font-medium text-[var(--text-primary)]">
               Sector Selection
             </h2>
           )}
-          <p className="text-xs text-[var(--text-muted)] mt-0.5">
+          <p className="text-caption text-[var(--text-muted)] mt-0.5">
             TOPIX-33 業種別 composite_score（今どこを買うか）
             {latestDate && (
               <span className="ml-2 text-[var(--text-muted)] font-mono">{latestDate}</span>
@@ -120,7 +120,7 @@ export default function SectorSection({
 
           <RankDeltaPeriodToggle value={deltaPeriod} onChange={setDeltaPeriod} />
 
-          <div className="inline-flex rounded-lg border border-[var(--border)] overflow-hidden text-xs">
+          <div className="inline-flex rounded-lg border border-[var(--border)] overflow-hidden text-caption">
             {(
               [
                 { v: 'chart' as const, label: 'チャート' },
@@ -150,7 +150,7 @@ export default function SectorSection({
           className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-8 text-center"
           style={{ color: 'var(--text-muted)' }}
         >
-          <p className="text-lg font-medium">読み込み中…</p>
+          <p className="text-title font-medium">読み込み中…</p>
         </div>
       )}
 
@@ -159,8 +159,8 @@ export default function SectorSection({
           className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-8 text-center"
           style={{ color: 'var(--text-muted)' }}
         >
-          <p className="text-lg font-medium mb-2">データが見つかりません</p>
-          <p className="text-sm">Supabase の sector_selection_s33 テーブルにデータを挿入してください。</p>
+          <p className="text-title font-medium mb-2">データが見つかりません</p>
+          <p className="text-small">Supabase の sector_selection_s33 テーブルにデータを挿入してください。</p>
         </div>
       ) : rows.length > 0 && (
         <>
@@ -183,19 +183,19 @@ export default function SectorSection({
           {/* ── 推移ビジュアル ────────────────────────────────────────────
               普段は使わないので既定は折りたたみ。見たいときだけ開く。 */}
           <details className="mt-6 group">
-            <summary className="cursor-pointer select-none list-none flex items-center gap-2 text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)]">
-              <span className="text-[10px] text-[var(--text-muted)] group-open:rotate-90 transition-transform inline-block">
+            <summary className="cursor-pointer select-none list-none flex items-center gap-2 text-small font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)]">
+              <span className="text-caption text-[var(--text-muted)] group-open:rotate-90 transition-transform inline-block">
                 ▶
               </span>
               {history.dates.length}営業日の推移（Bars / RRG）
-              <span className="text-xs font-normal text-[var(--text-muted)]">
+              <span className="text-caption font-normal text-[var(--text-muted)]">
                 — どのセクターが強いか・どう動いているかを比較
               </span>
             </summary>
 
             <div className="mt-3">
               <div className="flex flex-wrap items-center justify-end mb-3">
-                <div className="inline-flex rounded-lg border border-[var(--border)] overflow-hidden text-xs">
+                <div className="inline-flex rounded-lg border border-[var(--border)] overflow-hidden text-caption">
                   {(
                     [
                       { v: 'bar' as const, label: 'Bars' },
@@ -218,7 +218,7 @@ export default function SectorSection({
               </div>
 
               {history.dates.length === 0 ? (
-                <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-8 text-center text-[var(--text-muted)] text-sm">
+                <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-8 text-center text-[var(--text-muted)] text-small">
                   履歴データを読み込めませんでした
                 </div>
               ) : view === 'bar' ? (

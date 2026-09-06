@@ -33,8 +33,8 @@ export default function NavBar() {
 
   const linkClass = (path: string) =>
     pathname === path
-      ? 'text-sm font-semibold text-[var(--accent)] bg-[var(--accent-bg)] px-2.5 py-1 rounded-md'
-      : 'text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)] px-2.5 py-1 rounded-md transition-colors'
+      ? 'text-small font-medium text-[var(--accent)] bg-[var(--accent-bg)] px-2.5 py-1 rounded-md'
+      : 'text-small font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)] px-2.5 py-1 rounded-md transition-colors'
 
   return (
     <nav
@@ -49,10 +49,10 @@ export default function NavBar() {
         className="flex items-center gap-1.5 mr-2 flex-shrink-0"
         aria-label="21 Cloud ホーム"
       >
-        <span className="w-6 h-6 rounded-md bg-[var(--accent)] text-white text-[11px] font-bold flex items-center justify-center font-mono">
+        <span className="w-6 h-6 rounded-md bg-[var(--accent)] text-white text-caption font-medium flex items-center justify-center font-mono">
           21
         </span>
-        <span className="text-sm font-bold tracking-tight text-[var(--text-primary)] hidden md:inline">
+        <span className="text-small font-medium tracking-tight text-[var(--text-primary)] hidden md:inline">
           Cloud
         </span>
       </Link>
@@ -64,10 +64,10 @@ export default function NavBar() {
             value={selectedDate}
             onChange={e => setSelectedDate(e.target.value)}
             aria-label="表示する営業日"
-            className={`text-xs font-mono px-2 py-1 rounded-md border cursor-pointer ${
+            className={`text-caption font-mono px-2 py-1 rounded-md border cursor-pointer ${
               isLatest
                 ? 'border-[var(--border)] bg-[var(--bg-card)] text-[var(--text-secondary)]'
-                : 'border-[var(--sem-watch-bd)] bg-[var(--sem-watch-bg)] text-[var(--sem-watch-fg)] font-semibold'
+                : 'border-[var(--sem-watch-bd)] bg-[var(--sem-watch-bg)] text-[var(--sem-watch-fg)] font-medium'
             }`}
           >
             {availableDates.map(d => (
@@ -79,7 +79,7 @@ export default function NavBar() {
           {!isLatest && (
             <button
               onClick={resetToLatest}
-              className="text-[10px] px-2 py-1 rounded-md bg-[var(--sem-watch-fg)] text-white hover:brightness-110 transition-colors font-medium"
+              className="text-caption px-2 py-1 rounded-md bg-[var(--sem-watch-fg)] text-white hover:brightness-110 transition-colors font-medium"
             >
               最新に戻る
             </button>
@@ -102,12 +102,12 @@ export default function NavBar() {
       <div className="ml-auto flex items-center gap-2 flex-shrink-0 pl-2">
         {!authLoading && (session ? (
           <>
-            <span className="text-[10px] text-[var(--text-muted)] hidden sm:inline" title={session.user.email ?? ''}>
+            <span className="text-caption text-[var(--text-muted)] hidden sm:inline" title={session.user.email ?? ''}>
               🔓 {session.user.email}
             </span>
             <button
               onClick={() => signOut()}
-              className="text-[10px] px-2 py-1 rounded-md border border-[var(--border-strong)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-strong)] transition-colors"
+              className="text-caption px-2 py-1 rounded-md border border-[var(--border-strong)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-strong)] transition-colors"
             >
               ログアウト
             </button>
@@ -115,7 +115,7 @@ export default function NavBar() {
         ) : (
           <button
             onClick={() => setLoginOpen(true)}
-            className="text-[10px] px-2 py-1 rounded-md bg-[var(--accent)] text-white hover:opacity-90 transition-opacity font-medium"
+            className="text-caption px-2 py-1 rounded-md bg-[var(--accent)] text-white hover:opacity-90 transition-opacity font-medium"
             title="記録の追加・編集にはログインが必要です"
           >
             🔒 ログイン

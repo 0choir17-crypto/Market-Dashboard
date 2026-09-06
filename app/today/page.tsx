@@ -78,7 +78,7 @@ export default function TodayPage() {
       />
 
       {!isLatest && selectedDate && (
-        <div className="mb-4 px-4 py-2 rounded-lg bg-[var(--sem-watch-bg)] border border-[var(--sem-watch-bd)] text-[var(--sem-watch-fg)] text-sm font-medium">
+        <div className="mb-4 px-4 py-2 rounded-lg bg-[var(--sem-watch-bg)] border border-[var(--sem-watch-bd)] text-[var(--sem-watch-fg)] text-small font-medium">
           {selectedDate} のスナップショットを表示中
           {displayDate && displayDate !== selectedDate && (
             <span className="ml-2 font-normal text-[var(--sem-watch-fg)]">
@@ -95,7 +95,7 @@ export default function TodayPage() {
           className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-8 text-center"
           style={{ color: 'var(--text-muted)' }}
         >
-          <p className="text-lg font-medium">読み込み中…</p>
+          <p className="text-title font-medium">読み込み中…</p>
         </div>
       ) : (
         <div className="flex flex-col gap-6">
