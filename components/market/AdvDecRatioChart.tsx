@@ -5,7 +5,7 @@ import { LineStyle } from 'lightweight-charts'
 import { TimeSeriesChart, type TimeSeriesPoint } from './TimeSeriesChart'
 import { fetchAdvDecRatioTimeSeries } from '@/lib/marketChartData'
 import { useDate } from '@/contexts/DateContext'
-import { SERIES } from '@/lib/chartColors'
+import { CHART, REF_LINE, SERIES, withAlpha } from '@/lib/chartColors'
 
 export function AdvDecRatioChart({ height = 180 }: { height?: number }) {
   const { selectedDate, isLatest } = useDate()
@@ -33,19 +33,19 @@ export function AdvDecRatioChart({ height = 180 }: { height?: number }) {
     () => [
       {
         price: 120,
-        color: 'rgba(239, 68, 68, 0.5)',
+        color: withAlpha(CHART.negative, 0.5),
         title: 'Overbought',
         lineStyle: LineStyle.Dashed,
       },
       {
         price: 70,
-        color: 'rgba(16, 185, 129, 0.5)',
+        color: withAlpha(CHART.positive, 0.5),
         title: 'Oversold',
         lineStyle: LineStyle.Dashed,
       },
       {
         price: 100,
-        color: 'rgba(148, 163, 184, 0.4)',
+        color: REF_LINE,
         title: '',
         lineStyle: LineStyle.Dotted,
       },

@@ -14,7 +14,7 @@ import {
 } from 'lightweight-charts'
 import { Trade } from '@/types/trades'
 import { fetchTradeChartData, ChartDataPoint } from '@/lib/chartData'
-import { CHART, SERIES } from '@/lib/chartColors'
+import { CHART, GRID_LINE, SERIES } from '@/lib/chartColors'
 
 interface Props {
   trade: Trade
@@ -72,8 +72,8 @@ export default function TradeChart({ trade }: Props) {
         textColor: CHART.textSecondary,
       },
       grid: {
-        vertLines: { color: 'rgba(148, 163, 184, 0.15)' },
-        horzLines: { color: 'rgba(148, 163, 184, 0.15)' },
+        vertLines: { color: GRID_LINE },
+        horzLines: { color: GRID_LINE },
       },
       timeScale: {
         timeVisible: false,

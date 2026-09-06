@@ -5,7 +5,7 @@ import { LineStyle } from 'lightweight-charts'
 import { TimeSeriesChart, type TimeSeriesPoint } from './TimeSeriesChart'
 import { fetchAdvancePctTimeSeries } from '@/lib/marketChartData'
 import { useDate } from '@/contexts/DateContext'
-import { SERIES } from '@/lib/chartColors'
+import { REF_LINE, SERIES } from '@/lib/chartColors'
 
 // Advances と Declines の2本線は合計がほぼ一定で常に交差し見づらいため、
 // 値上がり比率 (Adv%) の1本線 + 50% 基準線で Adv/Dec バランスの推移を表示する。
@@ -34,7 +34,7 @@ export function AdvDecChart({ height = 200 }: { height?: number }) {
     () => [
       {
         price: 50,
-        color: 'rgba(148, 163, 184, 0.6)',
+        color: REF_LINE,
         title: '50%',
         lineStyle: LineStyle.Dashed,
       },

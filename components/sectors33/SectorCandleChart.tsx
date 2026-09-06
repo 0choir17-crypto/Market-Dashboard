@@ -20,7 +20,7 @@ import {
   VOLUME_SURGE_RATIO,
   volumeBarColor,
 } from '@/lib/volume'
-import { CHART, EMA_COLORS, emaLineColor } from '@/lib/chartColors'
+import { CHART, EMA_COLORS, GRID_LINE, emaLineColor } from '@/lib/chartColors'
 
 
 // 期間と色は TradingView 側のチャート設定に合わせる。
@@ -138,8 +138,8 @@ export default function SectorCandleChart({
         attributionLogo: false,
       },
       grid: {
-        vertLines: { color: 'rgba(148,163,184,0.10)' },
-        horzLines: { color: 'rgba(148,163,184,0.10)' },
+        vertLines: { color: GRID_LINE },
+        horzLines: { color: GRID_LINE },
       },
       timeScale: {
         timeVisible: false,

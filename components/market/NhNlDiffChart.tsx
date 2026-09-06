@@ -5,7 +5,7 @@ import { LineStyle } from 'lightweight-charts'
 import { TimeSeriesChart, type TimeSeriesPoint } from './TimeSeriesChart'
 import { fetchNhNlDiffTimeSeries } from '@/lib/marketChartData'
 import { useDate } from '@/contexts/DateContext'
-import { SERIES } from '@/lib/chartColors'
+import { REF_LINE, SERIES } from '@/lib/chartColors'
 
 export function NhNlDiffChart({ height = 180 }: { height?: number }) {
   const { selectedDate, isLatest } = useDate()
@@ -33,7 +33,7 @@ export function NhNlDiffChart({ height = 180 }: { height?: number }) {
     () => [
       {
         price: 0,
-        color: 'rgba(148, 163, 184, 0.6)',
+        color: REF_LINE,
         title: '0',
         lineStyle: LineStyle.Solid,
       },

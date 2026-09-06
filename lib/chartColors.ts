@@ -36,8 +36,11 @@ export const CHART = {
   candleLine: '#131722', // --candle-line
 } as const
 
-/** 罫線が薄すぎて消える背景の上で使うグリッド線。 */
-export const GRID_LINE = 'rgba(148,163,184,0.10)'
+/** チャートのグリッド線。--border ではチャート上で消えるので専用に持つ。 */
+export const GRID_LINE = 'rgba(148, 163, 184, 0.12)'
+
+/** 0 線・閾値線などの基準線。グリッドより強く、系列より弱い。 */
+export const REF_LINE = 'rgba(148, 163, 184, 0.5)'
 
 /**
  * 連続量のためのグリーンランプ（ヒートマップ）。
@@ -46,23 +49,11 @@ export const GRID_LINE = 'rgba(148,163,184,0.10)'
  */
 export const GREEN_RAMP = ['#dcfce7', '#86efac', '#22c55e', '#16a34a', '#15803d'] as const
 
-/**
- * レジーム判定の 5 段（強気 → 弱気）。意味語彙は段階を持たないので、
- * 発散スケールが要るここだけ実値の並びとして持つ。ScoreGauge は
- * この値に透明度を継ぎ足す（color + '1a'）ので var() は使えない。
- */
-export const REGIME_RAMP = {
-  strongBull: CHART.strongFg,
-  bull: CHART.positive,
-  neutral: CHART.textMuted,
-  bear: CHART.negative,
-  strongBear: CHART.weakFg,
-} as const
-
 /** 出来高の平常比。surge = 警戒、heavy = 注目。 */
 export const VOLUME_TONE = {
   surge: CHART.watchFg,
   heavy: CHART.focusFg,
+  normal: 'rgba(148, 163, 184, 0.55)', // 平常またはそれ以下 / 平常比不明
 } as const
 
 /**
@@ -87,7 +78,7 @@ export const EMA_COLORS = {
 } as const
 
 /** 移動平均線の不透明度。値動きを隠さないよう TradingView 側と同じ 30%。 */
-export const EMA_ALPHA = 0.3
+const EMA_ALPHA = 0.3
 
 /** #rrggbb → rgba()。チャートライブラリは 8 桁 16 進を受けないものがあるため展開する。 */
 export function withAlpha(hex: string, alpha: number): string {

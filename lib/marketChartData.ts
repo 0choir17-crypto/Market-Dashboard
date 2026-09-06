@@ -9,31 +9,6 @@ function startDateStr(lookbackDays: number, endDate?: string): string {
   return d.toISOString().slice(0, 10)
 }
 
-export async function fetchGateScoreTimeSeries(
-  lookbackDays: number = DEFAULT_LOOKBACK_DAYS,
-  endDate?: string,
-): Promise<TimeSeriesPoint[]> {
-  // Entry Gate スコア (0-100)。未集計の日付 (null) はチャートから除外。
-  let query = supabase
-    .from('market_conditions')
-    .select('date, gate_score')
-    .gte('date', startDateStr(lookbackDays, endDate))
-    .order('date', { ascending: true })
-
-  if (endDate) {
-    query = query.lte('date', endDate)
-  }
-
-  const { data, error } = await query
-
-  if (error || !data) return []
-
-  // Number(null) === 0 の罠を避けるため null は事前に除外
-  return (data as { date: string; gate_score: number | null }[])
-    .filter((r) => r.gate_score != null)
-    .map((r) => ({ time: r.date, value: Number(r.gate_score) }))
-    .filter((p) => Number.isFinite(p.value))
-}
 
 export async function fetchAdvDecRatioTimeSeries(
   lookbackDays: number = DEFAULT_LOOKBACK_DAYS,

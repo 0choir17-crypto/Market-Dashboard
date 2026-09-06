@@ -14,7 +14,7 @@ export const VOLUME_SURGE_RATIO = 2.0
 export const VOLUME_COLORS = {
   surge: VOLUME_TONE.surge, // 警戒 — 平常比 2.0 以上
   heavy: VOLUME_TONE.heavy, // 注目 — 平常比 1.2 以上
-  normal: 'rgba(148, 163, 184, 0.55)', // slate — 平常またはそれ以下 / 平常比不明
+  normal: VOLUME_TONE.normal, // 平常またはそれ以下 / 平常比不明
 } as const
 
 /** 平常比からバーの色を決める。ratio が null（20日平均なし）のときは淡色。 */
