@@ -109,7 +109,7 @@ export default function SectorSection({
           <p className="text-xs text-[var(--text-muted)] mt-0.5">
             TOPIX-33 業種別 composite_score（今どこを買うか）
             {latestDate && (
-              <span className="ml-2 text-gray-400 font-mono">{latestDate}</span>
+              <span className="ml-2 text-[var(--text-muted)] font-mono">{latestDate}</span>
             )}
           </p>
         </div>
@@ -184,7 +184,7 @@ export default function SectorSection({
               普段は使わないので既定は折りたたみ。見たいときだけ開く。 */}
           <details className="mt-6 group">
             <summary className="cursor-pointer select-none list-none flex items-center gap-2 text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)]">
-              <span className="text-[10px] text-gray-400 group-open:rotate-90 transition-transform inline-block">
+              <span className="text-[10px] text-[var(--text-muted)] group-open:rotate-90 transition-transform inline-block">
                 ▶
               </span>
               {history.dates.length}営業日の推移（Bars / RRG）
@@ -218,7 +218,7 @@ export default function SectorSection({
               </div>
 
               {history.dates.length === 0 ? (
-                <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-8 text-center text-gray-400 text-sm">
+                <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-8 text-center text-[var(--text-muted)] text-sm">
                   履歴データを読み込めませんでした
                 </div>
               ) : view === 'bar' ? (

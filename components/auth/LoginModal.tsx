@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Modal from '@/components/shared/Modal'
 import { useAuth } from '@/contexts/AuthContext'
+import { btnGhost, btnPrimary, errorClass, fieldClass, labelClass } from '@/components/shared/form'
 
 type Props = {
   open: boolean
@@ -33,12 +34,12 @@ export default function LoginModal({ open, onClose }: Props) {
   return (
     <Modal open={open} onClose={onClose} title="ログイン">
       <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
-        <p className="text-xs text-gray-500 leading-relaxed">
+        <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
           記録の追加・編集にはログインが必要です（閲覧はログイン不要）。
           セッションは端末に保存されるため、ログインは端末ごとに初回のみです。
         </p>
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1" htmlFor="login-email">
+          <label className={labelClass} htmlFor="login-email">
             メールアドレス
           </label>
           <input
@@ -48,11 +49,11 @@ export default function LoginModal({ open, onClose }: Props) {
             required
             value={email}
             onChange={e => setEmail(e.target.value)}
-            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className={fieldClass}
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1" htmlFor="login-password">
+          <label className={labelClass} htmlFor="login-password">
             パスワード
           </label>
           <input
@@ -62,11 +63,11 @@ export default function LoginModal({ open, onClose }: Props) {
             required
             value={password}
             onChange={e => setPassword(e.target.value)}
-            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className={fieldClass}
           />
         </div>
         {error && (
-          <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">
+          <p className={errorClass}>
             ログインに失敗しました: {error}
           </p>
         )}
@@ -74,14 +75,14 @@ export default function LoginModal({ open, onClose }: Props) {
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 transition-colors"
+            className={btnGhost}
           >
             キャンセル
           </button>
           <button
             type="submit"
             disabled={submitting}
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            className={btnPrimary}
           >
             {submitting ? 'ログイン中…' : 'ログイン'}
           </button>

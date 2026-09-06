@@ -66,7 +66,7 @@ export default function Page() {
 
       {/* 過去日バナー */}
       {!isLatest && selectedDate && (
-        <div className="mb-6 px-4 py-2 rounded-lg bg-amber-50 border border-amber-300 text-amber-800 text-sm font-medium">
+        <div className="mb-6 px-4 py-2 rounded-lg bg-[var(--sem-watch-bg)] border border-[var(--sem-watch-bd)] text-[var(--sem-watch-fg)] text-sm font-medium">
           {selectedDate} のスナップショットを表示中
         </div>
       )}
@@ -88,7 +88,7 @@ export default function Page() {
               : `${selectedDate} のマーケットデータはありません。`}
           </p>
           {error && (
-            <p className="text-xs mt-3 text-red-600 break-all">
+            <p className="text-xs mt-3 text-[var(--negative)] break-all">
               Supabase error: {error}
             </p>
           )}

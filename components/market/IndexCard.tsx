@@ -36,7 +36,7 @@ function ChangePill({ value }: { value: number | null | undefined }) {
 function SmaBadge({ above, label }: { above: boolean | null | undefined; label: string }) {
   if (above === null || above === undefined) {
     return (
-      <span className="px-1.5 py-0.5 rounded text-xs bg-gray-100 text-gray-400">{label} N/A</span>
+      <span className="px-1.5 py-0.5 rounded text-xs bg-[var(--bg-primary)] text-[var(--text-muted)]">{label} N/A</span>
     )
   }
   return (

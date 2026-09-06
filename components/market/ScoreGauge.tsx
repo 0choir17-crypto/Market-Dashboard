@@ -159,18 +159,18 @@ export default function ScoreGauge({
 
       {/* Sub-regimes (MC v4 \u3068\u306F\u5225\u7CFB\u7D71\u306E regime) */}
       <div className="mt-4 w-full">
-        <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">
+        <p className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-1.5">
           Sub-regimes
         </p>
         <div className="rounded-lg border border-[var(--border)] overflow-hidden text-sm">
           <div className="flex items-center justify-between px-4 py-2 border-b border-[var(--border)]">
-            <span className="text-gray-500 font-medium">Index Trend</span>
+            <span className="text-[var(--text-secondary)] font-medium">Index Trend</span>
             <span className="flex items-center gap-1.5 font-semibold" style={{ color: trendColor }}>
               {'\u25CF'} {marketRegimeLabel}
             </span>
           </div>
           <div className="flex items-center justify-between px-4 py-2">
-            <span className="text-gray-500 font-medium">Market Breadth</span>
+            <span className="text-[var(--text-secondary)] font-medium">Market Breadth</span>
             <span className="flex items-center gap-1.5 font-semibold" style={{ color: breadthColor }}>
               {'\u25CF'} {breadthRegimeLabel}
             </span>

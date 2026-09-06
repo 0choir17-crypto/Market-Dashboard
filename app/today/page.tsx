@@ -78,10 +78,10 @@ export default function TodayPage() {
       />
 
       {!isLatest && selectedDate && (
-        <div className="mb-4 px-4 py-2 rounded-lg bg-amber-50 border border-amber-300 text-amber-800 text-sm font-medium">
+        <div className="mb-4 px-4 py-2 rounded-lg bg-[var(--sem-watch-bg)] border border-[var(--sem-watch-bd)] text-[var(--sem-watch-fg)] text-sm font-medium">
           {selectedDate} のスナップショットを表示中
           {displayDate && displayDate !== selectedDate && (
-            <span className="ml-2 font-normal text-amber-700">
+            <span className="ml-2 font-normal text-[var(--sem-watch-fg)]">
               （各テーブルは {displayDate} の最近値にフォールバック）
             </span>
           )}

@@ -1,6 +1,7 @@
 'use client'
 
 import Modal from './Modal'
+import { btnSecondary } from '@/components/shared/form'
 
 type Props = {
   open: boolean
@@ -23,16 +24,16 @@ export default function ConfirmDialog({
 }: Props) {
   const confirmClass =
     variant === 'danger'
-      ? 'bg-red-600 hover:bg-red-700'
-      : 'bg-blue-600 hover:bg-blue-700'
+      ? 'bg-[var(--negative)] hover:brightness-110'
+      : 'bg-[var(--sem-focus-fg)] hover:brightness-110'
   return (
     <Modal open={open} onClose={onCancel} title="Confirm">
       <div className="px-6 py-5">
-        <p className="text-gray-700 text-sm mb-6">{message}</p>
+        <p className="text-[var(--text-primary)] text-sm mb-6">{message}</p>
         <div className="flex justify-end gap-3">
           <button
             onClick={onCancel}
-            className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-[var(--bg-card-hover)] transition-colors min-h-[44px]"
+            className={btnSecondary}
           >
             キャンセル
           </button>

@@ -101,13 +101,13 @@ export default function ReasonPerformance({ trades }: Props) {
   return (
     <div className="mb-6 bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm">
       <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border-subtle)]">
-        <h3 className="text-sm font-semibold text-gray-700">
+        <h3 className="text-sm font-semibold text-[var(--text-primary)]">
           Exit Reason Performance
-          <span className="ml-2 text-xs font-normal text-gray-400">
+          <span className="ml-2 text-xs font-normal text-[var(--text-muted)]">
             手仕舞い理由別成績
           </span>
         </h3>
-        <span className="text-xs text-gray-400 font-mono">n={closed.length}</span>
+        <span className="text-xs text-[var(--text-muted)] font-mono">n={closed.length}</span>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
@@ -136,14 +136,14 @@ export default function ReasonPerformance({ trades }: Props) {
                   className="border-b border-[var(--border-subtle)] hover:bg-[var(--bg-card-hover)]"
                 >
                   <td
-                    className={`px-3 py-2 ${muted ? 'text-gray-400 italic' : 'text-gray-800 font-medium'}`}
+                    className={`px-3 py-2 ${muted ? 'text-[var(--text-muted)] italic' : 'text-[var(--text-primary)] font-medium'}`}
                   >
                     {r.reason}
                   </td>
                   <td className="px-3 py-2 text-right font-mono">{r.count}</td>
                   <td className="px-3 py-2 text-right font-mono text-xs">
                     <span className="text-[var(--positive)]">{r.wins}</span>
-                    <span className="text-gray-400 mx-0.5">/</span>
+                    <span className="text-[var(--text-muted)] mx-0.5">/</span>
                     <span className="text-[var(--negative)]">{r.losses}</span>
                   </td>
                   <td
@@ -175,7 +175,7 @@ export default function ReasonPerformance({ trades }: Props) {
                   </td>
                   <td className="px-3 py-2">
                     <div className="relative h-3 w-full">
-                      <div className="absolute left-1/2 top-0 bottom-0 w-px bg-gray-300" />
+                      <div className="absolute left-1/2 top-0 bottom-0 w-px bg-[var(--sem-idle-bd)]" />
                       <div
                         className="absolute top-0.5 bottom-0.5 rounded"
                         style={{
@@ -192,7 +192,7 @@ export default function ReasonPerformance({ trades }: Props) {
           </tbody>
         </table>
       </div>
-      <p className="px-4 py-2 text-[11px] text-gray-400 border-t border-[var(--border-subtle)]">
+      <p className="px-4 py-2 text-[11px] text-[var(--text-muted)] border-t border-[var(--border-subtle)]">
         ※ 各トレードは 1 理由のみで集計されるため Trades 合計 = CLOSED 総数。
         CSV import 分は exit_reason が無いため「未設定」に入る。
       </p>

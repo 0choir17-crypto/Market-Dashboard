@@ -25,7 +25,7 @@ function AdRatioColor(ratio: number | null | undefined) {
 function ProgressBar({ pct, color }: { pct: number | null | undefined; color: string }) {
   const value = pct ?? 0
   return (
-    <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+    <div className="w-full bg-[var(--bg-primary)] rounded-full h-2 overflow-hidden">
       <div
         className="h-2 rounded-full transition-all"
         style={{ width: `${Math.min(Math.max(value, 0), 100)}%`, backgroundColor: color }}

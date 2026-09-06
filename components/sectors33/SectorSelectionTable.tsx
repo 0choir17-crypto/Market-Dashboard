@@ -80,7 +80,7 @@ function ReturnsBlock({ row }: { row: SectorSelectionRow }) {
             {fmtSignedPct(p.ret)}
           </p>
           <p className="text-[10px] font-mono tabular-nums" style={{ color: pctColor(p.exc) }}>
-            <span className="text-gray-400">vs TPX </span>
+            <span className="text-[var(--text-muted)]">vs TPX </span>
             {fmtSignedPct(p.exc)}
           </p>
         </div>
@@ -95,7 +95,7 @@ function MiniBar({ value }: { value: number | null | undefined }) {
   const label = isNum(value) ? value.toFixed(0) : '—'
   return (
     <div className="flex items-center gap-1.5 w-full">
-      <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden min-w-[24px]">
+      <div className="flex-1 h-1.5 bg-[var(--bg-primary)] rounded-full overflow-hidden min-w-[24px]">
         <div className="h-full rounded-full" style={{ width: `${safe}%`, backgroundColor: color }} />
       </div>
       <span
@@ -146,14 +146,14 @@ function DrilldownBody({ row }: { row: SectorSelectionRow }) {
           {/* Left: 5 component bars */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <p className="text-xs font-semibold text-gray-600">
+              <p className="text-xs font-semibold text-[var(--text-secondary)]">
                 スコア内訳 — {row.sector_name_s33}
                 {row.sector_code_s33 && (
-                  <span className="ml-2 text-gray-400 font-mono">[{row.sector_code_s33}]</span>
+                  <span className="ml-2 text-[var(--text-muted)] font-mono">[{row.sector_code_s33}]</span>
                 )}
               </p>
-              <p className="text-xs text-gray-500">
-                合計 <span className="font-mono font-bold text-gray-700">{total}</span>
+              <p className="text-xs text-[var(--text-secondary)]">
+                合計 <span className="font-mono font-bold text-[var(--text-primary)]">{total}</span>
               </p>
             </div>
             <div className="space-y-2">
@@ -166,23 +166,23 @@ function DrilldownBody({ row }: { row: SectorSelectionRow }) {
                   <div key={meta.key} className="flex items-center gap-3 text-xs">
                     <div className="w-32 flex items-center gap-1 shrink-0">
                       <Tooltip content={meta.tooltip}>
-                        <span className="font-semibold text-gray-700">{meta.label}</span>
+                        <span className="font-semibold text-[var(--text-primary)]">{meta.label}</span>
                       </Tooltip>
-                      <span className="text-gray-400 font-mono">(×{weight.toFixed(2)})</span>
+                      <span className="text-[var(--text-muted)] font-mono">(×{weight.toFixed(2)})</span>
                     </div>
-                    <div className="flex-1 h-3 bg-gray-100 rounded overflow-hidden">
+                    <div className="flex-1 h-3 bg-[var(--bg-primary)] rounded overflow-hidden">
                       <div
                         className="h-full rounded"
                         style={{ width: `${safe}%`, backgroundColor: color }}
                       />
                     </div>
                     <span
-                      className="font-mono tabular-nums w-10 text-right text-gray-700"
+                      className="font-mono tabular-nums w-10 text-right text-[var(--text-primary)]"
                       style={{ color: isNum(value) ? 'var(--text-primary)' : 'var(--sem-idle-fg)' }}
                     >
                       {isNum(value) ? value.toFixed(0) : '—'}
                     </span>
-                    <span className="font-mono tabular-nums w-14 text-right text-gray-500">
+                    <span className="font-mono tabular-nums w-14 text-right text-[var(--text-secondary)]">
                       {isNum(value) ? `→ ${(value * weight).toFixed(2)}` : ''}
                     </span>
                   </div>
@@ -210,7 +210,7 @@ function DrilldownBody({ row }: { row: SectorSelectionRow }) {
 
         {/* 期間リターン / TOPIX超過 */}
         <div className="mt-5">
-          <p className="text-xs font-semibold text-gray-600 mb-2">
+          <p className="text-xs font-semibold text-[var(--text-secondary)] mb-2">
             期間リターン / TOPIX超過
           </p>
           <ReturnsBlock row={row} />
@@ -219,13 +219,13 @@ function DrilldownBody({ row }: { row: SectorSelectionRow }) {
         {/* 空売り内訳（当日） */}
         <div className="mt-5">
           <div className="flex items-baseline gap-3 mb-2">
-            <p className="text-xs font-semibold text-gray-600">空売り内訳（当日）</p>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs font-semibold text-[var(--text-secondary)]">空売り内訳（当日）</p>
+            <p className="text-xs text-[var(--text-secondary)]">
               比率{' '}
-              <span className="font-mono font-bold text-gray-700">
+              <span className="font-mono font-bold text-[var(--text-primary)]">
                 {fmtRatioPct(row.sector_short_va_ratio_s33)}
               </span>
-              <span className="ml-2 text-gray-400">
+              <span className="ml-2 text-[var(--text-muted)]">
                 （5日平均 {fmtRatioPct(row.sector_short_va_ratio_5d_s33)}）
               </span>
             </p>
@@ -370,7 +370,7 @@ export default function SectorSelectionTable({
             count={moverCount}
           />
         </span>
-        <label className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer select-none">
+        <label className="flex items-center gap-2 text-xs text-[var(--text-secondary)] cursor-pointer select-none">
           <input
             type="checkbox"
             checked={hideLowConf}
@@ -430,13 +430,13 @@ export default function SectorSelectionTable({
           <span className="inline-block w-2.5 h-2.5 rounded" style={{ backgroundColor: 'var(--sem-weak-bg)' }} />
           <span style={{ color: 'var(--text-secondary)' }}>弱 &lt;30</span>
         </span>
-        <span className="text-gray-300">|</span>
+        <span className="text-[var(--text-muted)]">|</span>
         <span className="text-[var(--text-secondary)]">
           <span className="font-mono" style={{ color: 'var(--positive)' }}>▲</span>
           <span className="font-mono" style={{ color: 'var(--negative)' }}>▼</span>
           {` ${deltaPeriod.toUpperCase()} 前からの順位変動（±${BIG_MOVE_THRESHOLD}以上は色付き＋左端の帯）`}
         </span>
-        <span className="text-gray-300">|</span>
+        <span className="text-[var(--text-muted)]">|</span>
         <span className="text-[var(--text-secondary)]">⚠️ confidence_low = 銘柄数&lt;10</span>
       </div>
     </div>

@@ -118,7 +118,7 @@ export default function EmaSetupsSection({
   }
 
   const selectClass =
-    'text-xs px-2 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg-card)] text-gray-700 cursor-pointer'
+    'text-xs px-2 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg-card)] text-[var(--text-primary)] cursor-pointer'
 
   return (
     <section className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-4">
@@ -171,8 +171,8 @@ export default function EmaSetupsSection({
           onClick={() => setFreshOnly(v => !v)}
           className={`text-xs font-medium px-2.5 py-1.5 rounded-lg border transition-colors ${
             freshOnly
-              ? 'bg-amber-500 text-white border-amber-500'
-              : 'bg-[var(--bg-card)] text-amber-700 border-amber-200 hover:bg-amber-50'
+              ? 'bg-[var(--sem-watch-fg)] text-white border-[var(--sem-watch-bd)]'
+              : 'bg-[var(--bg-card)] text-[var(--sem-watch-fg)] border-[var(--sem-watch-bd)] hover:bg-[var(--sem-watch-bg)]'
           }`}
           title="直近10営業日に同じ EMA へのタッチが無い＝初回のタッチを含む銘柄だけ表示"
         >

@@ -30,32 +30,32 @@ function holdDays(entry: string | null, exit: string | null): number | null {
 
 // スクリーン種別 → バッジ色 (Phase 2.1 採用 2 + legacy グレー)
 function screenBadgeClass(rawScreenName: string | null): string {
-  if (!rawScreenName) return 'bg-gray-100 text-gray-600'
+  if (!rawScreenName) return 'bg-[var(--bg-primary)] text-[var(--text-secondary)]'
   const first = rawScreenName.split('|')[0].trim()
   // Phase 2.1 採用 (bear/neutral 限定)
   if (first === 'DIV_DY_Incr_EpsGr') {
-    return 'bg-red-50 text-red-700'
+    return 'bg-[var(--sem-weak-bg)] text-[var(--sem-weak-fg)]'
   }
   if (first === 'FCT_ValueQuality_CRS') {
-    return 'bg-purple-50 text-purple-700'
+    return 'bg-[var(--sem-focus-bg)] text-[var(--sem-focus-fg)]'
   }
   // Phase 2.1 で archive された旧 screens (過去 signal 互換用 grey)
-  return 'bg-gray-100 text-gray-500'
+  return 'bg-[var(--bg-primary)] text-[var(--text-secondary)]'
 }
 
 function SignalSnapshotLine({ t }: { t: Trade }) {
   if (t.rs_at_entry == null) return null
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-gray-400 mt-1">
-      <span>RS: <strong className="text-gray-600">{t.rs_at_entry.toFixed(1)}</strong></span>
-      <span>RVOL: <strong className={(t.rvol_at_entry ?? 0) >= 2 ? 'text-emerald-600 font-bold' : 'text-gray-600'}>{t.rvol_at_entry?.toFixed(2)}</strong></span>
-      <span>ADR: <strong className="text-gray-600">{t.adr_at_entry?.toFixed(2)}%</strong></span>
-      <span>EMA21: <strong className="text-gray-600">{t.dist_ema21_at_entry?.toFixed(2)}R</strong></span>
-      {t.stop_pct_at_entry != null && <span>Stop: <strong className="text-gray-600">{t.stop_pct_at_entry.toFixed(2)}%</strong></span>}
-      {t.sector_s33 && <span>Sector: <strong className="text-gray-600">{t.sector_s33}</strong></span>}
-      {t.signal_price != null && <span>Price: <strong className="text-gray-600">&yen;{t.signal_price.toLocaleString()}</strong></span>}
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-[var(--text-muted)] mt-1">
+      <span>RS: <strong className="text-[var(--text-secondary)]">{t.rs_at_entry.toFixed(1)}</strong></span>
+      <span>RVOL: <strong className={(t.rvol_at_entry ?? 0) >= 2 ? 'text-[var(--positive)] font-bold' : 'text-[var(--text-secondary)]'}>{t.rvol_at_entry?.toFixed(2)}</strong></span>
+      <span>ADR: <strong className="text-[var(--text-secondary)]">{t.adr_at_entry?.toFixed(2)}%</strong></span>
+      <span>EMA21: <strong className="text-[var(--text-secondary)]">{t.dist_ema21_at_entry?.toFixed(2)}R</strong></span>
+      {t.stop_pct_at_entry != null && <span>Stop: <strong className="text-[var(--text-secondary)]">{t.stop_pct_at_entry.toFixed(2)}%</strong></span>}
+      {t.sector_s33 && <span>Sector: <strong className="text-[var(--text-secondary)]">{t.sector_s33}</strong></span>}
+      {t.signal_price != null && <span>Price: <strong className="text-[var(--text-secondary)]">&yen;{t.signal_price.toLocaleString()}</strong></span>}
       {t.mc_condition_at_entry && (
-        <span>MC: <strong className={t.mc_met_at_entry ? 'text-emerald-600' : 'text-gray-400'}>{t.mc_condition_at_entry} {t.mc_met_at_entry ? '\u2705' : '\u274c'}</strong></span>
+        <span>MC: <strong className={t.mc_met_at_entry ? 'text-[var(--positive)]' : 'text-[var(--text-muted)]'}>{t.mc_condition_at_entry} {t.mc_met_at_entry ? '\u2705' : '\u274c'}</strong></span>
       )}
     </div>
   )
@@ -71,7 +71,7 @@ function ReviewTagPills({ tagIds }: { tagIds: string[] }) {
         return (
           <span
             key={id}
-            className="text-[10px] bg-blue-50 text-blue-700 border border-blue-200 px-1.5 py-0.5 rounded"
+            className="text-[10px] bg-[var(--sem-focus-bg)] text-[var(--sem-focus-fg)] border border-[var(--sem-focus-bd)] px-1.5 py-0.5 rounded"
             title={tag.description}
           >
             {tag.label}
@@ -79,7 +79,7 @@ function ReviewTagPills({ tagIds }: { tagIds: string[] }) {
         )
       })}
       {tagIds.length > 6 && (
-        <span className="text-[10px] text-gray-500">+{tagIds.length - 6}</span>
+        <span className="text-[10px] text-[var(--text-secondary)]">+{tagIds.length - 6}</span>
       )}
     </div>
   )
@@ -111,17 +111,17 @@ export default function TradeList({
       {/* OPEN trades */}
       {showOpen && (
       <section>
-        <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-          <span className="inline-block w-2 h-2 rounded-full bg-emerald-500" />
+        <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-3 flex items-center gap-2">
+          <span className="inline-block w-2 h-2 rounded-full bg-[var(--positive)]" />
           OPEN ({openTrades.length})
         </h3>
         {openTrades.length === 0 ? (
-          <p className="text-sm text-gray-400 pl-4">No open positions</p>
+          <p className="text-sm text-[var(--text-muted)] pl-4">No open positions</p>
         ) : (
           <div className="space-y-3">
             {openTrades.map(t => (
               <div key={t.id} className="space-y-2">
-                <div className="bg-[var(--bg-card)] rounded-lg border border-gray-200 px-4 py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3 hover:shadow-sm transition-shadow">
+                <div className="bg-[var(--bg-card)] rounded-lg border border-[var(--border)] px-4 py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3 hover:shadow-sm transition-shadow">
                   <div className="space-y-1 min-w-0 flex-1">
                     {/* 1行目: 最重要 */}
                     <div className="flex flex-wrap items-center gap-2">
@@ -129,7 +129,7 @@ export default function TradeList({
                         href={`https://jp.tradingview.com/chart/?symbol=TSE:${t.ticker}`}
                         target="_blank"
                         rel="noreferrer"
-                        className="font-mono font-bold text-blue-600 text-base hover:underline"
+                        className="font-mono font-bold text-[var(--sem-focus-fg)] text-base hover:underline"
                       >
                         {t.ticker}
                       </a>
@@ -138,19 +138,19 @@ export default function TradeList({
                           href={`https://shikiho.toyokeizai.net/stocks/${t.ticker}`}
                           target="_blank"
                           rel="noreferrer"
-                          className="text-sm text-gray-700 truncate hover:underline"
+                          className="text-sm text-[var(--text-primary)] truncate hover:underline"
                         >
                           {t.company_name}
                         </a>
                       ) : (
-                        <span className="text-sm text-gray-700 truncate" />
+                        <span className="text-sm text-[var(--text-primary)] truncate" />
                       )}
                       <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${screenBadgeClass(t.screen_name)}`}>
                         {t.screen_name ? (SCREEN_NAME_MAP[t.screen_name] ?? t.screen_name) : '—'}
                       </span>
                     </div>
                     {/* 2行目: エントリー情報 */}
-                    <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-gray-500">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-[var(--text-secondary)]">
                       <span className="font-mono">{t.entry_date}</span>
                       <span className="font-mono">&yen;{t.entry_price.toLocaleString()} &times; {t.shares}株</span>
                     </div>
@@ -160,13 +160,13 @@ export default function TradeList({
                   <div className="flex gap-2 self-end md:self-auto">
                     <button
                       onClick={() => onEdit(t)}
-                      className="px-3 py-1.5 text-xs font-medium text-gray-600 border border-gray-300 hover:bg-gray-100 rounded-lg transition-colors"
+                      className="px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] border border-[var(--border-strong)] hover:bg-[var(--bg-card-hover)] rounded-lg transition-colors"
                     >
                       編集
                     </button>
                     <button
                       onClick={() => onClose(t)}
-                      className="px-3 py-1.5 text-xs font-medium text-white bg-orange-500 hover:bg-orange-600 rounded-lg transition-colors"
+                      className="px-3 py-1.5 text-xs font-medium text-white bg-[var(--sem-watch-fg)] hover:brightness-110 rounded-lg transition-colors"
                     >
                       決済
                     </button>
@@ -182,12 +182,12 @@ export default function TradeList({
       {/* CLOSED trades — grouped by exit-date year, descending */}
       {showClosed && (
       <section>
-        <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-          <span className="inline-block w-2 h-2 rounded-full bg-gray-400" />
+        <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-3 flex items-center gap-2">
+          <span className="inline-block w-2 h-2 rounded-full bg-[var(--sem-idle-bd)]" />
           CLOSED ({closedTrades.length})
         </h3>
         {closedTrades.length === 0 ? (
-          <p className="text-sm text-gray-400 pl-4">No closed trades</p>
+          <p className="text-sm text-[var(--text-muted)] pl-4">No closed trades</p>
         ) : (
           <div className="space-y-6">
             {groupTradesByYear(closedTrades).map(group => {
@@ -195,11 +195,11 @@ export default function TradeList({
               // PeriodPerformance table above and don't need to repeat here.
               return (
                 <div key={group.year}>
-                  <div className="flex items-baseline gap-3 mb-3 pb-1.5 border-b border-gray-200">
-                    <h4 className="text-base font-bold text-gray-800 font-mono">
+                  <div className="flex items-baseline gap-3 mb-3 pb-1.5 border-b border-[var(--border)]">
+                    <h4 className="text-base font-bold text-[var(--text-primary)] font-mono">
                       {group.year}
                     </h4>
-                    <span className="text-xs text-gray-500">
+                    <span className="text-xs text-[var(--text-secondary)]">
                       {group.trades.length}件
                     </span>
                   </div>
@@ -208,9 +208,9 @@ export default function TradeList({
                       const cls = effectiveResult(t)
                       const tone = cls === 'WIN' ? 'win' : cls === 'LOSS' ? 'loss' : 'be'
                       const badgeClass =
-                        tone === 'win' ? 'bg-emerald-100 text-emerald-700'
-                        : tone === 'loss' ? 'bg-red-100 text-red-700'
-                        : 'bg-gray-100 text-gray-600'
+                        tone === 'win' ? 'bg-[var(--sem-strong-bg)] text-[var(--sem-strong-fg)]'
+                        : tone === 'loss' ? 'bg-[var(--sem-weak-bg)] text-[var(--sem-weak-fg)]'
+                        : 'bg-[var(--bg-primary)] text-[var(--text-secondary)]'
                       const valueClass =
                         tone === 'win' ? 'text-[var(--positive)]'
                         : tone === 'loss' ? 'text-[var(--negative)]'
@@ -224,7 +224,7 @@ export default function TradeList({
                       return (
                         <div
                           key={t.id}
-                          className={`bg-[var(--bg-card)] rounded-lg border border-gray-200 hover:shadow-sm transition-shadow ${
+                          className={`bg-[var(--bg-card)] rounded-lg border border-[var(--border)] hover:shadow-sm transition-shadow ${
                             expanded ? 'lg:col-span-3 md:col-span-2' : ''
                           }`}
                         >
@@ -236,7 +236,7 @@ export default function TradeList({
                                   href={`https://jp.tradingview.com/chart/?symbol=TSE:${t.ticker}`}
                                   target="_blank"
                                   rel="noreferrer"
-                                  className="font-mono font-bold text-sm text-blue-600 hover:underline flex-shrink-0"
+                                  className="font-mono font-bold text-sm text-[var(--sem-focus-fg)] hover:underline flex-shrink-0"
                                 >
                                   {t.ticker}
                                 </a>
@@ -245,7 +245,7 @@ export default function TradeList({
                                     href={`https://shikiho.toyokeizai.net/stocks/${t.ticker}`}
                                     target="_blank"
                                     rel="noreferrer"
-                                    className="text-xs text-gray-700 truncate hover:underline"
+                                    className="text-xs text-[var(--text-primary)] truncate hover:underline"
                                     title={t.company_name}
                                   >
                                     {t.company_name}
@@ -272,13 +272,13 @@ export default function TradeList({
                                   </span>
                                 )}
                                 {days != null && (
-                                  <span className="text-[11px] text-gray-500 font-mono">{days}日</span>
+                                  <span className="text-[11px] text-[var(--text-secondary)] font-mono">{days}日</span>
                                 )}
                               </div>
                             </div>
 
                             {/* 3行目: 日付・価格 */}
-                            <div className="text-[11px] text-gray-500 font-mono leading-tight">
+                            <div className="text-[11px] text-[var(--text-secondary)] font-mono leading-tight">
                               {t.entry_date} → {t.exit_date}
                               <br />
                               &yen;{t.entry_price.toLocaleString()} → &yen;{t.exit_price?.toLocaleString()}
@@ -298,11 +298,11 @@ export default function TradeList({
                             {hasReview && <ReviewTagPills tagIds={tags} />}
                           </div>
 
-                          <div className="px-3 py-1.5 border-t border-gray-100 flex items-center justify-end gap-2">
+                          <div className="px-3 py-1.5 border-t border-[var(--border)] flex items-center justify-end gap-2">
                             {/* Edit = ghost (secondary), Review = filled (primary action) */}
                             <button
                               onClick={() => onEdit(t)}
-                              className="px-2.5 py-1 text-[11px] font-medium text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
+                              className="px-2.5 py-1 text-[11px] font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)] rounded transition-colors"
                             >
                               編集
                             </button>
@@ -310,10 +310,10 @@ export default function TradeList({
                               onClick={() => onToggleReview(t.id)}
                               className={`px-2.5 py-1 text-[11px] font-semibold rounded border transition-colors ${
                                 expanded
-                                  ? 'bg-blue-100 border-blue-400 text-blue-800'
+                                  ? 'bg-[var(--sem-focus-bg)] border-[var(--sem-focus-bd)] text-[var(--sem-focus-fg)]'
                                   : hasReview
-                                    ? 'bg-blue-600 border-blue-600 text-white hover:bg-blue-700'
-                                    : 'bg-amber-500 border-amber-500 text-white hover:bg-amber-600'
+                                    ? 'bg-[var(--sem-focus-fg)] border-[var(--sem-focus-bd)] text-white hover:brightness-110'
+                                    : 'bg-[var(--sem-watch-fg)] border-[var(--sem-watch-bd)] text-white hover:brightness-110'
                               }`}
                             >
                               {hasReview ? '🔍 再編集' : '🔍 レビュー'}
@@ -321,7 +321,7 @@ export default function TradeList({
                           </div>
 
                           {expanded && (
-                            <div className="border-t border-gray-100 p-3">
+                            <div className="border-t border-[var(--border)] p-3">
                               <ReviewSection trade={t} onSaved={onSectionSaved} onCancel={onSectionCancel} />
                             </div>
                           )}

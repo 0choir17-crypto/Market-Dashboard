@@ -201,8 +201,10 @@ export default function CurrentStateTable({ rows }: Props) {
         // 重みは塗りではなく左端のレールで示す。READY だけ。
         rail={r => (r.state === 'READY' ? 'var(--sem-focus-fg)' : null)}
         renderGroupHeader={(state, count) => (
-          <span className="inline-flex items-baseline gap-2">
-            <span className="text-caption tracking-wide text-[var(--text-secondary)]">{state}</span>
+          <span className="inline-flex items-baseline gap-2 flex-wrap">
+            <span className="text-small font-medium tracking-wide text-[var(--text-primary)]">
+              {state}
+            </span>
             <span className="text-caption text-[var(--text-muted)]">{count} 銘柄</span>
             {GROUP_NOTE[state] && (
               <span className="text-caption text-[var(--text-muted)]">— {GROUP_NOTE[state]}</span>

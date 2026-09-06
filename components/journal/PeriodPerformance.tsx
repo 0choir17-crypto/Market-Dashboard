@@ -51,9 +51,9 @@ export default function PeriodPerformance({ trades }: Props) {
   return (
     <div className="mb-6 bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm">
       <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border-subtle)]">
-        <h3 className="text-sm font-semibold text-gray-700">
+        <h3 className="text-sm font-semibold text-[var(--text-primary)]">
           Period Performance
-          <span className="ml-2 text-xs font-normal text-gray-400">
+          <span className="ml-2 text-xs font-normal text-[var(--text-muted)]">
             {mode === 'month' ? '月別' : '年別'}成績
           </span>
         </h3>
@@ -64,8 +64,8 @@ export default function PeriodPerformance({ trades }: Props) {
               onClick={() => setMode(m)}
               className={`px-3 py-1 rounded font-medium transition-colors ${
                 mode === m
-                  ? 'bg-blue-600 text-white'
-                  : 'text-gray-600 hover:bg-[var(--bg-card-hover)]'
+                  ? 'bg-[var(--sem-focus-fg)] text-white'
+                  : 'text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)]'
               }`}
             >
               {m === 'month' ? '月別' : '年別'}
@@ -105,18 +105,18 @@ export default function PeriodPerformance({ trades }: Props) {
               const barWidthPct = (Math.abs(b.pnl) / maxAbsPnl) * 100
               return (
                 <tr key={b.key} className="border-b border-[var(--border-subtle)] hover:bg-[var(--bg-card-hover)]">
-                  <td className="px-3 py-2 font-mono font-semibold text-gray-700">
+                  <td className="px-3 py-2 font-mono font-semibold text-[var(--text-primary)]">
                     {b.key}
                   </td>
                   <td className="px-3 py-2 text-right font-mono">{b.trades}</td>
                   <td className="px-3 py-2 text-right font-mono text-xs">
                     <span className="text-[var(--positive)]">{b.wins}</span>
-                    <span className="text-gray-400 mx-0.5">/</span>
+                    <span className="text-[var(--text-muted)] mx-0.5">/</span>
                     <span className="text-[var(--negative)]">{b.losses}</span>
                     {b.breakevens > 0 && (
                       <>
-                        <span className="text-gray-400 mx-0.5">/</span>
-                        <span className="text-gray-500" title="BREAKEVEN">{b.breakevens}</span>
+                        <span className="text-[var(--text-muted)] mx-0.5">/</span>
+                        <span className="text-[var(--text-secondary)]" title="BREAKEVEN">{b.breakevens}</span>
                       </>
                     )}
                   </td>
@@ -135,7 +135,7 @@ export default function PeriodPerformance({ trades }: Props) {
                   </td>
                   <td className="px-3 py-2">
                     <div className="relative h-3 w-full">
-                      <div className="absolute left-1/2 top-0 bottom-0 w-px bg-gray-300" />
+                      <div className="absolute left-1/2 top-0 bottom-0 w-px bg-[var(--sem-idle-bd)]" />
                       <div
                         className="absolute top-0.5 bottom-0.5 rounded"
                         style={{

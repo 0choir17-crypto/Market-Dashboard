@@ -99,15 +99,15 @@ export default function TagPerformance({ trades }: Props) {
     return (
       <div className="mb-6 bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm">
         <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border-subtle)]">
-          <h3 className="text-sm font-semibold text-gray-700">
+          <h3 className="text-sm font-semibold text-[var(--text-primary)]">
             Tag Performance
-            <span className="ml-2 text-xs font-normal text-gray-400">
+            <span className="ml-2 text-xs font-normal text-[var(--text-muted)]">
               振り返りタグ別成績
             </span>
           </h3>
-          <span className="text-xs text-gray-400">reviewed: {reviewedCount}</span>
+          <span className="text-xs text-[var(--text-muted)]">reviewed: {reviewedCount}</span>
         </div>
-        <div className="p-6 text-center text-sm text-gray-400">
+        <div className="p-6 text-center text-sm text-[var(--text-muted)]">
           振り返りタグが付いた CLOSED トレードがまだありません。
         </div>
       </div>
@@ -117,13 +117,13 @@ export default function TagPerformance({ trades }: Props) {
   return (
     <div className="mb-6 bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm">
       <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border-subtle)]">
-        <h3 className="text-sm font-semibold text-gray-700">
+        <h3 className="text-sm font-semibold text-[var(--text-primary)]">
           Tag Performance
-          <span className="ml-2 text-xs font-normal text-gray-400">
+          <span className="ml-2 text-xs font-normal text-[var(--text-muted)]">
             振り返りタグ別成績
           </span>
         </h3>
-        <span className="text-xs text-gray-400">reviewed: {reviewedCount}</span>
+        <span className="text-xs text-[var(--text-muted)]">reviewed: {reviewedCount}</span>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
@@ -150,7 +150,7 @@ export default function TagPerformance({ trades }: Props) {
                   <tr className="bg-[var(--bg-card-hover)]/60">
                     <td
                       colSpan={8}
-                      className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-gray-500"
+                      className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-[var(--text-secondary)]"
                     >
                       {CATEGORY_LABELS[cat]}
                     </td>
@@ -164,7 +164,7 @@ export default function TagPerformance({ trades }: Props) {
                         className="border-b border-[var(--border-subtle)] hover:bg-[var(--bg-card-hover)]"
                       >
                         <td
-                          className="px-3 py-2 text-gray-800"
+                          className="px-3 py-2 text-[var(--text-primary)]"
                           title={r.tag.description}
                         >
                           {r.tag.label}
@@ -172,7 +172,7 @@ export default function TagPerformance({ trades }: Props) {
                         <td className="px-3 py-2 text-right font-mono">{r.count}</td>
                         <td className="px-3 py-2 text-right font-mono text-xs">
                           <span className="text-[var(--positive)]">{r.wins}</span>
-                          <span className="text-gray-400 mx-0.5">/</span>
+                          <span className="text-[var(--text-muted)] mx-0.5">/</span>
                           <span className="text-[var(--negative)]">{r.losses}</span>
                         </td>
                         <td
@@ -204,7 +204,7 @@ export default function TagPerformance({ trades }: Props) {
                         </td>
                         <td className="px-3 py-2">
                           <div className="relative h-3 w-full">
-                            <div className="absolute left-1/2 top-0 bottom-0 w-px bg-gray-300" />
+                            <div className="absolute left-1/2 top-0 bottom-0 w-px bg-[var(--sem-idle-bd)]" />
                             <div
                               className="absolute top-0.5 bottom-0.5 rounded"
                               style={{
@@ -224,7 +224,7 @@ export default function TagPerformance({ trades }: Props) {
           </tbody>
         </table>
       </div>
-      <p className="px-4 py-2 text-[11px] text-gray-400 border-t border-[var(--border-subtle)]">
+      <p className="px-4 py-2 text-[11px] text-[var(--text-muted)] border-t border-[var(--border-subtle)]">
         ※ 1 トレードに複数タグが付くため、各行の Trades 合計は CLOSED 総数と一致しません。
         勝率は breakeven を母数から除外。
       </p>

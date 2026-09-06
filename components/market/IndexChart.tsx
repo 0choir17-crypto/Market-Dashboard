@@ -157,7 +157,7 @@ export function IndexChart({ prefix, displayName, height = 260, lookbackDays = 1
   if (error) {
     return (
       <div
-        className="p-4 bg-red-50 rounded-md text-sm text-red-700 flex items-center"
+        className="p-4 bg-[var(--sem-weak-bg)] rounded-md text-sm text-[var(--sem-weak-fg)] flex items-center"
         style={{ height }}
       >
         チャートデータ取得エラー: {error}

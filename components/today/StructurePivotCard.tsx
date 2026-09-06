@@ -242,7 +242,7 @@ export default function StructurePivotCard({
         {onAddPosition && (
           <button
             onClick={() => onAddPosition(row)}
-            className="px-2 py-1 text-[10px] font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded transition-colors"
+            className="px-2 py-1 text-[10px] font-medium text-[var(--sem-strong-fg)] bg-[var(--sem-ok-bg)] hover:brightness-95 border border-[var(--sem-strong-bd)] rounded transition-colors"
             title="Position として保存"
           >
             ＋ Position

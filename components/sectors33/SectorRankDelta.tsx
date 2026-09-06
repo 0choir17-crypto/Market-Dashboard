@@ -126,7 +126,7 @@ export function MoversOnlyToggle({
   count: number
 }) {
   return (
-    <label className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer select-none">
+    <label className="flex items-center gap-2 text-xs text-[var(--text-secondary)] cursor-pointer select-none">
       <input
         type="checkbox"
         checked={checked}
