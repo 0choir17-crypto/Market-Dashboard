@@ -17,18 +17,18 @@ export const CHART = {
   ground: '#f6f7f9', // --bg-primary
   card: '#ffffff', // --bg-card
   textPrimary: '#1a1d23', // --text-primary
-  textSecondary: '#6b7280', // --text-secondary
-  textMuted: '#9ca3af', // --text-muted
-  positive: '#16a34a', // --positive
+  textSecondary: '#4b5563', // --text-secondary
+  textMuted: '#6b7280', // --text-muted
+  positive: '#15803d', // --positive
   negative: '#dc2626', // --negative
-  strongFg: '#15803d', // --sem-strong-fg
+  strongFg: '#166534', // --sem-strong-fg
   strongBg: '#dcfce7', // --sem-strong-bg
   strongBd: '#86efac', // --sem-strong-bd
   watchFg: '#92400e', // --sem-watch-fg
   watchBg: '#fef3c7', // --sem-watch-bg
   weakFg: '#b91c1c', // --sem-weak-fg
   weakBg: '#fee2e2', // --sem-weak-bg
-  idleFg: '#71717a', // --sem-idle-fg
+  idleFg: '#62626b', // --sem-idle-fg
   focusFg: '#1d4ed8', // --sem-focus-fg
   focusBg: '#eff6ff', // --sem-focus-bg
   candleUp: '#ffffff', // --candle-up
