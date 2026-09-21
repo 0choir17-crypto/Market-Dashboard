@@ -9,6 +9,7 @@
 //   2. NULL を昇順・降順いずれでも末尾に置くソート規則
 //   3. グループ化と折りたたみ
 //   4. 要約 / 全列トグルと詳細行
+//   5. ページネーション（任意。pageSize を渡したときだけ）
 //
 // 設計原則との対応:
 //   - 一覧は比較のため、詳細は決断のため（原則 3）
@@ -78,6 +79,15 @@ type Props<Row> = {
   tieBreak?: (a: Row, b: Row) => number
   /** 要約 / 全列トグルを出すか。false なら常に全列。 */
   summaryToggle?: boolean
+  /**
+   * 1 ページあたりの行数。指定すると表の下にページャが出る。
+   * 日によって件数が 2〜204 と大きく振れる一覧（Daily Watch の Inside Day）で、
+   * 行数に関わらず表の高さを一定に保つために使う。省略すると全行を 1 枚に出す。
+   *
+   * groupBy とは併用しない。グループの切れ目をまたいでページを割ると見出しの
+   * 「この群は N 件」という意味が壊れるため、groupBy があるときは無視する。
+   */
+  pageSize?: number
 }
 
 export default function DataTable<Row>({
@@ -95,9 +105,11 @@ export default function DataTable<Row>({
   rowClassName,
   tieBreak,
   summaryToggle = true,
+  pageSize,
 }: Props<Row>) {
   const [sortKey, setSortKey] = useState(defaultSort.key)
   const [sortDir, setSortDir] = useState<SortDirection>(defaultSort.dir)
+  const [page, setPage] = useState(0)
   const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set(defaultCollapsed))
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set())
   // 既定は全列。実測で全列でも横スクロールは出ないため、要約は「絞りたいときの選択肢」。
@@ -148,6 +160,29 @@ export default function DataTable<Row>({
     if (groupRank) entries.sort((a, b) => groupRank(a[0]) - groupRank(b[0]))
     return entries.map(([key, list]) => ({ key, rows: [...list].sort(cmp) }))
   }, [rows, columns, sortKey, sortDir, groupBy, groupRank, tieBreak])
+
+  // 行の集合や並びが変わったら先頭ページへ戻す（絞り込み直後に中ほどのページが
+  // 残っていると「消えた」ように見えるため）。レンダー中に前回値と比べて直接直す
+  // ——「props の変化に合わせて state を調整する」React 公式の書き方。useEffect で
+  // setState すると 1 フレームだけ古いページ番号で描かれ、行数が減った直後に
+  // 空の表がちらつく。
+  const [pageAnchor, setPageAnchor] = useState({ rows, sortKey, sortDir })
+  if (pageAnchor.rows !== rows || pageAnchor.sortKey !== sortKey || pageAnchor.sortDir !== sortDir) {
+    setPageAnchor({ rows, sortKey, sortDir })
+    setPage(0)
+  }
+
+  // ページネーション（グループ化しない表のみ）。
+  const perPage = pageSize != null && pageSize > 0 && !groupBy ? pageSize : 0
+  const paginated = perPage > 0
+  const totalRows = paginated ? groups[0].rows.length : 0
+  const pageCount = paginated ? Math.max(1, Math.ceil(totalRows / perPage)) : 1
+  // 絞り込みで総ページ数が縮んだとき、空のページに取り残されないよう丸める。
+  const safePage = Math.min(page, pageCount - 1)
+  const pageStart = safePage * perPage
+  const viewGroups: Group<Row>[] = paginated
+    ? [{ key: groups[0].key, rows: groups[0].rows.slice(pageStart, pageStart + perPage) }]
+    : groups
 
   const colSpan = visible.length + (detailButton ? 1 : 0)
 
@@ -270,7 +305,7 @@ export default function DataTable<Row>({
             </tr>
           </thead>
 
-          {groups.map(group =>
+          {viewGroups.map(group =>
             groupBy ? (
               <tbody
                 key={group.key}
@@ -313,6 +348,35 @@ export default function DataTable<Row>({
           )}
         </table>
       </div>
+
+      {paginated && pageCount > 1 && (
+        <div className="flex items-center justify-end gap-2 mt-2 text-caption text-[var(--text-muted)]">
+          <span className="tabular-nums">
+            {pageStart + 1}–{Math.min(pageStart + perPage, totalRows)} / {totalRows}
+          </span>
+          <div className="inline-flex rounded-lg border-[0.5px] border-[var(--border)] overflow-hidden">
+            <button
+              onClick={() => setPage(p => Math.max(0, p - 1))}
+              disabled={safePage === 0}
+              aria-label="前のページ"
+              className="px-2.5 py-1 bg-[var(--bg-card)] hover:bg-[var(--bg-card-hover)] disabled:opacity-40 disabled:hover:bg-[var(--bg-card)]"
+            >
+              ←
+            </button>
+            <span className="px-2.5 py-1 bg-[var(--bg-card)] border-x-[0.5px] border-[var(--border)] tabular-nums">
+              {safePage + 1} / {pageCount}
+            </span>
+            <button
+              onClick={() => setPage(p => Math.min(pageCount - 1, p + 1))}
+              disabled={safePage >= pageCount - 1}
+              aria-label="次のページ"
+              className="px-2.5 py-1 bg-[var(--bg-card)] hover:bg-[var(--bg-card-hover)] disabled:opacity-40 disabled:hover:bg-[var(--bg-card)]"
+            >
+              →
+            </button>
+          </div>
+        </div>
+      )}
     </>
   )
 }
