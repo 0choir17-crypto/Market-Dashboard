@@ -5,6 +5,7 @@ import { useDate } from '@/contexts/DateContext'
 import { fetchToday, type TodayResponse } from '@/lib/todayFetch'
 import EmaSetupsSection from '@/components/today/EmaSetupsSection'
 import StructurePivotSection from '@/components/today/StructurePivotSection'
+import InsideDaySection from '@/components/today/InsideDaySection'
 import ErrorBanner from '@/components/shared/ErrorBanner'
 import PageHeader from '@/components/shared/PageHeader'
 
@@ -14,6 +15,9 @@ const EMPTY: TodayResponse = {
   emaTableMissing: false,
   structDate: null,
   struct: [],
+  insideDate: null,
+  inside: [],
+  insideTableMissing: false,
   hotSectors: [],
   error: null,
 }
@@ -44,12 +48,15 @@ export default function TodayPage() {
   // ページ見出しの日付は現役スキャナーの最大 date のみから決める
   // （2026-08-29 に廃止された6テーブルは参照しない。参照すると 2026-08-28 で
   //   止まった日付を「最終更新日」として出し続けてしまう）。
-  const displayDate = data.structDate ?? data.emaDate ?? selectedDate
+  const displayDate = data.structDate ?? data.emaDate ?? data.insideDate ?? selectedDate
 
-  const total = data.ema.length + data.struct.length
+  const total = data.ema.length + data.struct.length + data.inside.length
 
   // 複数シグナル重複: 同一 code が 2 つ以上のスキャナーに当日出た銘柄。
   // 各スキャナーのカード背景を黄色で強調するために code の集合を作る。
+  //
+  // inside_day は数え上げに入れない。候補が 40 件/日（最多 204）と他より一桁多く、
+  // 入れると「重複＝珍しい」という黄色の意味が薄まるため（0choir17 と確認済み）。
   const multiHitCodes = useMemo(() => {
     const counts = new Map<string, number>()
     const addList = (rows: { code: string }[]) => {
@@ -64,6 +71,15 @@ export default function TodayPage() {
     addList(data.struct)
     const set = new Set<string>()
     for (const [code, n] of counts) if (n >= 2) set.add(code)
+    return set
+  }, [data])
+
+  // Inside Day 側に付ける印用: 本日 Structure Pivot / EMA Setups のどちらかに出た銘柄。
+  // multiHitCodes（2本以上）とは条件が違う（こちらは 1 本でも該当）。
+  const otherScannerCodes = useMemo(() => {
+    const set = new Set<string>()
+    for (const r of data.ema) if (r.code) set.add(r.code)
+    for (const r of data.struct) if (r.code) set.add(r.code)
     return set
   }, [data])
 
@@ -113,6 +129,15 @@ export default function TodayPage() {
             multiHitCodes={multiHitCodes}
             title="EMA Setups"
             subtitle="下落してきて EMA 9 / 21 / 50 にちょうど到達し、安値が「EMA のすぐ下 0.1ATR」の帯に収まって踏みとどまった日。EMA を明確に割った日は含まない。同じ銘柄が複数の EMA に同日タッチすると EMA バッジが並ぶ。※このスキャナーに統計的エッジは無い（勝率 23.6% に対しベースライン 23.1%、耐えの深さ・ヒゲ/実体・EMA の別はいずれも AUC 0.50）。買いシグナルではなく、毎朝チャートを開く銘柄を機械的に絞り込んだリストとして使う。"
+          />
+          <InsideDaySection
+            rows={data.inside}
+            date={data.insideDate}
+            tableMissing={data.insideTableMissing}
+            hotSectors={data.hotSectors}
+            alsoHitCodes={otherScannerCodes}
+            title="Inside Day"
+            subtitle="当日の高値と安値が、どちらも前日（マザーバー）の値幅の内側に収まった日。高値・安値はヒゲ込みで、前日と同値の日は含まない（実体で判定する「はらみ線」とは別物）。翌日以降はマザーバー高値を上抜けるか、安値を割るかをチャートで見る。※このスキャナーは成績（勝率・期待値）の検証をしていない。既定の並びは収縮%（当日値幅 ÷ 前日値幅）の昇順＝より縮んだ順で、強い順・おすすめ順ではない。毎朝チャートを開く銘柄を機械的に絞り込んだリストとして使う。"
           />
         </div>
       )}

@@ -130,11 +130,40 @@ app/layout.tsx  (RootLayout, lang="ja")
 3. **EmaSetupsSection** — 「EMA Setups」
    EMA 9 / 21 / 50 に到達し、安値が EMA 直下 0.1ATR 帯で踏みとどまった日。
    ※統計的エッジ無し（勝率 23.6% vs ベースライン 23.1%）と明記した上でのスクリーニング用リスト。→ `EmaSetupCard`
+4. **InsideDaySection** — 「Inside Day」（2026-09-21 新設 / 配信側 run_daily Step1e）
+   当日の高値・安値がどちらも前日（マザーバー）の値幅の内側に収まった日。ヒゲ込み・前日と同値は含まない。
+   ※成績（勝率・期待値）の検証をしていないウォッチリスト専用のリスト。→ `DataTable` + `InsideDayBand`
 
 - 複数シグナル重複（同一 code が 2 スキャナー以上に出現）は `multiHitCodes` で黄色強調
 - 各カードから `PositionModal` を直接開ける。ウォッチリストへの追加ボタンは廃止し、
   `CopyTickerButton`（`TSE:XXXX` をクリップボードにコピー → TradingView に貼る）に置き換え
-- データ: `lib/todayFetch.ts`（`ema` / `struct` / `hotSectors`）
+- データ: `lib/todayFetch.ts`（`ema` / `struct` / `inside` / `hotSectors`）
+
+#### InsideDaySection の内訳
+- 唯一カードではなく**表**（`DataTable`）のセクション。候補が 2〜204 件/日（平均 44 / 中央値 39）と
+  桁で振れるため、カードのグリッドだと日によって縦の長さが数倍変わる。列を横断比較する読み方
+  （どれが一番縮んだか）にも表のほうが合う（DESIGN_DIRECTION 原則 3）
+- **既定の並びは `range_pct`（収縮%）の昇順** = 値幅がより縮んだ順。「収縮の度合い」という事実の並びで
+  あって良し悪しの順位ではないので、スコア / グレード / ランク列は作らず、
+  「買いシグナル」「エントリー推奨」の表現も使わない
+- 列 11: `Code / Name` `市場` `Sector` `Close` `マザーバー 安値〜高値` `当日 安値〜高値` `帯`
+  `収縮%` `連続` `高値まで%` `RS`
+  - `帯` = `InsideDayBand`。マザーバーの値幅（薄い枠）の中に当日の値幅（濃い帯）を重ね、終値の位置に
+    縦線を引く。`range_pct` の数字だけでは読めない「マザーバーの上側で縮んだか下側か」が一目で分かる。
+    上下や良し悪しを表さないので色は付けない
+  - `高値まで%` = `(mother_high ÷ close − 1) × 100`。**DB には無い計算列**
+- 詳細行（▼）: `ADR%` `売買代金` `出来高20日平均` `出来高比` `52週高値からの乖離` `150SMA からの乖離`
+  `安値まで%` + `CopyTickerButton` / `＋ Position`
+- 絞り込みは**すべて既定「なし」**（配信側が意図的に掛けていない条件なので、使う / 使わないはこの画面で選ぶ）:
+  `市場` `セクター` `連続2日以上` `収縮% の上限スライダー` `RS の下限スライダー`
+- ページネーションは 100 件/ページ（`DataTable` の `pageSize`）。絞り込みや並べ替えで行が変わると先頭ページへ戻る
+- 日付は**ページ共通の日付ピッカー（`DateContext`）に追随**する。セクション専用の日付セレクタは置かない
+  （操作点を 1 つに保つため）。実際に表示している date はセクション見出しに「更新日 YYYY-MM-DD」として出す
+- `close` は生の株価、`high` / `low` / `mother_*` は分割調整済み。直近 5 営業日に株式分割があった銘柄だけ
+  桁がずれるので、そのときは帯の終値マーカーと `高値まで%` / `安値まで%` を出さず、詳細行に理由を書く
+- **`multiHitCodes`（複数スキャナー重複の黄色強調）には入れない**。候補が他スキャナーより一桁多く、
+  入れると「重複＝珍しい」という黄色の意味が薄まるため。代わりに Structure Pivot / EMA Setups にも
+  本日出ている銘柄へ `他シグナル` バッジを付ける
 
 ---
 
@@ -254,7 +283,7 @@ Env 表示 / `market_conditions` 最新行プローブ / anon ロールでのテ
 | `sector_selection_s33` | `/`, `/sectors33` |
 | `earnings_quality` | `/earnings` |
 | `market_leaders` | `/leaders`（Top 50 スナップショット・セクターローテーションとも同一テーブル） |
-| `ema_setups` / `structure_pivot_events` | `/today`（`lib/todayFetch.ts`） |
+| `ema_setups` / `structure_pivot_events` / `inside_day_setups` | `/today`（`lib/todayFetch.ts`） |
 | `trades` / `risk_settings` | `/journal` |
 | `watchlist_events` | `/watchlist`（差分・見逃しボード・鮮度判定） |
 | `watchlist_current` | `/watchlist`（現在の状態） |
