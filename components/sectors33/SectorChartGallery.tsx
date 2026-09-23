@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   SectorSelectionRow,
   COMPONENT_META,
@@ -16,7 +16,7 @@ import {
   type SectorChartEntry,
 } from '@/lib/sectorPriceFetch'
 import type { SectorIndexChangeEntry } from '@/lib/sectorIndexChangeFetch'
-import SectorCandleChart, { VolumeLegend } from './SectorCandleChart'
+import SectorCandleChart, { MaLegend, VolumeLegend } from './SectorCandleChart'
 import { SectorChangeStrip } from './SectorChangeCells'
 import { RankDeltaBadge, MoversOnlyToggle } from './SectorRankDelta'
 import {
@@ -90,6 +90,8 @@ function SectorCard({
   delta,
   deltaPeriod,
   metricKey,
+  chartHeight = 260,
+  onExpand,
 }: {
   row: SectorSelectionRow
   entry: SectorChartEntry | undefined
@@ -97,6 +99,9 @@ function SectorCard({
   delta: RankDelta | undefined
   deltaPeriod: RankDeltaPeriodKey
   metricKey: MetricSelection
+  chartHeight?: number
+  /** 渡すとチャートのクリックで拡大表示を開く（拡大表示の中では渡さない） */
+  onExpand?: () => void
 }) {
   const { bg, text } = compositeColor(row.composite_score)
   const isLow = row.confidence_low === 1
@@ -120,6 +125,23 @@ function SectorCard({
     if (!points || points.length === 0) return null
     return { points, color: cfg.color }
   }, [entry, metricKey])
+
+  // チャートはドラッグでスクロールできるので、押した位置から動いていない
+  // クリックだけを「拡大」とみなす（ドラッグ終わりで開かないように）
+  const pressRef = useRef<{ x: number; y: number } | null>(null)
+  const expandHandlers = onExpand
+    ? {
+        onPointerDown: (e: React.PointerEvent) => {
+          pressRef.current = { x: e.clientX, y: e.clientY }
+        },
+        onClick: (e: React.MouseEvent) => {
+          const p = pressRef.current
+          pressRef.current = null
+          if (p && Math.hypot(e.clientX - p.x, e.clientY - p.y) > 5) return
+          onExpand()
+        },
+      }
+    : {}
 
   return (
     <div
@@ -158,6 +180,17 @@ function SectorCard({
         >
           {isNum(row.composite_score) ? row.composite_score.toFixed(1) : '—'}
         </span>
+        {onExpand && (
+          <button
+            type="button"
+            onClick={onExpand}
+            title="拡大表示"
+            aria-label={`${row.sector_name_s33} のチャートを拡大表示`}
+            className="shrink-0 w-7 h-7 flex items-center justify-center rounded-md border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)]"
+          >
+            ⤢
+          </button>
+        )}
       </div>
 
       {/* 業種指数の騰落率: 1D / 1W / 1M / 6M / 1Y */}
@@ -167,18 +200,24 @@ function SectorCard({
 
       {/* チャート */}
       {entry && entry.bars.length > 0 ? (
-        <SectorCandleChart
-          bars={entry.bars}
-          metric={metric}
-          volumes={entry.volumes}
-          volumeLabel="業種出来高"
-          height={260}
-          visibleBars={VISIBLE_BARS}
-        />
+        <div
+          {...expandHandlers}
+          className={onExpand ? 'cursor-zoom-in' : undefined}
+          title={onExpand ? 'クリックで拡大' : undefined}
+        >
+          <SectorCandleChart
+            bars={entry.bars}
+            metric={metric}
+            volumes={entry.volumes}
+            volumeLabel="業種出来高"
+            height={chartHeight}
+            visibleBars={VISIBLE_BARS}
+          />
+        </div>
       ) : (
         <div
           className="flex items-center justify-center bg-[var(--bg-card-hover)] rounded-md text-caption text-[var(--text-muted)] text-center px-3"
-          style={{ height: 260 }}
+          style={{ height: chartHeight }}
         >
           指数データがありません
         </div>
@@ -218,6 +257,92 @@ function SectorCard({
   )
 }
 
+/**
+ * 1 業種のチャートを画面いっぱいに拡大表示する。
+ * ← / → で前後の業種（一覧と同じ並び）に移れる。Esc / 背景クリックで閉じる。
+ */
+function ExpandedSectorView({
+  index,
+  count,
+  onClose,
+  onNavigate,
+  children,
+}: {
+  index: number
+  count: number
+  onClose: () => void
+  onNavigate: (dir: -1 | 1) => void
+  children: React.ReactNode
+}) {
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose()
+      else if (e.key === 'ArrowLeft') onNavigate(-1)
+      else if (e.key === 'ArrowRight') onNavigate(1)
+    }
+    window.addEventListener('keydown', onKey)
+    // 背面スクロールを止める
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      document.body.style.overflow = prevOverflow
+    }
+  }, [onClose, onNavigate])
+
+  const navBtn =
+    'px-3 py-1.5 rounded-md border border-[var(--border)] bg-[var(--bg-card)] text-caption font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)] disabled:opacity-40 disabled:cursor-not-allowed'
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-6">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px]" onClick={onClose} />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="業種指数チャート（拡大）"
+        className="relative w-full max-w-[1600px] max-h-full overflow-y-auto rounded-xl bg-[var(--bg-primary)] shadow-xl p-3 sm:p-4"
+      >
+        <div className="flex flex-wrap items-center gap-2 mb-3">
+          <MaLegend />
+          <VolumeLegend />
+          <div className="ml-auto flex items-center gap-2">
+            <button className={navBtn} onClick={() => onNavigate(-1)} disabled={index <= 0}>
+              ← 前
+            </button>
+            <span className="text-caption font-mono tabular-nums text-[var(--text-muted)]">
+              {index + 1} / {count}
+            </span>
+            <button className={navBtn} onClick={() => onNavigate(1)} disabled={index >= count - 1}>
+              次 →
+            </button>
+            <button
+              onClick={onClose}
+              aria-label="閉じる"
+              className="w-8 h-8 flex items-center justify-center rounded-md text-title leading-none font-light text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)]"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+        {children}
+      </div>
+    </div>
+  )
+}
+
+/** 拡大表示のチャート高さ。ヘッダー・騰落率・指標セルのぶんを画面高から引く */
+function useExpandedChartHeight(active: boolean) {
+  const [h, setH] = useState(560)
+  useEffect(() => {
+    if (!active) return
+    const update = () => setH(Math.max(320, Math.round(window.innerHeight - 300)))
+    update()
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
+  }, [active])
+  return h
+}
+
 export default function SectorChartGallery({
   rows,
   changes = {},
@@ -231,6 +356,8 @@ export default function SectorChartGallery({
   // 既定で信頼度低 (銘柄数<10) を除外する
   const [hideLowConf, setHideLowConf] = useState(true)
   const [moversOnly, setMoversOnly] = useState(false)
+  // 拡大表示中の業種（null なら閉じている）
+  const [expanded, setExpanded] = useState<string | null>(null)
 
   // 境界日の算出に使う代表業種（どの業種も 1 日 1 行なのでどれでもよい）
   const referenceSector = rows[0]?.sector_name_s33
@@ -257,6 +384,22 @@ export default function SectorChartGallery({
       (a, b) => (b.composite_score ?? -Infinity) - (a.composite_score ?? -Infinity),
     )
   }, [rows, hideLowConf, moversOnly, rankDeltas])
+
+  // フィルタで一覧から外れた業種は拡大表示の対象にしない
+  const expandedIndex = expanded
+    ? sorted.findIndex((r) => r.sector_name_s33 === expanded)
+    : -1
+  const expandedRow = expandedIndex >= 0 ? sorted[expandedIndex] : null
+  const expandedChartHeight = useExpandedChartHeight(expandedRow !== null)
+
+  const closeExpanded = useCallback(() => setExpanded(null), [])
+  const navigateExpanded = useCallback(
+    (dir: -1 | 1) => {
+      const next = sorted[expandedIndex + dir]
+      if (next) setExpanded(next.sector_name_s33)
+    },
+    [sorted, expandedIndex],
+  )
 
   const lowConfCount = rows.filter((r) => r.confidence_low === 1).length
   const moverCount = useMemo(
@@ -349,9 +492,29 @@ export default function SectorChartGallery({
               delta={rankDeltas[row.sector_name_s33]}
               deltaPeriod={deltaPeriod}
               metricKey={metricKey}
+              onExpand={() => setExpanded(row.sector_name_s33)}
             />
           ))}
         </div>
+      )}
+
+      {expandedRow && (
+        <ExpandedSectorView
+          index={expandedIndex}
+          count={sorted.length}
+          onClose={closeExpanded}
+          onNavigate={navigateExpanded}
+        >
+          <SectorCard
+            row={expandedRow}
+            entry={bySector[expandedRow.sector_name_s33]}
+            change={changes[expandedRow.sector_name_s33]}
+            delta={rankDeltas[expandedRow.sector_name_s33]}
+            deltaPeriod={deltaPeriod}
+            metricKey={metricKey}
+            chartHeight={expandedChartHeight}
+          />
+        </ExpandedSectorView>
       )}
 
       {!loading && sorted.length === 0 && (
