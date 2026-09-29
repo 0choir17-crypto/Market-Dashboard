@@ -1,6 +1,7 @@
 'use client'
 
 // 1 段 (大型 / 中小) の一覧。t21 と t63 を横に並べ、それぞれに 5 日比を添える。
+// t63 の右に t21 − t63 (直近の勢いと 3 か月の強さのずれ) を置く。
 // 「t63 は高いが t21 は落ちてきた」というずれが一目で読めるのがこの表の読みどころ。
 //
 // 色は 5 日比 (括弧の中) だけ: +0.1 以上 緑 / −0.1 以下 赤 / それ以外・新規 灰。
@@ -53,6 +54,12 @@ function TCell({
   )
 }
 
+function gapOf(r: LiquidLeader): number | null {
+  const a = r.t21
+  const b = r.t63
+  return a !== null && b !== null && Number.isFinite(a) && Number.isFinite(b) ? a - b : null
+}
+
 function sinceOf(r: LiquidLeader): string | null {
   return r.in_t63 ? r.t63_since : r.t21_since
 }
@@ -83,7 +90,11 @@ export default function LiquidLeadersTable({ rows, prev, title, hint, query }: P
         align: 'left',
         value: r => r.code,
         defaultDir: 'asc',
-        render: r => <TickerCell code={r.code} name={r.co_name} />,
+        render: r => (
+          <div className="max-w-[11rem]">
+            <TickerCell code={r.code} name={r.co_name} />
+          </div>
+        ),
       },
       {
         key: 'sector_s33',
@@ -93,12 +104,20 @@ export default function LiquidLeadersTable({ rows, prev, title, hint, query }: P
         value: r => r.sector_s33,
         defaultDir: 'asc',
         render: r => (
-          <span className="text-small text-[var(--text-secondary)] whitespace-nowrap">{r.sector_s33 ?? '—'}</span>
+          <span className="block max-w-[7rem] truncate text-small text-[var(--text-secondary)]" title={r.sector_s33 ?? undefined}>
+            {r.sector_s33 ?? '—'}
+          </span>
         ),
       },
       {
         key: 't21',
-        label: 't21 (5日比)',
+        label: (
+          <>
+            t21
+            <br />
+            <span className="font-normal">(5日比)</span>
+          </>
+        ),
         tooltip: `自力の t 値（直近 21 日）。TOPIX につられた分を除いた強さが毎日どれだけ安定しているか。2 以上で強い。${T_NOTE}`,
         align: 'right',
         value: r => r.t21,
@@ -106,7 +125,13 @@ export default function LiquidLeadersTable({ rows, prev, title, hint, query }: P
       },
       {
         key: 't63',
-        label: 't63 (5日比)',
+        label: (
+          <>
+            t63
+            <br />
+            <span className="font-normal">(5日比)</span>
+          </>
+        ),
         tooltip: `自力の t 値（直近 63 日）。2 以上で強い。${T_NOTE}。並べ替えは t63 の一覧にいる銘柄が先`,
         align: 'right',
         // t63 の一覧にいない銘柄は null 扱いで後ろへ (tieBreak で t21 の高い順)
@@ -114,17 +139,51 @@ export default function LiquidLeadersTable({ rows, prev, title, hint, query }: P
         render: r => <TCell row={r} period="t63" prev={prev} />,
       },
       {
+        key: 'gap',
+        label: (
+          <>
+            t21
+            <br />
+            −t63
+          </>
+        ),
+        tooltip:
+          't21 − t63。プラス = 直近 1 か月の強さが 3 か月の強さを上回っている（勢いが増している）、マイナス = 3 か月の先導に比べて直近は勢いが落ちている',
+        align: 'right',
+        value: gapOf,
+        render: r => {
+          const g = gapOf(r)
+          if (g === null) return <span className="text-[var(--sem-idle-fg)]">—</span>
+          const v = Math.round(g * 100) / 100
+          return (
+            <span className="num text-[var(--text-secondary)]">
+              {v === 0 ? '±0.00' : `${v > 0 ? '+' : '−'}${Math.abs(v).toFixed(2)}`}
+            </span>
+          )
+        },
+      },
+      {
         key: 'since',
         label: '入った日',
-        tooltip: 't63 の一覧にいれば t63 に入った日、いなければ t21 に入った日。マウスを乗せると両方',
-        align: 'right',
+        tooltip:
+          'その一覧に今回入った日。t21 と t63 の両方にいれば両方出す。並べ替えは t63 に入った日（t63 の一覧にいなければ t21 に入った日）',
+        align: 'left',
         value: sinceOf,
         render: r => {
-          const d = sinceOf(r)
-          const both = `t21: ${r.in_t21 && r.t21_since ? r.t21_since : '—'} / t63: ${r.in_t63 && r.t63_since ? r.t63_since : '—'}`
+          const items: [LiquidPeriod, string | null][] = [
+            ['t21', r.in_t21 ? r.t21_since : null],
+            ['t63', r.in_t63 ? r.t63_since : null],
+          ]
           return (
-            <span className="text-caption num text-[var(--text-secondary)]" title={both}>
-              {d ? md(d) : '—'}
+            <span className="inline-flex flex-col text-caption num whitespace-nowrap leading-tight">
+              {items.map(([k, d]) =>
+                d ? (
+                  <span key={k} title={`${k} の一覧に入った日: ${d}`}>
+                    <span className="text-[var(--text-muted)]">{k}</span>{' '}
+                    <span className="text-[var(--text-secondary)]">{md(d)}</span>
+                  </span>
+                ) : null,
+              )}
             </span>
           )
         },
