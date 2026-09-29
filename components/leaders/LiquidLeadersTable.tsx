@@ -1,10 +1,15 @@
 'use client'
 
+// 1 段 × 1 期間 (t21 か t63) の一覧。段ごとに左 t21 / 右 t63 で並べて使う。
+// 並びは「新しく入った順」(その期間の入った日の新しい順、同日は t の高い順)。
+
 import { useMemo } from 'react'
 import {
   STATE_META,
+  byNewestEntry,
   leaderState,
   type LiquidLeader,
+  type LiquidPeriod,
 } from '@/types/liquidLeaders'
 import DataTable, { type Column } from '@/components/shared/DataTable'
 import TickerCell from '@/components/shared/TickerCell'
@@ -20,6 +25,7 @@ function shortDate(iso: string): string {
 }
 
 // 状態の印（1 行に 1 つだけ）。列は増やさず、銘柄セルの頭に置く。
+// t21 側: t63 にも入っていれば継続、入っていなければ始まり / t63 側: t21 に無ければ失速。
 function StateMark({ row }: { row: LiquidLeader }) {
   const s = leaderState(row)
   if (!s) return <span className="inline-block w-3" />
@@ -36,79 +42,15 @@ function StateMark({ row }: { row: LiquidLeader }) {
   )
 }
 
-// t 値: 2 以上が「強い」。一覧に入っていない側の値は薄く出す。
-function TCell({ value, inList }: { value: number | null; inList: boolean | null }) {
-  if (!isNum(value)) return <span className="text-[var(--sem-idle-fg)]">—</span>
-  return (
-    <span
-      className="num"
-      style={{
-        color: inList ? 'var(--text-primary)' : 'var(--text-muted)',
-        fontWeight: inList ? 500 : 400,
-      }}
-    >
-      {value.toFixed(2)}
-    </span>
-  )
-}
-
-// in_t21 / in_t63 の印: 入っている方だけ塗る。
-function ListMarks({ row }: { row: LiquidLeader }) {
-  const chip = (on: boolean | null, label: string) => (
-    <span
-      className="inline-block min-w-[26px] text-center px-1.5 py-0.5 rounded text-caption num"
-      style={
-        on
-          ? { backgroundColor: 'var(--sem-ok-bg)', color: 'var(--sem-ok-fg)' }
-          : { color: 'var(--sem-idle-bd)' }
-      }
-      title={on ? `t${label} の一覧に入っている` : `t${label} の一覧には入っていない`}
-    >
-      {label}
-    </span>
-  )
-  return (
-    <span className="inline-flex gap-1">
-      {chip(row.in_t21, '21')}
-      {chip(row.in_t63, '63')}
-    </span>
-  )
-}
-
-function SinceCell({ row }: { row: LiquidLeader }) {
-  const items: [string, string | null][] = [
-    ['21', row.in_t21 ? row.t21_since : null],
-    ['63', row.in_t63 ? row.t63_since : null],
-  ]
-  return (
-    <span className="inline-flex flex-col gap-0.5 text-caption num text-[var(--text-secondary)]">
-      {items.map(([k, d]) =>
-        d ? (
-          <span key={k} title={`t${k} の一覧に入った日: ${d}`}>
-            <span className="text-[var(--text-muted)]">{k}:</span> {shortDate(d)}
-          </span>
-        ) : null,
-      )}
-    </span>
-  )
-}
-
-// t63 の高い順。t63 が無い行は末尾に回り (DataTable は NULL を末尾に置く)、
-// そこでは t21 の高い順に並ぶ。
-function byT21Desc(a: LiquidLeader, b: LiquidLeader): number {
-  const av = isNum(a.t21) ? a.t21 : -Infinity
-  const bv = isNum(b.t21) ? b.t21 : -Infinity
-  return bv - av
-}
-
 type Props = {
+  /** その期間の一覧に入っている行だけ */
   rows: LiquidLeader[]
+  period: LiquidPeriod
   title: string
-  hint: string
   query: string
 }
 
-export default function LiquidLeadersTable({ rows, title, hint, query }: Props) {
+export default function LiquidLeadersTable({ rows, period, title, query }: Props) {
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
     if (!q) return rows
@@ -117,8 +59,12 @@ export default function LiquidLeadersTable({ rows, title, hint, query }: Props) 
     )
   }, [rows, query])
 
-  const columns: Column<LiquidLeader>[] = useMemo(
-    () => [
+  const tieBreak = useMemo(() => byNewestEntry(period), [period])
+
+  const columns: Column<LiquidLeader>[] = useMemo(() => {
+    const t = (r: LiquidLeader) => (period === 't21' ? r.t21 : r.t63)
+    const since = (r: LiquidLeader) => (period === 't21' ? r.t21_since : r.t63_since)
+    return [
       {
         key: 'code',
         label: 'Code / Name',
@@ -141,75 +87,63 @@ export default function LiquidLeadersTable({ rows, title, hint, query }: Props) 
         value: r => r.sector_s33,
         defaultDir: 'asc',
         render: r => (
-          <span className="text-small text-[var(--text-secondary)]">{r.sector_s33 ?? '—'}</span>
+          <span className="text-small text-[var(--text-secondary)] whitespace-nowrap">{r.sector_s33 ?? '—'}</span>
         ),
       },
       {
-        key: 't21',
-        label: 't21',
-        tooltip: '自力の t 値（直近 21 日）。TOPIX につられた分を除いた強さが毎日どれだけ安定しているか。2 以上で強い',
+        key: 't',
+        label: period,
+        tooltip:
+          period === 't21'
+            ? '自力の t 値（直近 21 日）。TOPIX につられた分を除いた強さが毎日どれだけ安定しているか。2 以上で強い'
+            : '自力の t 値（直近 63 日）。2 以上で強い',
         align: 'right',
-        value: r => r.t21,
-        className: 'w-20',
-        render: r => <TCell value={r.t21} inList={r.in_t21} />,
-      },
-      {
-        key: 't63',
-        label: 't63',
-        tooltip: '同・直近 63 日',
-        align: 'right',
-        value: r => r.t63,
-        className: 'w-20',
-        render: r => <TCell value={r.t63} inList={r.in_t63} />,
-      },
-      {
-        key: 'lists',
-        label: '一覧',
-        tooltip: 't21 / t63 のどちらの一覧に入っているか（塗り = 入っている）',
-        align: 'center',
-        sortable: false,
-        className: 'w-24',
-        render: r => <ListMarks row={r} />,
+        value: t,
+        className: 'w-16',
+        render: r => {
+          const v = t(r)
+          return isNum(v) ? (
+            <span className="num text-[var(--text-primary)]">{v.toFixed(2)}</span>
+          ) : (
+            <span className="text-[var(--sem-idle-fg)]">—</span>
+          )
+        },
       },
       {
         key: 'since',
         label: '入った日',
-        tooltip: '今回その一覧に入った日（t21_since / t63_since）。並べ替えは早い方の日付',
-        align: 'left',
-        value: r => {
-          const ds = [r.in_t21 ? r.t21_since : null, r.in_t63 ? r.t63_since : null].filter(
-            (d): d is string => !!d,
-          )
-          return ds.length ? ds.sort()[0] : null
+        tooltip: `今回 ${period} の一覧に入った日`,
+        align: 'right',
+        value: since,
+        className: 'w-20',
+        render: r => {
+          const d = since(r)
+          return <span className="text-caption num text-[var(--text-secondary)]">{d ? shortDate(d) : '—'}</span>
         },
-        className: 'w-28',
-        render: r => <SinceCell row={r} />,
       },
-    ],
-    [],
-  )
+    ]
+  }, [period])
 
   return (
-    <section>
-      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-3">
-        <h2 className="text-small font-medium text-[var(--text-primary)]">{title}</h2>
-        <span className="text-caption text-[var(--text-muted)]">{hint}</span>
+    <section className="min-w-0">
+      <div className="flex items-baseline gap-2 mb-2">
+        <h3 className="text-caption font-medium text-[var(--text-secondary)]">{title}</h3>
         <span className="ml-auto text-caption text-[var(--text-muted)]">
           <span className="num">{filtered.length}</span> 銘柄
         </span>
       </div>
 
       {filtered.length === 0 ? (
-        <div className="bg-[var(--bg-card)] rounded-xl border-[0.5px] border-[var(--border)] py-10 text-center text-[var(--text-muted)] text-small">
-          {query ? `「${query}」に一致する銘柄はありません` : 'この日の該当銘柄はありません'}
+        <div className="bg-[var(--bg-card)] rounded-xl border-[0.5px] border-[var(--border)] py-8 text-center text-[var(--text-muted)] text-small">
+          {query ? `「${query}」に一致する銘柄はありません` : '該当なし'}
         </div>
       ) : (
         <DataTable
           rows={filtered}
           columns={columns}
           rowKey={r => r.code}
-          defaultSort={{ key: 't63', dir: 'desc' }}
-          tieBreak={byT21Desc}
+          defaultSort={{ key: 'since', dir: 'desc' }}
+          tieBreak={tieBreak}
           summaryToggle={false}
         />
       )}

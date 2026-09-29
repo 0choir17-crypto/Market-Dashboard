@@ -1,16 +1,24 @@
 'use client'
 
 // ヒートマップ B: 銘柄 × 日 — 今のリーダーがいつから・どれくらい強いか。
-// 行 = 表示日の一覧の銘柄 (段ごと。並びは一覧と同じ t63 の高い順、無ければ t21)
+// 行 = 表示日に t21 の一覧に入っている銘柄 (始まり・継続)。失速 (t63 だけ) の銘柄は
+//      t21 で見ると右端まで空白の行になるだけなので出さない。
+//      並びは一覧と同じ「新しく入った順」(t21_since の新しい順、同日は t21 の高い順)。
 // 列 = 表示日までの直近 60 営業日 (テーブルにある日付)
-// マス = その日の t 値。その期間の一覧に入っていた日だけ塗る (行が無い日・一覧外の日は空白)
+// マス = その日の t21。t21 の一覧に入っていた日だけ塗る (行が無い日・一覧外の日は空白)
+// 切り替えを無くすため、左に大型・右に中小を並べる。
 
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import { fetchLiquidLeaderCells, type LiquidLeaderCell } from '@/lib/liquidLeadersFetch'
-import { STATE_META, leaderState, type LiquidLeader, type LiquidTier } from '@/types/liquidLeaders'
-import { HEAT, HoverReadout, Segmented, Swatch, monthTicks } from './heatmapUi'
-
-type Period = 't21' | 't63'
+import {
+  STATE_META,
+  TIERS,
+  byNewestEntry,
+  leaderState,
+  type LiquidLeader,
+  type LiquidTier,
+} from '@/types/liquidLeaders'
+import { HEAT, HoverReadout, Swatch, monthTicks } from './heatmapUi'
 
 const DAYS = 60
 
@@ -21,13 +29,11 @@ function tColor(t: number): string {
   return t >= 4 ? T_COLORS[2] : t >= 3 ? T_COLORS[1] : T_COLORS[0]
 }
 
-function num(v: number | null | undefined): number {
-  return v !== null && v !== undefined && Number.isFinite(v) ? v : -Infinity
-}
-
 function fmtT(v: number | null | undefined): string {
   return v !== null && v !== undefined && Number.isFinite(v) ? v.toFixed(2) : '—'
 }
+
+type Hover = { code: string; date: string }
 
 type Props = {
   /** 表示日の一覧 (全段) */
@@ -38,9 +44,7 @@ type Props = {
 }
 
 export default function LeaderDayHeatmap({ rows, dates, selectedDate }: Props) {
-  const [tier, setTier] = useState<LiquidTier>('mid')
-  const [period, setPeriod] = useState<Period>('t21')
-  const [hover, setHover] = useState<{ code: string; date: string } | null>(null)
+  const [hover, setHover] = useState<Hover | null>(null)
 
   // 表示日までの直近 60 営業日 (昇順)
   const cols = useMemo(() => {
@@ -71,49 +75,26 @@ export default function LeaderDayHeatmap({ rows, dates, selectedDate }: Props) {
     return m
   }, [loading, data])
 
-  const tierRows = useMemo(
-    () =>
+  const byTier = useMemo(() => {
+    const sort = byNewestEntry('t21')
+    const pick = (t: LiquidTier) =>
       rows
-        .filter(r => (tier === 'large' ? r.tier === 'large' : r.tier !== 'large'))
-        .sort((a, b) => num(b.t63) - num(a.t63) || num(b.t21) - num(a.t21)),
-    [rows, tier],
-  )
+        .filter(r => r.in_t21 === true && (t === 'large' ? r.tier === 'large' : r.tier !== 'large'))
+        .sort(sort)
+    return { large: pick('large'), mid: pick('mid') }
+  }, [rows])
 
   const ticks = useMemo(() => monthTicks(cols), [cols])
   const hoverCell = hover ? cellMap.get(`${hover.code}|${hover.date}`) : undefined
-  const hoverRow = hover ? tierRows.find(r => r.code === hover.code) : undefined
-
-  const gridCols = `11rem repeat(${Math.max(cols.length, 1)}, minmax(7px, 1fr)) 2.5rem`
+  const hoverRow = hover ? rows.find(r => r.code === hover.code) : undefined
 
   return (
     <section className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-5">
-      <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
-        <div>
-          <p className="text-small font-medium text-[var(--text-primary)]">銘柄 × 日</p>
-          <p className="text-caption text-[var(--text-secondary)] mt-0.5">
-            右端が薄くなってきた = 強さが落ちている ／ 左側が空白 = 最近入った（直近 {DAYS} 営業日。一覧に入っていた日だけ塗る）
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Segmented
-            label="段"
-            value={tier}
-            onChange={setTier}
-            options={[
-              { key: 'large', label: '大型' },
-              { key: 'mid', label: '中小' },
-            ]}
-          />
-          <Segmented
-            label="期間"
-            value={period}
-            onChange={setPeriod}
-            options={[
-              { key: 't21', label: 't21' },
-              { key: 't63', label: 't63' },
-            ]}
-          />
-        </div>
+      <div className="mb-3">
+        <p className="text-small font-medium text-[var(--text-primary)]">銘柄 × 日（t21 の一覧）</p>
+        <p className="text-caption text-[var(--text-secondary)] mt-0.5">
+          右端が薄くなってきた = 強さが落ちている ／ 左側が空白 = 最近入った（直近 {DAYS} 営業日。t21 の一覧に入っていた日だけ塗る。上ほど新しく入った銘柄）
+        </p>
       </div>
 
       <HoverReadout placeholder="マスにマウスを乗せると、日付・t21・t63 を表示">
@@ -141,14 +122,64 @@ export default function LeaderDayHeatmap({ rows, dates, selectedDate }: Props) {
 
       {loading ? (
         <p className="text-caption text-[var(--text-muted)] py-8 text-center">読み込み中…</p>
-      ) : tierRows.length === 0 ? (
-        <p className="text-caption text-[var(--text-muted)] py-8 text-center">この段の銘柄はありません</p>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-6 gap-y-5" onMouseLeave={() => setHover(null)}>
+          {TIERS.map(t => (
+            <TierGrid
+              key={t.key}
+              label={t.label}
+              rows={byTier[t.key]}
+              cols={cols}
+              ticks={ticks}
+              cellMap={cellMap}
+              hover={hover}
+              onHover={setHover}
+            />
+          ))}
+        </div>
+      )}
+
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-3 text-caption text-[var(--text-secondary)]">
+        <span className="text-[var(--text-muted)]">t21 の値:</span>
+        <Swatch color={T_COLORS[0]} label="〜3" />
+        <Swatch color={T_COLORS[1]} label="3〜4" />
+        <Swatch color={T_COLORS[2]} label="4 以上" />
+        <Swatch color="transparent" label="一覧外 / 行なし" />
+      </div>
+    </section>
+  )
+}
+
+function TierGrid({
+  label,
+  rows,
+  cols,
+  ticks,
+  cellMap,
+  hover,
+  onHover,
+}: {
+  label: string
+  rows: LiquidLeader[]
+  cols: string[]
+  ticks: (string | null)[]
+  cellMap: Map<string, LiquidLeaderCell>
+  hover: Hover | null
+  onHover: (h: Hover) => void
+}) {
+  const gridCols = `9rem repeat(${Math.max(cols.length, 1)}, minmax(4px, 1fr)) 2.5rem`
+  return (
+    <div className="min-w-0">
+      <p className="text-caption font-medium text-[var(--text-secondary)] mb-1">
+        {label} <span className="num text-[var(--text-muted)] font-normal">{rows.length} 銘柄</span>
+      </p>
+      {rows.length === 0 ? (
+        <p className="text-caption text-[var(--text-muted)] py-4">該当なし</p>
       ) : (
         <div className="overflow-x-auto">
           <div
             className="grid gap-px"
-            style={{ gridTemplateColumns: gridCols, minWidth: `calc(13.5rem + ${cols.length * 8}px)` }}
-            onMouseLeave={() => setHover(null)}
+            style={{ gridTemplateColumns: gridCols, minWidth: `calc(11.5rem + ${cols.length * 6}px)` }}
           >
             <div />
             {cols.map((d, i) => (
@@ -158,13 +189,13 @@ export default function LeaderDayHeatmap({ rows, dates, selectedDate }: Props) {
             ))}
             <div />
 
-            {tierRows.map(r => {
+            {rows.map(r => {
               const s = leaderState(r)
               const activeRow = hover?.code === r.code
               return (
                 <Fragment key={r.code}>
                   <div
-                    className={`text-caption truncate pr-2 leading-[14px] ${
+                    className={`text-caption truncate pr-2 leading-[13px] ${
                       activeRow ? 'text-[var(--text-primary)] font-medium' : 'text-[var(--text-secondary)]'
                     }`}
                     title={`${r.code} ${r.co_name ?? ''}`}
@@ -173,15 +204,14 @@ export default function LeaderDayHeatmap({ rows, dates, selectedDate }: Props) {
                   </div>
                   {cols.map(d => {
                     const c = cellMap.get(`${r.code}|${d}`)
-                    const inList = c ? (period === 't21' ? c.in_t21 : c.in_t63) === true : false
-                    const t = c ? (period === 't21' ? c.t21 : c.t63) : null
-                    const painted = inList && t !== null && Number.isFinite(t)
+                    const t = c?.in_t21 ? c.t21 : null
+                    const painted = t !== null && Number.isFinite(t)
                     const isHover = activeRow && hover?.date === d
                     return (
                       <div
                         key={d}
-                        onMouseEnter={() => setHover({ code: r.code, date: d })}
-                        className="h-[14px] rounded-[2px]"
+                        onMouseEnter={() => onHover({ code: r.code, date: d })}
+                        className="h-[13px] rounded-[2px]"
                         style={{
                           backgroundColor: painted ? tColor(t as number) : 'transparent',
                           boxShadow: isHover
@@ -193,7 +223,7 @@ export default function LeaderDayHeatmap({ rows, dates, selectedDate }: Props) {
                       />
                     )
                   })}
-                  <div className="text-caption text-[var(--text-muted)] pl-1.5 leading-[14px] whitespace-nowrap">
+                  <div className="text-caption text-[var(--text-muted)] pl-1.5 leading-[13px] whitespace-nowrap">
                     {s ? STATE_META[s].label : ''}
                   </div>
                 </Fragment>
@@ -202,15 +232,6 @@ export default function LeaderDayHeatmap({ rows, dates, selectedDate }: Props) {
           </div>
         </div>
       )}
-
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-3 text-caption text-[var(--text-secondary)]">
-        <span className="text-[var(--text-muted)]">{period} の値:</span>
-        <Swatch color={T_COLORS[0]} label="〜3" />
-        <Swatch color={T_COLORS[1]} label="3〜4" />
-        <Swatch color={T_COLORS[2]} label="4 以上" />
-        <Swatch color="transparent" label="一覧外 / 行なし" />
-      </div>
-    </section>
+    </div>
   )
 }
-

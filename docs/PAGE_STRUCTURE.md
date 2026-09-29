@@ -103,10 +103,10 @@ app/layout.tsx  (RootLayout, lang="ja")
 - 過去日バナー / ErrorBanner / ローディング / データなし
 - 本体
   1. `ReadingNotes`（page 内）— 状態の印の凡例（▲始まり / ●継続 / ▼失速）と読み方の注記
-  2. `SectorWeekHeatmap` — 業種 × 週（直近 52 週。`liquid_leaders_sector` の「業種の大きさから見込む件数との差」の週平均。段 / 期間 / 並びを切替）
-  3. `LeaderDayHeatmap` — 銘柄 × 日（表示日の一覧の銘柄 × 直近 60 営業日。一覧に入っていた日の t 値を 3 段で塗る。段 / 期間を切替）
+  2. `SectorWeekHeatmap` — 業種 × 週（直近 52 週。`liquid_leaders_sector` の「業種の大きさから見込む件数との差」の週平均。上 t21 / 下 t63、左 大型 / 右 中小の 4 枚を同時表示。並びだけ切替）
+  3. `LeaderDayHeatmap` — 銘柄 × 日（表示日に t21 の一覧に入っている銘柄 × 直近 60 営業日。t21 の一覧に入っていた日の t21 を 3 段で塗る。左 大型 / 右 中小、新しく入った順）
   4. `LiquidSectorCounts` — 業種ごとの件数（大型 / 中小を積み上げ）
-  5. `LiquidLeadersTable` × 2 — 段 (large=大型 / mid=中小) ごとの一覧。t63 の高い順（無ければ t21 の高い順）
+  5. `LiquidLeadersTable` × 4 — 段 (large=大型 / mid=中小) ごとに左 t21 / 右 t63 の一覧。新しく入った順（同日は t の高い順）
 - データ: `lib/liquidLeadersFetch.ts`（`fetchLiquidLeadersSnapshot` / `fetchLiquidLeaderDates` / `fetchLiquidSectorDays` / `fetchLiquidLeaderCells`）
 
 ---
