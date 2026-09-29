@@ -1,6 +1,7 @@
 'use client'
 
 // 1 段 (大型 / 中小) の一覧。t21 と t63 を横に並べ、それぞれに 5 日比を添える。
+// t63 の右に t21 − t63 (直近の勢いと 3 か月の強さのずれ) を置く。
 // 「t63 は高いが t21 は落ちてきた」というずれが一目で読めるのがこの表の読みどころ。
 //
 // 色は 5 日比 (括弧の中) だけ: +0.1 以上 緑 / −0.1 以下 赤 / それ以外・新規 灰。
@@ -53,6 +54,12 @@ function TCell({
   )
 }
 
+function gapOf(r: LiquidLeader): number | null {
+  const a = r.t21
+  const b = r.t63
+  return a !== null && b !== null && Number.isFinite(a) && Number.isFinite(b) ? a - b : null
+}
+
 function sinceOf(r: LiquidLeader): string | null {
   return r.in_t63 ? r.t63_since : r.t21_since
 }
@@ -83,7 +90,11 @@ export default function LiquidLeadersTable({ rows, prev, title, hint, query }: P
         align: 'left',
         value: r => r.code,
         defaultDir: 'asc',
-        render: r => <TickerCell code={r.code} name={r.co_name} />,
+        render: r => (
+          <div className="max-w-[11rem]">
+            <TickerCell code={r.code} name={r.co_name} />
+          </div>
+        ),
       },
       {
         key: 'sector_s33',
@@ -93,12 +104,20 @@ export default function LiquidLeadersTable({ rows, prev, title, hint, query }: P
         value: r => r.sector_s33,
         defaultDir: 'asc',
         render: r => (
-          <span className="text-small text-[var(--text-secondary)] whitespace-nowrap">{r.sector_s33 ?? '—'}</span>
+          <span className="block max-w-[7rem] truncate text-small text-[var(--text-secondary)]" title={r.sector_s33 ?? undefined}>
+            {r.sector_s33 ?? '—'}
+          </span>
         ),
       },
       {
         key: 't21',
-        label: 't21 (5日比)',
+        label: (
+          <>
+            t21
+            <br />
+            <span className="font-normal">(5日比)</span>
+          </>
+        ),
         tooltip: `自力の t 値（直近 21 日）。TOPIX につられた分を除いた強さが毎日どれだけ安定しているか。2 以上で強い。${T_NOTE}`,
         align: 'right',
         value: r => r.t21,
@@ -106,12 +125,42 @@ export default function LiquidLeadersTable({ rows, prev, title, hint, query }: P
       },
       {
         key: 't63',
-        label: 't63 (5日比)',
+        label: (
+          <>
+            t63
+            <br />
+            <span className="font-normal">(5日比)</span>
+          </>
+        ),
         tooltip: `自力の t 値（直近 63 日）。2 以上で強い。${T_NOTE}。並べ替えは t63 の一覧にいる銘柄が先`,
         align: 'right',
         // t63 の一覧にいない銘柄は null 扱いで後ろへ (tieBreak で t21 の高い順)
         value: r => (r.in_t63 ? r.t63 : null),
         render: r => <TCell row={r} period="t63" prev={prev} />,
+      },
+      {
+        key: 'gap',
+        label: (
+          <>
+            t21
+            <br />
+            −t63
+          </>
+        ),
+        tooltip:
+          't21 − t63。プラス = 直近 1 か月の強さが 3 か月の強さを上回っている（勢いが増している）、マイナス = 3 か月の先導に比べて直近は勢いが落ちている',
+        align: 'right',
+        value: gapOf,
+        render: r => {
+          const g = gapOf(r)
+          if (g === null) return <span className="text-[var(--sem-idle-fg)]">—</span>
+          const v = Math.round(g * 100) / 100
+          return (
+            <span className="num text-[var(--text-secondary)]">
+              {v === 0 ? '±0.00' : `${v > 0 ? '+' : '−'}${Math.abs(v).toFixed(2)}`}
+            </span>
+          )
+        },
       },
       {
         key: 'since',
@@ -126,7 +175,7 @@ export default function LiquidLeadersTable({ rows, prev, title, hint, query }: P
             ['t63', r.in_t63 ? r.t63_since : null],
           ]
           return (
-            <span className="inline-flex gap-2 text-caption num whitespace-nowrap">
+            <span className="inline-flex flex-col text-caption num whitespace-nowrap leading-tight">
               {items.map(([k, d]) =>
                 d ? (
                   <span key={k} title={`${k} の一覧に入った日: ${d}`}>
