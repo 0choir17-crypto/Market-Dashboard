@@ -2,7 +2,7 @@
 // when a larger .limit() is requested. Any query that can grow past that —
 // price history, sector time series, a whole journal — silently truncates
 // unless it pages with .range(). This helper centralizes the paging loop that
-// lib/marketLeadersFetch.ts#fetchHistory pioneered.
+// lib/liquidLeadersFetch.ts also uses.
 //
 // The query builder passed in MUST apply a stable total ordering (e.g.
 // .order('date').order('code')) so pages don't overlap or skip rows.

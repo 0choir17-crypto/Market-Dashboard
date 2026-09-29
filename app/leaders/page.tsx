@@ -1,32 +1,27 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
-  fetchLeadersSnapshot,
-  fetchSectorRotation,
-  type SectorRotation,
-  type LeadersSnapshot,
-} from '@/lib/marketLeadersFetch'
-import LeadersTable from '@/components/leaders/LeadersTable'
-import SectorConcentration from '@/components/leaders/SectorConcentration'
-import SectorRotationHeatmap from '@/components/leaders/SectorRotationHeatmap'
+  fetchLiquidLeaderDates,
+  fetchLiquidLeadersSnapshot,
+  type LiquidLeadersSnapshot,
+} from '@/lib/liquidLeadersFetch'
+import { STATE_META, TIERS, type LeaderState } from '@/types/liquidLeaders'
+import LiquidLeadersTable from '@/components/leaders/LiquidLeadersTable'
+import LiquidSectorCounts from '@/components/leaders/LiquidSectorCounts'
 import ErrorBanner from '@/components/shared/ErrorBanner'
 import PageHeader from '@/components/shared/PageHeader'
 
-export default function LeadersPage() {
-  const [snapshot, setSnapshot] = useState<LeadersSnapshot>({
-    latestDate: null,
-    prevDate: null,
-    rows: [],
-    hitsMap: new Map(),
-    availableDates: [],
-  })
-  const [rotation, setRotation] = useState<SectorRotation>({ weeks: [], sectors: [], cells: new Map() })
-  const [loading, setLoading] = useState(true)
-  const [rotationLoading, setRotationLoading] = useState(true)
+const STATE_ORDER: LeaderState[] = ['start', 'continue', 'fade']
 
+export default function LeadersPage() {
+  const [snapshot, setSnapshot] = useState<LiquidLeadersSnapshot>({ date: null, rows: [] })
+  const [loading, setLoading] = useState(true)
+  // 日付ピッカーの選択肢は表示日と無関係に全履歴。マウント時に 1 回だけ取る
+  // （表示日ごとに取り直すと、過去日を選んだ後に新しい日付へ戻れなくなる）。
+  const [dates, setDates] = useState<string[]>([])
+  const [datesError, setDatesError] = useState<string | null>(null)
   const [query, setQuery] = useState('')
-  const [selectedDate, setSelectedDate] = useState<string | null>(null)
 
   // 日付の高速切替時に古い応答が後着して新しい表示を上書きしないためのガード
   const requestIdRef = useRef(0)
@@ -34,56 +29,72 @@ export default function LeadersPage() {
   const loadSnapshot = useCallback(async (date?: string) => {
     const reqId = ++requestIdRef.current
     setLoading(true)
-    const snap = await fetchLeadersSnapshot(date)
+    const snap = await fetchLiquidLeadersSnapshot(date)
     if (reqId !== requestIdRef.current) return // 古いリクエストの応答は破棄
     setSnapshot(snap)
-    setSelectedDate(date ?? snap.latestDate)
     setLoading(false)
   }, [])
 
-  useEffect(() => { loadSnapshot() }, [loadSnapshot])  // eslint-disable-line react-hooks/set-state-in-effect
-
-  // セクターローテーション (D) は表示対象日に依存しない (常に直近 6 ヶ月)
-  // 初期 rotationLoading は true で立ち上がるので、effect 本体での setState は不要
-  useEffect(() => {
-    fetchSectorRotation(6).then(r => {
-      setRotation(r)
-      setRotationLoading(false)
-    })
+  const loadDates = useCallback(async () => {
+    const res = await fetchLiquidLeaderDates()
+    setDates(res.dates)
+    setDatesError(res.error)
   }, [])
 
-  const latestAvailable = snapshot.availableDates[0] ?? snapshot.latestDate ?? null
-  const isLatest =
-    snapshot.availableDates.length === 0 || selectedDate === snapshot.availableDates[0]
+  useEffect(() => {
+    loadSnapshot() // eslint-disable-line react-hooks/set-state-in-effect
+    loadDates()
+  }, [loadSnapshot, loadDates])
+
+  const selectedDate = snapshot.date
+  const latestDate = dates[0] ?? null
+  const isLatest = !latestDate || !selectedDate || selectedDate === latestDate
+
+  const byTier = useMemo(() => {
+    const m = new Map<string, typeof snapshot.rows>()
+    for (const t of TIERS) m.set(t.key, [])
+    for (const r of snapshot.rows) {
+      const k = r.tier === 'large' ? 'large' : 'mid'
+      m.get(k)!.push(r)
+    }
+    return m
+  }, [snapshot])
 
   return (
     <main className="min-h-screen p-6" style={{ backgroundColor: 'var(--bg-primary)' }}>
       <PageHeader
-        title="Market Leaders (Top 50)"
-        subtitle="東証クロスセクション top 50 銘柄 — 資金フロー観測。cs_avg=確立度 / 初動(emerging_cs)=加速度の2軸"
-        onRefresh={() => loadSnapshot(selectedDate ?? undefined)}
+        title="Liquid Leaders"
+        subtitle="リキッド・リーダー — 機関投資家が大量に売買できる銘柄のうち、市場平均を上回る買いが入り続けている銘柄。市場の状況の確認用（売買タイミングではない）"
+        onRefresh={() => {
+          loadSnapshot(selectedDate ?? undefined)
+          loadDates()
+        }}
         refreshing={loading}
       >
-        {snapshot.availableDates.length > 0 && (
+        {dates.length > 0 && (
           <select
-            value={selectedDate ?? snapshot.latestDate ?? ''}
+            value={selectedDate ?? ''}
             onChange={e => loadSnapshot(e.target.value)}
+            aria-label="表示する営業日"
             className={`text-caption font-mono px-2 py-1 rounded border cursor-pointer ${
               isLatest
                 ? 'border-[var(--border)] bg-[var(--bg-card)] text-[var(--text-primary)]'
                 : 'border-[var(--sem-watch-bd)] bg-[var(--sem-watch-bg)] text-[var(--sem-watch-fg)] font-medium'
             }`}
           >
-            {snapshot.availableDates.map(d => (
+            {selectedDate && !dates.includes(selectedDate) && (
+              <option value={selectedDate}>{selectedDate}</option>
+            )}
+            {dates.map(d => (
               <option key={d} value={d}>
-                {d}{d === snapshot.availableDates[0] ? '（最新）' : ''}
+                {d}{d === latestDate ? '（最新）' : ''}
               </option>
             ))}
           </select>
         )}
-        {!isLatest && latestAvailable && (
+        {!isLatest && latestDate && (
           <button
-            onClick={() => loadSnapshot(latestAvailable)}
+            onClick={() => loadSnapshot(latestDate)}
             className="text-caption px-1.5 py-0.5 rounded bg-[var(--sem-watch-fg)] text-white hover:brightness-110 transition-colors font-medium"
           >
             最新に戻る
@@ -100,12 +111,12 @@ export default function LeadersPage() {
 
       {!isLatest && selectedDate && (
         <div className="mb-4 px-4 py-2 rounded-lg bg-[var(--sem-watch-bg)] border border-[var(--sem-watch-bd)] text-[var(--sem-watch-fg)] text-small font-medium">
-          {selectedDate} のスナップショットを表示中
+          {selectedDate} の一覧を表示中
         </div>
       )}
 
-      {(snapshot.error || rotation.error) && (
-        <ErrorBanner detail={[snapshot.error, rotation.error].filter(Boolean).join(' / ')} />
+      {(snapshot.error || datesError) && (
+        <ErrorBanner detail={[snapshot.error, datesError].filter(Boolean).join(' / ')} />
       )}
 
       {loading && snapshot.rows.length === 0 && (
@@ -124,27 +135,61 @@ export default function LeadersPage() {
         >
           <p className="text-title font-medium mb-2">データが見つかりません</p>
           <p className="text-small">
-            Supabase の <code className="font-mono">market_leaders</code> テーブルにデータがあるか確認してください。
+            Supabase の <code className="font-mono">liquid_leaders</code> テーブルにデータがあるか確認してください。
             <br />
-            毎営業日 18:23 JST に jquants-scanner から自動 push されます。
+            毎平日の引け後に scan_liquid_leaders.py が直近 5 営業日を更新します。
           </p>
         </div>
       ) : snapshot.rows.length > 0 && (
         <>
-          {/* View B: セクター集中度 */}
-          <SectorConcentration rows={snapshot.rows} />
+          <ReadingNotes />
 
-          {/* View A: Top 50 テーブル (ヒット数 / 連続列 込み) */}
           <div className="mt-6">
-            <LeadersTable rows={snapshot.rows} hitsMap={snapshot.hitsMap} query={query} />
+            <LiquidSectorCounts rows={snapshot.rows} />
           </div>
 
-          {/* View D: セクターローテーション (常時表示) */}
-          <div className="mt-8">
-            <SectorRotationHeatmap rotation={rotation} loading={rotationLoading} />
+          <div className="mt-6 space-y-8">
+            {TIERS.map(t => (
+              <LiquidLeadersTable
+                key={t.key}
+                rows={byTier.get(t.key) ?? []}
+                title={t.label}
+                hint={t.hint}
+                query={query}
+              />
+            ))}
           </div>
         </>
       )}
     </main>
+  )
+}
+
+// 読み方の注記 + 状態の印の凡例
+function ReadingNotes() {
+  return (
+    <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-5 text-caption text-[var(--text-secondary)]">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mb-3">
+        <span className="text-[var(--text-muted)]">状態:</span>
+        {STATE_ORDER.map(s => {
+          const m = STATE_META[s]
+          return (
+            <span key={s} className="flex items-center gap-1" title={m.hint}>
+              <span style={{ color: `var(--sem-${m.tone}-fg)` }}>{m.icon}</span>
+              <span className="text-[var(--text-primary)]">{m.label}</span>
+              <span className="text-[var(--text-muted)]">{m.hint}</span>
+            </span>
+          )
+        })}
+      </div>
+      <ul className="list-disc pl-5 space-y-1">
+        <li>
+          t 値 = TOPIX につられた分を除いた強さが毎日どれだけ安定しているか。2 以上で一覧に入り、入った後の最高値から 1 下がったら外れる。
+        </li>
+        <li>件数そのものは、実力ゼロでも偶然で入る件数とほぼ同じ。同じ業種が固まっているかを見る。</li>
+        <li>TOPIX が 3 か月で 5% 以上下げている時期は、t21 の一覧の 3〜4 割が「下げが小さいだけの防御株」になる。</li>
+        <li>一覧に入った銘柄が、その後も強さを保つとは限らない（記述用。予測用ではない）。</li>
+      </ul>
+    </div>
   )
 }

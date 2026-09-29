@@ -47,7 +47,7 @@ app/layout.tsx  (RootLayout, lang="ja")
 | ルート | ファイル | 種別 | 概要 |
 |---|---|---|---|
 | `/` | `app/page.tsx` | 画面 | Market Dashboard（指数・セクター・ブレッド） |
-| `/leaders` | `app/leaders/page.tsx` | 画面 | Market Leaders (Top 50) |
+| `/leaders` | `app/leaders/page.tsx` | 画面 | Liquid Leaders (リキッド・リーダー) |
 | `/earnings` | `app/earnings/page.tsx` | 画面 | Earnings Quality |
 | `/today` | `app/today/page.tsx` | 画面 | Daily Watch（当日スキャナー結果） |
 | `/watchlist` | `app/watchlist/page.tsx` | 画面 | Watchlist Journal（TradingView の操作記録・読み取り専用） |
@@ -96,16 +96,16 @@ app/layout.tsx  (RootLayout, lang="ja")
 
 ---
 
-### `/leaders` — Market Leaders (Top 50)
-サブタイトル: 東証クロスセクション top 50 銘柄 — 資金フロー観測。cs_avg=確立度 / 初動(emerging_cs)=加速度の 2 軸。
+### `/leaders` — Liquid Leaders (リキッド・リーダー)
+サブタイトル: 機関投資家が大量に売買できる銘柄のうち、市場平均を上回る買いが入り続けている銘柄。市場の状況の確認用（売買タイミングではない）。
 
-- ヘッダー右: 日付セレクト（ページ独自。`DateContext` は使わない）/「最新に戻る」/ 銘柄コード・銘柄名の検索ボックス
+- ヘッダー右: 日付セレクト（ページ独自。`DateContext` は使わない。選択肢は表示日と無関係に全履歴）/「最新に戻る」/ 銘柄コード・銘柄名の検索ボックス
 - 過去日バナー / ErrorBanner / ローディング / データなし
-- 本体（View 名はコード内コメント準拠）
-  1. **View B**: `SectorConcentration` — セクター集中度
-  2. **View A**: `LeadersTable` — Top 50 テーブル（ヒット数 / 連続列込み、検索クエリ適用）
-  3. **View D**: `SectorRotationHeatmap` — セクターローテーション（直近 6 ヶ月固定、日付非依存で常時表示）
-- データ: `lib/marketLeadersFetch.ts`（`fetchLeadersSnapshot` / `fetchSectorRotation`）
+- 本体
+  1. `ReadingNotes`（page 内）— 状態の印の凡例（▲始まり / ●継続 / ▼失速）と読み方の注記
+  2. `LiquidSectorCounts` — 業種ごとの件数（大型 / 中小を積み上げ）
+  3. `LiquidLeadersTable` × 2 — 段 (large=大型 / mid=中小) ごとの一覧。t63 の高い順（無ければ t21 の高い順）
+- データ: `lib/liquidLeadersFetch.ts`（`fetchLiquidLeadersSnapshot` / `fetchLiquidLeaderDates`）
 
 ---
 
@@ -282,7 +282,7 @@ Env 表示 / `market_conditions` 最新行プローブ / anon ロールでのテ
 | `market_conditions` | `/`（TopixChart / BreadthPanel）、`/debug` |
 | `sector_selection_s33` | `/`, `/sectors33` |
 | `earnings_quality` | `/earnings` |
-| `market_leaders` | `/leaders`（Top 50 スナップショット・セクターローテーションとも同一テーブル） |
+| `liquid_leaders` | `/leaders`（日次一覧・業種件数・日付ピッカー） |
 | `ema_setups` / `structure_pivot_events` / `inside_day_setups` | `/today`（`lib/todayFetch.ts`） |
 | `trades` / `risk_settings` | `/journal` |
 | `watchlist_events` | `/watchlist`（差分・見逃しボード・鮮度判定） |
@@ -326,7 +326,7 @@ Env 表示 / `market_conditions` 最新行プローブ / anon ロールでのテ
 
 ```
 NavBar ──┬─ /            Market ─── TopixChart / SectorSection / BreadthPanel
-         ├─ /leaders     Market Leaders (Top 50)
+         ├─ /leaders     Liquid Leaders
          ├─ /earnings    Earnings Quality
          ├─ /today       Daily Watch ── Structure Pivot / EMA Setups
          │                 └─ カードから TSE:XXXX コピー・PositionModal
