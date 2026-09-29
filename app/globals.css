@@ -119,6 +119,15 @@
   /* --sem-focus-fg の別名。リンクとフォーカスリングは同じ意味なので同値 */
   --accent: var(--sem-focus-fg);
   --accent-bg: var(--sem-focus-bg);
+
+  /* ヒートマップの濃淡（1 色相 = 落ち着いた青灰）。強弱ではなく「量」を表すので
+     意味語彙 (--sem-*) とは別に持つ。赤・緑は使わない。 */
+  --heat-1: #e4ebf3;
+  --heat-2: #c5d3e4;
+  --heat-3: #98afca;
+  --heat-4: #6a88ad;
+  --heat-5: #45648c;
+  --heat-grid: #eceef1;
 }
 
 body {
@@ -157,4 +166,13 @@ body {
   background-color: var(--bg-card);
   border-radius: 12px;
   border: 0.5px solid var(--border);
+}
+
+/* ヒートマップ: 母数 0 のマス (その段にその業種の銘柄が無い週) を斜線で示す */
+.heat-hatch {
+  background-image: repeating-linear-gradient(
+    135deg,
+    var(--heat-grid) 0 1px,
+    transparent 1px 4px
+  );
 }
