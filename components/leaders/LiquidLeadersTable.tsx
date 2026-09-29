@@ -116,15 +116,25 @@ export default function LiquidLeadersTable({ rows, prev, title, hint, query }: P
       {
         key: 'since',
         label: '入った日',
-        tooltip: 't63 の一覧にいれば t63 に入った日、いなければ t21 に入った日。マウスを乗せると両方',
-        align: 'right',
+        tooltip:
+          'その一覧に今回入った日。t21 と t63 の両方にいれば両方出す。並べ替えは t63 に入った日（t63 の一覧にいなければ t21 に入った日）',
+        align: 'left',
         value: sinceOf,
         render: r => {
-          const d = sinceOf(r)
-          const both = `t21: ${r.in_t21 && r.t21_since ? r.t21_since : '—'} / t63: ${r.in_t63 && r.t63_since ? r.t63_since : '—'}`
+          const items: [LiquidPeriod, string | null][] = [
+            ['t21', r.in_t21 ? r.t21_since : null],
+            ['t63', r.in_t63 ? r.t63_since : null],
+          ]
           return (
-            <span className="text-caption num text-[var(--text-secondary)]" title={both}>
-              {d ? md(d) : '—'}
+            <span className="inline-flex gap-2 text-caption num whitespace-nowrap">
+              {items.map(([k, d]) =>
+                d ? (
+                  <span key={k} title={`${k} の一覧に入った日: ${d}`}>
+                    <span className="text-[var(--text-muted)]">{k}</span>{' '}
+                    <span className="text-[var(--text-secondary)]">{md(d)}</span>
+                  </span>
+                ) : null,
+              )}
             </span>
           )
         },
