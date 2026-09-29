@@ -71,3 +71,20 @@ export function leaderState(r: Pick<LiquidLeader, 'in_t21' | 'in_t63'>): LeaderS
   if (b) return 'fade'
   return null
 }
+
+export type LiquidPeriod = 't21' | 't63'
+
+/** 新しく入った順: その期間の since の新しい順、同じ日に入った銘柄どうしは t の高い順。 */
+export function byNewestEntry(period: LiquidPeriod) {
+  const since = (r: LiquidLeader) => (period === 't21' ? r.t21_since : r.t63_since) ?? ''
+  const t = (r: LiquidLeader) => {
+    const v = period === 't21' ? r.t21 : r.t63
+    return v !== null && Number.isFinite(v) ? v : -Infinity
+  }
+  return (a: LiquidLeader, b: LiquidLeader) => {
+    const as = since(a)
+    const bs = since(b)
+    if (as !== bs) return as < bs ? 1 : -1
+    return t(b) - t(a)
+  }
+}

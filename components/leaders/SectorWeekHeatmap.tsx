@@ -9,11 +9,14 @@
 //                    excess = n_tX − exp
 //   週の値 = その週の日次 excess の平均 (n_universe > 0 の日だけ)
 // 比 (n ÷ exp) は使わない。母数 1〜3 銘柄の業種で暴れるため。
+//
+// 切り替えの手間を省くため、段 (大型 / 中小) × 期間 (t21 / t63) の 4 枚を一度に出す。
+// 期間ごとに 1 つの格子で、左に大型・右に中小を並べ、業種の行を左右で揃える。
 
-import { useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import { fetchLiquidSectorDays, type LiquidSectorDay } from '@/lib/liquidLeadersFetch'
 import { TOPIX33_FALLBACK } from '@/lib/sectorNames'
-import type { LiquidTier } from '@/types/liquidLeaders'
+import { TIERS, type LiquidTier } from '@/types/liquidLeaders'
 import { HEAT, HoverReadout, Segmented, Swatch, monthTicks } from './heatmapUi'
 
 type Period = 't21' | 't63'
@@ -95,43 +98,55 @@ type Props = {
   endDate: string
 }
 
-export default function SectorWeekHeatmap({ endDate }: Props) {
-  const [tier, setTier] = useState<LiquidTier>('mid')
-  const [period, setPeriod] = useState<Period>('t63')
-  const [order, setOrder] = useState<Order>('latest')
-  const [hover, setHover] = useState<{ sector: string; week: string } | null>(null)
+type Matrix = ReturnType<typeof buildMatrix>
+type Hover = { sector: string; week: string; tier: LiquidTier; period: Period }
 
-  // 取得結果は要求キー付きで持つ。キーが今の要求と違えば「読み込み中」。
-  const reqKey = `${tier}|${endDate}`
-  const [data, setData] = useState<{ key: string; rows: LiquidSectorDay[]; error: string | null } | null>(null)
+const PERIODS: { key: Period; label: string }[] = [
+  { key: 't21', label: 't21（直近 21 日）' },
+  { key: 't63', label: 't63（直近 63 日）' },
+]
+
+export default function SectorWeekHeatmap({ endDate }: Props) {
+  const [order, setOrder] = useState<Order>('latest')
+  const [hover, setHover] = useState<Hover | null>(null)
+
+  // 両段をまとめて取得。取得結果は要求キー付きで持ち、キーが違えば「読み込み中」。
+  const [data, setData] = useState<{
+    key: string
+    rows: Record<LiquidTier, LiquidSectorDay[]>
+    error: string | null
+  } | null>(null)
   useEffect(() => {
     let alive = true
-    fetchLiquidSectorDays(tier, endDate, WEEKS).then(res => {
-      if (alive) setData({ key: `${tier}|${endDate}`, ...res })
+    Promise.all([
+      fetchLiquidSectorDays('large', endDate, WEEKS),
+      fetchLiquidSectorDays('mid', endDate, WEEKS),
+    ]).then(([l, m]) => {
+      if (alive) setData({ key: endDate, rows: { large: l.rows, mid: m.rows }, error: l.error ?? m.error })
     })
     return () => {
       alive = false
     }
-  }, [tier, endDate])
-  const loading = data?.key !== reqKey
-  const rows = useMemo(() => (loading ? [] : data?.rows ?? []), [loading, data])
+  }, [endDate])
+  const loading = data?.key !== endDate
 
-  const { weeks, sectors, cells } = useMemo(() => buildMatrix(rows, period), [rows, period])
-
-  const orderedSectors = useMemo(() => {
-    if (order === 'fixed') {
-      const idx = new Map(TOPIX33_FALLBACK.map((s, i) => [s, i]))
-      return [...sectors].sort((a, b) => (idx.get(a) ?? 99) - (idx.get(b) ?? 99) || a.localeCompare(b, 'ja'))
+  // matrices[period][tier]
+  const matrices = useMemo(() => {
+    const empty: LiquidSectorDay[] = []
+    const out = {} as Record<Period, Record<LiquidTier, Matrix>>
+    for (const p of PERIODS) {
+      out[p.key] = {
+        large: buildMatrix(loading ? empty : data?.rows.large ?? empty, p.key),
+        mid: buildMatrix(loading ? empty : data?.rows.mid ?? empty, p.key),
+      }
     }
-    const last = weeks[weeks.length - 1]
-    const v = (s: string) => cells.get(`${s}|${last}`)?.excess ?? -Infinity
-    return [...sectors].sort((a, b) => v(b) - v(a) || a.localeCompare(b, 'ja'))
-  }, [order, sectors, weeks, cells])
+    return out
+  }, [loading, data])
 
-  const ticks = useMemo(() => monthTicks(weeks), [weeks])
-  const hoverCell = hover ? cells.get(`${hover.sector}|${hover.week}`) : undefined
-
-  const gridCols = `9rem repeat(${Math.max(weeks.length, 1)}, minmax(9px, 1fr))`
+  const hoverCell = hover
+    ? matrices[hover.period][hover.tier].cells.get(`${hover.sector}|${hover.week}`)
+    : undefined
+  const noData = PERIODS.every(p => TIERS.every(t => matrices[p.key][t.key].weeks.length === 0))
 
   return (
     <section className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-5">
@@ -142,52 +157,34 @@ export default function SectorWeekHeatmap({ endDate }: Props) {
             濃いほど、業種の大きさから見込むより多く一覧に入っている（直近 {WEEKS} 週・日次の差の週平均）
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Segmented
-            label="段"
-            value={tier}
-            onChange={setTier}
-            options={[
-              { key: 'large', label: '大型' },
-              { key: 'mid', label: '中小' },
-            ]}
-          />
-          <Segmented
-            label="期間"
-            value={period}
-            onChange={setPeriod}
-            options={[
-              { key: 't21', label: 't21' },
-              { key: 't63', label: 't63' },
-            ]}
-          />
-          <Segmented
-            label="並び"
-            value={order}
-            onChange={setOrder}
-            options={[
-              { key: 'latest', label: '直近の差順' },
-              { key: 'fixed', label: '業種順' },
-            ]}
-          />
-        </div>
+        <Segmented
+          label="並び"
+          value={order}
+          onChange={setOrder}
+          options={[
+            { key: 'latest', label: '直近の差順' },
+            { key: 'fixed', label: '業種順' },
+          ]}
+        />
       </div>
 
       <HoverReadout placeholder="マスにマウスを乗せると、週・件数・見込み・母数を表示">
-        {hover &&
-          (hoverCell ? (
-            <>
-              <span className="text-[var(--text-primary)] font-medium">{hover.sector}</span>
-              {'　'}週 {hover.week}〜{'　'}一覧 {hoverCell.n.toFixed(1)} 件（平均）{'　'}見込み{' '}
-              {hoverCell.exp.toFixed(1)} 件{'　'}差 {hoverCell.excess >= 0 ? '+' : ''}
-              {hoverCell.excess.toFixed(1)}{'　'}母数 {hoverCell.u.toFixed(0)}
-            </>
-          ) : (
-            <>
-              <span className="text-[var(--text-primary)] font-medium">{hover.sector}</span>
-              {'　'}週 {hover.week}〜{'　'}母数 0（この段に銘柄なし）
-            </>
-          ))}
+        {hover && (
+          <>
+            <span className="text-[var(--text-primary)] font-medium">{hover.sector}</span>
+            {'　'}{TIERS.find(t => t.key === hover.tier)?.label} · {hover.period}
+            {'　'}週 {hover.week}〜
+            {hoverCell ? (
+              <>
+                {'　'}一覧 {hoverCell.n.toFixed(1)} 件（平均）{'　'}見込み {hoverCell.exp.toFixed(1)} 件
+                {'　'}差 {hoverCell.excess >= 0 ? '+' : ''}{hoverCell.excess.toFixed(1)}
+                {'　'}母数 {hoverCell.u.toFixed(0)}
+              </>
+            ) : (
+              <>{'　'}母数 0（この段に銘柄なし）</>
+            )}
+          </>
+        )}
       </HoverReadout>
 
       {data?.error && !loading && (
@@ -196,34 +193,22 @@ export default function SectorWeekHeatmap({ endDate }: Props) {
 
       {loading ? (
         <p className="text-caption text-[var(--text-muted)] py-8 text-center">読み込み中…</p>
-      ) : weeks.length === 0 ? (
+      ) : noData ? (
         <p className="text-caption text-[var(--text-muted)] py-8 text-center">データがありません</p>
       ) : (
-        <div className="overflow-x-auto">
-          <div
-            className="grid gap-px"
-            style={{ gridTemplateColumns: gridCols, minWidth: `calc(9rem + ${weeks.length * 10}px)` }}
-            onMouseLeave={() => setHover(null)}
-          >
-            {/* 月の見出し */}
-            <div />
-            {weeks.map((w, i) => (
-              <div key={w} className="h-4 text-caption text-[var(--text-muted)] whitespace-nowrap overflow-visible">
-                {ticks[i]}
-              </div>
-            ))}
-
-            {orderedSectors.map(s => (
-              <Row
-                key={s}
-                sector={s}
-                weeks={weeks}
-                cells={cells}
-                hover={hover}
-                onHover={setHover}
-              />
-            ))}
-          </div>
+        <div className="space-y-5" onMouseLeave={() => setHover(null)}>
+          {PERIODS.map(p => (
+            <PeriodGrid
+              key={p.key}
+              period={p.key}
+              label={p.label}
+              large={matrices[p.key].large}
+              mid={matrices[p.key].mid}
+              order={order}
+              hover={hover}
+              onHover={setHover}
+            />
+          ))}
         </div>
       )}
 
@@ -244,54 +229,123 @@ export default function SectorWeekHeatmap({ endDate }: Props) {
   )
 }
 
-function Row({
-  sector,
-  weeks,
-  cells,
+// 1 期間ぶんの格子: 業種名 | 大型 52 週 | 余白 | 中小 52 週。業種の並びは左右共通。
+function PeriodGrid({
+  period,
+  label,
+  large,
+  mid,
+  order,
   hover,
   onHover,
 }: {
-  sector: string
-  weeks: string[]
-  cells: Map<string, Cell>
-  hover: { sector: string; week: string } | null
-  onHover: (h: { sector: string; week: string }) => void
+  period: Period
+  label: string
+  large: Matrix
+  mid: Matrix
+  order: Order
+  hover: Hover | null
+  onHover: (h: Hover) => void
 }) {
-  const active = hover?.sector === sector
+  const weeks = large.weeks.length >= mid.weeks.length ? large.weeks : mid.weeks
+  const ticks = useMemo(() => monthTicks(weeks), [weeks])
+
+  const sectors = useMemo(() => {
+    const all = [...new Set([...large.sectors, ...mid.sectors])]
+    if (order === 'fixed') {
+      const idx = new Map(TOPIX33_FALLBACK.map((s, i) => [s, i]))
+      return all.sort((a, b) => (idx.get(a) ?? 99) - (idx.get(b) ?? 99) || a.localeCompare(b, 'ja'))
+    }
+    // 直近週の差 (大型 + 中小) の大きい順
+    const last = weeks[weeks.length - 1]
+    const v = (s: string) =>
+      (large.cells.get(`${s}|${last}`)?.excess ?? 0) + (mid.cells.get(`${s}|${last}`)?.excess ?? 0)
+    return all.sort((a, b) => v(b) - v(a) || a.localeCompare(b, 'ja'))
+  }, [large, mid, order, weeks])
+
+  const n = Math.max(weeks.length, 1)
+  const gridCols = `8.5rem repeat(${n}, minmax(4px, 1fr)) 10px repeat(${n}, minmax(4px, 1fr))`
+  const tiers: [LiquidTier, Matrix][] = [
+    ['large', large],
+    ['mid', mid],
+  ]
+
   return (
-    <>
+    <div className="overflow-x-auto">
       <div
-        className={`text-caption text-right pr-2 truncate leading-[14px] ${
-          active ? 'text-[var(--text-primary)] font-medium' : 'text-[var(--text-secondary)]'
-        }`}
-        title={sector}
+        className="grid gap-px"
+        style={{ gridTemplateColumns: gridCols, minWidth: `calc(8.5rem + ${n * 2 * 6 + 10}px)` }}
       >
-        {sector}
+        {/* 見出し: 期間 | 大型 | 中小 */}
+        <div className="text-caption font-medium text-[var(--text-primary)] leading-5">{label}</div>
+        <div className="text-caption font-medium text-[var(--text-secondary)] leading-5" style={{ gridColumn: `span ${n}` }}>
+          大型
+        </div>
+        <div />
+        <div className="text-caption font-medium text-[var(--text-secondary)] leading-5" style={{ gridColumn: `span ${n}` }}>
+          中小
+        </div>
+
+        {/* 月の見出し */}
+        <div />
+        {tiers.map(([t], ti) => (
+          <Fragment key={t}>
+            {ti === 1 && <div />}
+            {weeks.map((w, i) => (
+              <div key={w} className="h-4 text-caption text-[var(--text-muted)] whitespace-nowrap overflow-visible">
+                {ticks[i]}
+              </div>
+            ))}
+          </Fragment>
+        ))}
+
+        {sectors.map(s => {
+          const activeRow = hover?.sector === s && hover.period === period
+          return (
+            <Fragment key={s}>
+              <div
+                className={`text-caption text-right pr-2 truncate leading-[13px] ${
+                  activeRow ? 'text-[var(--text-primary)] font-medium' : 'text-[var(--text-secondary)]'
+                }`}
+                title={s}
+              >
+                {s}
+              </div>
+              {tiers.map(([t, m], ti) => (
+                <Fragment key={t}>
+                  {ti === 1 && <div />}
+                  {weeks.map(w => {
+                    const c = m.cells.get(`${s}|${w}`)
+                    const lv = c ? level(c.excess) : 0
+                    const isHover = activeRow && hover?.tier === t && hover.week === w
+                    return (
+                      <div
+                        key={w}
+                        onMouseEnter={() => onHover({ sector: s, week: w, tier: t, period })}
+                        className={`h-[13px] rounded-[2px] ${c ? '' : 'heat-hatch'}`}
+                        style={
+                          c
+                            ? {
+                                backgroundColor: lv > 0 ? HEAT[lv - 1] : 'transparent',
+                                boxShadow: isHover
+                                  ? 'inset 0 0 0 1px var(--text-secondary)'
+                                  : lv === 0
+                                    ? 'inset 0 0 0 0.5px var(--heat-grid)'
+                                    : undefined,
+                              }
+                            : isHover
+                              ? { boxShadow: 'inset 0 0 0 1px var(--text-secondary)' }
+                              : undefined
+                        }
+                      />
+                    )
+                  })}
+                </Fragment>
+              ))}
+            </Fragment>
+          )
+        })}
       </div>
-      {weeks.map(w => {
-        const c = cells.get(`${sector}|${w}`)
-        const lv = c ? level(c.excess) : 0
-        return (
-          <div
-            key={w}
-            onMouseEnter={() => onHover({ sector, week: w })}
-            className={`h-[14px] rounded-[2px] ${c ? '' : 'heat-hatch'}`}
-            style={
-              c
-                ? {
-                    backgroundColor: lv > 0 ? HEAT[lv - 1] : 'transparent',
-                    boxShadow:
-                      hover?.sector === sector && hover.week === w
-                        ? 'inset 0 0 0 1px var(--text-secondary)'
-                        : lv === 0
-                          ? 'inset 0 0 0 0.5px var(--heat-grid)'
-                          : undefined,
-                  }
-                : undefined
-            }
-          />
-        )
-      })}
-    </>
+    </div>
   )
 }

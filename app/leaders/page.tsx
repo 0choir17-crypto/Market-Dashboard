@@ -158,15 +158,31 @@ export default function LeadersPage() {
           </div>
 
           <div className="mt-6 space-y-8">
-            {TIERS.map(t => (
-              <LiquidLeadersTable
-                key={t.key}
-                rows={byTier.get(t.key) ?? []}
-                title={t.label}
-                hint={t.hint}
-                query={query}
-              />
-            ))}
+            {TIERS.map(t => {
+              const tierRows = byTier.get(t.key) ?? []
+              return (
+                <section key={t.key}>
+                  <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-3">
+                    <h2 className="text-small font-medium text-[var(--text-primary)]">{t.label}</h2>
+                    <span className="text-caption text-[var(--text-muted)]">{t.hint}</span>
+                  </div>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-6 gap-y-6 items-start">
+                    <LiquidLeadersTable
+                      rows={tierRows.filter(r => r.in_t21 === true)}
+                      period="t21"
+                      title="t21 の一覧（直近 21 日）"
+                      query={query}
+                    />
+                    <LiquidLeadersTable
+                      rows={tierRows.filter(r => r.in_t63 === true)}
+                      period="t63"
+                      title="t63 の一覧（直近 63 日）"
+                      query={query}
+                    />
+                  </div>
+                </section>
+              )
+            })}
           </div>
         </>
       )}
