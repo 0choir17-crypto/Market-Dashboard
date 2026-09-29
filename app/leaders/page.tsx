@@ -6,15 +6,12 @@ import {
   fetchLiquidLeadersSnapshot,
   type LiquidLeadersSnapshot,
 } from '@/lib/liquidLeadersFetch'
-import { STATE_META, TIERS, type LeaderState } from '@/types/liquidLeaders'
+import { DIFF_DAYS, TIERS, type LiquidLeader } from '@/types/liquidLeaders'
 import LiquidLeadersTable from '@/components/leaders/LiquidLeadersTable'
-import LiquidSectorCounts from '@/components/leaders/LiquidSectorCounts'
 import SectorWeekHeatmap from '@/components/leaders/SectorWeekHeatmap'
 import LeaderDayHeatmap from '@/components/leaders/LeaderDayHeatmap'
 import ErrorBanner from '@/components/shared/ErrorBanner'
 import PageHeader from '@/components/shared/PageHeader'
-
-const STATE_ORDER: LeaderState[] = ['start', 'continue', 'fade']
 
 export default function LeadersPage() {
   const [snapshot, setSnapshot] = useState<LiquidLeadersSnapshot>({ date: null, rows: [] })
@@ -51,6 +48,29 @@ export default function LeadersPage() {
   const selectedDate = snapshot.date
   const latestDate = dates[0] ?? null
   const isLatest = !latestDate || !selectedDate || selectedDate === latestDate
+
+  // 5 日比の基準日 = 表示日から数えて 5 営業日前 (liquid_leaders にある日付で数える)
+  const prevDate = useMemo(() => {
+    if (!selectedDate) return null
+    const i = dates.indexOf(selectedDate)
+    return i >= 0 ? dates[i + DIFF_DAYS] ?? null : null
+  }, [dates, selectedDate])
+  const [prevData, setPrevData] = useState<{ date: string; map: Map<string, LiquidLeader> } | null>(null)
+  useEffect(() => {
+    if (!prevDate) return
+    let alive = true
+    fetchLiquidLeadersSnapshot(prevDate).then(res => {
+      if (alive) setPrevData({ date: prevDate, map: new Map(res.rows.map(r => [r.code, r])) })
+    })
+    return () => {
+      alive = false
+    }
+  }, [prevDate])
+  // undefined = 読み込み中 / null = 比べる日が無い (履歴が 5 営業日に満たない)
+  const prev: Map<string, LiquidLeader> | null | undefined =
+    dates.length === 0 ? undefined
+      : !prevDate ? null
+        : prevData?.date === prevDate ? prevData.map : undefined
 
   const byTier = useMemo(() => {
     const m = new Map<string, typeof snapshot.rows>()
@@ -149,40 +169,21 @@ export default function LeadersPage() {
           {selectedDate && (
             <div className="mt-6 space-y-6">
               <SectorWeekHeatmap endDate={selectedDate} />
-              <LeaderDayHeatmap rows={snapshot.rows} dates={dates} selectedDate={selectedDate} />
+              <LeaderDayHeatmap rows={snapshot.rows} dates={dates} selectedDate={selectedDate} prev={prev} />
             </div>
           )}
 
-          <div className="mt-6">
-            <LiquidSectorCounts rows={snapshot.rows} />
-          </div>
-
-          <div className="mt-6 space-y-8">
-            {TIERS.map(t => {
-              const tierRows = byTier.get(t.key) ?? []
-              return (
-                <section key={t.key}>
-                  <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-3">
-                    <h2 className="text-small font-medium text-[var(--text-primary)]">{t.label}</h2>
-                    <span className="text-caption text-[var(--text-muted)]">{t.hint}</span>
-                  </div>
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-6 gap-y-6 items-start">
-                    <LiquidLeadersTable
-                      rows={tierRows.filter(r => r.in_t21 === true)}
-                      period="t21"
-                      title="t21 の一覧（直近 21 日）"
-                      query={query}
-                    />
-                    <LiquidLeadersTable
-                      rows={tierRows.filter(r => r.in_t63 === true)}
-                      period="t63"
-                      title="t63 の一覧（直近 63 日）"
-                      query={query}
-                    />
-                  </div>
-                </section>
-              )
-            })}
+          <div className="mt-6 grid grid-cols-1 xl:grid-cols-2 gap-x-6 gap-y-8 items-start">
+            {TIERS.map(t => (
+              <LiquidLeadersTable
+                key={t.key}
+                rows={byTier.get(t.key) ?? []}
+                prev={prev}
+                title={t.label}
+                hint={t.hint}
+                query={query}
+              />
+            ))}
           </div>
         </>
       )}
@@ -190,27 +191,20 @@ export default function LeadersPage() {
   )
 }
 
-// 読み方の注記 + 状態の印の凡例
+// 読み方の注記
 function ReadingNotes() {
   return (
     <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-5 text-caption text-[var(--text-secondary)]">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mb-3">
-        <span className="text-[var(--text-muted)]">状態:</span>
-        {STATE_ORDER.map(s => {
-          const m = STATE_META[s]
-          return (
-            <span key={s} className="flex items-center gap-1" title={m.hint}>
-              <span style={{ color: `var(--sem-${m.tone}-fg)` }}>{m.icon}</span>
-              <span className="text-[var(--text-primary)]">{m.label}</span>
-              <span className="text-[var(--text-muted)]">{m.hint}</span>
-            </span>
-          )
-        })}
-      </div>
       <ul className="list-disc pl-5 space-y-1">
         <li>
-          t 値 = TOPIX につられた分を除いた強さが毎日どれだけ安定しているか。2 以上で一覧に入り、入った後の最高値から 1 下がったら外れる。
+          t 値 = TOPIX につられた分を除いた強さが毎日どれだけ安定しているか。2 以上で一覧に入り、入った後の最高値から 1 下がるまで残る（そのため 2 未満の銘柄も一覧にいる）。
         </li>
+        <li>
+          括弧内は 5 営業日前からの t の増減。<span style={{ color: 'var(--positive)' }}>+0.1 以上</span> /{' '}
+          <span style={{ color: 'var(--negative)' }}>−0.1 以下</span> / それ以外は灰。5 営業日前に一覧にいなかった銘柄は「新規」。
+        </li>
+        <li>赤が何日も続く = 強さが落ちてきている。1〜2 日だけの色は日々の揺れのことが多い。</li>
+        <li>t63 が高いのに t21 の 5 日比が赤 = 3 か月の先導は続いているが、直近 1 か月で勢いが落ちている。</li>
         <li>件数そのものは、実力ゼロでも偶然で入る件数とほぼ同じ。同じ業種が固まっているかを見る。</li>
         <li>TOPIX が 3 か月で 5% 以上下げている時期は、t21 の一覧の 3〜4 割が「下げが小さいだけの防御株」になる。</li>
         <li>一覧に入った銘柄が、その後も強さを保つとは限らない（記述用。予測用ではない）。</li>

@@ -3,7 +3,8 @@
 // ヒートマップ B: 銘柄 × 日 — 今のリーダーがいつから・どれくらい強いか。
 // 行 = 表示日に t21 の一覧に入っている銘柄 (始まり・継続)。失速 (t63 だけ) の銘柄は
 //      t21 で見ると右端まで空白の行になるだけなので出さない。
-//      並びは一覧と同じ「新しく入った順」(t21_since の新しい順、同日は t21 の高い順)。
+//      並びは一覧と同じ (t63 の一覧にいる銘柄を t63 の高い順、その後ろに t21 の高い順)。
+// 行の右端 = t21 の 5 日比 (一覧と同じ色: +0.1 以上 緑 / −0.1 以下 赤 / それ以外・新規 灰)。
 // 列 = 表示日までの直近 60 営業日 (テーブルにある日付)
 // マス = その日の t21。t21 の一覧に入っていた日だけ塗る (行が無い日・一覧外の日は空白)
 // 切り替えを無くすため、左に大型・右に中小を並べる。
@@ -11,10 +12,11 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import { fetchLiquidLeaderCells, type LiquidLeaderCell } from '@/lib/liquidLeadersFetch'
 import {
-  STATE_META,
   TIERS,
-  byNewestEntry,
-  leaderState,
+  byListOrder,
+  diffColor,
+  fmtDiff,
+  tDiff,
   type LiquidLeader,
   type LiquidTier,
 } from '@/types/liquidLeaders'
@@ -41,9 +43,11 @@ type Props = {
   /** テーブルにある全営業日 (降順) */
   dates: string[]
   selectedDate: string
+  /** 5 営業日前の行 (code → row)。null = 比べる日が無い / undefined = 読み込み中 */
+  prev: Map<string, LiquidLeader> | null | undefined
 }
 
-export default function LeaderDayHeatmap({ rows, dates, selectedDate }: Props) {
+export default function LeaderDayHeatmap({ rows, dates, selectedDate, prev }: Props) {
   const [hover, setHover] = useState<Hover | null>(null)
 
   // 表示日までの直近 60 営業日 (昇順)
@@ -76,11 +80,10 @@ export default function LeaderDayHeatmap({ rows, dates, selectedDate }: Props) {
   }, [loading, data])
 
   const byTier = useMemo(() => {
-    const sort = byNewestEntry('t21')
     const pick = (t: LiquidTier) =>
       rows
         .filter(r => r.in_t21 === true && (t === 'large' ? r.tier === 'large' : r.tier !== 'large'))
-        .sort(sort)
+        .sort(byListOrder)
     return { large: pick('large'), mid: pick('mid') }
   }, [rows])
 
@@ -93,7 +96,7 @@ export default function LeaderDayHeatmap({ rows, dates, selectedDate }: Props) {
       <div className="mb-3">
         <p className="text-small font-medium text-[var(--text-primary)]">銘柄 × 日（t21 の一覧）</p>
         <p className="text-caption text-[var(--text-secondary)] mt-0.5">
-          右端が薄くなってきた = 強さが落ちている ／ 左側が空白 = 最近入った（直近 {DAYS} 営業日。t21 の一覧に入っていた日だけ塗る。上ほど新しく入った銘柄）
+          右端が薄くなってきた = 強さが落ちている ／ 左側が空白 = 最近入った（直近 {DAYS} 営業日。t21 の一覧に入っていた日だけ塗る。右端は t21 の 5 日比）
         </p>
       </div>
 
@@ -132,6 +135,7 @@ export default function LeaderDayHeatmap({ rows, dates, selectedDate }: Props) {
               cols={cols}
               ticks={ticks}
               cellMap={cellMap}
+              prev={prev}
               hover={hover}
               onHover={setHover}
             />
@@ -156,6 +160,7 @@ function TierGrid({
   cols,
   ticks,
   cellMap,
+  prev,
   hover,
   onHover,
 }: {
@@ -164,10 +169,11 @@ function TierGrid({
   cols: string[]
   ticks: (string | null)[]
   cellMap: Map<string, LiquidLeaderCell>
+  prev: Map<string, LiquidLeader> | null | undefined
   hover: Hover | null
   onHover: (h: Hover) => void
 }) {
-  const gridCols = `9rem repeat(${Math.max(cols.length, 1)}, minmax(4px, 1fr)) 2.5rem`
+  const gridCols = `9rem repeat(${Math.max(cols.length, 1)}, minmax(4px, 1fr)) 3rem`
   return (
     <div className="min-w-0">
       <p className="text-caption font-medium text-[var(--text-secondary)] mb-1">
@@ -179,7 +185,7 @@ function TierGrid({
         <div className="overflow-x-auto">
           <div
             className="grid gap-px"
-            style={{ gridTemplateColumns: gridCols, minWidth: `calc(11.5rem + ${cols.length * 6}px)` }}
+            style={{ gridTemplateColumns: gridCols, minWidth: `calc(12rem + ${cols.length * 6}px)` }}
           >
             <div />
             {cols.map((d, i) => (
@@ -190,7 +196,7 @@ function TierGrid({
             <div />
 
             {rows.map(r => {
-              const s = leaderState(r)
+              const d = prev ? tDiff(r.t21, prev.get(r.code), 't21') : null
               const activeRow = hover?.code === r.code
               return (
                 <Fragment key={r.code}>
@@ -223,8 +229,12 @@ function TierGrid({
                       />
                     )
                   })}
-                  <div className="text-caption text-[var(--text-muted)] pl-1.5 leading-[13px] whitespace-nowrap">
-                    {s ? STATE_META[s].label : ''}
+                  <div
+                    className="text-caption num pl-1.5 leading-[13px] whitespace-nowrap"
+                    style={{ color: diffColor(d) }}
+                    title="t21 の 5 営業日前からの増減"
+                  >
+                    {prev === undefined ? '…' : fmtDiff(d)}
                   </div>
                 </Fragment>
               )
