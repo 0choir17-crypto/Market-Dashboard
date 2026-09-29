@@ -8,7 +8,6 @@
 // 一覧の出入り: t が 2 以上で入り、入った後の t の最高値から 1 下がったら外れる。
 // 「市場の状況の確認」用で、売買のタイミングを示すものではない。
 
-import type { SemanticTone } from '@/types/semantic'
 
 /** 流動性の段。large = 60 日売買代金の上位 200 位 / mid = 201〜1,000 位 */
 export type LiquidTier = 'large' | 'mid'
@@ -36,55 +35,60 @@ export const TIERS: { key: LiquidTier; label: string; hint: string }[] = [
   { key: 'mid', label: '中小', hint: '60 日売買代金 201〜1,000 位' },
 ]
 
-/** 状態 — 1 行に 1 つだけ付ける印。 */
-export type LeaderState = 'start' | 'fade' | 'continue'
-
-export const STATE_META: Record<
-  LeaderState,
-  { label: string; icon: string; tone: SemanticTone; hint: string }
-> = {
-  start: {
-    label: '始まり',
-    icon: '▲',
-    tone: 'focus',
-    hint: 't21 のみ — 新しい先導',
-  },
-  continue: {
-    label: '継続',
-    icon: '●',
-    tone: 'strong',
-    hint: 't21・t63 とも — 先導が続いている',
-  },
-  fade: {
-    label: '失速',
-    icon: '▼',
-    tone: 'watch',
-    hint: 't63 のみ — 3 か月は強かったが直近は失速',
-  },
-}
-
-export function leaderState(r: Pick<LiquidLeader, 'in_t21' | 'in_t63'>): LeaderState | null {
-  const a = r.in_t21 === true
-  const b = r.in_t63 === true
-  if (a && b) return 'continue'
-  if (a) return 'start'
-  if (b) return 'fade'
-  return null
-}
-
 export type LiquidPeriod = 't21' | 't63'
 
-/** 新しく入った順: その期間の since の新しい順、同じ日に入った銘柄どうしは t の高い順。 */
-export function byNewestEntry(period: LiquidPeriod) {
-  const since = (r: LiquidLeader) => (period === 't21' ? r.t21_since : r.t63_since) ?? ''
-  const t = (r: LiquidLeader) => {
-    const v = period === 't21' ? r.t21 : r.t63
-    return v !== null && Number.isFinite(v) ? v : -Infinity
+function num(v: number | null | undefined): number | null {
+  return v !== null && v !== undefined && Number.isFinite(v) ? v : null
+}
+
+/**
+ * 一覧の既定の並び: t63 の一覧にいる銘柄を t63 の高い順、その後ろに
+ * t63 の一覧にいない銘柄を t21 の高い順。ヒートマップ B の行順も同じ。
+ */
+export function byListOrder(a: LiquidLeader, b: LiquidLeader): number {
+  const ai = a.in_t63 === true
+  const bi = b.in_t63 === true
+  if (ai !== bi) return ai ? -1 : 1
+  if (ai) {
+    const d = (num(b.t63) ?? -Infinity) - (num(a.t63) ?? -Infinity)
+    if (d !== 0) return d
   }
-  return (a: LiquidLeader, b: LiquidLeader) => {
-    const as = since(a)
-    const bs = since(b)
-    if (as !== bs) return as < bs ? 1 : -1
-    return t(b) - t(a)
-  }
+  return (num(b.t21) ?? -Infinity) - (num(a.t21) ?? -Infinity)
+}
+
+// ── 5 日比 ────────────────────────────────────────────────────────────
+// 5 日比 = 今日の t − 5 営業日前の t (営業日 = liquid_leaders にある日付を数える)。
+// liquid_leaders は一覧に入っている日の行しか無いので、5 営業日前にその銘柄の
+// 行が無ければ比べられない → 「新規」(5 営業日以内に一覧に入った銘柄)。
+
+export const DIFF_DAYS = 5
+
+/** 5 日比の値。'new' = 5 営業日前に行が無い / null = どちらかの t が欠損 */
+export type TDiff = number | 'new' | null
+
+export function tDiff(
+  now: number | null | undefined,
+  prevRow: Pick<LiquidLeader, 't21' | 't63'> | undefined,
+  period: LiquidPeriod,
+): TDiff {
+  if (!prevRow) return 'new'
+  const a = num(now)
+  const b = num(period === 't21' ? prevRow.t21 : prevRow.t63)
+  return a === null || b === null ? null : a - b
+}
+
+// +0.1 以上 = 上昇 (緑) / −0.1 以下 = 下降 (赤) / それ以外・新規 = 横ばい (灰)
+export function diffColor(d: TDiff): string {
+  if (typeof d !== 'number') return 'var(--text-muted)'
+  if (d >= 0.1) return 'var(--positive)'
+  if (d <= -0.1) return 'var(--negative)'
+  return 'var(--text-muted)'
+}
+
+export function fmtDiff(d: TDiff): string {
+  if (d === 'new') return '新規'
+  if (d === null) return '—'
+  const r = Math.round(d * 100) / 100
+  if (r === 0) return '±0.00'
+  return `${r > 0 ? '+' : '−'}${Math.abs(r).toFixed(2)}`
 }

@@ -102,12 +102,11 @@ app/layout.tsx  (RootLayout, lang="ja")
 - ヘッダー右: 日付セレクト（ページ独自。`DateContext` は使わない。選択肢は表示日と無関係に全履歴）/「最新に戻る」/ 銘柄コード・銘柄名の検索ボックス
 - 過去日バナー / ErrorBanner / ローディング / データなし
 - 本体
-  1. `ReadingNotes`（page 内）— 状態の印の凡例（▲始まり / ●継続 / ▼失速）と読み方の注記
+  1. `ReadingNotes`（page 内）— 読み方の注記（t 値・5 日比の色・偶然で入る分など）
   2. `SectorWeekHeatmap` — 業種 × 週（直近 52 週。`liquid_leaders_sector` の「業種の大きさから見込む件数との差」の週平均。上 t21 / 下 t63、左 大型 / 右 中小の 4 枚を同時表示。並びだけ切替）
-  3. `LeaderDayHeatmap` — 銘柄 × 日（表示日に t21 の一覧に入っている銘柄 × 直近 60 営業日。t21 の一覧に入っていた日の t21 を 3 段で塗る。左 大型 / 右 中小、新しく入った順）
-  4. `LiquidSectorCounts` — 業種ごとの件数（大型 / 中小を積み上げ）
-  5. `LiquidLeadersTable` × 4 — 段 (large=大型 / mid=中小) ごとに左 t21 / 右 t63 の一覧。新しく入った順（同日は t の高い順）
-- データ: `lib/liquidLeadersFetch.ts`（`fetchLiquidLeadersSnapshot` / `fetchLiquidLeaderDates` / `fetchLiquidSectorDays` / `fetchLiquidLeaderCells`）
+  3. `LeaderDayHeatmap` — 銘柄 × 日（表示日に t21 の一覧に入っている銘柄 × 直近 60 営業日。t21 の一覧に入っていた日の t21 を 3 段で塗る。左 大型 / 右 中小、並びは一覧と同じ。行の右端に t21 の 5 日比）
+  4. `LiquidLeadersTable` × 2 — 段 (large=大型 / mid=中小) ごとに 1 表（左 大型 / 右 中小）。列は 銘柄・業種・t21 (5日比)・t63 (5日比)・入った日。既定は t63 の一覧にいる銘柄を t63 の高い順、その後ろに t21 の高い順
+- データ: `lib/liquidLeadersFetch.ts`（`fetchLiquidLeadersSnapshot`（表示日と 5 営業日前の 2 回）/ `fetchLiquidLeaderDates` / `fetchLiquidSectorDays` / `fetchLiquidLeaderCells`）
 
 ---
 
@@ -284,7 +283,7 @@ Env 表示 / `market_conditions` 最新行プローブ / anon ロールでのテ
 | `market_conditions` | `/`（TopixChart / BreadthPanel）、`/debug` |
 | `sector_selection_s33` | `/`, `/sectors33` |
 | `earnings_quality` | `/earnings` |
-| `liquid_leaders` | `/leaders`（日次一覧・業種件数・銘柄 × 日ヒートマップ・日付ピッカー） |
+| `liquid_leaders` | `/leaders`（日次一覧・5 日比・銘柄 × 日ヒートマップ・日付ピッカー） |
 | `liquid_leaders_sector` | `/leaders`（業種 × 週ヒートマップ） |
 | `ema_setups` / `structure_pivot_events` / `inside_day_setups` | `/today`（`lib/todayFetch.ts`） |
 | `trades` / `risk_settings` | `/journal` |

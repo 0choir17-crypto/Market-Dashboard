@@ -1,56 +1,71 @@
 'use client'
 
-// 1 段 × 1 期間 (t21 か t63) の一覧。段ごとに左 t21 / 右 t63 で並べて使う。
-// 並びは「新しく入った順」(その期間の入った日の新しい順、同日は t の高い順)。
+// 1 段 (大型 / 中小) の一覧。t21 と t63 を横に並べ、それぞれに 5 日比を添える。
+// 「t63 は高いが t21 は落ちてきた」というずれが一目で読めるのがこの表の読みどころ。
+//
+// 色は 5 日比 (括弧の中) だけ: +0.1 以上 緑 / −0.1 以下 赤 / それ以外・新規 灰。
+// t の値そのものは、その期間の一覧に入っていれば普通の文字、入っていなければ灰色。
 
 import { useMemo } from 'react'
 import {
-  STATE_META,
-  byNewestEntry,
-  leaderState,
+  byListOrder,
+  diffColor,
+  fmtDiff,
+  tDiff,
   type LiquidLeader,
   type LiquidPeriod,
 } from '@/types/liquidLeaders'
 import DataTable, { type Column } from '@/components/shared/DataTable'
 import TickerCell from '@/components/shared/TickerCell'
 
-function isNum(v: number | null | undefined): v is number {
-  return v !== null && v !== undefined && Number.isFinite(v)
+// 'YYYY-MM-DD' → 'M/D'
+function md(iso: string): string {
+  const [, m, d] = iso.split('-')
+  return `${parseInt(m, 10)}/${parseInt(d, 10)}`
 }
 
-// 'YYYY-MM-DD' → 'YY/M/D'（1 年分の履歴があるので年も要る）
-function shortDate(iso: string): string {
-  const [y, m, d] = iso.split('-')
-  return `${y.slice(2)}/${parseInt(m, 10)}/${parseInt(d, 10)}`
-}
+const T_NOTE =
+  't が 2 以上で一覧に入り、入った後の最高値から 1 下がるまで残る。そのため 2 未満の銘柄も一覧にいる。括弧内は 5 営業日前からの増減（5 営業日前に一覧にいなければ「新規」）'
 
-// 状態の印（1 行に 1 つだけ）。列は増やさず、銘柄セルの頭に置く。
-// t21 側: t63 にも入っていれば継続、入っていなければ始まり / t63 側: t21 に無ければ失速。
-function StateMark({ row }: { row: LiquidLeader }) {
-  const s = leaderState(row)
-  if (!s) return <span className="inline-block w-3" />
-  const m = STATE_META[s]
+function TCell({
+  row,
+  period,
+  prev,
+}: {
+  row: LiquidLeader
+  period: LiquidPeriod
+  /** 5 営業日前の行 (code → row)。null = 比べる日が無い / undefined = 読み込み中 */
+  prev: Map<string, LiquidLeader> | null | undefined
+}) {
+  const v = period === 't21' ? row.t21 : row.t63
+  const inList = (period === 't21' ? row.in_t21 : row.in_t63) === true
+  if (v === null || !Number.isFinite(v)) return <span className="text-[var(--sem-idle-fg)]">—</span>
+  const d = prev ? tDiff(v, prev.get(row.code), period) : null
   return (
-    <span
-      className="inline-block w-3 text-center text-caption flex-shrink-0"
-      style={{ color: `var(--sem-${m.tone}-fg)` }}
-      title={`${m.label}: ${m.hint}`}
-      aria-label={m.label}
-    >
-      {m.icon}
+    <span className="num whitespace-nowrap">
+      <span style={{ color: inList ? 'var(--text-primary)' : 'var(--text-muted)' }}>
+        {v.toFixed(2)}
+      </span>
+      <span className="text-caption ml-1" style={{ color: diffColor(d) }}>
+        ({prev === undefined ? '…' : fmtDiff(d)})
+      </span>
     </span>
   )
 }
 
+function sinceOf(r: LiquidLeader): string | null {
+  return r.in_t63 ? r.t63_since : r.t21_since
+}
+
 type Props = {
-  /** その期間の一覧に入っている行だけ */
   rows: LiquidLeader[]
-  period: LiquidPeriod
+  prev: Map<string, LiquidLeader> | null | undefined
   title: string
+  hint: string
   query: string
 }
 
-export default function LiquidLeadersTable({ rows, period, title, query }: Props) {
+export default function LiquidLeadersTable({ rows, prev, title, hint, query }: Props) {
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
     if (!q) return rows
@@ -59,25 +74,16 @@ export default function LiquidLeadersTable({ rows, period, title, query }: Props
     )
   }, [rows, query])
 
-  const tieBreak = useMemo(() => byNewestEntry(period), [period])
-
-  const columns: Column<LiquidLeader>[] = useMemo(() => {
-    const t = (r: LiquidLeader) => (period === 't21' ? r.t21 : r.t63)
-    const since = (r: LiquidLeader) => (period === 't21' ? r.t21_since : r.t63_since)
-    return [
+  const columns: Column<LiquidLeader>[] = useMemo(
+    () => [
       {
         key: 'code',
         label: 'Code / Name',
-        tooltip: '頭の印 = 状態（▲始まり / ●継続 / ▼失速）。コード → TradingView / 銘柄名 → 四季報',
+        tooltip: 'コード → TradingView / 銘柄名 → 四季報',
         align: 'left',
         value: r => r.code,
         defaultDir: 'asc',
-        render: r => (
-          <div className="flex items-baseline gap-1.5 min-w-0">
-            <StateMark row={r} />
-            <TickerCell code={r.code} name={r.co_name} />
-          </div>
-        ),
+        render: r => <TickerCell code={r.code} name={r.co_name} />,
       },
       {
         key: 'sector_s33',
@@ -91,43 +97,47 @@ export default function LiquidLeadersTable({ rows, period, title, query }: Props
         ),
       },
       {
-        key: 't',
-        label: period,
-        tooltip:
-          period === 't21'
-            ? '自力の t 値（直近 21 日）。TOPIX につられた分を除いた強さが毎日どれだけ安定しているか。2 以上で強い'
-            : '自力の t 値（直近 63 日）。2 以上で強い',
+        key: 't21',
+        label: 't21 (5日比)',
+        tooltip: `自力の t 値（直近 21 日）。TOPIX につられた分を除いた強さが毎日どれだけ安定しているか。2 以上で強い。${T_NOTE}`,
         align: 'right',
-        value: t,
-        className: 'w-16',
-        render: r => {
-          const v = t(r)
-          return isNum(v) ? (
-            <span className="num text-[var(--text-primary)]">{v.toFixed(2)}</span>
-          ) : (
-            <span className="text-[var(--sem-idle-fg)]">—</span>
-          )
-        },
+        value: r => r.t21,
+        render: r => <TCell row={r} period="t21" prev={prev} />,
+      },
+      {
+        key: 't63',
+        label: 't63 (5日比)',
+        tooltip: `自力の t 値（直近 63 日）。2 以上で強い。${T_NOTE}。並べ替えは t63 の一覧にいる銘柄が先`,
+        align: 'right',
+        // t63 の一覧にいない銘柄は null 扱いで後ろへ (tieBreak で t21 の高い順)
+        value: r => (r.in_t63 ? r.t63 : null),
+        render: r => <TCell row={r} period="t63" prev={prev} />,
       },
       {
         key: 'since',
         label: '入った日',
-        tooltip: `今回 ${period} の一覧に入った日`,
+        tooltip: 't63 の一覧にいれば t63 に入った日、いなければ t21 に入った日。マウスを乗せると両方',
         align: 'right',
-        value: since,
-        className: 'w-20',
+        value: sinceOf,
         render: r => {
-          const d = since(r)
-          return <span className="text-caption num text-[var(--text-secondary)]">{d ? shortDate(d) : '—'}</span>
+          const d = sinceOf(r)
+          const both = `t21: ${r.in_t21 && r.t21_since ? r.t21_since : '—'} / t63: ${r.in_t63 && r.t63_since ? r.t63_since : '—'}`
+          return (
+            <span className="text-caption num text-[var(--text-secondary)]" title={both}>
+              {d ? md(d) : '—'}
+            </span>
+          )
         },
       },
-    ]
-  }, [period])
+    ],
+    [prev],
+  )
 
   return (
     <section className="min-w-0">
-      <div className="flex items-baseline gap-2 mb-2">
-        <h3 className="text-caption font-medium text-[var(--text-secondary)]">{title}</h3>
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-2">
+        <h2 className="text-small font-medium text-[var(--text-primary)]">{title}</h2>
+        <span className="text-caption text-[var(--text-muted)]">{hint}</span>
         <span className="ml-auto text-caption text-[var(--text-muted)]">
           <span className="num">{filtered.length}</span> 銘柄
         </span>
@@ -142,8 +152,8 @@ export default function LiquidLeadersTable({ rows, period, title, query }: Props
           rows={filtered}
           columns={columns}
           rowKey={r => r.code}
-          defaultSort={{ key: 'since', dir: 'desc' }}
-          tieBreak={tieBreak}
+          defaultSort={{ key: 't63', dir: 'desc' }}
+          tieBreak={byListOrder}
           summaryToggle={false}
         />
       )}
