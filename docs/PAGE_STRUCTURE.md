@@ -103,9 +103,11 @@ app/layout.tsx  (RootLayout, lang="ja")
 - 過去日バナー / ErrorBanner / ローディング / データなし
 - 本体
   1. `ReadingNotes`（page 内）— 状態の印の凡例（▲始まり / ●継続 / ▼失速）と読み方の注記
-  2. `LiquidSectorCounts` — 業種ごとの件数（大型 / 中小を積み上げ）
-  3. `LiquidLeadersTable` × 2 — 段 (large=大型 / mid=中小) ごとの一覧。t63 の高い順（無ければ t21 の高い順）
-- データ: `lib/liquidLeadersFetch.ts`（`fetchLiquidLeadersSnapshot` / `fetchLiquidLeaderDates`）
+  2. `SectorWeekHeatmap` — 業種 × 週（直近 52 週。`liquid_leaders_sector` の「業種の大きさから見込む件数との差」の週平均。段 / 期間 / 並びを切替）
+  3. `LeaderDayHeatmap` — 銘柄 × 日（表示日の一覧の銘柄 × 直近 60 営業日。一覧に入っていた日の t 値を 3 段で塗る。段 / 期間を切替）
+  4. `LiquidSectorCounts` — 業種ごとの件数（大型 / 中小を積み上げ）
+  5. `LiquidLeadersTable` × 2 — 段 (large=大型 / mid=中小) ごとの一覧。t63 の高い順（無ければ t21 の高い順）
+- データ: `lib/liquidLeadersFetch.ts`（`fetchLiquidLeadersSnapshot` / `fetchLiquidLeaderDates` / `fetchLiquidSectorDays` / `fetchLiquidLeaderCells`）
 
 ---
 
@@ -282,7 +284,8 @@ Env 表示 / `market_conditions` 最新行プローブ / anon ロールでのテ
 | `market_conditions` | `/`（TopixChart / BreadthPanel）、`/debug` |
 | `sector_selection_s33` | `/`, `/sectors33` |
 | `earnings_quality` | `/earnings` |
-| `liquid_leaders` | `/leaders`（日次一覧・業種件数・日付ピッカー） |
+| `liquid_leaders` | `/leaders`（日次一覧・業種件数・銘柄 × 日ヒートマップ・日付ピッカー） |
+| `liquid_leaders_sector` | `/leaders`（業種 × 週ヒートマップ） |
 | `ema_setups` / `structure_pivot_events` / `inside_day_setups` | `/today`（`lib/todayFetch.ts`） |
 | `trades` / `risk_settings` | `/journal` |
 | `watchlist_events` | `/watchlist`（差分・見逃しボード・鮮度判定） |

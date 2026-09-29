@@ -63,3 +63,61 @@ export async function fetchLiquidLeadersSnapshot(date?: string): Promise<LiquidL
     error: error ? error.message : null,
   }
 }
+
+// ── ヒートマップ A: 業種 × 週 (liquid_leaders_sector) ──────────────────
+// 1 行 = (date, tier, sector_s33)。件数 0 の業種も毎日すべて入る。
+export type LiquidSectorDay = {
+  date: string
+  sector_s33: string
+  n_universe: number
+  n_t21: number
+  n_t63: number
+}
+
+// endDate から遡って約 52 週ぶん (1 段 ≒ 33 業種 × 260 日 ≒ 8,600 行) をページング取得。
+export async function fetchLiquidSectorDays(
+  tier: string,
+  endDate: string,
+  weeks = 52,
+): Promise<{ rows: LiquidSectorDay[]; error: string | null }> {
+  const [y, m, d] = endDate.split('-').map(Number)
+  const since = new Date(Date.UTC(y, m - 1, d - weeks * 7 - 7)).toISOString().slice(0, 10)
+  const { rows, error } = await fetchAllPaged<LiquidSectorDay>((from, to) =>
+    supabase
+      .from('liquid_leaders_sector')
+      .select('date, sector_s33, n_universe, n_t21, n_t63')
+      .eq('tier', tier)
+      .gte('date', since)
+      .lte('date', endDate)
+      .order('date', { ascending: true })
+      .order('sector_s33', { ascending: true })
+      .range(from, to),
+  )
+  if (error) console.error('[liquid_leaders_sector]', error)
+  return { rows, error }
+}
+
+// ── ヒートマップ B: 銘柄 × 日 (liquid_leaders) ────────────────────────
+export type LiquidLeaderCell = Pick<
+  LiquidLeader,
+  'date' | 'code' | 't21' | 't63' | 'in_t21' | 'in_t63'
+>
+
+// [fromDate, toDate] の全行 (1 日 40〜180 行 × 60 日 ≒ 最大 1 万行)。
+export async function fetchLiquidLeaderCells(
+  fromDate: string,
+  toDate: string,
+): Promise<{ rows: LiquidLeaderCell[]; error: string | null }> {
+  const { rows, error } = await fetchAllPaged<LiquidLeaderCell>((from, to) =>
+    supabase
+      .from(TABLE)
+      .select('date, code, t21, t63, in_t21, in_t63')
+      .gte('date', fromDate)
+      .lte('date', toDate)
+      .order('date', { ascending: true })
+      .order('code', { ascending: true })
+      .range(from, to),
+  )
+  if (error) console.error('[liquid_leaders cells]', error)
+  return { rows, error }
+}

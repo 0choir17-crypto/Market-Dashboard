@@ -9,6 +9,8 @@ import {
 import { STATE_META, TIERS, type LeaderState } from '@/types/liquidLeaders'
 import LiquidLeadersTable from '@/components/leaders/LiquidLeadersTable'
 import LiquidSectorCounts from '@/components/leaders/LiquidSectorCounts'
+import SectorWeekHeatmap from '@/components/leaders/SectorWeekHeatmap'
+import LeaderDayHeatmap from '@/components/leaders/LeaderDayHeatmap'
 import ErrorBanner from '@/components/shared/ErrorBanner'
 import PageHeader from '@/components/shared/PageHeader'
 
@@ -144,6 +146,13 @@ export default function LeadersPage() {
         <>
           <ReadingNotes />
 
+          {selectedDate && (
+            <div className="mt-6 space-y-6">
+              <SectorWeekHeatmap endDate={selectedDate} />
+              <LeaderDayHeatmap rows={snapshot.rows} dates={dates} selectedDate={selectedDate} />
+            </div>
+          )}
+
           <div className="mt-6">
             <LiquidSectorCounts rows={snapshot.rows} />
           </div>
@@ -189,6 +198,9 @@ function ReadingNotes() {
         <li>件数そのものは、実力ゼロでも偶然で入る件数とほぼ同じ。同じ業種が固まっているかを見る。</li>
         <li>TOPIX が 3 か月で 5% 以上下げている時期は、t21 の一覧の 3〜4 割が「下げが小さいだけの防御株」になる。</li>
         <li>一覧に入った銘柄が、その後も強さを保つとは限らない（記述用。予測用ではない）。</li>
+        <li>
+          ヒートマップの件数や濃さも「実力ゼロでも偶然で入る分」を含む。業種 × 週は差で補正しているが、1〜2 週だけの濃淡は偶然のことが多い。何週も続く塊を読む。
+        </li>
       </ul>
     </div>
   )
