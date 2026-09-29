@@ -22,14 +22,15 @@ import {
   type LiquidPeriod,
   type LiquidTier,
 } from '@/types/liquidLeaders'
-import { HoverReadout, Swatch, monthTicks } from './heatmapUi'
+import { tradingViewUrl, shikihoUrl } from '@/lib/tickerLinks'
+import { GREEN, HoverReadout, Swatch, monthTicks } from './heatmapUi'
 
 const DAYS = 60
 const PERIODS: LiquidPeriod[] = ['t21', 't63']
 
 // t 値の 3 段: 2 未満 / 2〜3 / 3 以上。一覧に入った後は最高値から 1 下がるまで残るので、
 // 塗るマスでも 2 を割っていることがある (最も薄い段)。
-const T_COLORS = ['var(--heat-g-1)', 'var(--heat-g-2)', 'var(--heat-g-3)']
+const T_COLORS = GREEN
 function tColor(t: number): string {
   return t >= 3 ? T_COLORS[2] : t >= 2 ? T_COLORS[1] : T_COLORS[0]
 }
@@ -209,9 +210,26 @@ function TierGrid({
                       activeRow ? 'text-[var(--text-primary)] font-medium' : 'text-[var(--text-secondary)]'
                     }`}
                     style={{ gridRow: 'span 2' }}
-                    title={`${r.code} ${r.co_name ?? ''}`}
                   >
-                    <span className="font-mono">{r.code}</span> {r.co_name ?? ''}
+                    {/* クリック規約 (lib/tickerLinks.ts): コード → TradingView / 銘柄名 → 四季報 */}
+                    <a
+                      href={tradingViewUrl(r.code)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-mono text-[var(--sem-focus-fg)] hover:underline"
+                      title={`${r.code}（TradingView を開く）`}
+                    >
+                      {r.code}
+                    </a>{' '}
+                    <a
+                      href={shikihoUrl(r.code)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:text-[var(--sem-focus-fg)] hover:underline"
+                      title={`${r.co_name ?? '—'}（四季報を開く）`}
+                    >
+                      {r.co_name ?? '—'}
+                    </a>
                   </div>
                   {PERIODS.map(p => {
                     const d = prev ? tDiff(p === 't21' ? r.t21 : r.t63, prev.get(r.code), p) : null

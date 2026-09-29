@@ -1,11 +1,12 @@
 'use client'
 
 // ヒートマップ 2 つ (業種 × 週 / 銘柄 × 日) の共通部品。
-// 色は 1 色相 (--heat-1〜5, 落ち着いた青灰) の濃淡だけ。赤・緑や塗りのバッジは使わない。
+// 色は緑 1 色相 (--heat-g-1〜3) の 3 段の濃淡だけ。塗りのバッジは使わない。
 
 import type { ReactNode } from 'react'
 
-export const HEAT = ['var(--heat-1)', 'var(--heat-2)', 'var(--heat-3)', 'var(--heat-4)', 'var(--heat-5)']
+/** 濃淡 3 段 (緑 1 色相)。[薄 / 中 / 濃]。両ヒートマップ共通。 */
+export const GREEN = ['var(--heat-g-1)', 'var(--heat-g-2)', 'var(--heat-g-3)']
 
 /** 小さな切り替え (段 / 期間 / 並び)。選択中は枠と文字色だけで示す。 */
 export function Segmented<T extends string>({

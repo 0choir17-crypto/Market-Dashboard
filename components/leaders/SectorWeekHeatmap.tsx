@@ -17,20 +17,16 @@ import { Fragment, useEffect, useMemo, useState } from 'react'
 import { fetchLiquidSectorDays, type LiquidSectorDay } from '@/lib/liquidLeadersFetch'
 import { TOPIX33_FALLBACK } from '@/lib/sectorNames'
 import { TIERS, type LiquidTier } from '@/types/liquidLeaders'
-import { HEAT, HoverReadout, Segmented, Swatch, monthTicks } from './heatmapUi'
+import { GREEN, HoverReadout, Segmented, Swatch, monthTicks } from './heatmapUi'
 
 type Period = 't21' | 't63'
 type Order = 'latest' | 'fixed'
 
 const WEEKS = 52
-// 差 (件) の段階。0 以下は塗らない。
-const STEPS = [0.5, 1, 2, 4] as const
-
+// 差 (件) の 3 段: 1 未満 / 1〜3 / 3 以上 (最も濃い)。0 以下は塗らない。
 function level(excess: number): number {
   if (!(excess > 0)) return 0
-  let i = 0
-  while (i < STEPS.length && excess > STEPS[i]) i++
-  return i + 1 // 1..5
+  return excess >= 3 ? 3 : excess >= 1 ? 2 : 1
 }
 
 function isoMonday(iso: string): string {
@@ -215,11 +211,9 @@ export default function SectorWeekHeatmap({ endDate }: Props) {
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-3 text-caption text-[var(--text-secondary)]">
         <span className="text-[var(--text-muted)]">見込みとの差（件）:</span>
         <Swatch color="transparent" label="0 以下" />
-        <Swatch color={HEAT[0]} label="〜0.5" />
-        <Swatch color={HEAT[1]} label="〜1" />
-        <Swatch color={HEAT[2]} label="〜2" />
-        <Swatch color={HEAT[3]} label="〜4" />
-        <Swatch color={HEAT[4]} label="4 超" />
+        <Swatch color={GREEN[0]} label="1 未満" />
+        <Swatch color={GREEN[1]} label="1〜3" />
+        <Swatch color={GREEN[2]} label="3 以上" />
         <span className="flex items-center gap-1">
           <span className="inline-block w-3 h-3 rounded-sm heat-hatch" />
           <span>母数 0</span>
@@ -326,7 +320,7 @@ function PeriodGrid({
                         style={
                           c
                             ? {
-                                backgroundColor: lv > 0 ? HEAT[lv - 1] : 'transparent',
+                                backgroundColor: lv > 0 ? GREEN[lv - 1] : 'transparent',
                                 boxShadow: isHover
                                   ? 'inset 0 0 0 1px var(--text-secondary)'
                                   : lv === 0
