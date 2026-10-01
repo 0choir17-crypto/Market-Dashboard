@@ -1,7 +1,7 @@
 'use client'
 
 // 1 段 (大型 / 中小) の一覧。t21 と t63 を横に並べ、それぞれに 5 日比を添える。
-// t63 の右に t21 − t63 (直近の勢いと 3 か月の強さのずれ) を置く。
+// t63 の右に t21 − t63 (直近の勢いと 3 か月の強さのずれ) を置き、最後に t21 / t63 の一覧に入った日を 1 列ずつ並べる。
 // 「t63 は高いが t21 は落ちてきた」というずれが一目で読めるのがこの表の読みどころ。
 //
 // 色は 5 日比 (括弧の中) だけ: +0.1 以上 緑 / −0.1 以下 赤 / それ以外・新規 灰。
@@ -60,8 +60,8 @@ function gapOf(r: LiquidLeader): number | null {
   return a !== null && b !== null && Number.isFinite(a) && Number.isFinite(b) ? a - b : null
 }
 
-function sinceOf(r: LiquidLeader): string | null {
-  return r.in_t63 ? r.t63_since : r.t21_since
+function sinceOf(r: LiquidLeader, period: LiquidPeriod): string | null {
+  return period === 't21' ? (r.in_t21 ? r.t21_since : null) : r.in_t63 ? r.t63_since : null
 }
 
 type Props = {
@@ -162,32 +162,31 @@ export default function LiquidLeadersTable({ rows, prev, title, hint, query }: P
           )
         },
       },
-      {
-        key: 'since',
-        label: '入った日',
-        tooltip:
-          'その一覧に今回入った日。t21 と t63 の両方にいれば両方出す。並べ替えは t63 に入った日（t63 の一覧にいなければ t21 に入った日）',
-        align: 'left',
-        value: sinceOf,
-        render: r => {
-          const items: [LiquidPeriod, string | null][] = [
-            ['t21', r.in_t21 ? r.t21_since : null],
-            ['t63', r.in_t63 ? r.t63_since : null],
-          ]
-          return (
-            <span className="inline-flex flex-col text-caption num whitespace-nowrap leading-tight">
-              {items.map(([k, d]) =>
-                d ? (
-                  <span key={k} title={`${k} の一覧に入った日: ${d}`}>
-                    <span className="text-[var(--text-muted)]">{k}</span>{' '}
-                    <span className="text-[var(--text-secondary)]">{md(d)}</span>
-                  </span>
-                ) : null,
-              )}
-            </span>
-          )
-        },
-      },
+      ...(['t21', 't63'] as const).map(
+        (k): Column<LiquidLeader> => ({
+          key: `${k}_since`,
+          label: (
+            <>
+              入った日
+              <br />
+              <span className="font-normal">({k})</span>
+            </>
+          ),
+          tooltip: `${k} の一覧に今回入った日。${k} の一覧にいなければ —`,
+          align: 'right',
+          value: r => sinceOf(r, k),
+          render: r => {
+            const d = sinceOf(r, k)
+            return d ? (
+              <span className="text-caption num whitespace-nowrap text-[var(--text-secondary)]" title={`${k} の一覧に入った日: ${d}`}>
+                {md(d)}
+              </span>
+            ) : (
+              <span className="text-[var(--sem-idle-fg)]">—</span>
+            )
+          },
+        }),
+      ),
     ],
     [prev],
   )
