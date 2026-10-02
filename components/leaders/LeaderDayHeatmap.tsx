@@ -29,7 +29,8 @@ const DAYS = 60
 const PERIODS: LiquidPeriod[] = ['t21', 't63']
 
 // t 値の 3 段: 2 未満 / 2〜3 / 3 以上。一覧に入った後は最高値から 1 下がるまで残るので、
-// 塗るマスでも 2 を割っていることがある (最も薄い段)。
+// 塗るマスでも 2 を割っていることがある (最も薄い段)。中小は 1.5 で入るので、入ったばかりでも
+// 最も薄い段のことがある。
 const T_COLORS = GREEN
 function tColor(t: number): string {
   return t >= 3 ? T_COLORS[2] : t >= 2 ? T_COLORS[1] : T_COLORS[0]

@@ -181,6 +181,7 @@ export default function LeadersPage() {
                 prev={prev}
                 title={t.label}
                 hint={t.hint}
+                enter={t.enter}
                 query={query}
               />
             ))}
@@ -197,7 +198,10 @@ function ReadingNotes() {
     <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-5 text-caption text-[var(--text-secondary)]">
       <ul className="list-disc pl-5 space-y-1">
         <li>
-          t 値 = TOPIX につられた分を除いた強さが毎日どれだけ安定しているか。2 以上で一覧に入り、入った後の最高値から 1 下がるまで残る（そのため 2 未満の銘柄も一覧にいる）。
+          t 値 = TOPIX につられた分を除いた強さが毎日どれだけ安定しているか。大型は 2.0 以上・中小は 1.5 以上で一覧に入り、入った後の最高値から 1 下がるまで残る（そのため入る線を割った銘柄も一覧にいる）。
+        </li>
+        <li>
+          段に入るのは 1 日の平均値幅（ADR%・20 日）が大型 2% 以上・中小 3% 以上の日だけ。値動きのほとんど無い銘柄が「TOPIX が下げた日に下げなかっただけ」で入るのを防ぐため。その日の ADR で判定するので、下限を割った日は一覧からも業種ヒートマップの母数からも外れる。
         </li>
         <li>
           括弧内は 5 営業日前からの t の増減。<span style={{ color: 'var(--positive)' }}>+0.1 以上</span> /{' '}

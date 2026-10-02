@@ -25,8 +25,11 @@ function md(iso: string): string {
   return `${parseInt(m, 10)}/${parseInt(d, 10)}`
 }
 
-const T_NOTE =
-  't が 2 以上で一覧に入り、入った後の最高値から 1 下がるまで残る。そのため 2 未満の銘柄も一覧にいる。括弧内は 5 営業日前からの増減（5 営業日前に一覧にいなければ「新規」）'
+// 入る線は段ごとに違う (大型 2.0 / 中小 1.5)
+function tNote(enter: number): string {
+  const e = enter.toFixed(1)
+  return `この段は t が ${e} 以上で一覧に入り、入った後の最高値から 1 下がるまで残る。そのため ${e} 未満の銘柄も一覧にいる。括弧内は 5 営業日前からの増減（5 営業日前に一覧にいなければ「新規」）`
+}
 
 function TCell({
   row,
@@ -69,10 +72,12 @@ type Props = {
   prev: Map<string, LiquidLeader> | null | undefined
   title: string
   hint: string
+  /** この段の一覧に入る t の線 */
+  enter: number
   query: string
 }
 
-export default function LiquidLeadersTable({ rows, prev, title, hint, query }: Props) {
+export default function LiquidLeadersTable({ rows, prev, title, hint, enter, query }: Props) {
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
     if (!q) return rows
@@ -118,7 +123,7 @@ export default function LiquidLeadersTable({ rows, prev, title, hint, query }: P
             <span className="font-normal">(5日比)</span>
           </>
         ),
-        tooltip: `自力の t 値（直近 21 日）。TOPIX につられた分を除いた強さが毎日どれだけ安定しているか。2 以上で強い。${T_NOTE}`,
+        tooltip: `自力の t 値（直近 21 日）。TOPIX につられた分を除いた強さが毎日どれだけ安定しているか。2 以上で強い。${tNote(enter)}`,
         align: 'right',
         value: r => r.t21,
         render: r => <TCell row={r} period="t21" prev={prev} />,
@@ -132,7 +137,7 @@ export default function LiquidLeadersTable({ rows, prev, title, hint, query }: P
             <span className="font-normal">(5日比)</span>
           </>
         ),
-        tooltip: `自力の t 値（直近 63 日）。2 以上で強い。${T_NOTE}。並べ替えは t63 の一覧にいる銘柄が先`,
+        tooltip: `自力の t 値（直近 63 日）。2 以上で強い。${tNote(enter)}。並べ替えは t63 の一覧にいる銘柄が先`,
         align: 'right',
         // t63 の一覧にいない銘柄は null 扱いで後ろへ (tieBreak で t21 の高い順)
         value: r => (r.in_t63 ? r.t63 : null),
@@ -188,7 +193,7 @@ export default function LiquidLeadersTable({ rows, prev, title, hint, query }: P
         }),
       ),
     ],
-    [prev],
+    [prev, enter],
   )
 
   return (

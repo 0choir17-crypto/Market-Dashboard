@@ -5,11 +5,14 @@
 //           直近 5 営業日を upsert。2025-09 以降の履歴を投入済み。
 //
 // 1 行 = その日、t21 か t63 のどちらかの一覧に入っている銘柄。
-// 一覧の出入り: t が 2 以上で入り、入った後の t の最高値から 1 下がったら外れる。
+// 一覧の出入り: t が段ごとの「入る線」以上で入り、入った後の t の最高値から 1 下がったら外れる。
+// 段に入れるのは ADR% (20 日) が段ごとの下限以上の日だけ (2026-10-03 修正 3)。値動きの
+// ほとんど無い銘柄が「TOPIX が下げた日に下げなかっただけ」で t21 を 2 超えにするのを防ぐ。
+// ADR はその日の値で判定し、下限を割った日は段の外 = 一覧からも sector の n_universe からも外れる。
 // 「市場の状況の確認」用で、売買のタイミングを示すものではない。
 
 
-/** 流動性の段。large = 60 日売買代金の上位 200 位 / mid = 201〜1,000 位 */
+/** 流動性の段。large = 60 日売買代金の上位 200 位 かつ ADR 2% 以上 / mid = 201〜1,000 位 かつ ADR 3% 以上 */
 export type LiquidTier = 'large' | 'mid'
 
 export type LiquidLeader = {
@@ -30,9 +33,19 @@ export type LiquidLeader = {
   t63_since: string | null
 }
 
-export const TIERS: { key: LiquidTier; label: string; hint: string }[] = [
-  { key: 'large', label: '大型', hint: '60 日売買代金 上位 200 位' },
-  { key: 'mid', label: '中小', hint: '60 日売買代金 201〜1,000 位' },
+export type TierDef = {
+  key: LiquidTier
+  label: string
+  hint: string
+  /** 段に入れる ADR% (20 日) の下限 */
+  adrMin: number
+  /** 一覧に入る t の線 (出る線はどの段も「入った後の最高値 − 1」) */
+  enter: number
+}
+
+export const TIERS: TierDef[] = [
+  { key: 'large', label: '大型', hint: '60 日売買代金 上位 200 位 · ADR 2% 以上 · t 2.0 以上で入る', adrMin: 2, enter: 2 },
+  { key: 'mid', label: '中小', hint: '60 日売買代金 201〜1,000 位 · ADR 3% 以上 · t 1.5 以上で入る', adrMin: 3, enter: 1.5 },
 ]
 
 export type LiquidPeriod = 't21' | 't63'
