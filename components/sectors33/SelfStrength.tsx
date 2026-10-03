@@ -3,7 +3,8 @@
 // 業種の自力 (self_t63 など) の表示部品。一覧とチャートカードで共通に使う。
 //
 // 注意の印: self_t63 ≤ −1 の業種に 1 つだけ。控えめに (塗りつぶしは使わず、注意色の文字だけ)。
-// 5 日差の矢印: 5 営業日前の self_t63 との差が +0.1 以上 ↑ (緑) / −0.1 以下 ↓ (赤) / それ以外は出さない。
+// 5 日差の矢印 (チャートカード): 5 営業日前の self_t63 との差が +0.1 以上 ↑ (緑) / −0.1 以下 ↓ (赤) / それ以外は出さない。
+// 5 日差の数値 (一覧): 括弧内に差。+0.1 以上 緑 / −0.1 以下 赤 / それ以外 灰 (Liquid Leaders の 5d Δ と同じ)。
 
 import {
   SELF_DIFF_STEP,
@@ -48,6 +49,23 @@ export function TValue({ v, strong = false }: { v: number | null | undefined; st
   return (
     <span className={`num ${strong ? 'text-[var(--text-primary)] font-medium' : 'text-[var(--text-secondary)]'}`}>
       {fmtT(v)}
+    </span>
+  )
+}
+
+/** 5 営業日前との差を括弧付きで。比べる値が無ければ灰の「(—)」 */
+export function DiffValue({ diff }: { diff: number | undefined }) {
+  const ok = diff !== undefined && isNum(diff)
+  const color = !ok
+    ? 'var(--text-muted)'
+    : diff >= SELF_DIFF_STEP
+      ? 'var(--positive)'
+      : diff <= -SELF_DIFF_STEP
+        ? 'var(--negative)'
+        : 'var(--text-muted)'
+  return (
+    <span className="text-caption num" style={{ color }}>
+      ({ok ? fmtT(diff) : '—'})
     </span>
   )
 }

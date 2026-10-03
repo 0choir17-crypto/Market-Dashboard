@@ -102,25 +102,31 @@ export async function fetchSectorSelectionHistory(
   }
 }
 
+/** 最新日 − N 営業日前の差 (self_t63 / self_t21)。どちらかが null の期間は入れない */
+export type SelfDiff = { t63?: number; t21?: number }
+
 /**
- * 最新日の self_t63 − N 営業日前の self_t63 (sector_name → 差)。
- * どちらかが null の業種は入れない。日付は履歴にある営業日で数える。
+ * sector_name → 最新日の self_t63 / self_t21 − N 営業日前の値。
+ * 日付は履歴にある営業日で数える。
  */
-export function selfT63Diffs(
+export function selfDiffs(
   history: SectorHistoryResponse,
   days = 5,
-): Record<string, number> {
+): Record<string, SelfDiff> {
   const { dates, bySector } = history
-  const out: Record<string, number> = {}
+  const out: Record<string, SelfDiff> = {}
   if (dates.length <= days) return out
   const now = dates[dates.length - 1]
   const then = dates[dates.length - 1 - days]
+  const fin = (v: number | null | undefined): v is number =>
+    v !== null && v !== undefined && Number.isFinite(v)
   for (const [sector, byDate] of Object.entries(bySector)) {
-    const a = byDate[now]?.self_t63
-    const b = byDate[then]?.self_t63
-    if (a !== null && a !== undefined && b !== null && b !== undefined && Number.isFinite(a) && Number.isFinite(b)) {
-      out[sector] = a - b
-    }
+    const a = byDate[now]
+    const b = byDate[then]
+    const d: SelfDiff = {}
+    if (fin(a?.self_t63) && fin(b?.self_t63)) d.t63 = a.self_t63 - b.self_t63
+    if (fin(a?.self_t21) && fin(b?.self_t21)) d.t21 = a.self_t21 - b.self_t21
+    out[sector] = d
   }
   return out
 }

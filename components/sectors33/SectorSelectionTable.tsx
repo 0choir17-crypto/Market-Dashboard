@@ -9,7 +9,8 @@ import { SectorSelectionRow, isNum, SELF_T63_CAUTION, SELF_DIFF_STEP } from '@/t
 import { SectorChangeInline } from './SectorChangeCells'
 import type { SectorIndexChangeEntry } from '@/lib/sectorIndexChangeFetch'
 import DataTable, { type Column } from '@/components/shared/DataTable'
-import { CautionMark, DiffArrow, TValue, CAUTION_NOTE } from './SelfStrength'
+import { CautionMark, DiffValue, TValue, CAUTION_NOTE } from './SelfStrength'
+import type { SelfDiff } from '@/lib/sectorSelectionHistoryFetch'
 
 function fmtPctPlain(v: number | null | undefined): string {
   return isNum(v) ? `${v.toFixed(0)}%` : '—'
@@ -125,8 +126,8 @@ export default function SectorSelectionTable({
   rows: SectorSelectionRow[]
   /** sector_name_s33 → 1D / 1W / 1M / 6M / 1Y の騰落率（後着でもよい） */
   changes?: Record<string, SectorIndexChangeEntry>
-  /** sector_name_s33 → self_t63 の 5 営業日前との差（履歴が後着でもよい） */
-  diffs?: Record<string, number>
+  /** sector_name_s33 → self_t63 / self_t21 の 5 営業日前との差（履歴が後着でもよい） */
+  diffs?: Record<string, SelfDiff>
 }) {
   // 既定で信頼度低を除外する
   const [hideLowConf, setHideLowConf] = useState(true)
@@ -171,28 +172,36 @@ export default function SectorSelectionTable({
           <span className="inline-block leading-tight">
             Self t63
             <br />
-            <span className="font-normal">(5d)</span>
+            <span className="font-normal">(5d Δ)</span>
           </span>
         ),
-        tooltip: `業種の自力（TOPIX につられた分を除いた強さ・配当込み）の直近 63 営業日の t 値。主の列。${CAUTION_NOTE}。矢印は 5 営業日前との差（±${SELF_DIFF_STEP} 以上）。所属が 5 社未満の業種は —`,
+        tooltip: `業種の自力（TOPIX につられた分を除いた強さ・配当込み）の直近 63 営業日の t 値。主の列。${CAUTION_NOTE}。括弧内は 5 営業日前との差（+${SELF_DIFF_STEP} 以上 緑 / −${SELF_DIFF_STEP} 以下 赤）。所属が 5 社未満の業種は —`,
         value: (r: SectorSelectionRow) => (isNum(r.self_t63) ? r.self_t63 : null),
-        className: 'w-28',
         render: (r: SectorSelectionRow) => (
           <span className="inline-flex items-center justify-end gap-1.5 whitespace-nowrap">
             <CautionMark row={r} />
             <TValue v={r.self_t63} strong />
-            <span className="w-2.5 inline-block text-left">
-              <DiffArrow diff={diffs[r.sector_name_s33]} />
-            </span>
+            <DiffValue diff={diffs[r.sector_name_s33]?.t63} />
           </span>
         ),
       },
       {
         key: 'self_t21',
-        label: 'Self t21',
-        tooltip: '同じく直近 21 営業日の t 値。直近 1 か月。回復・失速の確認用',
+        label: (
+          <span className="inline-block leading-tight">
+            Self t21
+            <br />
+            <span className="font-normal">(5d Δ)</span>
+          </span>
+        ),
+        tooltip: `同じく直近 21 営業日の t 値。直近 1 か月。回復・失速の確認用。括弧内は 5 営業日前との差（+${SELF_DIFF_STEP} 以上 緑 / −${SELF_DIFF_STEP} 以下 赤）`,
         value: (r: SectorSelectionRow) => (isNum(r.self_t21) ? r.self_t21 : null),
-        render: (r: SectorSelectionRow) => <TValue v={r.self_t21} />,
+        render: (r: SectorSelectionRow) => (
+          <span className="inline-flex items-center justify-end gap-1.5 whitespace-nowrap">
+            <TValue v={r.self_t21} />
+            <DiffValue diff={diffs[r.sector_name_s33]?.t21} />
+          </span>
+        ),
       },
       {
         key: 'med_vs_idx_t21',
@@ -319,9 +328,8 @@ export default function SectorSelectionTable({
         </span>
         <span className="text-[var(--text-muted)]">|</span>
         <span>
-          <span className="font-mono" style={{ color: 'var(--positive)' }}>↑</span>
-          <span className="font-mono" style={{ color: 'var(--negative)' }}>↓</span>
-          {` self_t63 の 5 営業日前との差（±${SELF_DIFF_STEP} 以上）`}
+          括弧内 = 5 営業日前との差（<span style={{ color: 'var(--positive)' }}>+{SELF_DIFF_STEP} 以上</span> /{' '}
+          <span style={{ color: 'var(--negative)' }}>−{SELF_DIFF_STEP} 以下</span>）
         </span>
         <span className="text-[var(--text-muted)]">|</span>
         <span>Med vs Idx / VA share / VA up は状況の説明用（成績の予測には効かない）</span>

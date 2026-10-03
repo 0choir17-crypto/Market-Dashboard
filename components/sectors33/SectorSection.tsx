@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { fetchLatestSectorSelection } from '@/lib/sectorSelectionFetch'
 import {
   fetchSectorSelectionHistory,
-  selfT63Diffs,
+  selfDiffs,
   type SectorHistoryResponse,
 } from '@/lib/sectorSelectionHistoryFetch'
 import {
@@ -76,8 +76,8 @@ export default function SectorSection({
 
   useEffect(() => { fetchData() }, [fetchData])
 
-  // self_t63 の 5 営業日前との差。取得済みの履歴から出すので追加のフェッチは不要
-  const diffs = useMemo(() => selfT63Diffs(history, 5), [history])
+  // self_t63 / self_t21 の 5 営業日前との差。取得済みの履歴から出すので追加のフェッチは不要
+  const diffs = useMemo(() => selfDiffs(history, 5), [history])
 
   return (
     <section>
