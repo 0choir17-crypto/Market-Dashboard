@@ -1,7 +1,9 @@
 'use client'
 
 // 1 段 (大型 / 中小) の一覧。t21 と t63 を横に並べ、それぞれに 5 日比を添える。
-// t63 の右に t21 − t63 (直近の勢いと 3 か月の強さのずれ) を置き、最後に t21 / t63 の一覧に入った日を 1 列ずつ並べる。
+// t63 の右に t21 − t63 (直近の勢いと 3 か月の強さのずれ)、補足の代金の勢い (va_trend) を置き、
+// 最後に t21 / t63 の一覧に入った日を 1 列ずつ並べる。
+// 代金の勢いは「高い = 良い」ではない (高いほどその後 3 か月の伸びが小さい傾向) ので色を付けない。
 // 「t63 は高いが t21 は落ちてきた」というずれが一目で読めるのがこの表の読みどころ。
 //
 // 色は 5 日比 (括弧の中) だけ: +0.1 以上 緑 / −0.1 以下 赤 / それ以外・新規 灰。
@@ -25,8 +27,11 @@ function md(iso: string): string {
   return `${parseInt(m, 10)}/${parseInt(d, 10)}`
 }
 
-const T_NOTE =
-  't が 2 以上で一覧に入り、入った後の最高値から 1 下がるまで残る。そのため 2 未満の銘柄も一覧にいる。括弧内は 5 営業日前からの増減（5 営業日前に一覧にいなければ「新規」）'
+// 入る線は段ごとに違う (大型 2.0 / 中小 1.5)
+function tNote(enter: number): string {
+  const e = enter.toFixed(1)
+  return `この段は t が ${e} 以上で一覧に入り、入った後の最高値から 1 下がるまで残る。そのため ${e} 未満の銘柄も一覧にいる。括弧内は 5 営業日前からの増減（5 営業日前に一覧にいなければ「新規」）`
+}
 
 function TCell({
   row,
@@ -54,6 +59,10 @@ function TCell({
   )
 }
 
+function num(v: number | null | undefined): number | null {
+  return v !== null && v !== undefined && Number.isFinite(v) ? v : null
+}
+
 function gapOf(r: LiquidLeader): number | null {
   const a = r.t21
   const b = r.t63
@@ -69,10 +78,12 @@ type Props = {
   prev: Map<string, LiquidLeader> | null | undefined
   title: string
   hint: string
+  /** この段の一覧に入る t の線 */
+  enter: number
   query: string
 }
 
-export default function LiquidLeadersTable({ rows, prev, title, hint, query }: Props) {
+export default function LiquidLeadersTable({ rows, prev, title, hint, enter, query }: Props) {
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
     if (!q) return rows
@@ -118,7 +129,7 @@ export default function LiquidLeadersTable({ rows, prev, title, hint, query }: P
             <span className="font-normal">(5日比)</span>
           </>
         ),
-        tooltip: `自力の t 値（直近 21 日）。TOPIX につられた分を除いた強さが毎日どれだけ安定しているか。2 以上で強い。${T_NOTE}`,
+        tooltip: `自力の t 値（直近 21 日）。TOPIX につられた分を除いた強さが毎日どれだけ安定しているか。2 以上で強い。${tNote(enter)}`,
         align: 'right',
         value: r => r.t21,
         render: r => <TCell row={r} period="t21" prev={prev} />,
@@ -132,7 +143,7 @@ export default function LiquidLeadersTable({ rows, prev, title, hint, query }: P
             <span className="font-normal">(5日比)</span>
           </>
         ),
-        tooltip: `自力の t 値（直近 63 日）。2 以上で強い。${T_NOTE}。並べ替えは t63 の一覧にいる銘柄が先`,
+        tooltip: `自力の t 値（直近 63 日）。2 以上で強い。${tNote(enter)}。並べ替えは t63 の一覧にいる銘柄が先`,
         align: 'right',
         // t63 の一覧にいない銘柄は null 扱いで後ろへ (tieBreak で t21 の高い順)
         value: r => (r.in_t63 ? r.t63 : null),
@@ -162,6 +173,28 @@ export default function LiquidLeadersTable({ rows, prev, title, hint, query }: P
           )
         },
       },
+      {
+        key: 'va_trend',
+        label: (
+          <>
+            代金
+            <br />
+            <span className="font-normal">勢い</span>
+          </>
+        ),
+        tooltip:
+          '代金の勢い = 直近 20 日の売買代金の平均 ÷ 前日までの 60 日の代金の中央値。1.0 = いつもどおり、2.0 = いつもの倍。高いほど「商いが膨らんで一覧に入った」銘柄で、一覧には長く残るが、その後 3 か月の伸びは小さい傾向がある（10 年の検証で一貫）。高い = 良い、ではない',
+        align: 'right',
+        value: r => num(r.va_trend),
+        render: r => {
+          const v = num(r.va_trend)
+          return v === null ? (
+            <span className="text-[var(--sem-idle-fg)]">—</span>
+          ) : (
+            <span className="num text-[var(--text-secondary)]">{v.toFixed(2)}×</span>
+          )
+        },
+      },
       ...(['t21', 't63'] as const).map(
         (k): Column<LiquidLeader> => ({
           key: `${k}_since`,
@@ -188,7 +221,7 @@ export default function LiquidLeadersTable({ rows, prev, title, hint, query }: P
         }),
       ),
     ],
-    [prev],
+    [prev, enter],
   )
 
   return (
