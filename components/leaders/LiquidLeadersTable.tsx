@@ -102,20 +102,20 @@ export default function LiquidLeadersTable({ rows, prev, title, hint, enter, que
         value: r => r.code,
         defaultDir: 'asc',
         render: r => (
-          <div className="max-w-[11rem]">
+          <div className="max-w-[9rem]">
             <TickerCell code={r.code} name={r.co_name} />
           </div>
         ),
       },
       {
         key: 'sector_s33',
-        label: '業種',
-        tooltip: '東証 33 業種（五十音順ソート）',
+        label: 'Sector',
+        tooltip: '業種（東証 33 業種。五十音順ソート）',
         align: 'left',
         value: r => r.sector_s33,
         defaultDir: 'asc',
         render: r => (
-          <span className="block max-w-[7rem] truncate text-small text-[var(--text-secondary)]" title={r.sector_s33 ?? undefined}>
+          <span className="block max-w-[5.5rem] truncate text-small text-[var(--text-secondary)]" title={r.sector_s33 ?? undefined}>
             {r.sector_s33 ?? '—'}
           </span>
         ),
@@ -123,11 +123,11 @@ export default function LiquidLeadersTable({ rows, prev, title, hint, enter, que
       {
         key: 't21',
         label: (
-          <>
+          <span className="inline-block leading-tight">
             t21
             <br />
-            <span className="font-normal">(5日比)</span>
-          </>
+            <span className="font-normal">(5d Δ)</span>
+          </span>
         ),
         tooltip: `自力の t 値（直近 21 日）。TOPIX につられた分を除いた強さが毎日どれだけ安定しているか。2 以上で強い。${tNote(enter)}`,
         align: 'right',
@@ -137,11 +137,11 @@ export default function LiquidLeadersTable({ rows, prev, title, hint, enter, que
       {
         key: 't63',
         label: (
-          <>
+          <span className="inline-block leading-tight">
             t63
             <br />
-            <span className="font-normal">(5日比)</span>
-          </>
+            <span className="font-normal">(5d Δ)</span>
+          </span>
         ),
         tooltip: `自力の t 値（直近 63 日）。2 以上で強い。${tNote(enter)}。並べ替えは t63 の一覧にいる銘柄が先`,
         align: 'right',
@@ -152,14 +152,14 @@ export default function LiquidLeadersTable({ rows, prev, title, hint, enter, que
       {
         key: 'gap',
         label: (
-          <>
-            t21
+          <span className="inline-block leading-tight">
+            Gap
             <br />
-            −t63
-          </>
+            <span className="font-normal">t21−t63</span>
+          </span>
         ),
         tooltip:
-          't21 − t63。プラス = 直近 1 か月の強さが 3 か月の強さを上回っている（勢いが増している）、マイナス = 3 か月の先導に比べて直近は勢いが落ちている',
+          'Gap = t21 − t63。プラス = 直近 1 か月の強さが 3 か月の強さを上回っている（勢いが増している）、マイナス = 3 か月の先導に比べて直近は勢いが落ちている',
         align: 'right',
         value: gapOf,
         render: r => {
@@ -176,14 +176,14 @@ export default function LiquidLeadersTable({ rows, prev, title, hint, enter, que
       {
         key: 'va_trend',
         label: (
-          <>
-            代金
+          <span className="inline-block leading-tight">
+            Turnover
             <br />
-            <span className="font-normal">勢い</span>
-          </>
+            <span className="font-normal">×60d</span>
+          </span>
         ),
         tooltip:
-          '代金の勢い = 直近 20 日の売買代金の平均 ÷ 前日までの 60 日の代金の中央値。1.0 = いつもどおり、2.0 = いつもの倍。高いほど「商いが膨らんで一覧に入った」銘柄で、一覧には長く残るが、その後 3 か月の伸びは小さい傾向がある（10 年の検証で一貫）。高い = 良い、ではない',
+          'Turnover = 代金の勢い（va_trend）= 直近 20 日の売買代金の平均 ÷ 前日までの 60 日の代金の中央値。1.0 = いつもどおり、2.0 = いつもの倍。高いほど「商いが膨らんで一覧に入った」銘柄で、一覧には長く残るが、その後 3 か月の伸びは小さい傾向がある（10 年の検証で一貫）。高い = 良い、ではない',
         align: 'right',
         value: r => num(r.va_trend),
         render: r => {
@@ -199,13 +199,13 @@ export default function LiquidLeadersTable({ rows, prev, title, hint, enter, que
         (k): Column<LiquidLeader> => ({
           key: `${k}_since`,
           label: (
-            <>
-              入った日
+            <span className="inline-block leading-tight">
+              Since
               <br />
-              <span className="font-normal">({k})</span>
-            </>
+              <span className="font-normal">{k}</span>
+            </span>
           ),
-          tooltip: `${k} の一覧に今回入った日。${k} の一覧にいなければ —`,
+          tooltip: `入った日。${k} の一覧に今回入った日。${k} の一覧にいなければ —`,
           align: 'right',
           value: r => sinceOf(r, k),
           render: r => {

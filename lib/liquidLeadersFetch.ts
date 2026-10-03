@@ -96,28 +96,3 @@ export async function fetchLiquidSectorDays(
   if (error) console.error('[liquid_leaders_sector]', error)
   return { rows, error }
 }
-
-// ── ヒートマップ B: 銘柄 × 日 (liquid_leaders) ────────────────────────
-export type LiquidLeaderCell = Pick<
-  LiquidLeader,
-  'date' | 'code' | 't21' | 't63' | 'in_t21' | 'in_t63'
->
-
-// [fromDate, toDate] の全行 (1 日 40〜180 行 × 60 日 ≒ 最大 1 万行)。
-export async function fetchLiquidLeaderCells(
-  fromDate: string,
-  toDate: string,
-): Promise<{ rows: LiquidLeaderCell[]; error: string | null }> {
-  const { rows, error } = await fetchAllPaged<LiquidLeaderCell>((from, to) =>
-    supabase
-      .from(TABLE)
-      .select('date, code, t21, t63, in_t21, in_t63')
-      .gte('date', fromDate)
-      .lte('date', toDate)
-      .order('date', { ascending: true })
-      .order('code', { ascending: true })
-      .range(from, to),
-  )
-  if (error) console.error('[liquid_leaders cells]', error)
-  return { rows, error }
-}
