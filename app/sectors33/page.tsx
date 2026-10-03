@@ -10,7 +10,7 @@ export default function SectorSelectionPage() {
     <main className="min-h-screen p-6" style={{ backgroundColor: 'var(--bg-primary)' }}>
       <PageHeader
         title="Sector Selection"
-        subtitle="TOPIX-33 業種別 composite_score（今どこを買うか）"
+        subtitle="TOPIX-33 業種の自力（TOPIX につられた分を除いた強さ）。self_t63 ≤ −1 = 注意"
       />
       <SectorSection showHeading={false} />
     </main>

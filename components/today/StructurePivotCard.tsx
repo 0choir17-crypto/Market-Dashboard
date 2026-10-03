@@ -7,7 +7,6 @@ import CopyTickerButton from '@/components/shared/CopyTickerButton'
 
 type Props = {
   row: StructurePivotCardRow
-  hot?: boolean
   multiHit?: boolean
   onAddPosition?: (row: StructurePivotCardRow) => void
 }
@@ -113,13 +112,12 @@ function Metric({
 
 export default function StructurePivotCard({
   row,
-  hot = false,
   multiHit = false,
   onAddPosition,
 }: Props) {
-  // 枠/背景: 複数シグナル重複（黄）を最優先 → hotセクター（緑）→ 既定。
-  const borderColor = multiHit ? 'var(--sem-watch-bd)' : hot ? 'var(--sem-strong-bd)' : 'var(--border)'
-  const backgroundColor = multiHit ? 'var(--sem-watch-bg)' : hot ? 'var(--sem-ok-bg)' : 'var(--bg-card)'
+  // 枠/背景: 複数シグナル重複（黄）→ 既定。
+  const borderColor = multiHit ? 'var(--sem-watch-bd)' : 'var(--border)'
+  const backgroundColor = multiHit ? 'var(--sem-watch-bg)' : 'var(--bg-card)'
 
   // 本日ヒットしたシグナルのラベル（複数可）。カード上部に明示する。
   const todayTags: ('1st' | '2nd')[] = []
@@ -169,8 +167,7 @@ export default function StructurePivotCard({
           </div>
           <div className="mt-0.5 flex items-center gap-1.5 min-w-0">
             <span
-              className="text-caption truncate min-w-0"
-              style={{ color: hot ? 'var(--positive)' : 'var(--text-secondary)' }}
+              className="text-caption truncate min-w-0 text-[var(--text-secondary)]"
               title={row.sector_s33 ?? ''}
             >
               {row.sector_s33 ?? '—'}

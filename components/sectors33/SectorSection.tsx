@@ -4,28 +4,20 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { fetchLatestSectorSelection } from '@/lib/sectorSelectionFetch'
 import {
   fetchSectorSelectionHistory,
+  selfT63Diffs,
   type SectorHistoryResponse,
 } from '@/lib/sectorSelectionHistoryFetch'
 import {
   fetchSectorIndexChanges,
   type SectorIndexChangeEntry,
 } from '@/lib/sectorIndexChangeFetch'
-import {
-  buildRankDeltas,
-  DEFAULT_RANK_DELTA_PERIOD,
-  RANK_DELTA_PERIODS,
-  type RankDeltaPeriodKey,
-} from '@/lib/sectorRankDelta'
-import { RankDeltaPeriodToggle } from './SectorRankDelta'
 import { SectorSelectionRow } from '@/types/sectorSelection'
 import SectorSelectionTable from './SectorSelectionTable'
 import SectorChartGallery from './SectorChartGallery'
 import SectorRRG33 from './SectorRRG33'
-import SectorBarChart33 from './SectorBarChart33'
 import { MaLegend } from './SectorCandleChart'
 import ErrorBanner from '@/components/shared/ErrorBanner'
 
-type View = 'bar' | 'rrg'
 type MainView = 'chart' | 'table'
 
 /**
@@ -46,13 +38,8 @@ export default function SectorSection({
   })
   // 業種指数の騰落率 (1D / 1M / 6M / 1Y)（ランキング本体より後に届く）
   const [changes, setChanges] = useState<Record<string, SectorIndexChangeEntry>>({})
-  const [view, setView] = useState<View>('bar')
   // 既定はテーブル（一覧で順位・スコアを俯瞰したいことが多いため）
   const [mainView, setMainView] = useState<MainView>('table')
-  // ランク変動の比較期間。テーブルとチャートで共有する
-  const [deltaPeriod, setDeltaPeriod] = useState<RankDeltaPeriodKey>(
-    DEFAULT_RANK_DELTA_PERIOD,
-  )
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -89,12 +76,8 @@ export default function SectorSection({
 
   useEffect(() => { fetchData() }, [fetchData])
 
-  // 順位変動は取得済みの履歴から算出するので追加のフェッチは不要
-  const rankDeltas = useMemo(() => {
-    const days =
-      RANK_DELTA_PERIODS.find(p => p.key === deltaPeriod)?.tradingDays ?? 5
-    return buildRankDeltas(history, days)
-  }, [history, deltaPeriod])
+  // self_t63 の 5 営業日前との差。取得済みの履歴から出すので追加のフェッチは不要
+  const diffs = useMemo(() => selfT63Diffs(history, 5), [history])
 
   return (
     <section>
@@ -107,7 +90,7 @@ export default function SectorSection({
             </h2>
           )}
           <p className="text-caption text-[var(--text-muted)] mt-0.5">
-            TOPIX-33 業種別 composite_score（今どこを買うか）
+            TOPIX-33 業種の自力（TOPIX につられた分を除いた強さ）。self_t63 ≤ −1 = 注意
             {latestDate && (
               <span className="ml-2 text-[var(--text-muted)] font-mono">{latestDate}</span>
             )}
@@ -117,8 +100,6 @@ export default function SectorSection({
         <div className="flex items-center gap-3 flex-wrap">
           {/* EMA 凡例: チャート内の細線では色が判別しづらいのでここに大きく置く */}
           {mainView === 'chart' && <MaLegend />}
-
-          <RankDeltaPeriodToggle value={deltaPeriod} onChange={setDeltaPeriod} />
 
           <div className="inline-flex rounded-lg border border-[var(--border)] overflow-hidden text-caption">
             {(
@@ -168,61 +149,34 @@ export default function SectorSection({
             <SectorChartGallery
               rows={rows}
               changes={changes}
-              rankDeltas={rankDeltas}
-              deltaPeriod={deltaPeriod}
+              diffs={diffs}
             />
           ) : (
             <SectorSelectionTable
               rows={rows}
               changes={changes}
-              rankDeltas={rankDeltas}
-              deltaPeriod={deltaPeriod}
+              diffs={diffs}
             />
           )}
 
-          {/* ── 推移ビジュアル ────────────────────────────────────────────
+          {/* ── 推移ビジュアル (RRG) ──────────────────────────────────────
               普段は使わないので既定は折りたたみ。見たいときだけ開く。 */}
           <details className="mt-6 group">
             <summary className="cursor-pointer select-none list-none flex items-center gap-2 text-small font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)]">
               <span className="text-caption text-[var(--text-muted)] group-open:rotate-90 transition-transform inline-block">
                 ▶
               </span>
-              {history.dates.length}営業日の推移（Bars / RRG）
+              {history.dates.length}営業日の推移（RRG: self_t63 × self_t21）
               <span className="text-caption font-normal text-[var(--text-muted)]">
-                — どのセクターが強いか・どう動いているかを比較
+                — どの業種が強いか・どう動いているかを比較
               </span>
             </summary>
 
             <div className="mt-3">
-              <div className="flex flex-wrap items-center justify-end mb-3">
-                <div className="inline-flex rounded-lg border border-[var(--border)] overflow-hidden text-caption">
-                  {(
-                    [
-                      { v: 'bar' as const, label: 'Bars' },
-                      { v: 'rrg' as const, label: 'RRG' },
-                    ]
-                  ).map((opt, i) => (
-                    <button
-                      key={opt.v}
-                      onClick={() => setView(opt.v)}
-                      className={`px-3 py-1.5 font-medium ${
-                        view === opt.v
-                          ? 'bg-[var(--accent)] text-white'
-                          : 'bg-[var(--bg-card)] text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)]'
-                      } ${i > 0 ? 'border-l border-[var(--border)]' : ''}`}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
               {history.dates.length === 0 ? (
                 <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-8 text-center text-[var(--text-muted)] text-small">
                   履歴データを読み込めませんでした
                 </div>
-              ) : view === 'bar' ? (
-                <SectorBarChart33 history={history} />
               ) : (
                 <SectorRRG33 history={history} />
               )}

@@ -1,42 +1,32 @@
-import { toneVars, type SemanticTone } from '@/types/semantic'
-// TOPIX-33 sector selection: composite score model
+// TOPIX-33 業種テーブル。2026-10-03 に旧セクタースコア (composite_score と 4 成分・
+// leading/neutral/lagging・RS/breadth 系の集計) をやめ、「業種の自力」に置き換えた。
+// 旧列は新しく入れ直した全期間で null になり、後日テーブルから削除される (読まないこと)。
 // Source table: sector_selection_s33  (PK: date + sector_name_s33)
-
-export type SectorMomentum = 'leading' | 'neutral' | 'lagging'
+// 生成元: scripts/daily/sector_selection_s33.py (別リポ)。DDL: sql/sector_selection_s33.sql
+//
+// 自力の列の窓はすべて「その日を含む直近 N 営業日」。対象銘柄 = 個別株のうち 60 日売買代金の
+// 中央値で 1,000 位以内 (1,200 位より下で外れる)。所属が 5 社未満の業種日は n_stocks 以外が null。
+// 自力の列は 2016-06-28 以降に値が入る。
 
 export type SectorSelectionRow = {
   date: string
   sector_name_s33: string
   sector_code_s33: string | null
 
-  composite_score: number | null
-  composite_score_rank: number | null
+  // ── ① 業種の自力 (2026-10-03〜) ────────────────────────────────────────
+  /** その日の業種の対象銘柄数 (売買代金 1,000 位以内)。少ない業種は値がぶれやすい */
+  n_stocks?: number | null
+  /** 業種の自力 (TOPIX につられた分を除いた強さ・配当込み) の直近 21 営業日の t 値 */
+  self_t21?: number | null
+  /** 同・直近 63 営業日。主の列。−1 以下 = 注意 (入る時期を遅らせる目安) */
+  self_t63?: number | null
+  /** 業種内の中央値の銘柄が業種指数より強いかの t 値 (21 日)。+ 中小型が強い / − 大型主導 */
+  med_vs_idx_t21?: number | null
+  /** 業種の代金シェア (21 日) がその業種の普段 (直近 250 営業日) より多いか (z 値)。+1 以上 = 資金が集まっている */
+  va_share21_z250?: number | null
+  /** 対象銘柄のうち直近 21 日の平均代金が 63 日平均の 1.2 倍を超える銘柄の割合 (%) */
+  va21_vs63_up_pct?: number | null
 
-  // 4 components (0-100) — Flow は GCS に S33 業種別データが無いため廃止 (今後 NULL)
-  component_rs: number | null
-  component_acc: number | null
-  component_breadth: number | null
-  component_short: number | null
-  // retired: GCS に S33 業種別データが無いため廃止 (今後 NULL)
-  component_flow: number | null
-
-  // Raw / contextual fields used in tooltip / future drilldown
-  sector_rs_21d_s33: number | null
-  sector_rs_63d_s33: number | null
-  sector_rs_acc_s33: number | null
-  sector_er_21d_s33: number | null
-  sector_momentum_s33: SectorMomentum | null
-  sector_pct_above_50ma_s33: number | null
-  sector_pct_above_200ma_s33: number | null
-  sector_pct_near_52w_high_s33: number | null
-  sector_pct_vcs80_s33: number | null
-  sector_pct_ma_stack_s33: number | null
-  sector_pct_positive_momentum_s33: number | null
-  sector_vcs_median_s33: number | null
-  sector_inst_net_flow_s33: number | null
-  sector_inst_net_flow_rank_s33: number | null
-  sector_short_va_ratio_5d_s33: number | null
-  sector_short_sell_ratio_bd_s33: number | null
   sector_stock_count_s33: number | null
   confidence_low: number | null
 
@@ -51,7 +41,7 @@ export type SectorSelectionRow = {
   sector_index_ret_21d_s33?: number | null
   sector_index_ret_63d_s33?: number | null
   sector_index_ret_126d_s33?: number | null
-  // TOPIX超過リターン（生値。既存 sector_rs_*d_s33 はこれをランク化したもの）
+  // TOPIX超過リターン（生値）
   sector_index_excess_5d_s33?: number | null
   sector_index_excess_21d_s33?: number | null
   sector_index_excess_63d_s33?: number | null
@@ -73,57 +63,32 @@ export type SectorSelectionRow = {
   sector_volume_ma20_s33?: number | null
 }
 
-// Composite score weights — 4 成分に再正規化 (Flow 廃止)。DB 側の計算と一致させること。
-// composite_score = Σ(component × weight)
-export const COMPONENT_WEIGHTS = {
-  component_rs:       0.353,
-  component_acc:      0.176,
-  component_breadth:  0.294,
-  component_short:    0.176,
-} as const
+/** self_t63 がこの値以下の業種に注意の印を付ける */
+export const SELF_T63_CAUTION = -1
 
-export type ComponentKey = keyof typeof COMPONENT_WEIGHTS
+/** 5 営業日前との差で上向き・下向きとみなす幅 (Liquid Leaders の 5d Δ と同じ) */
+export const SELF_DIFF_STEP = 0.1
 
-export const COMPONENT_META: { key: ComponentKey; label: string; tooltip: string }[] = [
-  { key: 'component_rs',       label: 'RS',      tooltip: 'RS21d 相対強度ランク (0-100)' },
-  { key: 'component_acc',      label: 'Acc',     tooltip: 'RS加速度ランク (50=中立, 21d-63d)' },
-  { key: 'component_breadth',  label: 'Brd',     tooltip: 'セクター内の上昇銘柄比率 (0-100)' },
-  { key: 'component_short',    label: 'Sht',     tooltip: '空売り過熱の逆 — 踏み上げ余地 (0-100)' },
-]
-
-export const MOMENTUM_CONFIG: Record<SectorMomentum, { label: string; tone: SemanticTone }> = {
-  // 絵文字は環境ごとに字形とサイズが変わり、密度の高い表で位置が揃わないので使わない。
-  // 状態はドット（呼び出し側が tone から描く）とラベルで示す。
-  leading: { label: 'leading', tone: 'strong' as const },
-  neutral: { label: 'neutral', tone: 'idle' as const },
-  lagging: { label: 'lagging', tone: 'weak' as const },
+export function isNum(v: number | null | undefined): v is number {
+  return v !== null && v !== undefined && Number.isFinite(v)
 }
 
-// Composite score heatmap: red (low) → yellow (mid) → green (high)
-/**
- * composite_score の 3 段階（Leader >=60 / Neutral 30-60 / Lagging <30）。
- * 閾値をここ 1 箇所に置き、表のバッジ（compositeColor）もバーの塗り
- * （SectorBarChart33）も同じ判定を使う。
- */
-export function compositeTone(score: number | null | undefined): SemanticTone {
-  if (score === null || score === undefined || Number.isNaN(score)) return 'idle'
-  if (score >= 60) return 'strong'
-  if (score >= 30) return 'watch'
-  return 'weak'
+export function isCaution(r: Pick<SectorSelectionRow, 'self_t63'>): boolean {
+  return isNum(r.self_t63) && r.self_t63 <= SELF_T63_CAUTION
 }
 
-export function compositeColor(score: number | null | undefined): {
-  bg: string
-  text: string
-} {
-  const t = toneVars(compositeTone(score))
-  return { bg: t.bg, text: t.fg }
+/** self_t63 の高い順 (null は最後)。一覧・チャート・RRG の並びに共通で使う */
+export function bySelfT63(
+  a: Pick<SectorSelectionRow, 'self_t63'>,
+  b: Pick<SectorSelectionRow, 'self_t63'>,
+): number {
+  return (isNum(b.self_t63) ? b.self_t63 : -Infinity) - (isNum(a.self_t63) ? a.self_t63 : -Infinity)
 }
 
-// Per-component bar color (mini bars + drilldown)
-export function componentColor(value: number | null | undefined): string {
-  if (value === null || value === undefined || Number.isNaN(value)) return 'var(--sem-idle-bd)'
-  if (value >= 70) return 'var(--sem-strong-fg)'
-  if (value >= 40) return 'var(--sem-watch-fg)'
-  return 'var(--sem-weak-fg)'
+/** 符号付きの t 値表示 (+1.23 / −0.45 / ±0.00) */
+export function fmtT(v: number | null | undefined): string {
+  if (!isNum(v)) return '—'
+  const r = Math.round(v * 100) / 100
+  if (r === 0) return '±0.00'
+  return `${r > 0 ? '+' : '−'}${Math.abs(r).toFixed(2)}`
 }

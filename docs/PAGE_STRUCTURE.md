@@ -79,12 +79,16 @@ app/layout.tsx  (RootLayout, lang="ja")
 連打対策に `requestIdRef` で後着レスポンスを破棄。
 
 #### SectorSection の内訳
-- ヘッダー行: 見出し（`showHeading`）/ サブタイトル + 最新日 / MA 凡例 / 期間トグル（`RankDeltaPeriodToggle`）/ 表示切替（チャート ⇄ テーブル）
-- チャート表示: `SectorChartGallery`（→ `SectorCandleChart`）
-- テーブル表示: `SectorSelectionTable`（→ `SectorChangeCells`）
-- 下部: 「N営業日の推移（Bars / RRG）」— 既定は折りたたみ（`<details>`）。開くと Bars ⇄ RRG のトグルで
-  `SectorBarChart33`（棒グラフ）/ `SectorRRG33`（RRG）を切り替え
-- データ: `sector_selection_s33` ほか（`lib/sectorSelectionFetch.ts`, `sectorSelectionHistoryFetch.ts`, `sectorIndexChangeFetch.ts`, `sectorPriceFetch.ts`, `sectorRankDelta.ts`）
+2026-10-03 に旧セクタースコア（composite_score・4 成分・leading/neutral/lagging）をやめ、「業種の自力」（`self_t63` ほか）に置き換えた。
+旧列は全期間 null で後日 DROP されるので、どこからも読まない。並びはすべて `self_t63` の高い順（null = 所属 5 社未満の業種は最後）。
+- ヘッダー行: 見出し（`showHeading`）/ サブタイトル + 最新日 / MA 凡例 / 表示切替（チャート ⇄ テーブル）
+- チャート表示: `SectorChartGallery`（→ `SectorCandleChart`）。カード見出し = 業種名・注意の印・Self t63 と 5 日差の矢印。
+  重ねる指標 = なし / Self t63 / Self t21（縦軸 −4〜+4 固定）。チャート下のセル = Self t63・Self t21・Med/Idx・VA z・VA up・N（対象/全銘柄）
+- テーブル表示: `SectorSelectionTable`（→ `SectorChangeCells`）。列 = Sector・Self t63 (5d)・Self t21・Med vs Idx t21・VA share z250・VA up 21/63・N 対象・N 全銘柄。
+  行を開くと期間リターン / TOPIX 超過と空売り内訳
+- 注意の印 = `self_t63 ≤ −1`（注意色の文字「注意」1 つだけ。塗りつぶしは使わない）。5 日差の矢印 = 5 営業日前の self_t63 との差が ±0.1 以上（`SelfStrength.tsx`）
+- 下部: 「N営業日の推移（RRG: self_t63 × self_t21）」— 既定は折りたたみ（`<details>`）。`SectorRRG33` = 横 self_t63 / 縦 self_t21、0 中心、横 −1 に注意の点線
+- データ: `sector_selection_s33` ほか（`lib/sectorSelectionFetch.ts`, `sectorSelectionHistoryFetch.ts`（`selfT63Diffs` で 5 日差）, `sectorIndexChangeFetch.ts`, `sectorPriceFetch.ts`）
 
 #### BreadthPanel の内訳（カード 4 枚）
 | カード | チャート |
@@ -138,7 +142,8 @@ app/layout.tsx  (RootLayout, lang="ja")
 - 複数シグナル重複（同一 code が 2 スキャナー以上に出現）は `multiHitCodes` で黄色強調
 - 各カードから `PositionModal` を直接開ける。ウォッチリストへの追加ボタンは廃止し、
   `CopyTickerButton`（`TSE:XXXX` をクリップボードにコピー → TradingView に貼る）に置き換え
-- データ: `lib/todayFetch.ts`（`ema` / `struct` / `inside` / `hotSectors`）
+- 業種による印は無い（旧 composite_score ≥ 60 の業種を緑にしていたのは 2026-10-03 に廃止）
+- データ: `lib/todayFetch.ts`（`ema` / `struct` / `inside`）
 
 #### InsideDaySection の内訳
 - 唯一カードではなく**表**（`DataTable`）のセクション。候補が 2〜204 件/日（平均 44 / 中央値 39）と

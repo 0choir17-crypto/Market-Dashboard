@@ -18,7 +18,6 @@ const EMPTY: TodayResponse = {
   insideDate: null,
   inside: [],
   insideTableMissing: false,
-  hotSectors: [],
   error: null,
 }
 
@@ -117,7 +116,6 @@ export default function TodayPage() {
         <div className="flex flex-col gap-6">
           <StructurePivotSection
             rows={data.struct}
-            hotSectors={data.hotSectors}
             multiHitCodes={multiHitCodes}
             title="Structure Pivot"
             subtitle="押し安値切り上がり（HL）から作る構造の 1st（建玉ライン=HL+0.618戻し）/ 2nd（スイングハイ）ヒット。本日ヒットした銘柄のみ表示。本日どちら（1st/2nd）にヒットしたかを明示し、1st・2nd それぞれの直近ヒット日を併記（本日ヒットは緑で強調）。終了済み（TP2/Stop）は除外。買い指示ではなくウォッチリスト（執行は手動チャート判断）。"
@@ -125,7 +123,6 @@ export default function TodayPage() {
           <EmaSetupsSection
             rows={data.ema}
             tableMissing={data.emaTableMissing}
-            hotSectors={data.hotSectors}
             multiHitCodes={multiHitCodes}
             title="EMA Setups"
             subtitle="下落してきて EMA 9 / 21 / 50 にちょうど到達し、安値が「EMA のすぐ下 0.1ATR」の帯に収まって踏みとどまった日。EMA を明確に割った日は含まない。同じ銘柄が複数の EMA に同日タッチすると EMA バッジが並ぶ。※このスキャナーに統計的エッジは無い（勝率 23.6% に対しベースライン 23.1%、耐えの深さ・ヒゲ/実体・EMA の別はいずれも AUC 0.50）。買いシグナルではなく、毎朝チャートを開く銘柄を機械的に絞り込んだリストとして使う。"
@@ -134,7 +131,6 @@ export default function TodayPage() {
             rows={data.inside}
             date={data.insideDate}
             tableMissing={data.insideTableMissing}
-            hotSectors={data.hotSectors}
             alsoHitCodes={otherScannerCodes}
             title="Inside Day"
             subtitle="当日の高値と安値が、どちらも前日（マザーバー）の値幅の内側に収まった日。高値・安値はヒゲ込みで、前日と同値の日は含まない（実体で判定する「はらみ線」とは別物）。翌日以降はマザーバー高値を上抜けるか、安値を割るかをチャートで見る。※このスキャナーは成績（勝率・期待値）の検証をしていない。既定の並びは収縮%（当日値幅 ÷ 前日値幅）の昇順＝より縮んだ順で、強い順・おすすめ順ではない。毎朝チャートを開く銘柄を機械的に絞り込んだリストとして使う。"

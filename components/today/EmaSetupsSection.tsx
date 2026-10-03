@@ -9,7 +9,6 @@ import PositionModal from '@/components/portfolio/PositionModal'
 
 type Props = {
   rows: EmaSetupCardRow[]
-  hotSectors: string[]
   title: string
   subtitle: string
   // ema_setups の DDL が未実行（テーブル未配備）。「0 件の日」と区別して案内する。
@@ -58,7 +57,6 @@ const RS_MAX = 90
 
 export default function EmaSetupsSection({
   rows,
-  hotSectors,
   title,
   subtitle,
   tableMissing = false,
@@ -70,8 +68,6 @@ export default function EmaSetupsSection({
   const [freshOnly, setFreshOnly] = useState(false)
   const [rsMin, setRsMin] = useState(0)
   const [sortKey, setSortKey] = useState<string>(SORTS[0].key)
-
-  const hotSet = useMemo(() => new Set(hotSectors), [hotSectors])
 
   const sectorOptions = useMemo(() => {
     const set = new Set<string>()
@@ -233,7 +229,6 @@ export default function EmaSetupsSection({
             <EmaSetupCard
               key={r.code}
               row={r}
-              hot={r.sector_s33 != null && hotSet.has(r.sector_s33)}
               multiHit={multiHitCodes.has(r.code)}
               onAddPosition={row => setPositionTarget(toPosition(row))}
             />

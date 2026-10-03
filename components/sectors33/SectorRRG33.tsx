@@ -3,6 +3,14 @@
 import { useMemo, useState } from 'react'
 import type { SectorHistoryResponse } from '@/lib/sectorSelectionHistoryFetch'
 import { CHART } from '@/lib/chartColors'
+import { SELF_T63_CAUTION } from '@/types/sectorSelection'
+
+// 業種の RRG。横 = self_t63 (3 か月の自力) / 縦 = self_t21 (直近 1 か月の自力)。どちらも t 値で 0 が中立。
+//   右上 Leading   = 3 か月も直近も強い
+//   右下 Weakening = 3 か月は強いが直近は弱い (失速)
+//   左下 Lagging   = どちらも弱い
+//   左上 Improving = 3 か月は弱いが直近は強い (回復)
+// 横 −1 の点線 = 注意の線 (self_t63 ≤ −1)。
 
 type Props = {
   history: SectorHistoryResponse
@@ -12,7 +20,6 @@ type DotPoint = {
   sector: string
   x: number
   y: number
-  composite: number | null
   date: string
 }
 
@@ -24,7 +31,7 @@ type Trail = {
 const PAD = 36
 const W_INNER_MIN = 480
 const H = 460
-const CENTER = 50
+const CENTER = 0
 
 function quadrantOf(x: number, y: number): 'leading' | 'weakening' | 'lagging' | 'improving' {
   if (x >= CENTER && y >= CENTER) return 'leading'
@@ -51,10 +58,10 @@ export default function SectorRRG33({ history }: Props) {
   const { dots, trails, xRange, yRange } = useMemo(() => {
     const dots: DotPoint[] = []
     const trails: Trail[] = []
-    let xMin = 100,
-      xMax = 0,
-      yMin = 100,
-      yMax = 0
+    let xMin = Infinity,
+      xMax = -Infinity,
+      yMin = Infinity,
+      yMax = -Infinity
 
     const trailSet = new Set<string>(
       showTrailFor === 'all'
@@ -71,16 +78,10 @@ export default function SectorRRG33({ history }: Props) {
     for (const sector of sectorsRanked) {
       const latest = bySector[sector]?.[latestDate]
       if (!latest) continue
-      const x = latest.component_rs
-      const y = latest.component_acc
-      if (x == null || y == null) continue
-      dots.push({
-        sector,
-        x,
-        y,
-        composite: latest.composite_score,
-        date: latestDate,
-      })
+      const x = latest.self_t63
+      const y = latest.self_t21
+      if (x == null || y == null || !Number.isFinite(x) || !Number.isFinite(y)) continue
+      dots.push({ sector, x, y, date: latestDate })
       xMin = Math.min(xMin, x)
       xMax = Math.max(xMax, x)
       yMin = Math.min(yMin, y)
@@ -90,29 +91,30 @@ export default function SectorRRG33({ history }: Props) {
         const pts: DotPoint[] = []
         for (const d of trailDates) {
           const r = bySector[sector]?.[d]
-          if (!r || r.component_rs == null || r.component_acc == null) continue
-          pts.push({
-            sector,
-            x: r.component_rs,
-            y: r.component_acc,
-            composite: r.composite_score,
-            date: d,
-          })
+          if (!r || r.self_t63 == null || r.self_t21 == null) continue
+          pts.push({ sector, x: r.self_t63, y: r.self_t21, date: d })
         }
         if (pts.length >= 2) trails.push({ sector, points: pts })
       }
     }
 
-    // Symmetric padding around center (50) so quadrants render evenly.
+    // 0 を中心に上下左右を同じ幅にする (象限が均等に見えるように。注意の線 −1 も必ず入る)
+    for (const t of trails) for (const p of t.points) {
+      xMin = Math.min(xMin, p.x)
+      xMax = Math.max(xMax, p.x)
+      yMin = Math.min(yMin, p.y)
+      yMax = Math.max(yMax, p.y)
+    }
     const halfRange = Math.max(
       Math.abs(xMin - CENTER),
       Math.abs(xMax - CENTER),
       Math.abs(yMin - CENTER),
       Math.abs(yMax - CENTER),
-      15,
+      2,
     )
-    const xRange: [number, number] = [Math.max(0, CENTER - halfRange - 5), Math.min(100, CENTER + halfRange + 5)]
-    const yRange: [number, number] = [Math.max(0, CENTER - halfRange - 5), Math.min(100, CENTER + halfRange + 5)]
+    const half = Math.ceil((halfRange + 0.3) * 2) / 2
+    const xRange: [number, number] = [CENTER - half, CENTER + half]
+    const yRange: [number, number] = [CENTER - half, CENTER + half]
 
     return { dots, trails, xRange, yRange }
   }, [bySector, sectorsRanked, latestDate, showTrailFor, dates, trailLen])
@@ -131,7 +133,7 @@ export default function SectorRRG33({ history }: Props) {
         <p className="text-small font-medium text-[var(--text-primary)] mr-auto">
           Sector RRG{' '}
           <span className="font-normal text-[var(--text-muted)]">
-            — X: RS (0-100) / Y: RS加速 (50=中立) · 軌跡=<span className="font-mono">{trailLen}</span>営業日
+            — 横: self_t63（3 か月の自力）/ 縦: self_t21（直近 1 か月）· 0 = 中立 · 点線 = 注意の線（self_t63 ≤ {SELF_T63_CAUTION}）· 軌跡=<span className="font-mono">{trailLen}</span>営業日
           </span>
         </p>
         <div className="flex items-center gap-1 text-caption">
@@ -176,10 +178,10 @@ export default function SectorRRG33({ history }: Props) {
         onHover={setHovered}
       />
       <div className="mt-3 flex flex-wrap items-center justify-center gap-4 text-caption">
-        <Legend label="Leading (RS↑ / 加速↑)" color={QUAD_COLOR.leading} />
-        <Legend label="Improving (RS↓ / 加速↑)" color={QUAD_COLOR.improving} />
-        <Legend label="Weakening (RS↑ / 加速↓)" color={QUAD_COLOR.weakening} />
-        <Legend label="Lagging (RS↓ / 加速↓)" color={QUAD_COLOR.lagging} />
+        <Legend label="Leading (t63 + / t21 +)" color={QUAD_COLOR.leading} />
+        <Legend label="Improving (t63 − / t21 +) 回復" color={QUAD_COLOR.improving} />
+        <Legend label="Weakening (t63 + / t21 −) 失速" color={QUAD_COLOR.weakening} />
+        <Legend label="Lagging (t63 − / t21 −)" color={QUAD_COLOR.lagging} />
       </div>
     </div>
   )
@@ -237,28 +239,38 @@ function RRGCanvas({
         <line x1={cx} y1={PAD} x2={cx} y2={H - PAD} stroke={CHART.textMuted} strokeDasharray="4 4" />
         <line x1={PAD} y1={cy} x2={innerW + PAD} y2={cy} stroke={CHART.textMuted} strokeDasharray="4 4" />
 
+        {/* 注意の線 self_t63 = −1 */}
+        {SELF_T63_CAUTION > xRange[0] && (
+          <g>
+            <line x1={sx(SELF_T63_CAUTION)} y1={PAD} x2={sx(SELF_T63_CAUTION)} y2={H - PAD} stroke={CHART.watchFg} strokeDasharray="2 3" />
+            <text x={sx(SELF_T63_CAUTION) - 4} y={PAD + 30} fontSize={10} textAnchor="end" fill={CHART.watchFg}>
+              注意 ≤ {SELF_T63_CAUTION}
+            </text>
+          </g>
+        )}
+
         {/* Axes ticks */}
         {[xRange[0], CENTER, xRange[1]].map(v => (
           <g key={`xt-${v}`}>
             <text x={sx(v)} y={H - PAD + 16} fontSize={10} textAnchor="middle" fill={CHART.textMuted}>
-              {v.toFixed(0)}
+              {v.toFixed(1)}
             </text>
           </g>
         ))}
         {[yRange[0], CENTER, yRange[1]].map(v => (
           <g key={`yt-${v}`}>
             <text x={PAD - 8} y={sy(v) + 3} fontSize={10} textAnchor="end" fill={CHART.textMuted}>
-              {v.toFixed(0)}
+              {v.toFixed(1)}
             </text>
           </g>
         ))}
 
         {/* Axis labels */}
         <text x={innerW + PAD - 4} y={cy - 6} fontSize={10} textAnchor="end" fill={CHART.textSecondary}>
-          RS →
+          self_t63 →
         </text>
         <text x={cx + 6} y={PAD - 10} fontSize={10} fill={CHART.textSecondary}>
-          加速 ↑
+          self_t21 ↑
         </text>
 
         {/* Quadrant labels */}

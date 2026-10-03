@@ -8,7 +8,6 @@ import PositionModal from '@/components/portfolio/PositionModal'
 
 type Props = {
   rows: StructurePivotCardRow[]
-  hotSectors: string[]
   title: string
   subtitle: string
   // 複数スキャナー重複銘柄の code 集合（背景を黄色で強調）
@@ -61,12 +60,10 @@ const SORTS: SortDef[] = [
 // signal フィルタ（1st / 2nd / 全部）。両方を既定表示。
 type SignalFilter = 'all' | StructurePivotSignal
 
-export default function StructurePivotSection({ rows, hotSectors, title, subtitle, multiHitCodes }: Props) {
+export default function StructurePivotSection({ rows, title, subtitle, multiHitCodes }: Props) {
   const [sector, setSector] = useState<string>('all')
   const [signal, setSignal] = useState<SignalFilter>('all')
   const [sortKey, setSortKey] = useState<string>(SORTS[0].key)
-
-  const hotSet = useMemo(() => new Set(hotSectors), [hotSectors])
 
   const sectorOptions = useMemo(() => {
     const set = new Set<string>()
@@ -169,7 +166,6 @@ export default function StructurePivotSection({ rows, hotSectors, title, subtitl
             <StructurePivotCard
               key={`${r.code}-${i}`}
               row={r}
-              hot={r.sector_s33 != null && hotSet.has(r.sector_s33)}
               multiHit={multiHitCodes.has(r.code)}
               onAddPosition={row => setPositionTarget(toPosition(row))}
             />
