@@ -10,6 +10,7 @@ import {
   type SectorChartEntry,
 } from '@/lib/sectorPriceFetch'
 import type { SectorIndexChangeEntry } from '@/lib/sectorIndexChangeFetch'
+import type { SelfDiff } from '@/lib/sectorSelectionHistoryFetch'
 import SectorCandleChart, { MaLegend, VolumeLegend } from './SectorCandleChart'
 import { SectorChangeStrip } from './SectorChangeCells'
 import { CautionMark, DiffArrow, TValue, CAUTION_NOTE } from './SelfStrength'
@@ -19,8 +20,8 @@ type Props = {
   rows: SectorSelectionRow[]
   /** sector_name_s33 → 1D / 1W / 1M / 6M / 1Y の騰落率（後着でもよい） */
   changes?: Record<string, SectorIndexChangeEntry>
-  /** sector_name_s33 → self_t63 の 5 営業日前との差（履歴が後着でもよい） */
-  diffs?: Record<string, number>
+  /** sector_name_s33 → self_t63 / self_t21 の 5 営業日前との差（履歴が後着でもよい） */
+  diffs?: Record<string, SelfDiff>
 }
 
 type MetricSelection = OverlayMetricKey | 'none'
@@ -437,7 +438,7 @@ export default function SectorChartGallery({
               row={row}
               entry={bySector[row.sector_name_s33]}
               change={changes[row.sector_name_s33]}
-              diff={diffs[row.sector_name_s33]}
+              diff={diffs[row.sector_name_s33]?.t63}
               metricKey={metricKey}
               onExpand={() => setExpanded(row.sector_name_s33)}
             />
@@ -456,7 +457,7 @@ export default function SectorChartGallery({
             row={expandedRow}
             entry={bySector[expandedRow.sector_name_s33]}
             change={changes[expandedRow.sector_name_s33]}
-            diff={diffs[expandedRow.sector_name_s33]}
+            diff={diffs[expandedRow.sector_name_s33]?.t63}
             metricKey={metricKey}
             chartHeight={expandedChartHeight}
           />
