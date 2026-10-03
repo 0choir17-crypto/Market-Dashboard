@@ -1,7 +1,9 @@
 'use client'
 
-// 試作 (未使用。どの画面にも置いていない): t63 × t21 の散布図 (段ごとに 1 枚)。
-// 点 = 今日の位置 / 細い線 = 5 営業日前の位置からの動き。
+// t63 × t21 の散布図 (段ごとに 1 枚)。
+// 点 = 今日の位置 / 細い線 = 5 営業日前の位置からの動き / 点の大きさ = Turnover (va_trend)。
+// Turnover は「大きい = 良い」ではない (高いほどその後 3 か月の伸びが小さい傾向) ので色は変えず、
+// 面積だけで示す。大きい点を先に描き、小さい点が隠れないようにする。
 // 斜線 t21 = t63 より上 = 直近 1 か月が 3 か月より強い、下 = 3 か月の先導に比べて直近が弱い。
 // 塗りの点 = t63 の一覧にいる / 白抜き = t21 の一覧だけ。
 
@@ -19,6 +21,13 @@ type Pt = {
   y: number
   px: number | null
   py: number | null
+}
+
+// 面積 ∝ Turnover。1.0× (いつもどおり) で r 4.5、0.5×〜4× の外は端に寄せる。
+const R1 = 4.5
+function radius(va: number | null | undefined): number {
+  const v = va !== null && va !== undefined && Number.isFinite(va) ? Math.min(4, Math.max(0.5, va)) : 1
+  return R1 * Math.sqrt(v)
 }
 
 function fin(v: number | null | undefined): v is number {
@@ -159,7 +168,7 @@ function Panel({
         )}
 
         {/* 今日の位置 */}
-        {pts.map(p => {
+        {[...pts].sort((a, b) => radius(b.r.va_trend) - radius(a.r.va_trend)).map(p => {
           const on = p.r.in_t63 === true
           const dim = hover && hover.r.code !== p.r.code
           return (
@@ -167,7 +176,7 @@ function Panel({
               key={p.r.code}
               cx={sx(p.x)}
               cy={sy(p.y)}
-              r={hover?.r.code === p.r.code ? 6 : 4.5}
+              r={radius(p.r.va_trend) + (hover?.r.code === p.r.code ? 1.5 : 0)}
               fill={on ? 'var(--sem-focus-fg)' : 'var(--bg-card)'}
               stroke={on ? 'var(--bg-card)' : 'var(--sem-focus-fg)'}
               strokeWidth={on ? 2 : 1.5}
@@ -178,7 +187,7 @@ function Panel({
 
         {/* 選んだ数銘柄だけ名前 */}
         {pts.filter(p => labeled.has(p.r.code)).map(p => (
-          <text key={`l${p.r.code}`} x={sx(p.x) + 8} y={sy(p.y) + 4} fontSize={11} fill="var(--text-secondary)">
+          <text key={`l${p.r.code}`} x={sx(p.x) + radius(p.r.va_trend) + 4} y={sy(p.y) + 4} fontSize={11} fill="var(--text-secondary)">
             {p.r.co_name ?? p.r.code}
           </text>
         ))}
@@ -189,6 +198,15 @@ function Panel({
         </span>
         <span className="flex items-center gap-1">
           <svg width="10" height="10"><circle cx="5" cy="5" r="3.5" fill="none" stroke="var(--sem-focus-fg)" strokeWidth="1.5" /></svg>t21 の一覧だけ
+        </span>
+        <span className="flex items-center gap-1">
+          大きさ = Turnover
+          <svg width="58" height="20" aria-hidden>
+            {[1, 2, 3].map((v, i) => (
+              <circle key={v} cx={8 + i * 19} cy={10} r={radius(v)} fill="none" stroke="var(--text-muted)" strokeWidth={1} />
+            ))}
+          </svg>
+          <span className="num">1× / 2× / 3×</span>
         </span>
         <span className="flex items-center gap-1">
           <svg width="22" height="10"><circle cx="3" cy="5" r="2" fill="var(--text-muted)" /><line x1="3" y1="5" x2="20" y2="5" stroke="var(--text-muted)" strokeWidth="1.25" /></svg>5 営業日前からの動き
@@ -212,7 +230,7 @@ export default function LeaderScatter({
     <section>
       <h2 className="text-small font-medium text-[var(--text-primary)] mb-1">t63 × t21（直近の勢いと 3 か月の強さ）</h2>
       <p className="text-caption text-[var(--text-muted)] mb-2">
-        斜線より上 = 直近 1 か月が 3 か月より強い ／ 下 = 3 か月の先導に比べて直近が弱い。線の根元が 5 営業日前の位置。
+        斜線より上 = 直近 1 か月が 3 か月より強い ／ 下 = 3 か月の先導に比べて直近が弱い。線の根元が 5 営業日前の位置。点が大きい = Turnover が高い（商いが膨らんで入った。その後 3 か月の伸びは小さい傾向。大きい = 良い、ではない）。
       </p>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {TIERS.map(t => (

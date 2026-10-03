@@ -104,7 +104,8 @@ app/layout.tsx  (RootLayout, lang="ja")
 - 本体
   1. `ReadingNotes`（page 内）— 読み方の注記（t 値と段ごとの入る線・ADR 下限・5 日比の色・偶然で入る分など）
   2. `SectorWeekHeatmap` — 業種 × 週（直近 52 週。`liquid_leaders_sector` の「業種の大きさから見込む件数との差」の週平均。上 t21 / 下 t63、左 大型 / 右 中小の 4 枚を同時表示。濃淡は緑 3 段（1 未満 / 1〜3 / 3 件以上）。並びだけ切替）
-  3. `LiquidLeadersTable` × 2 — 段 (large=大型: 売買代金上位 200 位・ADR 2% 以上・t 2.0 で入る / mid=中小: 201〜1,000 位・ADR 3% 以上・t 1.5 で入る。出る線はどちらも入った後の最高値 − 1) ごとに 1 表（幅 1,760px 以上は左 大型 / 右 中小、それより狭いと上 大型 / 下 中小）。列は Code / Name・Sector（業種）・t21 (5d Δ)・t63 (5d Δ)・Gap（t21−t63）・Turnover ×60d（代金の勢い va_trend。色なし）・Since t21・Since t63（その一覧に入った日。いなければ —）。既定は t63 の一覧にいる銘柄を t63 の高い順、その後ろに t21 の高い順
+  3. `LeaderScatter` — t63 × t21 の散布図（左 大型 / 右 中小。斜線 t21 = t63 より上 = 直近が強い / 下 = 直近が弱い。点 = 今日、細い線の根元 = 5 営業日前。塗り = t63 の一覧にいる / 白抜き = t21 の一覧だけ。点の大きさ = Turnover（面積比例、色は変えない）。点線 = 段の入る線。名前は斜線から最も離れた上下 2 銘柄ずつ、ほかはマウスで読む）
+  4. `LiquidLeadersTable` × 2 — 段 (large=大型: 売買代金上位 200 位・ADR 2% 以上・t 2.0 で入る / mid=中小: 201〜1,000 位・ADR 3% 以上・t 1.5 で入る。出る線はどちらも入った後の最高値 − 1) ごとに 1 表（幅 1,760px 以上は左 大型 / 右 中小、それより狭いと上 大型 / 下 中小）。列は Code / Name・Sector（業種）・t21 (5d Δ)・t63 (5d Δ)・Gap（t21−t63）・Turnover ×60d（代金の勢い va_trend。色なし）・Since t21・Since t63（その一覧に入った日。いなければ —）。既定は t63 の一覧にいる銘柄を t63 の高い順、その後ろに t21 の高い順
 - データ: `lib/liquidLeadersFetch.ts`（`fetchLiquidLeadersSnapshot`（表示日と 5 営業日前の 2 回）/ `fetchLiquidLeaderDates` / `fetchLiquidSectorDays`）
 
 ---
