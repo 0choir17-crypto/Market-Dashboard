@@ -9,7 +9,6 @@ import {
 import { DIFF_DAYS, TIERS, type LiquidLeader } from '@/types/liquidLeaders'
 import LiquidLeadersTable from '@/components/leaders/LiquidLeadersTable'
 import SectorWeekHeatmap from '@/components/leaders/SectorWeekHeatmap'
-import LeaderDayHeatmap from '@/components/leaders/LeaderDayHeatmap'
 import ErrorBanner from '@/components/shared/ErrorBanner'
 import PageHeader from '@/components/shared/PageHeader'
 
@@ -167,13 +166,14 @@ export default function LeadersPage() {
           <ReadingNotes />
 
           {selectedDate && (
-            <div className="mt-6 space-y-6">
+            <div className="mt-6">
               <SectorWeekHeatmap endDate={selectedDate} />
-              <LeaderDayHeatmap rows={snapshot.rows} dates={dates} selectedDate={selectedDate} prev={prev} />
             </div>
           )}
 
-          <div className="mt-6 grid grid-cols-1 xl:grid-cols-2 gap-x-6 gap-y-8 items-start">
+          {/* 1 表は全列で約 800px。2 表を横に並べても横スクロールが出ない幅 (約 1,700px) からだけ並べ、
+              それより狭い画面では縦に積む。 */}
+          <div className="mt-6 grid grid-cols-1 min-[1700px]:grid-cols-2 gap-x-6 gap-y-8 items-start">
             {TIERS.map(t => (
               <LiquidLeadersTable
                 key={t.key}
@@ -216,7 +216,7 @@ function ReadingNotes() {
         <li>TOPIX が 3 か月で 5% 以上下げている時期は、t21 の一覧の 3〜4 割が「下げが小さいだけの防御株」になる。</li>
         <li>一覧に入った銘柄が、その後も強さを保つとは限らない（記述用。予測用ではない）。</li>
         <li>
-          ヒートマップの件数や濃さも「実力ゼロでも偶然で入る分」を含む。業種 × 週は差で補正しているが、1〜2 週だけの濃淡は偶然のことが多い。何週も続く塊を読む。
+          業種 × 週のヒートマップの濃さも「実力ゼロでも偶然で入る分」を含む。差で補正しているが、1〜2 週だけの濃淡は偶然のことが多い。何週も続く塊を読む。
         </li>
       </ul>
     </div>
