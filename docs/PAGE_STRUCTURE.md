@@ -84,9 +84,9 @@ app/layout.tsx  (RootLayout, lang="ja")
 - ヘッダー行: 見出し（`showHeading`）/ サブタイトル + 最新日 / MA 凡例 / 表示切替（チャート ⇄ テーブル）
 - チャート表示: `SectorChartGallery`（→ `SectorCandleChart`）。カード見出し = 業種名・注意の印・Self t63 と 5 日差の矢印。
   重ねる指標 = なし / Self t63 / Self t21（縦軸 −4〜+4 固定）。チャート下のセル = Self t63・Self t21・Med/Idx・VA z・VA up・N（対象/全銘柄）
-- テーブル表示: `SectorSelectionTable`（→ `SectorChangeCells`）。列 = Sector・Self t63 (5d Δ)・Self t21 (5d Δ)・Med vs Idx t21・VA share z250・VA up 21/63・N 対象・N 全銘柄。
+- テーブル表示: `SectorSelectionTable`（→ `SectorChangeCells`）。列 = Sector・Self t63・Self t21（主の指標。t 値そのもの）・Δ t63 5d・Δ t21 5d・Med vs Idx t21・VA share z250・VA up 21/63・N 対象・N 全銘柄。
   行を開くと期間リターン / TOPIX 超過と空売り内訳
-- 注意の印 = `self_t63 ≤ −1`（注意色の文字「注意」1 つだけ。塗りつぶしは使わない）。5 日差 = 一覧は self_t63 / self_t21 それぞれの括弧内に数値（±0.1 以上で緑 / 赤）、チャートカード見出しは self_t63 の矢印（`SelfStrength.tsx`）
+- 注意の印 = `self_t63 ≤ −1`（注意色の文字「注意」1 つだけ。塗りつぶしは使わない）。5 日差 = 一覧は別列 Δ t63 / Δ t21 に数値（±0.1 以上で緑 / 赤）、チャートカード見出しは self_t63 の矢印（`SelfStrength.tsx`）
 - 下部: 「N営業日の推移（RRG: self_t63 × self_t21）」— 既定は折りたたみ（`<details>`）。`SectorRRG33` = 横 self_t63 / 縦 self_t21、0 中心、横 −1 に注意の点線
 - データ: `sector_selection_s33` ほか（`lib/sectorSelectionFetch.ts`, `sectorSelectionHistoryFetch.ts`（`selfDiffs` で 5 日差）, `sectorIndexChangeFetch.ts`, `sectorPriceFetch.ts`）
 
