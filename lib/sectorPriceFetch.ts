@@ -6,13 +6,10 @@ import { OVERLAY_SERIES } from '@/lib/chartColors'
 
 const TABLE = 'sector_selection_s33'
 
-// チャートに重ねられる 0-100 のスコア系指標。N(銘柄数) はスケールが違うため除外。
+// チャートに重ねられる指標 = 業種の自力の t 値 2 本。
 export const OVERLAY_METRICS = {
-  composite_score: { label: 'Score', color: OVERLAY_SERIES.composite },
-  component_rs: { label: 'RS', color: OVERLAY_SERIES.rs },
-  component_acc: { label: 'Acc', color: OVERLAY_SERIES.acc },
-  component_breadth: { label: 'Brd', color: OVERLAY_SERIES.breadth },
-  component_short: { label: 'Sht', color: OVERLAY_SERIES.short },
+  self_t63: { label: 'Self t63', color: OVERLAY_SERIES.selfT63 },
+  self_t21: { label: 'Self t21', color: OVERLAY_SERIES.selfT21 },
 } as const
 
 export type OverlayMetricKey = keyof typeof OVERLAY_METRICS
@@ -63,7 +60,7 @@ const WARMUP_BARS = 150
 const DEFAULT_LOOKBACK = VISIBLE_BARS + WARMUP_BARS
 
 /**
- * 全業種ぶんの指数 OHLC + スコア系指標をまとめて取得する。
+ * 全業種ぶんの指数 OHLC + 業種の自力 (self_t63 / self_t21) をまとめて取得する。
  *
  * 33業種 × 300日 ≈ 9,900 行で Supabase の 1000 行上限を超えるため、
  * 安定順序 (date, sector) でページングする。1業種ずつ 33 回叩くより往復が少ない。
@@ -146,13 +143,7 @@ export async function fetchAllSectorPriceHistory(
         sector,
         bars: [],
         volumes: [],
-        metrics: {
-          composite_score: [],
-          component_rs: [],
-          component_acc: [],
-          component_breadth: [],
-          component_short: [],
-        },
+        metrics: { self_t63: [], self_t21: [] },
       }
     }
     const entry = bySector[sector]

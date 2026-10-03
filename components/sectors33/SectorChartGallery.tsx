@@ -1,13 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import {
-  SectorSelectionRow,
-  COMPONENT_META,
-  compositeColor,
-  componentColor,
-  MOMENTUM_CONFIG,
-} from '@/types/sectorSelection'
+import { SectorSelectionRow, bySelfT63, fmtT, isNum } from '@/types/sectorSelection'
 import {
   fetchAllSectorPriceHistory,
   OVERLAY_METRICS,
@@ -18,53 +12,40 @@ import {
 import type { SectorIndexChangeEntry } from '@/lib/sectorIndexChangeFetch'
 import SectorCandleChart, { MaLegend, VolumeLegend } from './SectorCandleChart'
 import { SectorChangeStrip } from './SectorChangeCells'
-import { RankDeltaBadge, MoversOnlyToggle } from './SectorRankDelta'
-import {
-  isBigMove,
-  BIG_MOVE_THRESHOLD,
-  type RankDelta,
-  type RankDeltaMap,
-  type RankDeltaPeriodKey,
-} from '@/lib/sectorRankDelta'
+import { CautionMark, DiffArrow, TValue, CAUTION_NOTE } from './SelfStrength'
 import Tooltip from '@/components/shared/Tooltip'
-import Dot from '@/components/shared/Dot'
 
 type Props = {
   rows: SectorSelectionRow[]
   /** sector_name_s33 → 1D / 1W / 1M / 6M / 1Y の騰落率（後着でもよい） */
   changes?: Record<string, SectorIndexChangeEntry>
-  /** sector_name_s33 → 順位変動（履歴が後着でもよい） */
-  rankDeltas?: RankDeltaMap
-  deltaPeriod: RankDeltaPeriodKey
+  /** sector_name_s33 → self_t63 の 5 営業日前との差（履歴が後着でもよい） */
+  diffs?: Record<string, number>
 }
 
 type MetricSelection = OverlayMetricKey | 'none'
 
-function isNum(v: number | null | undefined): v is number {
-  return v !== null && v !== undefined && Number.isFinite(v)
-}
+// 重ねる指標の縦軸。t 値なので 0 を中心に ±4 で固定し、業種間で高さを比べられるようにする
+const METRIC_RANGE: [number, number] = [-4, 4]
 
-// チャート下に並べる指標（現行ランキングの列と同じ並び）
-const METRIC_CELLS: { key: OverlayMetricKey; label: string; tooltip: string }[] = [
-  { key: 'composite_score', label: 'Score', tooltip: 'composite_score 0-100（総合）' },
-  ...COMPONENT_META.map((m) => ({
-    key: m.key as OverlayMetricKey,
-    label: m.label,
-    tooltip: m.tooltip,
-  })),
+// チャート下に並べる指標（一覧の列と同じ並び）
+type CellKey = 'self_t63' | 'self_t21' | 'med_vs_idx_t21' | 'va_share21_z250'
+const METRIC_CELLS: { key: CellKey; label: string; tooltip: string; overlay: boolean }[] = [
+  { key: 'self_t63', label: 'Self t63', tooltip: `業種の自力の 63 日 t 値（主の列）。${CAUTION_NOTE}`, overlay: true },
+  { key: 'self_t21', label: 'Self t21', tooltip: '業種の自力の 21 日 t 値。回復・失速の確認用', overlay: true },
+  { key: 'med_vs_idx_t21', label: 'Med/Idx', tooltip: '中央値の銘柄 vs 業種指数の t 値（21 日）。+ 中小型が強い / − 大型主導。状況の説明用', overlay: false },
+  { key: 'va_share21_z250', label: 'VA z', tooltip: '代金シェア（21 日）の普段（250 日）比 z 値。+1 以上 = 資金が集まっている。状況の説明用', overlay: false },
 ]
 
 function MetricCell({
   label,
   tooltip,
   value,
-  color,
   active,
 }: {
   label: string
   tooltip: string
   value: number | null | undefined
-  color: string
   active: boolean
 }) {
   return (
@@ -76,8 +57,11 @@ function MetricCell({
       <Tooltip content={tooltip}>
         <p className="text-caption text-[var(--text-muted)] uppercase tracking-wide">{label}</p>
       </Tooltip>
-      <p className="text-small font-mono font-medium tabular-nums" style={{ color }}>
-        {isNum(value) ? value.toFixed(0) : '—'}
+      <p
+        className="text-small font-mono font-medium tabular-nums"
+        style={{ color: isNum(value) ? 'var(--text-primary)' : 'var(--sem-idle-fg)' }}
+      >
+        {fmtT(value)}
       </p>
     </div>
   )
@@ -87,8 +71,7 @@ function SectorCard({
   row,
   entry,
   change,
-  delta,
-  deltaPeriod,
+  diff,
   metricKey,
   chartHeight = 260,
   onExpand,
@@ -96,34 +79,20 @@ function SectorCard({
   row: SectorSelectionRow
   entry: SectorChartEntry | undefined
   change: SectorIndexChangeEntry | undefined
-  delta: RankDelta | undefined
-  deltaPeriod: RankDeltaPeriodKey
+  diff: number | undefined
   metricKey: MetricSelection
   chartHeight?: number
   /** 渡すとチャートのクリックで拡大表示を開く（拡大表示の中では渡さない） */
   onExpand?: () => void
 }) {
-  const { bg, text } = compositeColor(row.composite_score)
   const isLow = row.confidence_low === 1
-  const momentum = row.sector_momentum_s33
-  const momentumCfg = momentum ? MOMENTUM_CONFIG[momentum] : null
-
-  // 大きく動いたカードは枠線を色付きにして一覧から拾えるようにする
-  const bigMove = isBigMove(delta)
-  const accent = !bigMove
-    ? null
-    : delta?.isNew
-      ? 'var(--accent)'
-      : (delta?.delta ?? 0) > 0
-        ? 'var(--positive)'
-        : 'var(--negative)'
 
   const metric = useMemo(() => {
     if (metricKey === 'none' || !entry) return null
     const cfg = OVERLAY_METRICS[metricKey]
     const points = entry.metrics[metricKey]
     if (!points || points.length === 0) return null
-    return { points, color: cfg.color }
+    return { points, color: cfg.color, range: METRIC_RANGE }
   }, [entry, metricKey])
 
   // チャートはドラッグでスクロールできるので、押した位置から動いていない
@@ -145,40 +114,32 @@ function SectorCard({
 
   return (
     <div
-      className={`bg-[var(--bg-card)] rounded-xl border shadow-sm p-4 ${
+      className={`bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-4 ${
         isLow ? 'opacity-70' : ''
-      } ${accent ? 'border-l-4' : 'border-[var(--border)]'}`}
-      style={accent ? { borderColor: 'var(--border)', borderLeftColor: accent } : undefined}
+      }`}
     >
-      {/* ヘッダー: ランク / 順位変動 / 業種名 / モメンタム / スコア */}
+      {/* ヘッダー: 業種名 / 注意の印 / self_t63 と 5 日差の矢印 */}
       <div className="flex items-center gap-2 mb-2">
-        <span className="font-mono text-caption text-[var(--text-muted)] tabular-nums shrink-0">
-          #{row.composite_score_rank ?? '—'}
-        </span>
-        <span className="shrink-0">
-          <RankDeltaBadge delta={delta} period={deltaPeriod} size="md" />
-        </span>
         <span
           className="text-small font-medium text-[var(--text-primary)] truncate"
           title={row.sector_name_s33}
         >
           {row.sector_name_s33}
         </span>
-        {isLow && <span title="信頼度低: 銘柄数<10">⚠️</span>}
-        {momentumCfg && (
-          <span
-            className="ml-auto shrink-0 inline-flex items-center gap-1.5 text-caption whitespace-nowrap text-[var(--text-secondary)]"
-          >
-            <Dot tone={momentumCfg.tone} /> {momentumCfg.label}
+        {isLow && (
+          <span className="text-caption text-[var(--text-muted)]" title="信頼度低: 銘柄数が少ないためノイズ大">
+            低
           </span>
         )}
-        <span
-          className={`shrink-0 px-2 py-1 rounded-md font-mono text-small font-medium tabular-nums ${
-            momentumCfg ? '' : 'ml-auto'
-          }`}
-          style={{ backgroundColor: bg, color: text }}
-        >
-          {isNum(row.composite_score) ? row.composite_score.toFixed(1) : '—'}
+        <span className="ml-auto shrink-0 inline-flex items-center gap-1.5 whitespace-nowrap">
+          <CautionMark row={row} />
+          <span className="text-caption text-[var(--text-muted)]">Self t63</span>
+          <span className="text-small">
+            <TValue v={row.self_t63} strong />
+          </span>
+          <span className="w-2.5 inline-block">
+            <DiffArrow diff={diff} />
+          </span>
         </span>
         {onExpand && (
           <button
@@ -223,33 +184,32 @@ function SectorCard({
         </div>
       )}
 
-      {/* チャート下: Score / RS / Acc / Brd / Sht / N */}
+      {/* チャート下: Self t63 / Self t21 / Med/Idx / VA z / VA up / N */}
       <div className="grid grid-cols-6 gap-1.5 mt-3">
-        {METRIC_CELLS.map((m) => {
-          const value = row[m.key]
-          return (
-            <MetricCell
-              key={m.key}
-              label={m.label}
-              tooltip={m.tooltip}
-              value={value}
-              color={
-                m.key === 'composite_score'
-                  ? text
-                  : isNum(value)
-                    ? componentColor(value)
-                    : 'var(--text-muted)'
-              }
-              active={metricKey === m.key}
-            />
-          )
-        })}
+        {METRIC_CELLS.map((m) => (
+          <MetricCell
+            key={m.key}
+            label={m.label}
+            tooltip={m.tooltip}
+            value={row[m.key]}
+            active={metricKey === m.key}
+          />
+        ))}
         <div className="rounded-md border border-[var(--border)] bg-[var(--bg-card)] px-1.5 py-1 text-center">
-          <Tooltip content="セクター内銘柄数">
-            <p className="text-caption text-[var(--text-muted)] uppercase tracking-wide">N</p>
+          <Tooltip content="対象銘柄（売買代金 1,000 位以内）のうち、21 日の平均代金が 63 日平均の 1.2 倍を超える割合。状況の説明用">
+            <p className="text-caption text-[var(--text-muted)] tracking-wide">VA up</p>
+          </Tooltip>
+          <p className="text-small font-mono font-medium tabular-nums text-[var(--text-primary)]">
+            {isNum(row.va21_vs63_up_pct) ? `${row.va21_vs63_up_pct.toFixed(0)}%` : '—'}
+          </p>
+        </div>
+        <div className="rounded-md border border-[var(--border)] bg-[var(--bg-card)] px-1.5 py-1 text-center">
+          <Tooltip content="対象銘柄数（売買代金 1,000 位以内） / 業種の全銘柄数">
+            <p className="text-caption text-[var(--text-muted)] tracking-wide">N</p>
           </Tooltip>
           <p className="text-small font-mono font-medium tabular-nums text-[var(--text-secondary)]">
-            {isNum(row.sector_stock_count_s33) ? row.sector_stock_count_s33.toFixed(0) : '—'}
+            {isNum(row.n_stocks) ? row.n_stocks : '—'}
+            <span className="text-[var(--text-muted)]">/{isNum(row.sector_stock_count_s33) ? row.sector_stock_count_s33 : '—'}</span>
           </p>
         </div>
       </div>
@@ -346,16 +306,14 @@ function useExpandedChartHeight(active: boolean) {
 export default function SectorChartGallery({
   rows,
   changes = {},
-  rankDeltas = {},
-  deltaPeriod,
+  diffs = {},
 }: Props) {
   const [bySector, setBySector] = useState<Record<string, SectorChartEntry>>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [metricKey, setMetricKey] = useState<MetricSelection>('composite_score')
-  // 既定で信頼度低 (銘柄数<10) を除外する
+  const [metricKey, setMetricKey] = useState<MetricSelection>('self_t63')
+  // 既定で信頼度低を除外する
   const [hideLowConf, setHideLowConf] = useState(true)
-  const [moversOnly, setMoversOnly] = useState(false)
   // 拡大表示中の業種（null なら閉じている）
   const [expanded, setExpanded] = useState<string | null>(null)
 
@@ -376,14 +334,11 @@ export default function SectorChartGallery({
     }
   }, [referenceSector])
 
-  // スコア降順に並べる（欠損は末尾）
+  // self_t63 の高い順（欠損は末尾）
   const sorted = useMemo(() => {
-    let arr = hideLowConf ? rows.filter((r) => r.confidence_low !== 1) : [...rows]
-    if (moversOnly) arr = arr.filter((r) => isBigMove(rankDeltas[r.sector_name_s33]))
-    return [...arr].sort(
-      (a, b) => (b.composite_score ?? -Infinity) - (a.composite_score ?? -Infinity),
-    )
-  }, [rows, hideLowConf, moversOnly, rankDeltas])
+    const arr = hideLowConf ? rows.filter((r) => r.confidence_low !== 1) : [...rows]
+    return [...arr].sort(bySelfT63)
+  }, [rows, hideLowConf])
 
   // フィルタで一覧から外れた業種は拡大表示の対象にしない
   const expandedIndex = expanded
@@ -402,10 +357,6 @@ export default function SectorChartGallery({
   )
 
   const lowConfCount = rows.filter((r) => r.confidence_low === 1).length
-  const moverCount = useMemo(
-    () => rows.filter((r) => isBigMove(rankDeltas[r.sector_name_s33])).length,
-    [rows, rankDeltas],
-  )
 
   return (
     <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-5">
@@ -414,7 +365,7 @@ export default function SectorChartGallery({
         <p className="text-small font-medium text-[var(--text-primary)]">
           業種指数チャート
           <span className="ml-2 font-normal text-[var(--text-muted)]">
-            — スコア順・ローソク足 + EMA + 業種出来高
+            — self_t63 の高い順・ローソク足 + EMA + 業種出来高
           </span>
         </p>
 
@@ -427,7 +378,10 @@ export default function SectorChartGallery({
           {(
             [
               { k: 'none' as const, label: 'なし' },
-              ...METRIC_CELLS.map((m) => ({ k: m.key as MetricSelection, label: m.label })),
+              ...(Object.keys(OVERLAY_METRICS) as OverlayMetricKey[]).map((k) => ({
+                k: k as MetricSelection,
+                label: OVERLAY_METRICS[k].label,
+              })),
             ]
           ).map((o) => (
             <button
@@ -451,19 +405,13 @@ export default function SectorChartGallery({
             onChange={(e) => setHideLowConf(e.target.checked)}
             className="accent-[var(--accent)]"
           />
-          信頼度低 (銘柄数&lt;10) を除外
+          信頼度低を除外
           {lowConfCount > 0 && (
             <span className="text-[var(--text-muted)]">
               （<span className="font-mono">{lowConfCount}</span> 件）
             </span>
           )}
         </label>
-
-        <MoversOnlyToggle
-          checked={moversOnly}
-          onChange={setMoversOnly}
-          count={moverCount}
-        />
 
         <span className="ml-auto text-caption text-[var(--text-muted)]">
           <span className="font-mono">{sorted.length}</span> セクター
@@ -489,8 +437,7 @@ export default function SectorChartGallery({
               row={row}
               entry={bySector[row.sector_name_s33]}
               change={changes[row.sector_name_s33]}
-              delta={rankDeltas[row.sector_name_s33]}
-              deltaPeriod={deltaPeriod}
+              diff={diffs[row.sector_name_s33]}
               metricKey={metricKey}
               onExpand={() => setExpanded(row.sector_name_s33)}
             />
@@ -509,8 +456,7 @@ export default function SectorChartGallery({
             row={expandedRow}
             entry={bySector[expandedRow.sector_name_s33]}
             change={changes[expandedRow.sector_name_s33]}
-            delta={rankDeltas[expandedRow.sector_name_s33]}
-            deltaPeriod={deltaPeriod}
+            diff={diffs[expandedRow.sector_name_s33]}
             metricKey={metricKey}
             chartHeight={expandedChartHeight}
           />
@@ -519,9 +465,7 @@ export default function SectorChartGallery({
 
       {!loading && sorted.length === 0 && (
         <div className="py-10 text-center text-[var(--text-muted)] text-small">
-          {moversOnly
-            ? `${deltaPeriod.toUpperCase()} で ±${BIG_MOVE_THRESHOLD}位以上動いたセクターはありません`
-            : 'データがありません'}
+          データがありません
         </div>
       )}
     </div>

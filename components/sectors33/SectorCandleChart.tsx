@@ -99,11 +99,13 @@ export function VolumeLegend({ className = '' }: { className?: string }) {
 export type MetricOverlay = {
   points: SeriesPoint[]
   color: string
+  /** 縦軸の固定範囲。省略時はデータに合わせる */
+  range?: [number, number]
 }
 
 type Props = {
   bars: OhlcvBar[]
-  /** 0-100 のスコア系指標をローソク足の下部に重ねる（任意） */
+  /** 指標 (業種の自力の t 値など) をローソク足の下部に重ねる（任意） */
   metric?: MetricOverlay | null
   /**
    * 出来高バー（株）。渡すとローソク足の下部にヒストグラムを描き、
@@ -246,7 +248,7 @@ export default function SectorCandleChart({
       })
     }
 
-    // 指標オーバーレイ: 0-100 固定の独立スケールで下部 30% に描く
+    // 指標オーバーレイ: 独立スケール (range があれば固定) で下部 30% に描く
     if (metric && metric.points.length > 0) {
       // 現在値はチャート下のセルに出ているので、軸バッジは出さない。
       const metricSeries = chart.addSeries(LineSeries, {
@@ -256,9 +258,13 @@ export default function SectorCandleChart({
         priceLineVisible: false,
         lastValueVisible: false,
         crosshairMarkerVisible: true,
-        autoscaleInfoProvider: () => ({
-          priceRange: { minValue: 0, maxValue: 100 },
-        }),
+        ...(metric.range
+          ? {
+              autoscaleInfoProvider: () => ({
+                priceRange: { minValue: metric.range![0], maxValue: metric.range![1] },
+              }),
+            }
+          : {}),
       })
       metricSeries.setData(metric.points)
       // 出来高バーと重ならないよう、出来高があるときは 1 段上に寄せる

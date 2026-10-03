@@ -8,7 +8,6 @@ import CopyTickerButton from '@/components/shared/CopyTickerButton'
 
 type Props = {
   row: EmaSetupCardRow
-  hot?: boolean
   multiHit?: boolean
   onAddPosition?: (row: EmaSetupCardRow) => void
 }
@@ -92,7 +91,6 @@ function Metric({
 
 export default function EmaSetupCard({
   row,
-  hot = false,
   multiHit = false,
   onAddPosition,
 }: Props) {
@@ -100,8 +98,8 @@ export default function EmaSetupCard({
     <div
       className="bg-[var(--bg-card)] rounded-lg border shadow-sm hover:shadow-md transition-shadow flex flex-col"
       style={{
-        borderColor: multiHit ? 'var(--sem-watch-bd)' : hot ? 'var(--sem-strong-bd)' : 'var(--border)',
-        backgroundColor: multiHit ? 'var(--sem-watch-bg)' : hot ? 'var(--sem-ok-bg)' : 'var(--bg-card)',
+        borderColor: multiHit ? 'var(--sem-watch-bd)' : 'var(--border)',
+        backgroundColor: multiHit ? 'var(--sem-watch-bg)' : 'var(--bg-card)',
       }}
     >
       {/* タッチした EMA（同日に複数 EMA へタッチした銘柄はここに並ぶ） */}
@@ -135,8 +133,7 @@ export default function EmaSetupCard({
             </a>
           </div>
           <div
-            className="mt-0.5 text-caption truncate"
-            style={{ color: hot ? 'var(--positive)' : 'var(--text-secondary)' }}
+            className="mt-0.5 text-caption truncate text-[var(--text-secondary)]"
             title={row.sector_s33 ?? ''}
           >
             {row.sector_s33 ?? '—'}

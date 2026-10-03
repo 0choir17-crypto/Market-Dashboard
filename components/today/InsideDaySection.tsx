@@ -20,7 +20,6 @@ type Props = {
   rows: InsideDaySetupRow[]
   /** このセクションが実際に表示している date（テーブルの最大値、または選択日以前の直近日）。 */
   date: string | null
-  hotSectors: string[]
   /**
    * 本日 Structure Pivot / EMA Setups にも出た銘柄の code。
    * この表の行数は他スキャナーより一桁多い（最多 204 件/日）ので、inside_day 自体は
@@ -75,7 +74,6 @@ const PAGE_SIZE = 100
 export default function InsideDaySection({
   rows,
   date,
-  hotSectors,
   alsoHitCodes,
   title,
   subtitle,
@@ -86,8 +84,6 @@ export default function InsideDaySection({
   const [streakOnly, setStreakOnly] = useState(false)
   const [rangeMax, setRangeMax] = useState(RANGE_MAX)
   const [rsMin, setRsMin] = useState(0)
-
-  const hotSet = useMemo(() => new Set(hotSectors), [hotSectors])
 
   const sectorOptions = useMemo(() => {
     const set = new Set<string>()
@@ -173,21 +169,12 @@ export default function InsideDaySection({
       {
         key: 'sector',
         label: 'Sector',
-        tooltip: '東証33業種。セクター選定（composite_score ≥ 60）に入っている業種は緑',
+        tooltip: '東証33業種',
         align: 'left',
         value: r => r.sector_s33,
         defaultDir: 'asc',
         render: r => (
-          <span
-            className="text-small truncate"
-            style={{
-              color:
-                r.sector_s33 != null && hotSet.has(r.sector_s33)
-                  ? 'var(--positive)'
-                  : 'var(--text-secondary)',
-            }}
-            title={r.sector_s33 ?? ''}
-          >
+          <span className="text-small truncate text-[var(--text-secondary)]" title={r.sector_s33 ?? ''}>
             {r.sector_s33 ?? '—'}
           </span>
         ),
@@ -293,7 +280,7 @@ export default function InsideDaySection({
         ),
       },
     ],
-    [alsoHitCodes, hotSet],
+    [alsoHitCodes],
   )
 
   // 一覧に置かない数値（横断比較ではなく 1 銘柄を決めるための数値）は詳細行へ。

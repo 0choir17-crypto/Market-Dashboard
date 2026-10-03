@@ -1,36 +1,18 @@
 'use client'
 
+// 業種一覧 (最新日)。並びは self_t63 の高い順 (null = 所属 5 社未満の業種は最後)。
+// 列: 業種・Self t63 (5 日差の矢印 + 注意の印)・Self t21・Med vs Idx・VA share z・VA up %・N (対象 / 全銘柄)。
+// 行を開くと期間リターン / TOPIX 超過と空売り内訳。
+
 import { useMemo, useState } from 'react'
-import {
-  SectorSelectionRow,
-  COMPONENT_META,
-  COMPONENT_WEIGHTS,
-  ComponentKey,
-  MOMENTUM_CONFIG,
-  compositeColor,
-  componentColor,
-  SectorMomentum,
-} from '@/types/sectorSelection'
-import Tooltip from '@/components/shared/Tooltip'
+import { SectorSelectionRow, isNum, SELF_T63_CAUTION, SELF_DIFF_STEP } from '@/types/sectorSelection'
 import { SectorChangeInline } from './SectorChangeCells'
 import type { SectorIndexChangeEntry } from '@/lib/sectorIndexChangeFetch'
-import { RankDeltaBadge, MoversOnlyToggle } from './SectorRankDelta'
-import {
-  isBigMove,
-  BIG_MOVE_THRESHOLD,
-  type RankDeltaMap,
-  type RankDeltaPeriodKey,
-} from '@/lib/sectorRankDelta'
-import Dot from '@/components/shared/Dot'
 import DataTable, { type Column } from '@/components/shared/DataTable'
+import { CautionMark, DiffArrow, TValue, CAUTION_NOTE } from './SelfStrength'
 
-
-function isNum(v: number | null | undefined): v is number {
-  return v !== null && v !== undefined && Number.isFinite(v)
-}
-
-function fmt(v: number | null | undefined, decimals = 1): string {
-  return isNum(v) ? v.toFixed(decimals) : '—'
+function fmtPctPlain(v: number | null | undefined): string {
+  return isNum(v) ? `${v.toFixed(0)}%` : '—'
 }
 
 // リターン/超過は DB が倍率−1（0.067 = +6.7%）なので ×100 で%化。
@@ -89,129 +71,17 @@ function ReturnsBlock({ row }: { row: SectorSelectionRow }) {
   )
 }
 
-function MiniBar({ value }: { value: number | null | undefined }) {
-  const safe = isNum(value) ? Math.max(0, Math.min(100, value)) : 0
-  const color = componentColor(value)
-  const label = isNum(value) ? value.toFixed(0) : '—'
-  return (
-    <div className="flex items-center gap-1.5 w-full">
-      <div className="flex-1 h-1.5 bg-[var(--bg-primary)] rounded-full overflow-hidden min-w-[24px]">
-        <div className="h-full rounded-full" style={{ width: `${safe}%`, backgroundColor: color }} />
-      </div>
-      <span
-        className="font-mono text-caption tabular-nums w-6 text-right"
-        style={{ color: isNum(value) ? 'var(--text-primary)' : 'var(--sem-idle-fg)' }}
-      >
-        {label}
-      </span>
-    </div>
-  )
-}
-
-function MomentumBadge({ m }: { m: SectorMomentum | null }) {
-  if (!m || !MOMENTUM_CONFIG[m]) {
-    return <span className="text-caption text-[var(--text-muted)]">—</span>
-  }
-  const cfg = MOMENTUM_CONFIG[m]
-  return (
-    <span
-      className="inline-flex items-center gap-1.5 text-caption whitespace-nowrap text-[var(--text-secondary)]"
-    >
-      <Dot tone={cfg.tone} /> {cfg.label}
-    </span>
-  )
-}
-
-function CompositeCell({ score }: { score: number | null | undefined }) {
-  const { bg, text } = compositeColor(score)
-  const v = isNum(score) ? score.toFixed(1) : '—'
-  return (
-    <span
-      className="inline-block min-w-[52px] text-center px-2 py-1 rounded-md font-mono text-small font-medium tabular-nums"
-      style={{ backgroundColor: bg, color: text }}
-    >
-      {v}
-    </span>
-  )
-}
-
-
-// ── Drilldown: 5 horizontal bars with weight annotation ─────────────────────
-// 行を開いたときの中身。表の骨格（tr / td / colSpan）は DataTable が持つ。
+// ── 行を開いたときの中身。表の骨格（tr / td / colSpan）は DataTable が持つ。
 function DrilldownBody({ row }: { row: SectorSelectionRow }) {
-  const total = isNum(row.composite_score) ? row.composite_score.toFixed(2) : '—'
   return (
     <>
-        <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-6">
-          {/* Left: 5 component bars */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-caption font-medium text-[var(--text-secondary)]">
-                スコア内訳 — {row.sector_name_s33}
-                {row.sector_code_s33 && (
-                  <span className="ml-2 text-[var(--text-muted)] font-mono">[{row.sector_code_s33}]</span>
-                )}
-              </p>
-              <p className="text-caption text-[var(--text-secondary)]">
-                合計 <span className="font-mono font-medium text-[var(--text-primary)]">{total}</span>
-              </p>
-            </div>
-            <div className="space-y-2">
-              {COMPONENT_META.map(meta => {
-                const value = row[meta.key]
-                const weight = COMPONENT_WEIGHTS[meta.key]
-                const safe = isNum(value) ? Math.max(0, Math.min(100, value)) : 0
-                const color = componentColor(value)
-                return (
-                  <div key={meta.key} className="flex items-center gap-3 text-caption">
-                    <div className="w-32 flex items-center gap-1 shrink-0">
-                      <Tooltip content={meta.tooltip}>
-                        <span className="font-medium text-[var(--text-primary)]">{meta.label}</span>
-                      </Tooltip>
-                      <span className="text-[var(--text-muted)] font-mono">(×{weight.toFixed(2)})</span>
-                    </div>
-                    <div className="flex-1 h-3 bg-[var(--bg-primary)] rounded overflow-hidden">
-                      <div
-                        className="h-full rounded"
-                        style={{ width: `${safe}%`, backgroundColor: color }}
-                      />
-                    </div>
-                    <span
-                      className="font-mono tabular-nums w-10 text-right text-[var(--text-primary)]"
-                      style={{ color: isNum(value) ? 'var(--text-primary)' : 'var(--sem-idle-fg)' }}
-                    >
-                      {isNum(value) ? value.toFixed(0) : '—'}
-                    </span>
-                    <span className="font-mono tabular-nums w-14 text-right text-[var(--text-secondary)]">
-                      {isNum(value) ? `→ ${(value * weight).toFixed(2)}` : ''}
-                    </span>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-
-          {/* Right: contextual stats */}
-          <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-caption">
-            <Stat label="RS 21d" value={fmt(row.sector_rs_21d_s33, 1)} />
-            <Stat label="RS 63d" value={fmt(row.sector_rs_63d_s33, 1)} />
-            <Stat label="RS加速" value={fmt(row.sector_rs_acc_s33, 2)} />
-            <Stat label="ER 21d" value={fmt(row.sector_er_21d_s33, 4)} />
-            <Stat label=">50MA %" value={fmt(row.sector_pct_above_50ma_s33, 1)} />
-            <Stat label=">200MA %" value={fmt(row.sector_pct_above_200ma_s33, 1)} />
-            <Stat label="52w高値圏 %" value={fmt(row.sector_pct_near_52w_high_s33, 1)} />
-            <Stat label="MAスタック %" value={fmt(row.sector_pct_ma_stack_s33, 1)} />
-            <Stat label="VCS≥80 %" value={fmt(row.sector_pct_vcs80_s33, 1)} />
-            <Stat label="VCS中央" value={fmt(row.sector_vcs_median_s33, 1)} />
-            <Stat label="空売り比率 5d" value={fmt(row.sector_short_va_ratio_5d_s33, 3)} />
-            <Stat label="銘柄数" value={fmt(row.sector_stock_count_s33, 0)} />
-          </div>
-        </div>
-
         {/* 期間リターン / TOPIX超過 */}
-        <div className="mt-5">
+        <div>
           <p className="text-caption font-medium text-[var(--text-secondary)] mb-2">
-            期間リターン / TOPIX超過
+            期間リターン / TOPIX超過 — {row.sector_name_s33}
+            {row.sector_code_s33 && (
+              <span className="ml-2 text-[var(--text-muted)] font-mono">[{row.sector_code_s33}]</span>
+            )}
           </p>
           <ReturnsBlock row={row} />
         </div>
@@ -224,9 +94,6 @@ function DrilldownBody({ row }: { row: SectorSelectionRow }) {
               比率{' '}
               <span className="font-mono font-medium text-[var(--text-primary)]">
                 {fmtRatioPct(row.sector_short_va_ratio_s33)}
-              </span>
-              <span className="ml-2 text-[var(--text-muted)]">
-                （5日平均 {fmtRatioPct(row.sector_short_va_ratio_5d_s33)}）
               </span>
             </p>
           </div>
@@ -253,53 +120,29 @@ function Stat({ label, value }: { label: string; value: string }) {
 export default function SectorSelectionTable({
   rows,
   changes = {},
-  rankDeltas = {},
-  deltaPeriod,
+  diffs = {},
 }: {
   rows: SectorSelectionRow[]
   /** sector_name_s33 → 1D / 1W / 1M / 6M / 1Y の騰落率（後着でもよい） */
   changes?: Record<string, SectorIndexChangeEntry>
-  /** sector_name_s33 → 順位変動（履歴が後着でもよい） */
-  rankDeltas?: RankDeltaMap
-  deltaPeriod: RankDeltaPeriodKey
+  /** sector_name_s33 → self_t63 の 5 営業日前との差（履歴が後着でもよい） */
+  diffs?: Record<string, number>
 }) {
-  // 既定で信頼度低 (銘柄数<10) を除外する
+  // 既定で信頼度低を除外する
   const [hideLowConf, setHideLowConf] = useState(true)
-  const [moversOnly, setMoversOnly] = useState(false)
 
-  const filtered = useMemo(() => {
-    let arr = hideLowConf ? rows.filter(r => r.confidence_low !== 1) : rows
-    if (moversOnly) arr = arr.filter(r => isBigMove(rankDeltas[r.sector_name_s33]))
-    return arr
-  }, [rows, hideLowConf, moversOnly, rankDeltas])
+  const filtered = useMemo(
+    () => (hideLowConf ? rows.filter(r => r.confidence_low !== 1) : rows),
+    [rows, hideLowConf],
+  )
 
   const lowConfCount = rows.filter(r => r.confidence_low === 1).length
-  const moverCount = useMemo(
-    () => rows.filter(r => isBigMove(rankDeltas[r.sector_name_s33])).length,
-    [rows, rankDeltas],
-  )
-  // 列定義。5 つの内訳バーはスコアの構成要素で横断比較に使うので一覧に残す。
   const columns: Column<SectorSelectionRow>[] = useMemo(
     () => [
       {
-        key: 'rank',
-        label: '#',
-        tooltip: `composite_score_rank — 当日ランク (1=トップ)。右の ▲▼ は ${deltaPeriod.toUpperCase()} 前からの順位変動`,
-        align: 'center' as const,
-        value: (r: SectorSelectionRow) => r.composite_score_rank,
-        defaultDir: 'asc' as const,
-        className: 'w-24',
-        render: (r: SectorSelectionRow) => (
-          <span className="inline-flex items-center gap-1.5 num text-[var(--text-secondary)]">
-            <span>{r.composite_score_rank ?? '—'}</span>
-            <RankDeltaBadge delta={rankDeltas[r.sector_name_s33]} period={deltaPeriod} />
-          </span>
-        ),
-      },
-      {
         key: 'sector_name_s33',
         label: 'Sector',
-        tooltip: 'TOPIX-33 業種名。行をクリックすると内訳が開く',
+        tooltip: 'TOPIX-33 業種名。行をクリックすると期間リターンと空売り内訳が開く',
         align: 'left' as const,
         value: (r: SectorSelectionRow) => r.sector_name_s33,
         defaultDir: 'asc' as const,
@@ -309,7 +152,7 @@ export default function SectorSelectionTable({
               {r.sector_name_s33}
               {r.confidence_low === 1 && (
                 <span
-                  className="ml-1.5 text-caption text-[var(--sem-watch-fg)]"
+                  className="ml-1.5 text-caption text-[var(--text-muted)]"
                   title="信頼度低: 銘柄数が少ないためノイズ大"
                 >
                   低
@@ -323,61 +166,124 @@ export default function SectorSelectionTable({
         ),
       },
       {
-        key: 'composite_score',
-        label: 'Score',
-        tooltip: 'composite_score 0-100',
-        align: 'center' as const,
-        value: (r: SectorSelectionRow) => r.composite_score,
-        render: (r: SectorSelectionRow) => <CompositeCell score={r.composite_score} />,
+        key: 'self_t63',
+        label: (
+          <span className="inline-block leading-tight">
+            Self t63
+            <br />
+            <span className="font-normal">(5d)</span>
+          </span>
+        ),
+        tooltip: `業種の自力（TOPIX につられた分を除いた強さ・配当込み）の直近 63 営業日の t 値。主の列。${CAUTION_NOTE}。矢印は 5 営業日前との差（±${SELF_DIFF_STEP} 以上）。所属が 5 社未満の業種は —`,
+        value: (r: SectorSelectionRow) => (isNum(r.self_t63) ? r.self_t63 : null),
+        className: 'w-28',
+        render: (r: SectorSelectionRow) => (
+          <span className="inline-flex items-center justify-end gap-1.5 whitespace-nowrap">
+            <CautionMark row={r} />
+            <TValue v={r.self_t63} strong />
+            <span className="w-2.5 inline-block text-left">
+              <DiffArrow diff={diffs[r.sector_name_s33]} />
+            </span>
+          </span>
+        ),
       },
       {
-        key: 'sector_momentum_s33',
-        label: 'Trend',
-        align: 'left' as const,
-        render: (r: SectorSelectionRow) => <MomentumBadge m={r.sector_momentum_s33} />,
+        key: 'self_t21',
+        label: 'Self t21',
+        tooltip: '同じく直近 21 営業日の t 値。直近 1 か月。回復・失速の確認用',
+        value: (r: SectorSelectionRow) => (isNum(r.self_t21) ? r.self_t21 : null),
+        render: (r: SectorSelectionRow) => <TValue v={r.self_t21} />,
       },
-      ...COMPONENT_META.map(m => ({
-        key: m.key,
-        label: m.label,
-        tooltip: `${m.tooltip} — 重み ×${COMPONENT_WEIGHTS[m.key].toFixed(2)}`,
-        value: (r: SectorSelectionRow) => r[m.key],
-        className: 'w-[110px]',
-        render: (r: SectorSelectionRow) => <MiniBar value={r[m.key]} />,
-      })),
+      {
+        key: 'med_vs_idx_t21',
+        label: (
+          <span className="inline-block leading-tight">
+            Med vs Idx
+            <br />
+            <span className="font-normal">t21</span>
+          </span>
+        ),
+        tooltip: '業種内の中央値の銘柄が業種指数より強いかの t 値（21 日）。+ = 中小型が強い / − = 大型主導。状況の説明用（成績の予測には効かない）',
+        value: (r: SectorSelectionRow) => (isNum(r.med_vs_idx_t21) ? r.med_vs_idx_t21 : null),
+        render: (r: SectorSelectionRow) => <TValue v={r.med_vs_idx_t21} />,
+      },
+      {
+        key: 'va_share21_z250',
+        label: (
+          <span className="inline-block leading-tight">
+            VA share
+            <br />
+            <span className="font-normal">z250</span>
+          </span>
+        ),
+        tooltip: '業種の代金シェア（21 日）が、その業種の普段（直近 250 営業日）より多いか（z 値）。+1 以上 = 普段より資金が集まっている。状況の説明用',
+        value: (r: SectorSelectionRow) => (isNum(r.va_share21_z250) ? r.va_share21_z250 : null),
+        render: (r: SectorSelectionRow) => <TValue v={r.va_share21_z250} />,
+      },
+      {
+        key: 'va21_vs63_up_pct',
+        label: (
+          <span className="inline-block leading-tight">
+            VA up
+            <br />
+            <span className="font-normal">21/63</span>
+          </span>
+        ),
+        tooltip: '対象銘柄のうち、直近 21 営業日の平均代金が 63 営業日の平均代金の 1.2 倍を超える銘柄の割合。代金の増加が業種全体に広がっているか。状況の説明用',
+        value: (r: SectorSelectionRow) => (isNum(r.va21_vs63_up_pct) ? r.va21_vs63_up_pct : null),
+        render: (r: SectorSelectionRow) => (
+          <span className="num text-[var(--text-secondary)]">{fmtPctPlain(r.va21_vs63_up_pct)}</span>
+        ),
+      },
+      {
+        key: 'n_stocks',
+        label: (
+          <span className="inline-block leading-tight">
+            N
+            <br />
+            <span className="font-normal">対象</span>
+          </span>
+        ),
+        tooltip: 'その日の業種の対象銘柄数（60 日売買代金の中央値で 1,000 位以内）。自力の値はこの銘柄で計算。少ない業種は値がぶれやすい',
+        value: (r: SectorSelectionRow) => (isNum(r.n_stocks) ? r.n_stocks : null),
+        className: 'w-14',
+        render: (r: SectorSelectionRow) => (
+          <span className="num text-[var(--text-secondary)]">{isNum(r.n_stocks) ? r.n_stocks : '—'}</span>
+        ),
+      },
       {
         key: 'sector_stock_count_s33',
-        label: 'N',
-        tooltip: 'セクター内銘柄数',
+        label: (
+          <span className="inline-block leading-tight">
+            N
+            <br />
+            <span className="font-normal">全銘柄</span>
+          </span>
+        ),
+        tooltip: '業種に属する全銘柄数（売買代金の順位で絞る前）',
         value: (r: SectorSelectionRow) => r.sector_stock_count_s33,
         className: 'w-14',
         render: (r: SectorSelectionRow) => (
-          <span className="num text-[var(--text-secondary)]">{r.sector_stock_count_s33 ?? '—'}</span>
+          <span className="num text-[var(--text-muted)]">{r.sector_stock_count_s33 ?? '—'}</span>
         ),
       },
     ],
-    [changes, rankDeltas, deltaPeriod],
+    [changes, diffs],
   )
 
   return (
     <div>
       {/* Toolbar */}
       <div className="flex items-center gap-3 px-4 pt-4 pb-3 flex-wrap">
-        <p className="text-small font-medium text-[var(--text-primary)]">セクター選別ランキング</p>
-        <span className="ml-auto">
-          <MoversOnlyToggle
-            checked={moversOnly}
-            onChange={setMoversOnly}
-            count={moverCount}
-          />
-        </span>
-        <label className="flex items-center gap-2 text-caption text-[var(--text-secondary)] cursor-pointer select-none">
+        <p className="text-small font-medium text-[var(--text-primary)]">業種の自力（self_t63 の高い順）</p>
+        <label className="ml-auto flex items-center gap-2 text-caption text-[var(--text-secondary)] cursor-pointer select-none">
           <input
             type="checkbox"
             checked={hideLowConf}
             onChange={e => setHideLowConf(e.target.checked)}
             className="accent-[var(--accent)]"
           />
-          信頼度低 (銘柄数&lt;10) を除外
+          信頼度低を除外
           {lowConfCount > 0 && (
             <span className="text-[var(--text-muted)]">（<span className="font-mono">{lowConfCount}</span> 件）</span>
           )}
@@ -389,26 +295,17 @@ export default function SectorSelectionTable({
 
       {filtered.length === 0 ? (
         <div className="bg-[var(--bg-card)] rounded-xl border-[0.5px] border-[var(--border)] py-10 text-center text-[var(--text-muted)] text-small">
-          {moversOnly
-            ? `${deltaPeriod.toUpperCase()} で ±${BIG_MOVE_THRESHOLD}位以上動いたセクターはありません`
-            : 'データがありません'}
+          データがありません
         </div>
       ) : (
         <DataTable
           rows={filtered}
           columns={columns}
           rowKey={r => r.sector_name_s33}
-          defaultSort={{ key: 'rank', dir: 'asc' }}
+          defaultSort={{ key: 'self_t63', dir: 'desc' }}
           // 行のどこを押しても内訳が開く（専用ボタンは置かない）
           expandOnRowClick
           renderDetail={row => <DrilldownBody row={row} />}
-          // 大きく動いた行は左端に色帯を立てる（上昇=緑 / 下落=赤 / 新規=注目色）
-          rail={row => {
-            const d = rankDeltas[row.sector_name_s33]
-            if (!isBigMove(d)) return null
-            if (d?.isNew) return 'var(--sem-focus-fg)'
-            return (d?.delta ?? 0) > 0 ? 'var(--positive)' : 'var(--negative)'
-          }}
           // 信頼度低（銘柄数が少なくノイズが大きい）は減光して沈める
           rowClassName={row => (row.confidence_low === 1 ? 'opacity-60' : '')}
           summaryToggle={false}
@@ -416,28 +313,20 @@ export default function SectorSelectionTable({
       )}
 
       {/* Legend */}
-      <div className="flex items-center justify-center gap-5 py-3 text-caption border-t border-[var(--border-subtle)] flex-wrap">
-        <span className="text-[var(--text-secondary)]">Score:</span>
-        <span className="flex items-center gap-1">
-          <span className="inline-block w-2.5 h-2.5 rounded" style={{ backgroundColor: 'var(--sem-strong-bg)' }} />
-          <span style={{ color: 'var(--text-secondary)' }}>強 ≥60</span>
-        </span>
-        <span className="flex items-center gap-1">
-          <span className="inline-block w-2.5 h-2.5 rounded" style={{ backgroundColor: 'var(--sem-ok-bg)' }} />
-          <span style={{ color: 'var(--text-secondary)' }}>中 30-60</span>
-        </span>
-        <span className="flex items-center gap-1">
-          <span className="inline-block w-2.5 h-2.5 rounded" style={{ backgroundColor: 'var(--sem-weak-bg)' }} />
-          <span style={{ color: 'var(--text-secondary)' }}>弱 &lt;30</span>
+      <div className="flex items-center justify-center gap-5 py-3 text-caption border-t border-[var(--border-subtle)] flex-wrap text-[var(--text-secondary)]">
+        <span>
+          <span className="font-medium text-[var(--sem-watch-fg)]">注意</span> = self_t63 ≤ {SELF_T63_CAUTION}（入る時期を遅らせる目安）
         </span>
         <span className="text-[var(--text-muted)]">|</span>
-        <span className="text-[var(--text-secondary)]">
-          <span className="font-mono" style={{ color: 'var(--positive)' }}>▲</span>
-          <span className="font-mono" style={{ color: 'var(--negative)' }}>▼</span>
-          {` ${deltaPeriod.toUpperCase()} 前からの順位変動（±${BIG_MOVE_THRESHOLD}以上は色付き＋左端の帯）`}
+        <span>
+          <span className="font-mono" style={{ color: 'var(--positive)' }}>↑</span>
+          <span className="font-mono" style={{ color: 'var(--negative)' }}>↓</span>
+          {` self_t63 の 5 営業日前との差（±${SELF_DIFF_STEP} 以上）`}
         </span>
         <span className="text-[var(--text-muted)]">|</span>
-        <span className="text-[var(--text-secondary)]">⚠️ confidence_low = 銘柄数&lt;10</span>
+        <span>Med vs Idx / VA share / VA up は状況の説明用（成績の予測には効かない）</span>
+        <span className="text-[var(--text-muted)]">|</span>
+        <span>所属 5 社未満の業種は —（並びの最後）</span>
       </div>
     </div>
   )

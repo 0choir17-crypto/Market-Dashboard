@@ -39,49 +39,8 @@ export type TodayResponse = {
   inside: InsideDaySetupRow[]
   // inside_day_setups の DDL が未実行（テーブル未配備）なら true。ema と同じ扱い。
   insideTableMissing: boolean
-  hotSectors: string[]
   // 取得失敗の詳細（null なら全クエリ成功）。「0 件」と「取得失敗」を UI で区別するため。
   error: string | null
-}
-
-// "Hot" sectors = sector_selection_s33.composite_score >= 60 の業種。
-// Sectors-33 ページと同じ閾値を使い、該当業種に属する候補カードを緑ハイライト。
-const HOT_SECTOR_MIN_SCORE = 60
-
-// date 指定時はその日以前の直近セクター日を使う（過去スナップショット閲覧時に
-// 「最新」の hot セクターでハイライトしてしまう時代錯誤を防ぐ）。省略時は最新日。
-async function fetchHotSectors(
-  date: string | null,
-): Promise<{ sectors: string[]; error: string | null }> {
-  let latestQuery = supabase.from('sector_selection_s33').select('date')
-  if (date) latestQuery = latestQuery.lte('date', date)
-  const { data: latest, error: latestErr } = await latestQuery
-    .order('date', { ascending: false })
-    .limit(1)
-    .maybeSingle()
-  if (latestErr) {
-    console.error('[sector_selection_s33] hot sectors latest date error', latestErr)
-    return { sectors: [], error: `sector_selection_s33: ${latestErr.message}` }
-  }
-  if (!latest?.date) return { sectors: [], error: null }
-
-  const { data, error } = await supabase
-    .from('sector_selection_s33')
-    .select('sector_name_s33, composite_score')
-    .eq('date', latest.date as string)
-    .gte('composite_score', HOT_SECTOR_MIN_SCORE)
-
-  if (error || !data) {
-    if (error) console.error('[sector_selection_s33] hot sectors error', error)
-    return { sectors: [], error: error ? `sector_selection_s33: ${error.message}` : null }
-  }
-
-  return {
-    sectors: data
-      .map(r => r.sector_name_s33 as string | null)
-      .filter((s): s is string => !!s),
-    error: null,
-  }
 }
 
 // テーブル未存在（PostgREST の schema cache に無い）エラーか判定する。ema_setups /
@@ -309,14 +268,13 @@ async function fetchInsideDay(date: string | null): Promise<{
 export async function fetchToday(opts: { date?: string }): Promise<TodayResponse> {
   const requested = opts.date ?? null
 
-  const [emaRes, structRes, insideRes, hotRes] = await Promise.all([
+  const [emaRes, structRes, insideRes] = await Promise.all([
     fetchEmaSetups(requested),
     fetchStructurePivotEvents(requested),
     fetchInsideDay(requested),
-    fetchHotSectors(requested),
   ])
 
-  const errors = [emaRes.error, structRes.error, insideRes.error, hotRes.error].filter(
+  const errors = [emaRes.error, structRes.error, insideRes.error].filter(
     (e): e is string => !!e,
   )
 
@@ -329,7 +287,6 @@ export async function fetchToday(opts: { date?: string }): Promise<TodayResponse
     insideDate: insideRes.date,
     inside: insideRes.rows,
     insideTableMissing: insideRes.tableMissing,
-    hotSectors: hotRes.sectors,
     error: errors.length > 0 ? errors.join(' / ') : null,
   }
 }

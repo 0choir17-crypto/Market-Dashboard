@@ -1,16 +1,13 @@
 import { supabase } from '@/lib/supabase'
 import { fetchAllPaged } from '@/lib/pagedFetch'
+import { bySelfT63 } from '@/types/sectorSelection'
 
 export type SectorHistoryRow = {
   date: string
   sector_name_s33: string
-  composite_score: number | null
-  composite_score_rank: number | null
-  // RRG 軸: component_rs = RS ランク (0-100), component_acc = RS加速度ランク (50=中立)。
-  // sector_rs_acc_s33 は 0.xx 単位の生の加速度 (0-100 でも 50 中立でもない) なので RRG には使わない。
-  component_rs: number | null
-  component_acc: number | null
-  sector_rs_acc_s33: number | null
+  // 業種の自力の t 値。RRG の軸 (横 self_t63 / 縦 self_t21) と 5 営業日前との差に使う
+  self_t21: number | null
+  self_t63: number | null
 }
 
 export type SectorHistoryResponse = {
@@ -18,7 +15,7 @@ export type SectorHistoryResponse = {
   dates: string[]
   // sector_name → date → row (sparse: missing days are omitted)
   bySector: Record<string, Record<string, SectorHistoryRow>>
-  // Convenience: list of unique sector names (sorted by composite_score on the latest date, desc)
+  // Convenience: list of unique sector names (sorted by self_t63 on the latest date, desc / null last)
   sectorsRanked: string[]
   // Fetch failure message (null on success). Optional so existing callers'
   // initial-state literals keep compiling; the fetcher always sets it.
@@ -63,12 +60,12 @@ export async function fetchSectorSelectionHistory(
 
   // Phase 2: pull all rows in that date range. 63 days × 33 sectors ≈ 2079 行
   // なので、こちらも安定順序 (date asc, sector asc) で全件ページングする。
-  // select('*') で退役/改名された列があっても落ちないようにする (sector_rs_acc_s33 等)。
+  // 使う列だけを読む (旧スコアの列は後日 DROP されるので名指ししない)。
   const { rows: dataRows, error } = await fetchAllPaged<Record<string, unknown>>(
     (from, to) =>
       supabase
         .from(TABLE)
-        .select('*')
+        .select('date, sector_name_s33, self_t21, self_t63')
         .gte('date', minDate)
         .order('date', { ascending: true })
         .order('sector_name_s33', { ascending: true })
@@ -88,13 +85,14 @@ export async function fetchSectorSelectionHistory(
     bySector[r.sector_name_s33][r.date] = r
   }
 
-  // Rank sectors by latest composite_score (desc) for stable display order.
+  // 最新日の self_t63 の高い順 (null は最後)
   const latestDate = targetDates[0]
-  const sectorsRanked = Object.keys(bySector).sort((a, b) => {
-    const av = bySector[a][latestDate]?.composite_score ?? -Infinity
-    const bv = bySector[b][latestDate]?.composite_score ?? -Infinity
-    return bv - av
-  })
+  const sectorsRanked = Object.keys(bySector).sort((a, b) =>
+    bySelfT63(
+      { self_t63: bySector[a][latestDate]?.self_t63 ?? null },
+      { self_t63: bySector[b][latestDate]?.self_t63 ?? null },
+    ),
+  )
 
   return {
     dates: [...targetDates].reverse(), // ascending
@@ -102,4 +100,27 @@ export async function fetchSectorSelectionHistory(
     sectorsRanked,
     error: null,
   }
+}
+
+/**
+ * 最新日の self_t63 − N 営業日前の self_t63 (sector_name → 差)。
+ * どちらかが null の業種は入れない。日付は履歴にある営業日で数える。
+ */
+export function selfT63Diffs(
+  history: SectorHistoryResponse,
+  days = 5,
+): Record<string, number> {
+  const { dates, bySector } = history
+  const out: Record<string, number> = {}
+  if (dates.length <= days) return out
+  const now = dates[dates.length - 1]
+  const then = dates[dates.length - 1 - days]
+  for (const [sector, byDate] of Object.entries(bySector)) {
+    const a = byDate[now]?.self_t63
+    const b = byDate[then]?.self_t63
+    if (a !== null && a !== undefined && b !== null && b !== undefined && Number.isFinite(a) && Number.isFinite(b)) {
+      out[sector] = a - b
+    }
+  }
+  return out
 }

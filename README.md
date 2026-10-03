@@ -75,7 +75,7 @@ app/                  # App Router ページ (/, /leaders, /earnings, /today, /w
                       #   /journal, /notes, /guide, /sectors33, /portfolio→redirect, /debug)
 components/           # 画面別 UI コンポーネント
   market/             # TOPIX チャート / Market Breadth
-  sectors33/          # TOPIX-33 Sector Selection (チャート / テーブル / RRG / 棒グラフ)
+  sectors33/          # TOPIX-33 業種の自力 (チャート / テーブル / RRG)
   leaders/            # Liquid Leaders（段別一覧 / 業種 × 週ヒートマップ）
   earnings/           # Earnings Quality
   today/              # Daily Watch (Structure Pivot / EMA Setups / Inside Day)

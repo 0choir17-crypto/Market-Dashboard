@@ -95,14 +95,11 @@ export function emaLineColor(length: keyof typeof EMA_COLORS): string {
 }
 
 /**
- * チャートに重ねる 5 指標の色。系列を見分けるためだけの分類スケールで、
+ * チャートに重ねる 2 指標 (業種の自力 self_t63 / self_t21) の色。系列を見分けるためだけの分類スケールで、
  * 意味は持たない（意味を持つ色は CHART から取る）。意味語彙の 7 語は
  * それぞれ意味に結び付いているので、分類のために流用しない。
  */
 export const OVERLAY_SERIES = {
-  composite: '#0ea5e9',
-  rs: '#6366f1',
-  acc: '#ec4899',
-  breadth: '#14b8a6',
-  short: '#f97316',
+  selfT63: '#6366f1',
+  selfT21: '#ec4899',
 } as const

@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase'
-import { SectorSelectionRow } from '@/types/sectorSelection'
+import { SectorSelectionRow, bySelfT63 } from '@/types/sectorSelection'
 
 export type LatestSelection = {
   latestDate: string | null
@@ -12,15 +12,16 @@ export type LatestSelection = {
 // (Avoids a second roundtrip for MAX(date).)
 //
 // We use `select('*')` rather than an explicit column list so the query is
-// resilient to供給側 (jquants-scanner) のスキーマ増減: 退役した列 (component_flow /
-// sector_inst_net_flow_*) が DROP されても select 全体が落ちない。欠損列は
-// undefined となり、表示側の null ガードで `--` になる。
+// resilient to供給側 (jquants-scanner) のスキーマ増減: 退役した列 (旧セクタースコア
+// composite_score など) が DROP されても select 全体が落ちない。欠損列は
+// undefined となり、表示側の null ガードで `—` になる。
+// 並びは self_t63 の高い順 (null は最後)。DB 側では並べず、取得後に並べる。
 export async function fetchLatestSectorSelection(): Promise<LatestSelection> {
   const { data, error } = await supabase
     .from('sector_selection_s33')
     .select('*')
     .order('date', { ascending: false })
-    .order('composite_score', { ascending: false, nullsFirst: false })
+    .order('sector_name_s33', { ascending: true })
     .limit(50)
 
   if (error || !data || data.length === 0) {
@@ -33,7 +34,7 @@ export async function fetchLatestSectorSelection(): Promise<LatestSelection> {
   const latestDate = rows[0].date
   return {
     latestDate,
-    rows: rows.filter(r => r.date === latestDate),
+    rows: rows.filter(r => r.date === latestDate).sort(bySelfT63),
     error: null,
   }
 }
