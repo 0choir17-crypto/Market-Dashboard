@@ -1,14 +1,16 @@
 'use client'
 
 // t63 × t21 の散布図 (段ごとに 1 枚)。
-// 点 = 今日の位置 / 細い線 = 5 営業日前の位置からの動き / 点の大きさ = Turnover (va_trend)。
-// Turnover は「大きい = 良い」ではない (高いほどその後 3 か月の伸びが小さい傾向) ので色は変えず、
-// 面積だけで示す。大きい点を先に描き、小さい点が隠れないようにする。
+// 点 = 今日の位置 / 細い線 = 5 営業日前の位置からの動き / 点の色 = Turnover (va_trend)。
+// Turnover は「高い = 良い」ではない (高いほどその後 3 か月の伸びが小さい傾向) ので、
+// 良し悪しの緑・赤は使わず、青 1 色相の濃淡 4 段で示す (濃い = 商いが膨らんでいる)。
+// 点をクリック (最寄りの点、半径 18px 以内) で TradingView のチャートを新しいタブで開く。
 // 斜線 t21 = t63 より上 = 直近 1 か月が 3 か月より強い、下 = 3 か月の先導に比べて直近が弱い。
 // 塗りの点 = t63 の一覧にいる / 白抜き = t21 の一覧だけ。
 
 import { useMemo, useState } from 'react'
 import { TIERS, type LiquidLeader } from '@/types/liquidLeaders'
+import { tradingViewUrl } from '@/lib/tickerLinks'
 import { HoverReadout } from './heatmapUi'
 
 const W = 520
@@ -23,11 +25,24 @@ type Pt = {
   py: number | null
 }
 
-// 面積 ∝ Turnover。1.0× (いつもどおり) で r 4.5、0.5×〜4× の外は端に寄せる。
-const R1 = 4.5
-function radius(va: number | null | undefined): number {
-  const v = va !== null && va !== undefined && Number.isFinite(va) ? Math.min(4, Math.max(0.5, va)) : 1
-  return R1 * Math.sqrt(v)
+const R = 4.5
+
+// Turnover の 4 段 (青の順序ランプ。最も薄い段も白地で 2:1 以上)。値が無い点は灰。
+const VA_BINS: { min: number; label: string; color: string }[] = [
+  { min: -Infinity, label: '1.0× 未満', color: '#86b6ef' },
+  { min: 1.0, label: '1.0〜1.5×', color: '#3987e5' },
+  { min: 1.5, label: '1.5〜2.0×', color: '#1c5cab' },
+  { min: 2.0, label: '2.0× 以上', color: '#0d366b' },
+]
+function vaBin(va: number | null | undefined): number {
+  if (va === null || va === undefined || !Number.isFinite(va)) return -1
+  let i = 0
+  for (let k = 0; k < VA_BINS.length; k++) if (va >= VA_BINS[k].min) i = k
+  return i
+}
+function vaColor(va: number | null | undefined): string {
+  const i = vaBin(va)
+  return i < 0 ? 'var(--text-muted)' : VA_BINS[i].color
 }
 
 function fin(v: number | null | undefined): v is number {
@@ -90,9 +105,9 @@ function Panel({
     return new Set(out.map(p => p.r.code))
   }, [pts])
 
-  function onMove(e: React.PointerEvent<SVGSVGElement>) {
-    const svg = e.currentTarget
-    const box = svg.getBoundingClientRect()
+  // ポインタに最も近い点 (半径 18px 以内)。クリックはタッチでも効くよう、その場で探す。
+  function nearest(e: React.PointerEvent<SVGSVGElement> | React.MouseEvent<SVGSVGElement>): Pt | null {
+    const box = e.currentTarget.getBoundingClientRect()
     const mx = ((e.clientX - box.left) / box.width) * W
     const my = ((e.clientY - box.top) / box.height) * H
     let best: Pt | null = null
@@ -104,7 +119,12 @@ function Panel({
         best = p
       }
     }
-    setHover(best)
+    return best
+  }
+
+  function onClick(e: React.MouseEvent<SVGSVGElement>) {
+    const p = nearest(e)
+    if (p) window.open(tradingViewUrl(p.r.code), '_blank', 'noopener,noreferrer')
   }
 
   return (
@@ -115,7 +135,7 @@ function Panel({
           <span className="num">{pts.length}</span> 銘柄 · 入る線 {enter.toFixed(1)}
         </span>
       </div>
-      <HoverReadout placeholder="点にマウスを乗せると、銘柄・t21・t63・5 日の動き・Turnover を表示">
+      <HoverReadout placeholder="点にマウスを乗せると、銘柄・t21・t63・5 日の動き・Turnover を表示。クリックで TradingView">
         {hover && (
           <>
             <span className="font-mono">{hover.r.code}</span> {hover.r.co_name}
@@ -131,7 +151,9 @@ function Panel({
       <svg
         viewBox={`0 0 ${W} ${H}`}
         className="w-full h-auto select-none"
-        onPointerMove={onMove}
+        onPointerMove={e => setHover(nearest(e))}
+        onClick={onClick}
+        style={{ cursor: hover ? 'pointer' : 'default' }}
         onPointerLeave={() => setHover(null)}
         role="img"
         aria-label={`${label}: t63 と t21 の散布図`}
@@ -168,17 +190,19 @@ function Panel({
         )}
 
         {/* 今日の位置 */}
-        {[...pts].sort((a, b) => radius(b.r.va_trend) - radius(a.r.va_trend)).map(p => {
+        {/* 濃い (Turnover の高い) 点を後から描いて上に出す */}
+        {[...pts].sort((a, b) => vaBin(a.r.va_trend) - vaBin(b.r.va_trend)).map(p => {
           const on = p.r.in_t63 === true
           const dim = hover && hover.r.code !== p.r.code
+          const c = vaColor(p.r.va_trend)
           return (
             <circle
               key={p.r.code}
               cx={sx(p.x)}
               cy={sy(p.y)}
-              r={radius(p.r.va_trend) + (hover?.r.code === p.r.code ? 1.5 : 0)}
-              fill={on ? 'var(--sem-focus-fg)' : 'var(--bg-card)'}
-              stroke={on ? 'var(--bg-card)' : 'var(--sem-focus-fg)'}
+              r={R + (hover?.r.code === p.r.code ? 1.5 : 0)}
+              fill={on ? c : 'var(--bg-card)'}
+              stroke={on ? 'var(--bg-card)' : c}
               strokeWidth={on ? 2 : 1.5}
               opacity={dim ? 0.35 : 1}
             />
@@ -187,26 +211,26 @@ function Panel({
 
         {/* 選んだ数銘柄だけ名前 */}
         {pts.filter(p => labeled.has(p.r.code)).map(p => (
-          <text key={`l${p.r.code}`} x={sx(p.x) + radius(p.r.va_trend) + 4} y={sy(p.y) + 4} fontSize={11} fill="var(--text-secondary)">
+          <text key={`l${p.r.code}`} x={sx(p.x) + R + 4} y={sy(p.y) + 4} fontSize={11} fill="var(--text-secondary)">
             {p.r.co_name ?? p.r.code}
           </text>
         ))}
       </svg>
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-caption text-[var(--text-muted)] mt-1">
         <span className="flex items-center gap-1">
-          <svg width="10" height="10"><circle cx="5" cy="5" r="4" fill="var(--sem-focus-fg)" /></svg>t63 の一覧にいる
+          <svg width="10" height="10"><circle cx="5" cy="5" r="4" fill="var(--text-secondary)" /></svg>t63 の一覧にいる
         </span>
         <span className="flex items-center gap-1">
-          <svg width="10" height="10"><circle cx="5" cy="5" r="3.5" fill="none" stroke="var(--sem-focus-fg)" strokeWidth="1.5" /></svg>t21 の一覧だけ
+          <svg width="10" height="10"><circle cx="5" cy="5" r="3.5" fill="none" stroke="var(--text-secondary)" strokeWidth="1.5" /></svg>t21 の一覧だけ
         </span>
-        <span className="flex items-center gap-1">
-          大きさ = Turnover
-          <svg width="58" height="20" aria-hidden>
-            {[1, 2, 3].map((v, i) => (
-              <circle key={v} cx={8 + i * 19} cy={10} r={radius(v)} fill="none" stroke="var(--text-muted)" strokeWidth={1} />
-            ))}
-          </svg>
-          <span className="num">1× / 2× / 3×</span>
+        <span className="flex items-center gap-2">
+          色 = Turnover
+          {VA_BINS.map(b => (
+            <span key={b.label} className="flex items-center gap-1">
+              <svg width="10" height="10" aria-hidden><circle cx="5" cy="5" r="4" fill={b.color} /></svg>
+              <span className="num">{b.label}</span>
+            </span>
+          ))}
         </span>
         <span className="flex items-center gap-1">
           <svg width="22" height="10"><circle cx="3" cy="5" r="2" fill="var(--text-muted)" /><line x1="3" y1="5" x2="20" y2="5" stroke="var(--text-muted)" strokeWidth="1.25" /></svg>5 営業日前からの動き
@@ -230,7 +254,7 @@ export default function LeaderScatter({
     <section>
       <h2 className="text-small font-medium text-[var(--text-primary)] mb-1">t63 × t21（直近の勢いと 3 か月の強さ）</h2>
       <p className="text-caption text-[var(--text-muted)] mb-2">
-        斜線より上 = 直近 1 か月が 3 か月より強い ／ 下 = 3 か月の先導に比べて直近が弱い。線の根元が 5 営業日前の位置。点が大きい = Turnover が高い（商いが膨らんで入った。その後 3 か月の伸びは小さい傾向。大きい = 良い、ではない）。
+        斜線より上 = 直近 1 か月が 3 か月より強い ／ 下 = 3 か月の先導に比べて直近が弱い。線の根元が 5 営業日前の位置。点の色が濃い = Turnover が高い（商いが膨らんで入った。その後 3 か月の伸びは小さい傾向。濃い = 良い、ではない）。点をクリックすると TradingView のチャートを開く。
       </p>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {TIERS.map(t => (
