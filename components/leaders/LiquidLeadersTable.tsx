@@ -1,7 +1,9 @@
 'use client'
 
 // 1 段 (大型 / 中小) の一覧。t21 と t63 を横に並べ、それぞれに 5 日比を添える。
-// t63 の右に t21 − t63 (直近の勢いと 3 か月の強さのずれ) を置き、最後に t21 / t63 の一覧に入った日を 1 列ずつ並べる。
+// t63 の右に t21 − t63 (直近の勢いと 3 か月の強さのずれ)、補足の代金の勢い (va_trend) を置き、
+// 最後に t21 / t63 の一覧に入った日を 1 列ずつ並べる。
+// 代金の勢いは「高い = 良い」ではない (高いほどその後 3 か月の伸びが小さい傾向) ので色を付けない。
 // 「t63 は高いが t21 は落ちてきた」というずれが一目で読めるのがこの表の読みどころ。
 //
 // 色は 5 日比 (括弧の中) だけ: +0.1 以上 緑 / −0.1 以下 赤 / それ以外・新規 灰。
@@ -55,6 +57,10 @@ function TCell({
       </span>
     </span>
   )
+}
+
+function num(v: number | null | undefined): number | null {
+  return v !== null && v !== undefined && Number.isFinite(v) ? v : null
 }
 
 function gapOf(r: LiquidLeader): number | null {
@@ -164,6 +170,28 @@ export default function LiquidLeadersTable({ rows, prev, title, hint, enter, que
             <span className="num text-[var(--text-secondary)]">
               {v === 0 ? '±0.00' : `${v > 0 ? '+' : '−'}${Math.abs(v).toFixed(2)}`}
             </span>
+          )
+        },
+      },
+      {
+        key: 'va_trend',
+        label: (
+          <>
+            代金
+            <br />
+            <span className="font-normal">勢い</span>
+          </>
+        ),
+        tooltip:
+          '代金の勢い = 直近 20 日の売買代金の平均 ÷ 前日までの 60 日の代金の中央値。1.0 = いつもどおり、2.0 = いつもの倍。高いほど「商いが膨らんで一覧に入った」銘柄で、一覧には長く残るが、その後 3 か月の伸びは小さい傾向がある（10 年の検証で一貫）。高い = 良い、ではない',
+        align: 'right',
+        value: r => num(r.va_trend),
+        render: r => {
+          const v = num(r.va_trend)
+          return v === null ? (
+            <span className="text-[var(--sem-idle-fg)]">—</span>
+          ) : (
+            <span className="num text-[var(--text-secondary)]">{v.toFixed(2)}×</span>
           )
         },
       },

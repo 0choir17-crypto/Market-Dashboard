@@ -31,6 +31,12 @@ export type LiquidLeader = {
   t21_since: string | null
   /** t63 の一覧に今回入った日 */
   t63_since: string | null
+  /**
+   * 代金の勢い = 直近 20 日の売買代金の平均 ÷ 前日までの 60 日の代金の中央値。
+   * 1.0 = いつもどおり / 2.0 = いつもの倍。高いほど「商いが膨らんで一覧に入った」銘柄で、
+   * 一覧には長く残るが、その後 3 か月の伸びは小さい傾向 (10 年の検証で一貫)。良し悪しの色は付けない。
+   */
+  va_trend: number | null
 }
 
 export type TierDef = {
