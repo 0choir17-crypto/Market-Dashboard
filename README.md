@@ -78,7 +78,7 @@ components/           # 画面別 UI コンポーネント
   sectors33/          # TOPIX-33 業種の自力 (チャート / テーブル / RRG)
   leaders/            # Liquid Leaders（段別一覧 / 業種 × 週ヒートマップ）
   earnings/           # Earnings Quality
-  today/              # Daily Watch (Structure Pivot / EMA Setups / Inside Day)
+  today/              # Daily Watch (Structure Pivot / EMA Setups)
   watchlistJournal/   # Watchlist Journal (現在の状態 / 差分 / 見逃しボード) — 読み取り専用
   journal/            # Trade Journal
   portfolio/          # Positions / Risk / PositionModal
