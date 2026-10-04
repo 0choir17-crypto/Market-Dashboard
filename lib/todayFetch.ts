@@ -5,8 +5,6 @@ import type {
   StructurePivotCardRow,
   StructurePivotEventRow,
 } from '@/types/structurePivotEvents'
-import type { InsideDaySetupRow } from '@/types/insideDay'
-import { INSIDE_DAY_TABLE } from '@/types/insideDay'
 
 // Daily Watch — 「毎朝チャートを開く銘柄」を機械的に絞り込んだウォッチリスト。
 // jquants-scanner が毎日・平日引け後 (~18:00 JST) に当日分を upsert（冪等）。
@@ -19,7 +17,8 @@ import { INSIDE_DAY_TABLE } from '@/types/insideDay'
 //   新設 — ema_setups（Step1d）。押し目系（旧 ma / coil pullback）の後継。
 //
 // 2026-09-21 の配信側スキャナー新設に追随:
-//   新設 — inside_day_setups（Step1e）。日次スキャナーは 4 本 → 5 本になった。
+//   新設 — inside_day_setups（Step1e）。
+// 2026-10-04: Inside Day を廃止。inside_day_setups はどこからも読まない。
 const EMA_SETUPS_TABLE = 'ema_setups'
 const STRUCTURE_PIVOT_TABLE = 'structure_pivot_events'
 
@@ -35,10 +34,6 @@ export type TodayResponse = {
   emaTableMissing: boolean
   structDate: string | null
   struct: StructurePivotCardRow[]
-  insideDate: string | null
-  inside: InsideDaySetupRow[]
-  // inside_day_setups の DDL が未実行（テーブル未配備）なら true。ema と同じ扱い。
-  insideTableMissing: boolean
   // 取得失敗の詳細（null なら全クエリ成功）。「0 件」と「取得失敗」を UI で区別するため。
   error: string | null
 }
@@ -212,69 +207,15 @@ async function fetchStructurePivotEvents(
   return { date: anchor, rows: [...byCode.values()], error: null }
 }
 
-// インサイドデー候補（inside_day_setups）を単一 date で読む。
-// PK は (date, code) で 1銘柄1日1行。ema_setups と同じ「最新 date だけ読む」モデル。
-//
-// 日付の決め方は ema_setups と揃える: 指定日以前で行が存在する直近の date。
-// セクション専用の日付セレクタは置かず、ページ共通の日付ピッカー（DateContext）に追随する
-// （日付の操作点を 1 つに保つため。0choir17 と確認済み）。
-//
-// 件数は最多 204 行/日（直近1年の実測）で PostgREST の 1000 行上限には届かないので、
-// fetchAllPaged によるページングは要らない。
-async function fetchInsideDay(date: string | null): Promise<{
-  date: string | null
-  rows: InsideDaySetupRow[]
-  tableMissing: boolean
-  error: string | null
-}> {
-  let latestQuery = supabase.from(INSIDE_DAY_TABLE).select('date')
-  if (date) latestQuery = latestQuery.lte('date', date)
-  const { data: latest, error: latestErr } = await latestQuery
-    .order('date', { ascending: false })
-    .limit(1)
-    .maybeSingle()
-
-  if (latestErr) {
-    if (isMissingTableError(latestErr)) {
-      console.warn(`[${INSIDE_DAY_TABLE}] table not deployed yet — skipping`)
-      return { date: null, rows: [], tableMissing: true, error: null }
-    }
-    console.error(`[${INSIDE_DAY_TABLE}] latest date error`, latestErr)
-    return { date: null, rows: [], tableMissing: false, error: `${INSIDE_DAY_TABLE}: ${latestErr.message}` }
-  }
-
-  const targetDate = (latest?.date as string | undefined) ?? null
-  if (!targetDate) return { date: null, rows: [], tableMissing: false, error: null }
-
-  // select('*') で供給側のスキーマ増減に耐性を持たせる（他テーブルと同方針）。
-  const { data, error } = await supabase.from(INSIDE_DAY_TABLE).select('*').eq('date', targetDate)
-  if (error) {
-    if (isMissingTableError(error)) {
-      console.warn(`[${INSIDE_DAY_TABLE}] table not deployed yet — skipping`)
-      return { date: null, rows: [], tableMissing: true, error: null }
-    }
-    console.error(`[${INSIDE_DAY_TABLE}] fetch error`, error)
-    return { date: targetDate, rows: [], tableMissing: false, error: `${INSIDE_DAY_TABLE}: ${error.message}` }
-  }
-
-  return {
-    date: targetDate,
-    rows: (data ?? []) as unknown as InsideDaySetupRow[],
-    tableMissing: false,
-    error: null,
-  }
-}
-
 export async function fetchToday(opts: { date?: string }): Promise<TodayResponse> {
   const requested = opts.date ?? null
 
-  const [emaRes, structRes, insideRes] = await Promise.all([
+  const [emaRes, structRes] = await Promise.all([
     fetchEmaSetups(requested),
     fetchStructurePivotEvents(requested),
-    fetchInsideDay(requested),
   ])
 
-  const errors = [emaRes.error, structRes.error, insideRes.error].filter(
+  const errors = [emaRes.error, structRes.error].filter(
     (e): e is string => !!e,
   )
 
@@ -284,9 +225,6 @@ export async function fetchToday(opts: { date?: string }): Promise<TodayResponse
     emaTableMissing: emaRes.tableMissing,
     structDate: structRes.date,
     struct: structRes.rows,
-    insideDate: insideRes.date,
-    inside: insideRes.rows,
-    insideTableMissing: insideRes.tableMissing,
     error: errors.length > 0 ? errors.join(' / ') : null,
   }
 }
