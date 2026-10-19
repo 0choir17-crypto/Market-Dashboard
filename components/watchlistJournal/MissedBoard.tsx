@@ -15,7 +15,7 @@
 // 集計は中央値までに留め、件数の少なさを明記する。
 
 import { useMemo, useState } from 'react'
-import type { WatchlistEvent } from '@/types/watchlistJournal'
+import type { MissedRow } from '@/types/watchlistJournal'
 import { formatPct } from '@/lib/format'
 import DataTable, { type Column } from '@/components/shared/DataTable'
 import TickerCell from '@/components/shared/TickerCell'
@@ -29,7 +29,7 @@ function fromStateIndex(state: string | null): number {
   return i < 0 ? FROM_STATE_ORDER.length : i
 }
 
-const COLUMNS: Column<WatchlistEvent>[] = [
+const COLUMNS: Column<MissedRow>[] = [
   {
     key: 'date',
     label: 'Date',
@@ -37,6 +37,19 @@ const COLUMNS: Column<WatchlistEvent>[] = [
     align: 'left',
     value: r => r.date,
     render: r => <span className="font-mono text-small text-[var(--text-secondary)]">{r.date}</span>,
+  },
+  {
+    key: 'first_watch_date',
+    label: 'Added',
+    tooltip:
+      '初めて Watch list に入った日（入れ直していても初回の日）。記録開始 2026-08-13 の時点で既に入っていた銘柄は分からないため —',
+    align: 'left',
+    value: r => r.first_watch_date,
+    render: r => (
+      <span className="font-mono text-small text-[var(--text-secondary)]">
+        {r.first_watch_date ?? '—'}
+      </span>
+    ),
   },
   {
     key: 'bars_since',
@@ -126,7 +139,7 @@ const COLUMNS: Column<WatchlistEvent>[] = [
 ]
 
 type Props = {
-  rows: WatchlistEvent[]
+  rows: MissedRow[]
 }
 
 export default function MissedBoard({ rows }: Props) {
@@ -134,7 +147,7 @@ export default function MissedBoard({ rows }: Props) {
   const [filter, setFilter] = useState<string | null>(null)
 
   const groups = useMemo(() => {
-    const byState = new Map<string, WatchlistEvent[]>()
+    const byState = new Map<string, MissedRow[]>()
     for (const r of rows) {
       const key = r.from_state ?? '（不明）'
       const list = byState.get(key)

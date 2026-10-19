@@ -6,23 +6,23 @@
 // 「READY で何日止まっているか」が一目で分かることを最優先にしている。
 // 読み取り専用: 追加・編集・削除の導線は無い（編集は TradingView 側）。
 //
-// 列は要約 7 列 + 詳細行 8 列に分けた（DESIGN_DIRECTION.md §5.1）。
-// ATR14 / 1R / RR2 / RR2 % / Ext R / ADR % / Sector / Since は
+// 列は要約 7 列 + 詳細行 9 列に分けた（DESIGN_DIRECTION.md §5.1）。
+// ATR14 / 1R / RR2 / RR2 % / Ext R / ADR % / Sector / Since / Added は
 // 「22 行を横断比較するための数値」ではなく「1 銘柄を決めるための数値」なので、
 // 一覧から外して行を開いたときだけ見せる。要約ビューは min-w を持たず、
 // 横スクロールを出さない。
 
-import type { WatchlistCurrentRow } from '@/types/watchlistJournal'
+import type { CurrentRowWithFirstWatch } from '@/types/watchlistJournal'
 import { riskPct, stateOrderIndex } from '@/types/watchlistJournal'
 import DataTable, { type Column } from '@/components/shared/DataTable'
 import TickerCell from '@/components/shared/TickerCell'
 import { NumCell, PctCell, YenCell } from './atoms'
 
 type Props = {
-  rows: WatchlistCurrentRow[]
+  rows: CurrentRowWithFirstWatch[]
 }
 
-const COLUMNS: Column<WatchlistCurrentRow>[] = [
+const COLUMNS: Column<CurrentRowWithFirstWatch>[] = [
   {
     key: 'code',
     label: 'Code / Name',
@@ -106,6 +106,16 @@ const COLUMNS: Column<WatchlistCurrentRow>[] = [
     align: 'left',
     value: r => r.since,
     render: r => <span className="font-mono text-small">{r.since ?? '—'}</span>,
+  },
+  {
+    key: 'first_watch_date',
+    label: 'Added',
+    tooltip:
+      '初めて Watch list に入った日（入れ直していても初回の日）。記録開始 2026-08-13 の時点で既に入っていた銘柄、Watch list を経ずに入った銘柄は —',
+    summary: false,
+    align: 'left',
+    value: r => r.first_watch_date,
+    render: r => <span className="font-mono text-small">{r.first_watch_date ?? '—'}</span>,
   },
   {
     key: 'adr_pct_20',

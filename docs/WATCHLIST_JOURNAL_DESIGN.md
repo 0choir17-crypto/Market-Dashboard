@@ -37,7 +37,8 @@
 | `watchlist_events`（39 列） | 1 行 = 1 イベント | upsert（直近 90 日を送り直す） | **イベント日**の値。値動き 7 列だけ毎晩更新 | Missed Board / 鮮度バッジ |
 
 - 配信は **毎日 23:30**（土日祝も）。手動更新はデスクトップのショートカット
-- 取得は `select('*')` の 4 クエリ（`current` / 最終 `ts` / Watch list からの `exit` 全件 / `HOLD` 履歴）
+- 取得は 6 クエリ（`current` / 最終 `ts` / Watch list からの `exit` 全件 / `HOLD` 履歴 /
+  Watch list に入った履歴 / 最初のスナップショット ID）
 - ページングは `lib/pagedFetch.ts`（PostgREST の 1000 行上限対策）。安定順序は PK `(snapshot_id, code)`
 
 ---
@@ -58,8 +59,8 @@ main (min-h-screen, p-6, bg: --bg-primary)
 ├─ [読み込み中] / [記録がまだありません]           排他表示のカード
 │
 ├─ flex-col gap-10
-│   ├─ CurrentStateTable   ← 現在のリスト（15 列・state でグループ化）
-│   └─ MissedBoard         ← 主役（サマリタイル + 11 列）
+│   ├─ CurrentStateTable   ← 現在のリスト（16 列・state でグループ化）
+│   └─ MissedBoard         ← 主役（サマリタイル + 12 列）
 │
 └─ 注記（text-[11px], --text-muted）
      読み取り専用であること / HOLD→SOLD は約定日ではないこと /
@@ -106,7 +107,7 @@ main (min-h-screen, p-6, bg: --bg-primary)
 ```
 Current State                          22 銘柄 — 指標は今日の値。並び順は列見出しをクリック（既定: 滞在日数の長い順）
 ┌──────────────────────────────────────────────────────────────────────┐
-│ [列見出し 15 列 / クリックでソート / bg: --bg-card-hover]              │
+│ [列見出し 16 列 / クリックでソート / bg: --bg-card-hover]              │
 ├──────────────────────────────────────────────────────────────────────┤
 │ ▶ [HOLD] 2 銘柄                                    ← グループ見出し行 │
 │   … 行 …                                                             │
@@ -125,7 +126,7 @@ Current State                          22 銘柄 — 指標は今日の値。並
   （売却済アーカイブで現在のウォッチ対象ではなく、記録開始前からの建玉が混ざるため）
 - `STATE_ORDER` に無い状態が来たら末尾に「（不明）」で出し、表の下に警告文を出す
 
-### 列 — 要約 7 列 + 詳細行 8 列
+### 列 — 要約 7 列 + 詳細行 9 列
 
 一覧は比較のため、詳細は決断のため（設計原則 3）。**22 行を横断比較しない数値**は
 一覧から外し、行を開いたときだけ出す。要約ビューは `min-w` を持たず横スクロールしない。
@@ -144,11 +145,11 @@ Current State                          22 銘柄 — 指標は今日の値。並
 
 **詳細行（行を開くと出る）**
 
-`Sector` / `Since` / `ADR %` / `ATR14` / `1R（21EMA Low）` / `RR2（21EMA Low）` /
+`Sector` / `Since` / `Added` / `ADR %` / `ATR14` / `1R（21EMA Low）` / `RR2（21EMA Low）` /
 `RR2 %（21EMA Low）` / `Ext R (50MA)`
 
-**既定は全 15 列**。実測で全列でも横スクロールが出ないため、ヘッダー右の
-**`要約 / 全 15 列` トグル**は「絞りたいときの選択肢」として置いてある。
+**既定は全 16 列**。実測で全列でも横スクロールが出ないため、ヘッダー右の
+**`要約 / 全 16 列` トグル**は「絞りたいときの選択肢」として置いてある。
 表に `min-width` は指定しておらず、幅は内容が決める（画面が狭いときだけ横スクロール）。
 
 ---
@@ -168,17 +169,27 @@ Missed Board          Watch list に入れたのに、買わないまま落と�
 All の中央値   現在 -2.46%   最大上昇 +1.69%        ← 選択中の 1 組だけ大きく
 n=146 — 件数がまだ少ないため中央値のみ。勝率・PF・期待値は出しません
 ┌──────────────────────────────────────────────────────┐
-│ [列見出し 11 列 / クリックでソート]                    │
+│ [列見出し 12 列 / クリックでソート]                    │
 │ … 行（READY 由来は bg-blue-50/40 で薄く強調）…         │
 └──────────────────────────────────────────────────────┘
 ```
 
-### 列 — 要約 7 列 + 詳細行 4 列
+### 列 — 要約 8 列 + 詳細行 4 列
 
-**既定は全 11 列**。要約に絞ると `Date` / `Days`（経過営業日）/ `Code / Name` / `Price` /
-`From` / `Return` / `Max Gain`（既定ソート・降順）の 7 列になる。
+**既定は全 12 列**。要約に絞ると `Date` / `Added` / `Days`（経過営業日）/ `Code / Name` / `Price` /
+`From` / `Return` / `Max Gain`（既定ソート・降順）の 8 列になる。
 
 **詳細行**: `Sector` / `Stay`（居た暦日）/ `Max Draw` / `ADR %`
+
+### `Added` — 初めて Watch list に入った日（両テーブル共通）
+
+- `to_list = 'Watch list'` かつ `from_list ≠ 'Watch list'` のイベント（`enter` と
+  Holdings → Watch list の `move`）のうち、code ごとに最も古い `date`
+- **入れ直しても初回の日**。同じ code の exit が複数行あっても全行同じ日になる
+- **最初のスナップショットで入った銘柄は `—`**。記録開始（2026-08-13）前から居たもので
+  本当の日付が分からない。開始日を出すと「その日に拾った」と誤読されるため
+- Watch list を経ずに Holdings に入った銘柄も `—`
+- 実装は `lib/watchlistJournalFetch.ts#buildFirstWatchDate`
 
 > ⚠️ **`Days` と `Stay` は数え方が違う**（営業日 vs 暦日）。単位は見出しではなく
 > ツールチップで明示している。
@@ -271,7 +282,7 @@ Current State は既に state でグループ化されているので、その�
 | 列見出しクリック | 両テーブル全列 | ソート。同じ列を再クリックで昇順 ⇄ 降順。ソート中の列は accent 色 + `↑`/`↓`、未ソートは `↕` |
 | グループ見出しクリック | Current State | 開閉。`▶` が 90° 回転 |
 | サマリタイルクリック | Missed Board | `from_state` で絞り込み。再クリックで解除 |
-| 「更新」ボタン | ヘッダー | 全 4 クエリを再取得。連打は `requestIdRef` で後着応答を破棄 |
+| 「更新」ボタン | ヘッダー | 全 6 クエリを再取得。連打は `requestIdRef` で後着応答を破棄 |
 | ホバー | 行 | `--bg-card-hover` |
 
 **既定ソート**: Current State = `Days` 降順（READY で何日止まっているか）/
@@ -295,7 +306,7 @@ Missed Board = `Max Gain` 降順（落とした後に伸びた順）。
 
 ```
 app/watchlist/page.tsx                            ページ本体・取得と状態遷移
-lib/watchlistJournalFetch.ts                      4 クエリ + 見逃し判定 buildMissed()
+lib/watchlistJournalFetch.ts                      6 クエリ + 見逃し判定 buildMissed() + buildFirstWatchDate()
 types/watchlistJournal.ts                         型 / STATE_ORDER / stateColors /
                                                   riskPct() / classifySnapshotFreshness()
 components/shared/DataTable.tsx                   表の骨格（ソート / グループ / 折りたたみ /
