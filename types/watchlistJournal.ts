@@ -165,6 +165,16 @@ export type WatchlistCurrentRow = {
   rr2_ema21_low_yen: number | null
 }
 
+/**
+ * 初めて Watch list に入った日（lib/watchlistJournalFetch.ts#buildFirstWatchDate）。
+ * 再エントリーしても初回の日。記録開始前から居た銘柄・一度も Watch list に
+ * 入っていない銘柄は null。
+ */
+type FirstWatch = { first_watch_date: string | null }
+
+export type MissedRow = WatchlistEvent & FirstWatch
+export type CurrentRowWithFirstWatch = WatchlistCurrentRow & FirstWatch
+
 // ── 鮮度判定 ────────────────────────────────────────────────────────────────
 // /earnings の classifyFreshness は「営業日ベース + 決算閑散期」の判定で、
 // この画面には使えない: 記録は土日祝も走る (§1) ので、営業日で測ると
