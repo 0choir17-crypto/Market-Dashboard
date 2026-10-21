@@ -49,8 +49,8 @@ function isMissingTableError(error: { code?: string; message?: string } | null):
 }
 
 // EMA タッチ候補（ema_setups）を単一 date で読む。
-// PK は (date, code, ema) で 1タッチ=1行。同じ銘柄が同日に複数 EMA へタッチすれば
-// 最大 3 行出るので、表示前に groupByCode() で銘柄単位へ畳む（案1）。
+// PK は (date, code, line) で 1タッチ=1行（2026-10-21 に ema → line。EMA21 low 追加のため）。
+// 同じ銘柄が同日に複数の線へタッチすれば最大 4 行出るので、表示前に groupByCode() で銘柄単位へ畳む（案1）。
 //
 // 他スキャナーと違い「連続ヒットの除外」は掛けない。同じ銘柄が何日続けて出るかは
 // fresh 列が情報として持っており、配信側もフィルタ条件にしていないため。
