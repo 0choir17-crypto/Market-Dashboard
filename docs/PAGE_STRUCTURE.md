@@ -133,7 +133,9 @@ app/layout.tsx  (RootLayout, lang="ja")
    押し安値切り上がり（HL）から作る構造の 1st（建玉ライン = HL + 0.618 戻し）/ 2nd（スイングハイ）ヒット。
    本日ヒット銘柄のみ。終了済み（TP2 / Stop）は除外。→ `StructurePivotCard`
 3. **EmaSetupsSection** — 「EMA Setups」
-   EMA 9 / 21 / 50 に到達し、安値が EMA 直下 0.1ATR 帯で踏みとどまった日。
+   EMA 9 / 21 / 50 と EMA21L（安値で計算した EMA21）に到達し、安値が線の直下 0.1ATR 帯で踏みとどまった日。
+   行の区別は `line` 列（PK `(date, code, line)`、2026-10-21 に `ema` から変更）。
+   `ipo = true`（上場250本未満で EMA150 系条件を免除）の銘柄には IPO バッジ。
    ※統計的エッジ無し（勝率 23.6% vs ベースライン 23.1%）と明記した上でのスクリーニング用リスト。→ `EmaSetupCard`
 
 - 複数シグナル重複（同一 code が 2 スキャナー以上に出現）は `multiHitCodes` で黄色強調

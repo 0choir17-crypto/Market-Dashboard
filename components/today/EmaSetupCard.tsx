@@ -1,7 +1,7 @@
 'use client'
 
 import type { EmaSetupCardRow, EmaTouch } from '@/types/emaSetups'
-import { resolveTouchType } from '@/types/emaSetups'
+import { lineLabel, lineShortLabel, resolveTouchType } from '@/types/emaSetups'
 import { formatPct } from '@/lib/format'
 import { tradingViewUrl, shikihoUrl } from '@/lib/tickerLinks'
 import CopyTickerButton from '@/components/shared/CopyTickerButton'
@@ -37,8 +37,8 @@ function rsColor(v: number | null): string {
   return 'var(--negative)'
 }
 
-// EMA バッジは「どの EMA にタッチしたか」という事実の表示であって優劣ではない。
-// 9 / 21 / 50 を色で格付けせず、全て同じ中立色。ヒゲ / 実体は塗りの有無だけで区別する
+// EMA バッジは「どの線にタッチしたか」という事実の表示であって優劣ではない。
+// 9 / 21 / 21L / 50 を色で格付けせず、全て同じ中立色。21L = 安値で計算した EMA21。ヒゲ / 実体は塗りの有無だけで区別する
 // （検証上どちらが有利という情報は無い ＝ AUC 0.50）。
 function TouchBadge({ touch }: { touch: EmaTouch }) {
   const type = resolveTouchType(touch)
@@ -53,12 +53,12 @@ function TouchBadge({ touch }: { touch: EmaTouch }) {
         borderColor: 'var(--border-strong)',
       }}
       title={
-        `EMA${touch.ema} にタッチ（${typeLabel}）\n` +
+        `${lineLabel(touch.line)}${touch.line === 'ema21_low' ? '（安値EMA21）' : ''} にタッチ（${typeLabel}）\n` +
         `EMA値 ${fmtPrice(touch.ema_value)} / 安値ATR ${fmt(touch.low_atr, 3)}` +
-        (touch.fresh ? '\n直近10営業日で同じ EMA へのタッチは初回' : '')
+        (touch.fresh ? '\n直近10営業日で同じ線へのタッチは初回' : '')
       }
     >
-      <span className="font-mono">{touch.ema}</span>
+      <span className="font-mono">{lineShortLabel(touch.line)}</span>
       <span className="font-normal opacity-70">{typeLabel}</span>
       {touch.fresh && <span className="text-caption text-[var(--sem-watch-fg)]" title="初回">初</span>}
     </span>
@@ -105,8 +105,17 @@ export default function EmaSetupCard({
       {/* タッチした EMA（同日に複数 EMA へタッチした銘柄はここに並ぶ） */}
       <div className="px-3 py-2 border-b border-[var(--border-subtle)] flex items-center gap-1 flex-wrap">
         {row.touches.map(t => (
-          <TouchBadge key={t.ema} touch={t} />
+          <TouchBadge key={t.line} touch={t} />
         ))}
+        {row.ipo && (
+          <span
+            className="ml-auto inline-flex items-center px-1.5 py-0.5 rounded text-caption font-medium border"
+            style={{ color: 'var(--text-secondary)', borderColor: 'var(--border-strong)' }}
+            title={'上場250本未満の IPO 銘柄。EMA150 上向き / EMA21 ≥ SMA150 の条件を免除して載っている\n（上場150本未満なら SMA150 が無いので 150SMA 乖離は —）'}
+          >
+            IPO
+          </span>
+        )}
       </div>
 
       {/* 銘柄 */}
@@ -151,12 +160,12 @@ export default function EmaSetupCard({
       <div className="px-3 space-y-0.5">
         {row.touches.map(t => (
           <div
-            key={t.ema}
+            key={t.line}
             className="flex items-baseline justify-between gap-2 text-caption text-[var(--text-secondary)] tabular-nums"
           >
-            <span className="font-mono">EMA{t.ema}</span>
+            <span className="font-mono">{lineLabel(t.line)}</span>
             <span className="font-mono">{fmtPrice(t.ema_value)}</span>
-            <span className="font-mono" title="安値ATR = (安値 − EMA) / ATR14(前日)。定義上 0 〜 −0.10">
+            <span className="font-mono" title="安値ATR = (安値 − 線) / ATR14(前日)。定義上 0 〜 −0.10">
               安値ATR {fmt(t.low_atr, 3)}
             </span>
           </div>
@@ -185,7 +194,13 @@ export default function EmaSetupCard({
         <span className="font-mono" title="出来高比（対 20日平均）">
           出来高比 {fmt(row.vol_ratio, 2)}
         </span>
-        <span className="font-mono" title="終値の 150SMA からの乖離(%)">
+        <span
+          className="font-mono"
+          title={
+            '終値の 150SMA からの乖離(%)' +
+            (row.ipo && row.ext_sma150_pct === null ? '\n上場150本未満のため SMA150 が無い' : '')
+          }
+        >
           150SMA {fmtSignedPct(row.ext_sma150_pct)}
         </span>
       </div>

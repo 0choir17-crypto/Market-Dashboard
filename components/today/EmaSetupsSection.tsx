@@ -1,8 +1,8 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import type { EmaSetupCardRow, EmaPeriod, TouchType } from '@/types/emaSetups'
-import { EMA_PERIODS, resolveTouchType } from '@/types/emaSetups'
+import type { EmaSetupCardRow, EmaLine, TouchType } from '@/types/emaSetups'
+import { EMA_LINES, lineLabel, resolveTouchType } from '@/types/emaSetups'
 import type { Trade } from '@/types/trades'
 import EmaSetupCard from './EmaSetupCard'
 import PositionModal from '@/components/portfolio/PositionModal'
@@ -47,7 +47,7 @@ const SORTS: SortDef[] = [
   { key: 'code', label: 'コード順', compare: (a, b) => a.code.localeCompare(b.code) },
 ]
 
-type EmaFilter = 'all' | EmaPeriod
+type EmaFilter = 'all' | EmaLine
 type TouchFilter = 'all' | TouchType
 
 // RS 下限スライダーの刻み。0 = フィルタなし（既定）。
@@ -75,12 +75,12 @@ export default function EmaSetupsSection({
     return [...set].sort((a, b) => a.localeCompare(b, 'ja'))
   }, [rows])
 
-  // 1銘柄は最大3タッチを束ねているので、EMA / ヒゲ実体 / fresh は
+  // 1銘柄は最大4タッチを束ねているので、線 / ヒゲ実体 / fresh は
   // 「その条件に当てはまるタッチを1つでも持つか」で判定する。
   const filtered = useMemo(() => {
     return rows.filter(r => {
       if (sector !== 'all' && (r.sector_s33 ?? '') !== sector) return false
-      if (ema !== 'all' && !r.touches.some(t => t.ema === ema)) return false
+      if (ema !== 'all' && !r.touches.some(t => t.line === ema)) return false
       if (touch !== 'all' && !r.touches.some(t => resolveTouchType(t) === touch)) return false
       if (freshOnly && !r.touches.some(t => t.fresh)) return false
       if (rsMin > 0 && !(isNum(r.rs_topix_avg) && r.rs_topix_avg >= rsMin)) return false
@@ -122,7 +122,7 @@ export default function EmaSetupsSection({
         <h2 className="text-title font-medium text-[var(--text-primary)]">{title}</h2>
         <span className="text-caption text-[var(--text-muted)]">
           <span className="font-mono">{sorted.length} / {rows.length}</span> 銘柄
-          <span className="ml-1.5 font-mono" title="DB 上の行数（1タッチ=1行）。同じ銘柄が複数 EMA にタッチすると銘柄数より多くなる">
+          <span className="ml-1.5 font-mono" title="DB 上の行数（1タッチ=1行）。同じ銘柄が複数の線（EMA9/21/21L/50）にタッチすると銘柄数より多くなる">
             （{touchCount} タッチ）
           </span>
         </span>
@@ -141,14 +141,15 @@ export default function EmaSetupsSection({
         </select>
 
         <select
-          value={String(ema)}
-          onChange={e => setEma(e.target.value === 'all' ? 'all' : (Number(e.target.value) as EmaPeriod))}
+          value={ema}
+          onChange={e => setEma(e.target.value as EmaFilter)}
           className={selectClass}
         >
           <option value="all">全 EMA</option>
-          {EMA_PERIODS.map(p => (
-            <option key={p} value={p}>
-              EMA{p}
+          {EMA_LINES.map(l => (
+            <option key={l} value={l}>
+              {lineLabel(l)}
+              {l === 'ema21_low' ? '（安値EMA21）' : ''}
             </option>
           ))}
         </select>
@@ -170,7 +171,7 @@ export default function EmaSetupsSection({
               ? 'bg-[var(--sem-watch-fg)] text-white border-[var(--sem-watch-bd)]'
               : 'bg-[var(--bg-card)] text-[var(--sem-watch-fg)] border-[var(--sem-watch-bd)] hover:bg-[var(--sem-watch-bg)]'
           }`}
-          title="直近10営業日に同じ EMA へのタッチが無い＝初回のタッチを含む銘柄だけ表示"
+          title="直近10営業日に同じ線へのタッチが無い＝初回のタッチを含む銘柄だけ表示"
         >
           初回のみ
         </button>
