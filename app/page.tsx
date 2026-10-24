@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { MarketConditions } from '@/types/market'
 import { useDate } from '@/contexts/DateContext'
-import BreadthPanel from '@/components/market/BreadthPanel'
+import BreadthStateCard from '@/components/market/BreadthStateCard'
 import TopixChart from '@/components/market/TopixChart'
 import IndexStateCards from '@/components/market/IndexStateCards'
 import SectorStateCards from '@/components/market/SectorStateCards'
@@ -104,16 +104,15 @@ export default function Page() {
         <IndexStateCards />
       </div>
 
+      {/* 市場の参加度。従来の Breadth 4 枚はこのカードの「詳細」に畳んである */}
+      <div className="mb-6">
+        <BreadthStateCard market={market} />
+      </div>
+
       {market && (
         /* 指数そのもの (TOPIX ローソク足 + 市場出来高) */
         <div className="mb-6">
           <TopixChart market={market} />
-        </div>
-      )}
-
-      {market && (
-        <div className="mt-10">
-          <BreadthPanel market={market} />
         </div>
       )}
 
