@@ -4,7 +4,11 @@ import { useEffect, useState } from 'react'
 import { MarketConditions } from '@/types/market'
 import { useDate } from '@/contexts/DateContext'
 // ローソク足 + EMA + 出来高バーの描画器は業種チャートと共通のものを使う。
-import CandleChart, { MaLegend, VolumeLegend } from '@/components/sectors33/SectorCandleChart'
+import CandleChart, {
+  MaLegend,
+  VolumeLegend,
+  type MaLength,
+} from '@/components/sectors33/SectorCandleChart'
 import {
   fetchTopixChartData,
   DEFAULT_TOPIX_RANGE,
@@ -51,36 +55,10 @@ function ChangePill({ label, value }: { label: string; value: number | null | un
   )
 }
 
-// 単純移動平均（SMA）の上下バッジ。Supabase の *_sma50 / *_sma200 列をそのまま出す。
-// チャートに引いている 4 本は EMA なので、線の位置とこのバッジは一致しない。
-// title で明示しないと「線より上なのにバッジが下」が不具合に見える。
-const SMA_BADGE_NOTE = 'データ側の単純移動平均（SMA）との比較。チャートの線は EMA なので位置は一致しません'
-
-function SmaBadge({ above, label }: { above: boolean | null | undefined; label: string }) {
-  if (above === null || above === undefined) {
-    return (
-      <span
-        title={SMA_BADGE_NOTE}
-        className="px-1.5 py-0.5 rounded text-caption bg-[var(--bg-primary)] text-[var(--text-muted)]"
-      >
-        {label} N/A
-      </span>
-    )
-  }
-  return (
-    <span
-      title={SMA_BADGE_NOTE}
-      className="px-1.5 py-0.5 rounded text-caption font-medium"
-      style={
-        above
-          ? { backgroundColor: 'var(--sem-ok-bg)', color: 'var(--positive)' }
-          : { backgroundColor: 'var(--sem-weak-bg)', color: 'var(--negative)' }
-      }
-    >
-      {label} {above ? '↑' : '↓'}
-    </span>
-  )
-}
+// 初期表示は地合い判定に使う EMA9 / 21 だけ。詳細を開くと 50 / 150 も引く。
+// 配列はレンダーごとに作り直すとチャートが再生成されるのでモジュール定数にする。
+const MA_SIMPLE: MaLength[] = [9, 21]
+const MA_DETAIL: MaLength[] = [9, 21, 50, 150]
 
 /**
  * TOPIX のローソク足 + 市場出来高。
@@ -93,6 +71,8 @@ export default function TopixChart({ market, height = 380 }: Props) {
   const [range, setRange] = useState<TopixRangeKey>(DEFAULT_TOPIX_RANGE)
   const [data, setData] = useState<TopixChartData>(EMPTY)
   const [loading, setLoading] = useState(true)
+  const [showDetail, setShowDetail] = useState(false)
+  const maLengths = showDetail ? MA_DETAIL : MA_SIMPLE
 
   // 過去スナップショット選択時はその日以前のみ描画（カードの数値と揃える）
   const endDate = isLatest ? undefined : selectedDate || undefined
@@ -129,65 +109,70 @@ export default function TopixChart({ market, height = 380 }: Props) {
         </div>
 
         <div className="flex items-center gap-3 flex-wrap">
-          <MaLegend />
+          <MaLegend lengths={maLengths} />
           <VolumeLegend />
-          <div className="flex gap-1">
-            <SmaBadge above={market?.topix_above_sma50} label="SMA50" />
-            <SmaBadge above={market?.topix_above_sma200} label="SMA200" />
-          </div>
+          <button
+            onClick={() => setShowDetail((v) => !v)}
+            aria-expanded={showDetail}
+            className="text-caption px-2.5 py-1 rounded-md border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)]"
+          >
+            {showDetail ? '▾ 詳細を閉じる' : '▸ 詳細'}
+          </button>
         </div>
       </div>
 
       <div className="flex flex-col lg:flex-row gap-5">
-        {/* 左: 数値（既存の TOPIX 系カラム） */}
-        <div className="flex-shrink-0 lg:w-[220px]">
-          <div className="text-title font-medium font-mono tabular-nums text-[var(--text-primary)]">
-            {fmtIndex(market?.topix_price)}
-          </div>
-          <p className="text-caption text-[var(--text-muted)] mb-4">指数ポイント（終値）</p>
+        {/* 左: 数値（既存の TOPIX 系カラム）。初期表示では畳む */}
+        {showDetail && (
+          <div className="flex-shrink-0 lg:w-[220px]">
+            <div className="text-title font-medium font-mono tabular-nums text-[var(--text-primary)]">
+              {fmtIndex(market?.topix_price)}
+            </div>
+            <p className="text-caption text-[var(--text-muted)] mb-4">指数ポイント（終値）</p>
 
-          <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-small">
-            <ChangePill label="1W" value={market?.topix_chg_1w} />
-            <ChangePill label="1M" value={market?.topix_chg_1m} />
-            <ChangePill label="YTD" value={market?.topix_chg_ytd} />
-            <ChangePill label="1Y" value={market?.topix_chg_1y} />
-          </div>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-small">
+              <ChangePill label="1W" value={market?.topix_chg_1w} />
+              <ChangePill label="1M" value={market?.topix_chg_1m} />
+              <ChangePill label="YTD" value={market?.topix_chg_ytd} />
+              <ChangePill label="1Y" value={market?.topix_chg_1y} />
+            </div>
 
-          <div className="mt-3 pt-3 border-t border-[var(--border)] text-caption flex justify-between">
-            <span className="text-[var(--text-muted)]">To 52W High</span>
-            <span className="font-mono font-medium tabular-nums text-[var(--text-secondary)]">
-              {isNum(pct52wh) ? `${pct52wh.toFixed(2)}%` : '—'}
-            </span>
-          </div>
-
-          {/* 市場出来高 — TOPIX 指数の出来高ではないので名前を分けて示す */}
-          <div className="mt-3 pt-3 border-t border-[var(--border)]">
-            <Tooltip content="個別株（ETF/ETN/JDR/REIT を除く）の出来高を全銘柄合算した値。TOPIX 指数そのものに出来高データは存在しない。">
-              <p className="text-caption text-[var(--text-muted)] uppercase tracking-wide">
-                市場出来高（東証・個別株）
-              </p>
-            </Tooltip>
-            <div className="flex items-baseline justify-between mt-1">
-              <span className="font-mono text-title font-medium tabular-nums text-[var(--text-primary)]">
-                {formatShares(volume)}
-              </span>
-              <span
-                className="font-mono text-small font-medium tabular-nums"
-                style={{
-                  color:
-                    (volumeRatio ?? 0) >= VOLUME_HEAVY_RATIO
-                      ? volumeBarColor(volumeRatio)
-                      : 'var(--text-muted)',
-                }}
-              >
-                平常比 {formatVolumeRatio(volumeRatio)}
+            <div className="mt-3 pt-3 border-t border-[var(--border)] text-caption flex justify-between">
+              <span className="text-[var(--text-muted)]">To 52W High</span>
+              <span className="font-mono font-medium tabular-nums text-[var(--text-secondary)]">
+                {isNum(pct52wh) ? `${pct52wh.toFixed(2)}%` : '—'}
               </span>
             </div>
-            <p className="text-caption text-[var(--text-muted)] mt-0.5">
-              20日平均 {formatShares(volumeMa20)}
-            </p>
+
+            {/* 市場出来高 — TOPIX 指数の出来高ではないので名前を分けて示す */}
+            <div className="mt-3 pt-3 border-t border-[var(--border)]">
+              <Tooltip content="個別株（ETF/ETN/JDR/REIT を除く）の出来高を全銘柄合算した値。TOPIX 指数そのものに出来高データは存在しない。">
+                <p className="text-caption text-[var(--text-muted)] uppercase tracking-wide">
+                  市場出来高（東証・個別株）
+                </p>
+              </Tooltip>
+              <div className="flex items-baseline justify-between mt-1">
+                <span className="font-mono text-title font-medium tabular-nums text-[var(--text-primary)]">
+                  {formatShares(volume)}
+                </span>
+                <span
+                  className="font-mono text-small font-medium tabular-nums"
+                  style={{
+                    color:
+                      (volumeRatio ?? 0) >= VOLUME_HEAVY_RATIO
+                        ? volumeBarColor(volumeRatio)
+                        : 'var(--text-muted)',
+                  }}
+                >
+                  平常比 {formatVolumeRatio(volumeRatio)}
+                </span>
+              </div>
+              <p className="text-caption text-[var(--text-muted)] mt-0.5">
+                20日平均 {formatShares(volumeMa20)}
+              </p>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* 右: ローソク足 + 出来高 */}
         <div className="flex-1 min-w-0">
@@ -230,6 +215,7 @@ export default function TopixChart({ market, height = 380 }: Props) {
               volumeLabel="市場出来高"
               height={height}
               visibleBars={data.visibleBars || undefined}
+              maLengths={maLengths}
             />
           )}
         </div>
