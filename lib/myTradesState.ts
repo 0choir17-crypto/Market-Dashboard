@@ -6,10 +6,13 @@ import type { Trade } from '@/types/trades'
 // 自分の成績（My Trades カード）。色の判定は持たず、事実の数字だけを出す。
 // 著者の「試し玉に含み益が乗るか」「エントリー直後から失敗し続けていないか」「資産曲線」を見る。
 //
-// - 成績は 1 トレードごとの損益率（%）で測る。本来は R（初期リスクの何倍か）で測りたいが、
-//   SBI の取り込み経由の行に初期ストップが無く、損切りも柔軟に決めているので後から推定できない。
-//   今後、初期ストップの記録がたまったら R に切り替える（2026-10 に決定）
-// - 損益率は pnl_pct、無ければ (決済値 ÷ 建値 − 1)。資産曲線は損益率の単純な累計（複利にしない）
+// - 成績は ATR 倍 = (決済値 − 建値) ÷ 建玉時の ATR14（trades.atr_at_entry）で測る。
+//   本来は R（初期リスクの何倍か）で測りたいが、SBI の取り込み経由の行に初期ストップが無く、
+//   損切りも柔軟に決めているので後から推定できない（2026-10 に決定）。ATR は裁量が入らず過去分も正確に出せる
+// - atr_at_entry は別リポで埋めてもらう（docs/BACKFILL_REQUEST_ATR_AT_ENTRY.md）。直近 RECENT_TRADES 件が
+//   すべて埋まるまでは損益率（pnl_pct、無ければ 決済値 ÷ 建値 − 1）で出す。単位を混ぜないため、
+//   ATR 倍の表示では atr_at_entry の無いトレードを集計から外す
+// - 資産曲線は単純な累計（複利にしない）
 // - 保有中の現在値は daily_signals の直近の終値。スキャナーに出なくなった銘柄は値が古くなる
 
 export const RECENT_TRADES = 10
@@ -17,31 +20,36 @@ export const RECENT_TRADES = 10
 export type ClosedTrade = Pick<
   Trade,
   'id' | 'ticker' | 'company_name' | 'entry_date' | 'exit_date' | 'pnl' | 'result'
-> & { pct: number | null }
+> & { pct: number | null; atrX: number | null }
 
 export type OpenPosition = Pick<Trade, 'id' | 'ticker' | 'company_name' | 'entry_date' | 'entry_price' | 'shares'> & {
   price: number | null
   priceDate: string | null
   pct: number | null
+  atrX: number | null
 }
 
-export type EquityPoint = { date: string; cumPct: number; ma: number | null }
+/** 成績の単位。atr = ATR 倍 / pct = 損益率 % */
+export type PerfUnit = 'atr' | 'pct'
+
+export type EquityPoint = { date: string; cum: number; ma: number | null }
 
 export type MyTradesState = {
+  unit: PerfUnit
   open: OpenPosition[]
   /** 含み益の建玉数 / 現在値の分かる建玉数 */
   openInProfit: number
   openPriced: number
-  /** 保有中の含み損益率の平均 */
-  openAvgPct: number | null
+  /** 保有中の含み損益の平均（unit の単位） */
+  openAvg: number | null
   /** 直近 RECENT_TRADES 件（決済日の新しい順） */
   recent: ClosedTrade[]
   recentWins: number
   recentLosses: number
-  /** 直近 RECENT_TRADES 件の損益率の平均 */
-  recentAvgPct: number | null
+  /** 直近 RECENT_TRADES 件の損益の平均（unit の単位） */
+  recentAvg: number | null
   lossStreak: number
-  /** 損益率の累計と、その直近 RECENT_TRADES 件の移動平均（決済順） */
+  /** 損益（unit の単位）の累計と、その直近 RECENT_TRADES 件の移動平均（決済順） */
   equity: EquityPoint[]
   error: string | null
 }
@@ -54,6 +62,10 @@ const n = (v: unknown) => (v == null || !Number.isFinite(Number(v)) ? null : Num
 
 function pctOf(entry: number | null, exit: number | null): number | null {
   return entry && exit != null ? (exit / entry - 1) * 100 : null
+}
+
+function atrXOf(entry: number | null, exit: number | null, atr: number | null): number | null {
+  return entry != null && exit != null && atr != null && atr > 0 ? (exit - entry) / atr : null
 }
 
 function avg(xs: (number | null)[]): number | null {
@@ -88,22 +100,26 @@ export async function fetchMyTradesState(): Promise<MyTradesState> {
     pnl: n(t.pnl),
     result: (t.result as Trade['result']) ?? null,
     pct: n(t.pnl_pct) ?? pctOf(n(t.entry_price), n(t.exit_price)),
+    atrX: atrXOf(n(t.entry_price), n(t.exit_price), n(t.atr_at_entry)),
   }))
 
   const recent = closed.slice(-RECENT_TRADES).reverse()
+  const unit: PerfUnit = recent.length > 0 && recent.every((t) => t.atrX != null) ? 'atr' : 'pct'
+  const val = (t: { pct: number | null; atrX: number | null }) => (unit === 'atr' ? t.atrX : t.pct)
   let lossStreak = 0
   for (const t of closed) lossStreak = nextLossStreak(lossStreak, effectiveResult(t))
 
   const equity: EquityPoint[] = []
   let cum = 0
   for (const t of closed) {
-    if (t.pct == null) continue
-    cum += t.pct
-    equity.push({ date: t.exit_date as string, cumPct: cum, ma: null })
+    const v = val(t)
+    if (v == null) continue
+    cum += v
+    equity.push({ date: t.exit_date as string, cum, ma: null })
   }
   for (let i = RECENT_TRADES - 1; i < equity.length; i++) {
     let s = 0
-    for (let j = i - RECENT_TRADES + 1; j <= i; j++) s += equity[j].cumPct
+    for (let j = i - RECENT_TRADES + 1; j <= i; j++) s += equity[j].cum
     equity[i].ma = s / RECENT_TRADES
   }
 
@@ -138,19 +154,21 @@ export async function fetchMyTradesState(): Promise<MyTradesState> {
       price,
       priceDate: p?.date ?? null,
       pct: pctOf(entry, price),
+      atrX: atrXOf(entry, price, n(t.atr_at_entry)),
     }
   })
   const priced = open.filter((o) => o.price != null)
 
   return {
+    unit,
     open,
     openInProfit: priced.filter((o) => (o.price as number) > o.entry_price).length,
     openPriced: priced.length,
-    openAvgPct: avg(open.map((o) => o.pct)),
+    openAvg: avg(open.map(val)),
     recent,
     recentWins: recent.filter(isWin).length,
     recentLosses: recent.filter(isLoss).length,
-    recentAvgPct: avg(recent.map((t) => t.pct)),
+    recentAvg: avg(recent.map(val)),
     lossStreak,
     equity,
     error,
