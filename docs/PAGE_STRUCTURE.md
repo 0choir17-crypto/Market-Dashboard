@@ -71,8 +71,12 @@ app/layout.tsx  (RootLayout, lang="ja")
 1. `PageHeader`（タイトル / 日付 / Refresh）
 2. 過去日バナー（最新以外を選択中のときのみ、アンバー）
 3. ローディング / データなしカード
-4. **Market Regime** `components/market/IndexStateCards.tsx` — 6 枚（TOPIX / 日経225 / グロース250 / Market Breadth / Leaders 大型 / Leaders 中小）。
-   幅 1,536px 以上は横 1 列、それ未満の PC 幅は 3 枚 × 2 段。どのカードもクリックで詳細モーダル。
+4. **Market Regime** `components/market/IndexStateCards.tsx` — 7 枚（My Trades / TOPIX / 日経225 / グロース250 / Market Breadth / Leaders 大型 / Leaders 中小）。
+   PC 幅は 4 枚 + 3 枚の 2 段。どのカードもクリックで詳細モーダル。
+   - My Trades `MyTradesCard`（先頭）: 保有中の含み益の建玉数と含み R・直近 10 件の勝敗と R の合計・連敗・資産曲線（R の累計）が直近 10 件平均の上か下か。
+     **色の判定は持たない**（R の符号の緑赤は損益色）。R = (決済値 − 建値) ÷ (建値 − 初期ストップ)、無ければ `r_multiple`。
+     保有中の現在値は `daily_signals` の直近の終値（スキャナーに出なくなった銘柄は古い）。日付ピッカーには連動しない（`lib/myTradesState.ts`）。
+     詳細 = 資産曲線（R の累計と直近 10 件の移動平均）+ 保有中の一覧 + 直近 10 件の決済 + `/journal` へのリンク
    - 指数カード: 信号（色 + 言葉）/ EMA の向き「EMA9 ↑ EMA21 ↑」/ 値の大きい順に > でつないだ「終値 3,012.34 > EMA9 > EMA21」（EMA の値は出さない）/ 補助「終値 > 週足EMA9」「終値 > EMA50」。
      判定は日足 EMA9 / EMA21 の位置と向き（`lib/trendState.ts`、向き = 5 営業日前の EMA との比較）。
      緑 = 終値 > EMA21・EMA21↑・終値 > EMA9・EMA9↑・EMA9 > EMA21 / 黄 = 押し（上向き EMA21 は維持）・下向き EMA21 を上抜け・上向き EMA21 を割り込み / 赤 = 下向き EMA21 の下。
