@@ -3,49 +3,11 @@
 import { useEffect, useState } from 'react'
 import { useDate } from '@/contexts/DateContext'
 import { fetchIndexTrends, INDEXES, type IndexTrendResult } from '@/lib/indexTrendFetch'
-import { SLOPE_LOOKBACK, type TrendSignal, type TrendState } from '@/lib/trendState'
+import type { TrendState } from '@/lib/trendState'
+import { Position, Row, SIGNAL_STYLE, SLOPE_NOTE, Slope } from './trendAtoms'
 
 // 地合いの判定カード（3 指数を横 1 列）。色だけでは理由が読めないので、
 // 判定の材料（終値と EMA9 / EMA21 の位置、EMA の向き）を必ず並べて出す。
-
-const SIGNAL_STYLE: Record<TrendSignal, { bg: string; fg: string; bd: string; name: string }> = {
-  green: { bg: 'var(--sem-strong-bg)', fg: 'var(--sem-strong-fg)', bd: 'var(--sem-strong-bd)', name: '緑' },
-  yellow: { bg: 'var(--sem-watch-bg)', fg: 'var(--sem-watch-fg)', bd: 'var(--sem-watch-bd)', name: '黄' },
-  red: { bg: 'var(--sem-weak-bg)', fg: 'var(--sem-weak-fg)', bd: 'var(--sem-weak-bd)', name: '赤' },
-}
-
-const SLOPE_NOTE = `今日の EMA と ${SLOPE_LOOKBACK} 営業日前の EMA を比べた向き`
-
-function Row({ label, title, children }: { label: string; title?: string; children: React.ReactNode }) {
-  return (
-    <div className="flex justify-between items-baseline gap-3" title={title}>
-      <span className="text-[var(--text-muted)]">{label}</span>
-      <span className="font-mono tabular-nums font-medium">{children}</span>
-    </div>
-  )
-}
-
-function Position({ above, dist }: { above: boolean; dist?: number }) {
-  return (
-    <span style={{ color: above ? 'var(--positive)' : 'var(--negative)' }}>
-      {above ? '上' : '下'}
-      {dist !== undefined && (
-        <span className="ml-1.5">
-          {dist >= 0 ? '+' : ''}
-          {dist.toFixed(2)}%
-        </span>
-      )}
-    </span>
-  )
-}
-
-function Slope({ up }: { up: boolean }) {
-  return (
-    <span style={{ color: up ? 'var(--positive)' : 'var(--negative)' }}>
-      {up ? '↑ 上向き' : '↓ 下向き'}
-    </span>
-  )
-}
 
 function OptionalPosition({ above }: { above: boolean | null }) {
   if (above === null) return <span className="text-[var(--text-muted)]">—</span>

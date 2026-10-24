@@ -7,6 +7,7 @@ import { useDate } from '@/contexts/DateContext'
 import BreadthPanel from '@/components/market/BreadthPanel'
 import TopixChart from '@/components/market/TopixChart'
 import IndexStateCards from '@/components/market/IndexStateCards'
+import SectorStateCards from '@/components/market/SectorStateCards'
 import SectorSection from '@/components/sectors33/SectorSection'
 import PageHeader from '@/components/shared/PageHeader'
 
@@ -15,6 +16,8 @@ export default function Page() {
   const [market, setMarket] = useState<MarketConditions | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  // 業種の詳細（チャート・表・RRG）は開いたときだけ描画・取得する
+  const [sectorDetailOpen, setSectorDetailOpen] = useState(false)
   // 日付の高速切替時に古い応答が後着して新しい表示を上書きしないためのガード
   const requestIdRef = useRef(0)
 
@@ -108,16 +111,37 @@ export default function Page() {
         </div>
       )}
 
-      {/* Sectors-33 タブを統合。まず「どのセクターか」を見せ、
-          市場全体の内部状態 (Market Breadth) はその下で確認する。 */}
-      <SectorSection />
-
       {market && (
-        /* Market Breadth は Sector Selection の下に大きく表示 */
         <div className="mt-10">
           <BreadthPanel market={market} />
         </div>
       )}
+
+      {/* 業種は 33 枚あるので一番下に置き、ごちゃつきを防ぐ */}
+      <div className="mt-10">
+        <SectorStateCards />
+      </div>
+
+      {/* 旧 Sector Selection（チャート一覧 / 表 / RRG）。普段は畳んでおく */}
+      <details
+        className="mt-6 group"
+        onToggle={(e) => setSectorDetailOpen(e.currentTarget.open)}
+      >
+        <summary className="cursor-pointer select-none list-none flex items-center gap-2 text-small font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)]">
+          <span className="text-caption text-[var(--text-muted)] group-open:rotate-90 transition-transform inline-block">
+            ▶
+          </span>
+          業種の詳細（チャート・表・RRG）
+          <span className="text-caption font-normal text-[var(--text-muted)]">
+            — 常に最新日を表示（日付ピッカーには連動しない）
+          </span>
+        </summary>
+        {sectorDetailOpen && (
+          <div className="mt-4">
+            <SectorSection showHeading={false} />
+          </div>
+        )}
+      </details>
 
     </main>
   )

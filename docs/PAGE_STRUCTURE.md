@@ -78,8 +78,12 @@ app/layout.tsx  (RootLayout, lang="ja")
    データ: `market_conditions` の `topix_price` / `nikkei_price` / `growth_price`（`lib/indexTrendFetch.ts`）。`gate_state` 系は使わない
 5. **TopixChart** `components/market/TopixChart.tsx` — TOPIX ローソク足 + 市場出来高。初期表示は EMA9 / 21 のみ。
    「詳細」を開くと EMA50 / 150 と数値パネル（期間リターン・52W 高値・市場出来高）を出す。SMA50/200 バッジは廃止
-6. **SectorSection** `components/sectors33/SectorSection.tsx` — Sectors-33 タブを統合。「どのセクターか」を先に見せる
-7. **BreadthPanel** `components/market/BreadthPanel.tsx` — 市場全体の内部状態を下段で確認
+6. **BreadthPanel** `components/market/BreadthPanel.tsx` — 市場全体の内部状態
+7. **SectorStateCards** `components/market/SectorStateCards.tsx` — 33 業種の判定カード（1 列 2〜5 枚、画面幅で変わる）。
+   判定は指数カードと同じ。カード内 = 信号と言葉・EMA9 / EMA21（上下・乖離・向き）・自力 t21 / t63・注意の印（self_t63 ≤ −1）。
+   並びは 緑 → 黄 → 赤、同じ色の中は self_t21 の高い順。見出し右に色ごとの件数。日付ピッカーに連動。
+   データ: `sector_selection_s33` の `sector_index_close_s33` / `self_t63` / `self_t21`（`lib/sectorTrendFetch.ts`）
+8. **業種の詳細**（`<details>`、既定は閉じる）— 開いたときだけ `SectorSection` を描画・取得する。常に最新日（日付ピッカー非連動）
 
 データ: `market_conditions` から 1 行（最新モードは `order(date desc).limit(1)`、過去日モードは `eq(date)`）。
 連打対策に `requestIdRef` で後着レスポンスを破棄。
