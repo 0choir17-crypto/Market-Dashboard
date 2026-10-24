@@ -5,6 +5,7 @@ import { useDate } from '@/contexts/DateContext'
 import { fetchToday, type TodayResponse } from '@/lib/todayFetch'
 import EmaSetupsSection from '@/components/today/EmaSetupsSection'
 import StructurePivotSection from '@/components/today/StructurePivotSection'
+import VahBreakoutSection from '@/components/today/VahBreakoutSection'
 import ErrorBanner from '@/components/shared/ErrorBanner'
 import PageHeader from '@/components/shared/PageHeader'
 
@@ -14,6 +15,9 @@ const EMPTY: TodayResponse = {
   emaTableMissing: false,
   structDate: null,
   struct: [],
+  vahDate: null,
+  vah: [],
+  vahTableMissing: false,
   error: null,
 }
 
@@ -43,9 +47,9 @@ export default function TodayPage() {
   // ページ見出しの日付は現役スキャナーの最大 date のみから決める
   // （2026-08-29 に廃止された6テーブルは参照しない。参照すると 2026-08-28 で
   //   止まった日付を「最終更新日」として出し続けてしまう）。
-  const displayDate = data.structDate ?? data.emaDate ?? selectedDate
+  const displayDate = data.structDate ?? data.emaDate ?? data.vahDate ?? selectedDate
 
-  const total = data.ema.length + data.struct.length
+  const total = data.ema.length + data.struct.length + data.vah.length
 
   // 複数シグナル重複: 同一 code が 2 つ以上のスキャナーに当日出た銘柄。
   // 各スキャナーのカード背景を黄色で強調するために code の集合を作る。
@@ -61,6 +65,7 @@ export default function TodayPage() {
     }
     addList(data.ema)
     addList(data.struct)
+    addList(data.vah)
     const set = new Set<string>()
     for (const [code, n] of counts) if (n >= 2) set.add(code)
     return set
@@ -98,6 +103,13 @@ export default function TodayPage() {
         </div>
       ) : (
         <div className="flex flex-col gap-6">
+          <VahBreakoutSection
+            rows={data.vah}
+            tableMissing={data.vahTableMissing}
+            multiHitCodes={multiHitCodes}
+            title="VAH Breakouts"
+            subtitle="Volume Profile（出来高急増の起点〜前日の価格帯別出来高。TradingView の VP-JP と同じ線・配当調整後）の VAH を、終値で下から上抜けた日。同じ期間の中で何回目の上抜けかをバッジで示す（初回は緑）。灰色の「前VAH」は1つ前の期間の VAH。※検証では +2R 利確の版で平均より +0.07〜0.09R とわずかな上乗せ、利確なしではほぼ 0。初回か再上抜けか・前VAHより上か下かでは差が無い。買いシグナルではなく、毎朝チャートを開く銘柄を機械的に絞り込んだリストとして使う。"
+          />
           <StructurePivotSection
             rows={data.struct}
             multiHitCodes={multiHitCodes}

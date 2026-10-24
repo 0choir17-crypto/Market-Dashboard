@@ -13,6 +13,7 @@ const TABLES = [
   'market_conditions',
   'ema_setups',
   'structure_pivot_events',
+  'vah_breakouts',
   'mc_v4_raw_history',
   'sector_selection_s33',
   'sector_index_prices',
