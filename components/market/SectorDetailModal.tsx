@@ -4,12 +4,12 @@ import { useEffect, useState } from 'react'
 import Modal from '@/components/shared/Modal'
 import TvChart from '@/components/chart/TvChart'
 import type { MaLength } from '@/components/sectors33/SectorCandleChart'
-import { fetchSectorChart, type SectorTrend } from '@/lib/sectorTrendFetch'
+import { SECTOR_CHART_VISIBLE_BARS, fetchSectorChart, type SectorTrend } from '@/lib/sectorTrendFetch'
 import type { OhlcvBar, VolumeBar } from '@/types/chart'
 import { CloseVs, EmaChain, SelfRow, SignalPill, Slopes } from './trendAtoms'
 
 // 業種カードの詳細。判定の材料 + 自力 t 値 + TradingView 風チャート。
-// 業種指数の OHLC は直近 150 営業日しか無いので期間の切替は持たない（EMA150 は引けない）。
+// 直近 150 営業日を表示する（EMA の助走ぶんはその手前に取ってある）。期間の切替は持たない。
 
 const MA_LENGTHS: MaLength[] = [9, 21, 50]
 
@@ -62,10 +62,10 @@ export default function SectorDetailModal({
             読み込み中…
           </div>
         ) : (
-          <TvChart title={sector.sector} bars={data.bars} volumes={data.volumes} volumeLabel="業種出来高" maLengths={MA_LENGTHS} />
+          <TvChart title={sector.sector} bars={data.bars} volumes={data.volumes} volumeLabel="業種出来高" maLengths={MA_LENGTHS} visibleBars={SECTOR_CHART_VISIBLE_BARS} />
         )}
         <p className="text-caption text-[var(--text-muted)]">
-          業種指数の始値・高値・安値・終値は直近 150 営業日ぶんのみ（そのため EMA50 は TradingView と僅かにずれることがある）。自力 t21 / t63 = TOPIX につられた分を除いた業種の強さ
+          自力 t21 / t63 = TOPIX につられた分を除いた業種の強さ
         </p>
       </div>
     </Modal>

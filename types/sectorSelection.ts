@@ -31,7 +31,7 @@ export type SectorSelectionRow = {
   confidence_low: number | null
 
   // ── ② 業種別指数の生 OHLC + リターン（指数ポイント。出来高なし）───────────
-  // 直近150営業日のみ非null。それ以前は NULL（表示側で「—」にする）。
+  // 2008-05-07 以降すべて埋まっている（2026-10 に全期間を入れ直した）。
   sector_index_open_s33?: number | null
   sector_index_high_s33?: number | null
   sector_index_low_s33?: number | null

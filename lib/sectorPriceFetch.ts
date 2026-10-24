@@ -1,7 +1,7 @@
 import { supabase } from '@/lib/supabase'
 import { fetchAllPaged } from '@/lib/pagedFetch'
 import type { OhlcvBar, VolumeBar } from '@/types/chart'
-import type { SeriesPoint } from '@/lib/indicators'
+import { emaWarmupBars, type SeriesPoint } from '@/lib/indicators'
 import { OVERLAY_SERIES } from '@/lib/chartColors'
 
 const TABLE = 'sector_selection_s33'
@@ -52,17 +52,16 @@ function num(v: unknown): number | null {
 /** チャートに出したい本数（この範囲を初期表示する） */
 export const VISIBLE_BARS = 150
 /**
- * 最長 EMA(150) の助走ぶん。EMA は先頭 length 本を seed に使うため、
- * 150本しか無いと EMA150 は最終足の 1 点しか描けない。表示したい本数に
- * 加えてこの本数を余分に取得する。
+ * 最長 EMA(150) の助走ぶん（669 本）。表示したい本数の手前にこの本数を余分に取り、
+ * 表示範囲の左端から EMA150 を TradingView と同じ値にする（lib/indicators.ts の emaWarmupBars）。
  */
-const WARMUP_BARS = 150
+const WARMUP_BARS = emaWarmupBars(150)
 const DEFAULT_LOOKBACK = VISIBLE_BARS + WARMUP_BARS
 
 /**
  * 全業種ぶんの指数 OHLC + 業種の自力 (self_t63 / self_t21) をまとめて取得する。
  *
- * 33業種 × 300日 ≈ 9,900 行で Supabase の 1000 行上限を超えるため、
+ * 33業種 × 約 820日 ≈ 2.7万行で Supabase の 1000 行上限を超えるため、
  * 安定順序 (date, sector) でページングする。1業種ずつ 33 回叩くより往復が少ない。
  *
  * @param referenceSector 境界日の算出に使う代表業種。渡すと Phase 1 が
@@ -152,7 +151,7 @@ export async function fetchAllSectorPriceHistory(
     const h = num(r.sector_index_high_s33)
     const l = num(r.sector_index_low_s33)
     const c = num(r.sector_index_close_s33)
-    // 指数の生カラムは直近150営業日のみ非null。欠損日はローソク足から除外する。
+    // 四本値は 2008-05-07 以降すべて埋まっている（2026-10 に全期間を入れ直した）。念のため欠損日は足から除く。
     const vol = num(r.sector_volume_s33)
     if (o != null && h != null && l != null && c != null) {
       entry.bars.push({ date, open: o, high: h, low: l, close: c, volume: vol ?? 0 })

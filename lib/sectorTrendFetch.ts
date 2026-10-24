@@ -1,30 +1,34 @@
 import { supabase } from './supabase'
 import { fetchAllPaged } from './pagedFetch'
-import { barsToCalendarDays } from './indicators'
-import { computeTrendState, type ClosePoint, type TrendState } from './trendState'
+import { barsToCalendarDays, emaWarmupBars } from './indicators'
+import { SLOPE_LOOKBACK, computeTrendState, type ClosePoint, type TrendState } from './trendState'
 import type { OhlcvBar, VolumeBar } from '@/types/chart'
 
 // 33 業種の地合い判定。指数カードと同じ EMA9 / EMA21 の判定を業種指数の終値に掛け、
 // 業種の自力 (self_t63 / self_t21) を最終日の値で添える。
 //
-// ⚠️ 業種指数の生カラムは直近 150 営業日ぶんしか非 null でない。それより古い日を
-//    選ぶと終値が足りず判定できない（カードは「データが足りません」になる）。
-// ⚠️ 150 本では TradingView と一致させるのに足りない線がある（lib/indicators.ts の emaWarmupBars）。
-//    EMA9 / EMA21 は一致する。EMA50 は起点の影響が約 2%、週足 EMA9（約 30 週）は約 1% 残る。
-//    完全に合わせるにはバッチ側で業種指数の履歴を延ばす必要がある。
+// 業種指数の四本値は 2008-05-07 以降すべて埋まっている（2026-10 に全期間を入れ直した）。
+// 取る本数は EMA が TradingView と同じ値になる助走から決める（lib/indicators.ts の emaWarmupBars）。
 
 const TABLE = 'sector_selection_s33'
 
 const COLUMNS = 'date, sector_name_s33, sector_index_close_s33, self_t63, self_t21'
 
-/** 詳細チャートで取る足数（生カラムが非 null の範囲） */
-const SECTOR_CHART_BARS = 150
+/** 詳細チャートで初期表示する足数 */
+export const SECTOR_CHART_VISIBLE_BARS = 150
 
 /**
- * 取得する暦日数。EMA を TradingView に近づけるため、あるだけ（150 営業日）すべて取り、
- * 詳細チャートと同じ足で判定する。33 業種 × 150 日 ≈ 5,000 行なのでページングする。
+ * 詳細チャートで取る足数。表示ぶんの手前に、モーダルで引く最長の EMA50 の助走（223 本）を足す。
+ * 降順 limit 1 回で取るので Supabase の 1,000 行上限に収まること。
  */
-const LOOKBACK_DAYS = barsToCalendarDays(SECTOR_CHART_BARS)
+const SECTOR_CHART_BARS = SECTOR_CHART_VISIBLE_BARS + emaWarmupBars(50)
+
+/**
+ * 判定に取る暦日数。EMA50 が向き（SLOPE_LOOKBACK 本前）まで TradingView の値に収束する本数
+ * （約 230 本 ≈ 370 暦日。週足 EMA9 の 40 週もこれに収まる）。指数カードと同じ。
+ * 33 業種 × 約 250 日 ≈ 8,000 行なのでページングする。
+ */
+const LOOKBACK_DAYS = barsToCalendarDays(emaWarmupBars(50) + SLOPE_LOOKBACK)
 
 export type SectorTrend = {
   sector: string
@@ -108,7 +112,7 @@ export async function fetchSectorTrends(endDate?: string): Promise<SectorTrendRe
 
 /**
  * 1 業種ぶんの OHLC + 出来高（詳細モーダルのチャート用）。
- * 業種指数の生カラムは直近 150 営業日しか非 null でないので、それ以上は取らない。
+ * EMA の助走ぶんを含むので、チャートには SECTOR_CHART_VISIBLE_BARS を渡して右端だけ表示する。
  */
 export async function fetchSectorChart(
   sector: string,

@@ -98,7 +98,7 @@ app/layout.tsx  (RootLayout, lang="ja")
      詳細 = 一覧の件数の推移（`liquid_leaders_sector` を日ごとに合算）+ 外れた・入った・失速した銘柄の一覧 + `/leaders` へのリンク
 6. **Sectors** `components/market/SectorStateCards.tsx` — 33 業種の判定カード（1 列 2〜5 枚、画面幅で変わる）。書き方は指数カードと同じ + 自力 t21 / t63・注意の印（self_t63 ≤ −1）。
    並びは 緑 → 黄 → 赤、同じ色の中は self_t21 の高い順。見出し右に色ごとの件数。日付ピッカーに連動。
-   クリックで `SectorDetailModal`（`TvChart`、EMA 9 / 21 / 50 + 業種出来高。業種指数の OHLC は直近 150 営業日のみ）。
+   クリックで `SectorDetailModal`（`TvChart`、EMA 9 / 21 / 50 + 業種出来高。直近 150 営業日を表示）。
    データ: `sector_selection_s33`（`lib/sectorTrendFetch.ts`）
 7. **Sector Details**（`<details>`、既定は閉じる）— 開いたときだけ `SectorSection` を描画・取得する。常に最新日（日付ピッカー非連動）
 
