@@ -5,6 +5,7 @@ import type {
   StructurePivotCardRow,
   StructurePivotEventRow,
 } from '@/types/structurePivotEvents'
+import type { VahBreakoutRow } from '@/types/vahBreakouts'
 
 // Daily Watch — 「毎朝チャートを開く銘柄」を機械的に絞り込んだウォッチリスト。
 // jquants-scanner が毎日・平日引け後 (~18:00 JST) に当日分を upsert（冪等）。
@@ -19,7 +20,9 @@ import type {
 // 2026-09-21 の配信側スキャナー新設に追随:
 //   新設 — inside_day_setups（Step1e）。
 // 2026-10-04: Inside Day を廃止。inside_day_setups はどこからも読まない。
+// 2026-10-24: vah_breakouts（Step1k, VAH 上抜け）を新設。
 const EMA_SETUPS_TABLE = 'ema_setups'
+const VAH_BREAKOUTS_TABLE = 'vah_breakouts'
 const STRUCTURE_PIVOT_TABLE = 'structure_pivot_events'
 
 // structure_pivot_events は「直近ヒット窓」モデル。upsert は直近10営業日ぶんなので
@@ -34,6 +37,10 @@ export type TodayResponse = {
   emaTableMissing: boolean
   structDate: string | null
   struct: StructurePivotCardRow[]
+  vahDate: string | null
+  vah: VahBreakoutRow[]
+  // vah_breakouts の DDL が未実行なら true（ema と同じく「0 件の日」と区別する）。
+  vahTableMissing: boolean
   // 取得失敗の詳細（null なら全クエリ成功）。「0 件」と「取得失敗」を UI で区別するため。
   error: string | null
 }
@@ -94,6 +101,47 @@ async function fetchEmaSetups(date: string | null): Promise<{
 
   const raw = (data ?? []) as unknown as EmaSetupRow[]
   return { date: targetDate, rows: groupByCode(raw), tableMissing: false, error: null }
+}
+
+// VAH 上抜け（vah_breakouts）を単一 date で読む。PK は (date, code) で 1銘柄1行。
+// ema_setups と同じく「指定日以前で行がある直近日」の全行を出す。初回 / 再上抜けの別は cross_n が持つので、
+// 連続ヒットの除外は掛けない（配信側もフィルタ条件にしていない）。
+async function fetchVahBreakouts(date: string | null): Promise<{
+  date: string | null
+  rows: VahBreakoutRow[]
+  tableMissing: boolean
+  error: string | null
+}> {
+  let latestQuery = supabase.from(VAH_BREAKOUTS_TABLE).select('date')
+  if (date) latestQuery = latestQuery.lte('date', date)
+  const { data: latest, error: latestErr } = await latestQuery
+    .order('date', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (latestErr) {
+    if (isMissingTableError(latestErr)) {
+      console.warn(`[${VAH_BREAKOUTS_TABLE}] table not deployed yet — skipping`)
+      return { date: null, rows: [], tableMissing: true, error: null }
+    }
+    console.error(`[${VAH_BREAKOUTS_TABLE}] latest date error`, latestErr)
+    return { date: null, rows: [], tableMissing: false, error: `${VAH_BREAKOUTS_TABLE}: ${latestErr.message}` }
+  }
+
+  const targetDate = (latest?.date as string | undefined) ?? null
+  if (!targetDate) return { date: null, rows: [], tableMissing: false, error: null }
+
+  const { data, error } = await supabase.from(VAH_BREAKOUTS_TABLE).select('*').eq('date', targetDate)
+  if (error) {
+    if (isMissingTableError(error)) {
+      console.warn(`[${VAH_BREAKOUTS_TABLE}] table not deployed yet — skipping`)
+      return { date: null, rows: [], tableMissing: true, error: null }
+    }
+    console.error(`[${VAH_BREAKOUTS_TABLE}] fetch error`, error)
+    return { date: targetDate, rows: [], tableMissing: false, error: `${VAH_BREAKOUTS_TABLE}: ${error.message}` }
+  }
+
+  return { date: targetDate, rows: (data ?? []) as unknown as VahBreakoutRow[], tableMissing: false, error: null }
 }
 
 // Advanced Structure Pivot（1st / 2nd ヒット）を「直近ヒット窓」で読む。
@@ -210,12 +258,13 @@ async function fetchStructurePivotEvents(
 export async function fetchToday(opts: { date?: string }): Promise<TodayResponse> {
   const requested = opts.date ?? null
 
-  const [emaRes, structRes] = await Promise.all([
+  const [emaRes, structRes, vahRes] = await Promise.all([
     fetchEmaSetups(requested),
     fetchStructurePivotEvents(requested),
+    fetchVahBreakouts(requested),
   ])
 
-  const errors = [emaRes.error, structRes.error].filter(
+  const errors = [emaRes.error, structRes.error, vahRes.error].filter(
     (e): e is string => !!e,
   )
 
@@ -225,6 +274,9 @@ export async function fetchToday(opts: { date?: string }): Promise<TodayResponse
     emaTableMissing: emaRes.tableMissing,
     structDate: structRes.date,
     struct: structRes.rows,
+    vahDate: vahRes.date,
+    vah: vahRes.rows,
+    vahTableMissing: vahRes.tableMissing,
     error: errors.length > 0 ? errors.join(' / ') : null,
   }
 }
