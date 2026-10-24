@@ -8,10 +8,7 @@ import LineHistoryChart from '@/components/chart/LineHistoryChart'
 import { TIERS } from '@/types/liquidLeaders'
 import { BREADTH_SERIES } from '@/lib/chartColors'
 import {
-  FADE_BAD,
-  FADE_OK,
   LEADER_LOOKBACK,
-  SHRINK_BAD,
   fetchLeaderCountHistory,
   type CountDelta,
   type LeaderCountPoint,
@@ -20,20 +17,19 @@ import {
 } from '@/lib/leaderState'
 import { HISTORY_RANGES, type HistoryRange } from './BreadthStateCard'
 import { RangeBar } from './IndexDetailModal'
-import { CardButton, SignalPill } from './trendAtoms'
+import { CardButton } from './trendAtoms'
 
-// 主導株（Liquid Leaders）の判定カード。段（大型 / 中小）ごとに 1 枚。
+// 主導株（Liquid Leaders）のカード。段（大型 / 中小）ごとに 1 枚。
+// 色の判定は持たない（lib/leaderState.ts の冒頭参照）。増減の矢印も良し悪しの色を付けない。
 // クリックで詳細（件数の推移 + 外れた・入った・失速した銘柄の一覧）を開く。
 
 const DELTA_NOTE = `${LEADER_LOOKBACK} 営業日前との差`
 const FADE_NOTE = 't63 の一覧にいる（3 か月強い）のに t21 の一覧にはいない（直近 1 か月が弱い）銘柄の割合'
 
-function Diff({ d, invert = false, unit = '' }: { d: number | null; invert?: boolean; unit?: string }) {
+function Diff({ d, unit = '' }: { d: number | null; unit?: string }) {
   if (d == null) return <span className="text-[var(--text-muted)]">—</span>
-  const good = invert ? d < 0 : d > 0
-  const bad = invert ? d > 0 : d < 0
   return (
-    <span style={{ color: good ? 'var(--positive)' : bad ? 'var(--negative)' : 'var(--text-muted)' }}>
+    <span className="text-[var(--text-secondary)]">
       {d > 0 ? '↑' : d < 0 ? '↓' : '±'}
       {Math.abs(d).toFixed(unit ? 1 : 0)}
       {unit}
@@ -133,13 +129,10 @@ function LeaderDetailModal({
   return (
     <Modal open onClose={onClose} title={label} size="xl">
       <div className="p-6 space-y-5">
-        <div className="flex flex-wrap items-center gap-4">
-          <SignalPill signal={state.signal} label={state.label} />
-          <p className="text-caption text-[var(--text-muted)]">
-            緑 = t21 の件数が {LEADER_LOOKBACK} 日前以上・入った ≥ 外れた・失速 &lt; {FADE_OK}% / 赤 = 失速 ≥ {FADE_BAD}%、または t21 の件数が {SHRINK_BAD}% 以上減り外れた &gt; 入った / 黄 = それ以外。
-            比較は {prevDate ?? '—'} → {date ?? '—'}
-          </p>
-        </div>
+        <p className="text-caption text-[var(--text-muted)]">
+          色の判定は無し（検証で、失速や件数の増減にその後の値動きを分ける力が無かったため）。数字は情報として見る。
+          比較は {prevDate ?? '—'} → {date ?? '—'}
+        </p>
 
         <div>
           <p className="text-small font-medium text-[var(--text-primary)] mb-2">一覧の件数</p>
@@ -202,9 +195,6 @@ export default function LeaderStateCard({
           <p className="mt-3 text-small text-[var(--text-muted)]">読み込み中…</p>
         ) : (
           <>
-            <div className="mt-3">
-              <SignalPill signal={state.signal} label={state.label} />
-            </div>
             <p className="mt-3 text-caption text-[var(--text-muted)]">右は {LEADER_LOOKBACK} 日差</p>
             <div className="mt-1 space-y-1.5 text-small">
               <Line label="t21 の一覧" title={DELTA_NOTE} value={`${state.t21.now}`} diff={<Diff d={countDiff(state.t21)} />} />
@@ -212,9 +202,9 @@ export default function LeaderStateCard({
               <div className="flex items-baseline justify-between gap-2">
                 <span className="text-[var(--text-muted)]">5日の出入り</span>
                 <span className="font-mono tabular-nums">
-                  <span className="text-[var(--positive)]">入 {state.entered.length}</span>
+                  <span className="text-[var(--text-primary)]">入 {state.entered.length}</span>
                   <span className="text-[var(--text-muted)]"> / </span>
-                  <span className="text-[var(--negative)]">出 {state.exited.length}</span>
+                  <span className="text-[var(--text-primary)]">出 {state.exited.length}</span>
                 </span>
               </div>
               <Line
@@ -224,7 +214,6 @@ export default function LeaderStateCard({
                 diff={
                   <Diff
                     d={state.fadePct != null && state.fadePctPrev != null ? state.fadePct - state.fadePctPrev : null}
-                    invert
                     unit="pt"
                   />
                 }

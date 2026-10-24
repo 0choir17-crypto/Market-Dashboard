@@ -56,7 +56,7 @@ export function breadthLevel(v: number): BreadthLevel {
 
 /**
  * 判定ルール（SMA50 上の割合 = v、5 営業日前との差 = d）:
- * - v ≥ 70 … 黄「広範な強さ（伸び切り注意）」— 勢いは続きうるが楽な儲けは出尽くしがち
+ * - v ≥ 70 … 緑「広範な強さ」（2026-10 の検証で 50〜70% の日より明確に悪いとは言えなかったため黄から変更）
  * - 50 ≤ v < 70 … 緑「健全」/ d ≤ −2 なら 黄「健全だが低下中」
  * - 30 ≤ v < 50 … 黄「まちまち」— 単独では判断材料にならない。主導株を見る
  * - v < 30 … 赤「弱い・売られすぎ」/ d ≥ +2 なら 黄「売られすぎから回復中」
@@ -70,7 +70,7 @@ export function classifyBreadth(
   const falling = d != null && d <= -BREADTH_FLAT
   switch (level) {
     case 'hot':
-      return { level, signal: 'yellow', label: '広範な強さ（伸び切り注意）' }
+      return { level, signal: 'green', label: '広範な強さ' }
     case 'healthy':
       return falling
         ? { level, signal: 'yellow', label: '健全だが低下中' }

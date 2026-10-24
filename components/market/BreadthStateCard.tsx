@@ -123,7 +123,7 @@ function BreadthDetailModal({
         <div className="flex flex-wrap items-center gap-4">
           {state.signal && <SignalPill signal={state.signal} label={state.label} />}
           <p className="text-caption text-[var(--text-muted)]">
-            50日線の目安: {BREADTH_HOT}% 以上 = 広範な強さ（伸び切り注意）/ {BREADTH_MID}〜{BREADTH_HOT}% = 健全 /{' '}
+            50日線の目安: {BREADTH_HOT}% 以上 = 広範な強さ / {BREADTH_MID}〜{BREADTH_HOT}% = 健全 /{' '}
             {BREADTH_WEAK}〜{BREADTH_MID}% = まちまち / {BREADTH_WEAK}% 未満 = 弱い・売られすぎ（底の保証ではない）
           </p>
         </div>

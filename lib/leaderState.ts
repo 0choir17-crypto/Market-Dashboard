@@ -1,25 +1,21 @@
 import { supabase } from './supabase'
 import { fetchAllPaged } from './pagedFetch'
 import type { LiquidLeader, LiquidTier } from '@/types/liquidLeaders'
-import type { TrendSignal } from './trendState'
 
-// 主導株（Liquid Leaders）の判定。段（大型 / 中小）ごとに出す。
+// 主導株（Liquid Leaders）の状態。段（大型 / 中小）ごとに出す。
+//
+// 色の判定は持たない。2026-10 の検証（docs/VALIDATION_REQUEST_REGIME_THRESHOLDS.md への回答）で、
+// 失速は普段から 70〜85% あり、30 / 50 の線では毎日ほぼ赤になること、失速の高さとその後の値動きに
+// 関係が無いこと、指数の崩れに先行もしないことが分かったため。数字は情報としてだけ出す。
 //
 // - 一覧の件数（t21 / t63）と 5 営業日前との差 … 主導株が増えているか減っているか
 // - 5 日の出入り（t21 の一覧）… 入った数と外れた数
 // - 失速 = t63 の一覧にいる（3 か月強い）のに t21 の一覧にはいない（直近 1 か月が弱い）割合。
-//   3 か月強い銘柄は初期から持つ大口が大きな含み益を抱えている。その銘柄が直近で TOPIX に
-//   負け始めるのは利益確定の売りが出始めたサインで、指数より先に出やすい
 //
 // ⚠️ 価格（終値と EMA21 の位置）は liquid_leaders に無いので「崩れ」は自力の t 値で見ている。
 // ⚠️ 営業日は liquid_leaders にある日付で数える（一覧の 5 日比と同じ）。
 
 export const LEADER_LOOKBACK = 5
-
-/** 判定のしきい値（たたき台。2025-09 以降の履歴で後日調整する） */
-export const FADE_OK = 30 // 失速 < 30% なら緑の条件を満たす
-export const FADE_BAD = 50 // 失速 ≥ 50% で赤
-export const SHRINK_BAD = 20 // t21 の件数が 5 日前より 20% 以上減ったら赤の条件
 
 export type LeaderRow = Pick<LiquidLeader, 'date' | 'code' | 'tier' | 'co_name' | 'sector_s33' | 't21' | 't63' | 'in_t21' | 'in_t63'>
 
@@ -37,8 +33,6 @@ export type TierLeaderState = {
   /** 失速の割合（%）。t63 の一覧が空なら null */
   fadePct: number | null
   fadePctPrev: number | null
-  signal: TrendSignal
-  label: string
 }
 
 export type LeaderStateResult = {
@@ -52,35 +46,6 @@ function fadeOf(rows: LeaderRow[]): { faded: LeaderRow[]; pct: number | null } {
   const t63 = rows.filter((r) => r.in_t63 === true)
   const faded = t63.filter((r) => r.in_t21 !== true)
   return { faded, pct: t63.length > 0 ? (faded.length / t63.length) * 100 : null }
-}
-
-/**
- * 判定ルール（段ごと）:
- * - 赤 … 失速 ≥ 50%、または t21 の件数が 5 日前より 20% 以上減り かつ 外れた > 入った
- * - 緑 … t21 の件数が 5 日前以上 かつ 入った ≥ 外れた かつ 失速 < 30%
- * - 黄 … それ以外
- */
-export function classifyLeaders(s: {
-  t21: CountDelta
-  entered: number
-  exited: number
-  fadePct: number | null
-}): { signal: TrendSignal; label: string } {
-  const prev = s.t21.prev
-  const shrinkPct = prev != null && prev > 0 ? ((prev - s.t21.now) / prev) * 100 : 0
-  if (s.fadePct != null && s.fadePct >= FADE_BAD) return { signal: 'red', label: '主導株の失速が多い' }
-  if (shrinkPct >= SHRINK_BAD && s.exited > s.entered) return { signal: 'red', label: '主導株が減っている' }
-  if (
-    prev != null &&
-    s.t21.now >= prev &&
-    s.entered >= s.exited &&
-    s.fadePct != null &&
-    s.fadePct < FADE_OK
-  ) {
-    return { signal: 'green', label: '主導株が保たれている' }
-  }
-  if (s.fadePct != null && s.fadePct >= FADE_OK) return { signal: 'yellow', label: '失速が増えている' }
-  return { signal: 'yellow', label: '入れ替わりが多い' }
 }
 
 function tierState(tier: LiquidTier, now: LeaderRow[], prev: LeaderRow[] | null): TierLeaderState {
@@ -105,7 +70,6 @@ function tierState(tier: LiquidTier, now: LeaderRow[], prev: LeaderRow[] | null)
     faded: f.faded,
     fadePct: f.pct,
     fadePctPrev: fPrev?.pct ?? null,
-    ...classifyLeaders({ t21, entered: entered.length, exited: exited.length, fadePct: f.pct }),
   }
 }
 
