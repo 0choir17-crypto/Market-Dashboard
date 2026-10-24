@@ -45,9 +45,9 @@ export type MyTradesState = {
   error: string | null
 }
 
-const CLOSED_COLUMNS =
-  'id, ticker, company_name, entry_date, entry_price, exit_date, exit_price, pnl, result, initial_stop, r_multiple'
-const OPEN_COLUMNS = 'id, ticker, company_name, entry_date, entry_price, shares, initial_stop, stop_price'
+// 列は名指しせず select('*') で取る（Trading 画面と同じ）。initial_stop など後から足した列が
+// 環境によって無いことがあり、名指しすると PostgREST がクエリ全体をエラーにするため。
+// 無い列は undefined になり、R は r_multiple にフォールバックする。
 
 function rOf(entry: number | null, exit: number | null, stop: number | null): number | null {
   if (entry == null || exit == null || stop == null) return null
@@ -63,14 +63,14 @@ export async function fetchMyTradesState(): Promise<MyTradesState> {
     fetchAllPaged<Row>((from, to) =>
       supabase
         .from('trades')
-        .select(CLOSED_COLUMNS)
+        .select('*')
         .eq('status', 'closed')
         .not('exit_date', 'is', null)
         .order('exit_date', { ascending: true })
         .order('id', { ascending: true })
         .range(from, to) as unknown as PromiseLike<{ data: Row[] | null; error: { message: string } | null }>,
     ),
-    supabase.from('trades').select(OPEN_COLUMNS).eq('status', 'open').order('entry_date', { ascending: true }),
+    supabase.from('trades').select('*').eq('status', 'open').order('entry_date', { ascending: true }),
   ])
   const error = closedRes.error ?? openRes.error?.message ?? null
   if (error) console.error('[trades my state]', error)
