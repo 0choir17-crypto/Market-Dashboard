@@ -1,6 +1,7 @@
 import { supabase } from './supabase'
 import { fetchAllPaged } from './pagedFetch'
 import { computeTrendState, type ClosePoint, type TrendState } from './trendState'
+import type { OhlcvBar, VolumeBar } from '@/types/chart'
 
 // 33 業種の地合い判定。指数カードと同じ EMA9 / EMA21 の判定を業種指数の終値に掛け、
 // 業種の自力 (self_t63 / self_t21) を最終日の値で添える。
@@ -17,6 +18,9 @@ const COLUMNS = 'date, sector_name_s33, sector_index_close_s33, self_t63, self_t
  * 33 業種 × 約 100 日 ≈ 3,300 行なのでページングする。
  */
 const LOOKBACK_DAYS = 150
+
+/** 詳細チャートで取る足数（生カラムが非 null の範囲） */
+const SECTOR_CHART_BARS = 150
 
 export type SectorTrend = {
   sector: string
@@ -96,4 +100,46 @@ export async function fetchSectorTrends(endDate?: string): Promise<SectorTrendRe
     })
   }
   return { sectors, latestDate, error: null }
+}
+
+/**
+ * 1 業種ぶんの OHLC + 出来高（詳細モーダルのチャート用）。
+ * 業種指数の生カラムは直近 150 営業日しか非 null でないので、それ以上は取らない。
+ */
+export async function fetchSectorChart(
+  sector: string,
+  endDate?: string,
+): Promise<{ bars: OhlcvBar[]; volumes: VolumeBar[]; error: string | null }> {
+  let q = supabase
+    .from(TABLE)
+    .select(
+      'date, sector_index_open_s33, sector_index_high_s33, sector_index_low_s33, sector_index_close_s33, sector_volume_s33, sector_volume_ma20_s33',
+    )
+    .eq('sector_name_s33', sector)
+    .order('date', { ascending: false })
+    .limit(SECTOR_CHART_BARS)
+  if (endDate) q = q.lte('date', endDate)
+
+  const { data, error } = await q
+  if (error) {
+    console.error('[sector_selection_s33 chart]', error)
+    return { bars: [], volumes: [], error: error.message }
+  }
+  const bars: OhlcvBar[] = []
+  const volumes: VolumeBar[] = []
+  for (const r of ((data ?? []) as Record<string, unknown>[]).reverse()) {
+    const date = r.date as string
+    const o = num(r.sector_index_open_s33)
+    const h = num(r.sector_index_high_s33)
+    const l = num(r.sector_index_low_s33)
+    const c = num(r.sector_index_close_s33)
+    if (o == null || h == null || l == null || c == null) continue
+    const vol = num(r.sector_volume_s33)
+    bars.push({ date, open: o, high: h, low: l, close: c, volume: vol ?? 0 })
+    if (vol != null) {
+      const ma20 = num(r.sector_volume_ma20_s33)
+      volumes.push({ date, volume: vol, ratio: ma20 != null && ma20 > 0 ? vol / ma20 : null })
+    }
+  }
+  return { bars, volumes, error: null }
 }

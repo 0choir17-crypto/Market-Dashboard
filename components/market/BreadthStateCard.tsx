@@ -1,22 +1,26 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useDate } from '@/contexts/DateContext'
 import { MarketConditions } from '@/types/market'
 import {
   BREADTH_HOT,
   BREADTH_LOOKBACK,
   BREADTH_MID,
   BREADTH_WEAK,
-  fetchBreadthState,
+  fetchBreadthHistory,
+  type BreadthHistoryPoint,
   type BreadthMetric,
   type BreadthState,
 } from '@/lib/breadthState'
+import Modal from '@/components/shared/Modal'
 import BreadthPanel from './BreadthPanel'
-import { SIGNAL_STYLE } from './trendAtoms'
+import LineHistoryChart from '@/components/chart/LineHistoryChart'
+import { BREADTH_SERIES } from '@/lib/chartColors'
+import { RangeBar } from './IndexDetailModal'
+import { CardButton, SignalPill } from './trendAtoms'
 
-// Market Breadth の判定カード（横長 1 枚）。地合い（3 指数）の直下に置く。
-// 従来の 4 枚（騰落・騰落レシオ・新高値安値・SMA 上割合）は「詳細」に畳む。
+// Market Breadth の判定カード。指数カードの横（4 枚目）に置き、3 本の割合は縦に並べる。
+// クリックで詳細（割合 3 本の推移 + 騰落・騰落レシオ・新高値安値）を開く。
 
 const DELTA_NOTE = `${BREADTH_LOOKBACK} 営業日前との差（ポイント）`
 
@@ -24,53 +28,40 @@ function Delta({ d }: { d: number | null }) {
   if (d == null) return <span className="text-[var(--text-muted)]">—</span>
   return (
     <span style={{ color: d > 0 ? 'var(--positive)' : d < 0 ? 'var(--negative)' : 'var(--text-muted)' }}>
-      {d > 0 ? '+' : ''}
-      {d.toFixed(1)}
+      {d > 0 ? '↑' : d < 0 ? '↓' : ''}
+      {Math.abs(d).toFixed(1)}
     </span>
   )
 }
 
 /** 0〜100% のバー。30 / 50 / 70 に目盛りを打ち、どの区分にいるかを位置で読ませる */
-function LevelBar({ value }: { value: number | null }) {
+function LevelBar({ value, primary }: { value: number | null; primary: boolean }) {
   const v = Math.min(Math.max(value ?? 0, 0), 100)
   return (
-    <div className="relative h-2 w-full rounded-full bg-[var(--bg-primary)] overflow-hidden">
+    <div className="relative h-1.5 w-full rounded-full bg-[var(--bg-primary)] overflow-hidden">
       {value != null && (
-        <div className="h-2 rounded-full bg-[var(--text-secondary)]" style={{ width: `${v}%` }} />
+        <div
+          className="h-1.5 rounded-full"
+          style={{ width: `${v}%`, backgroundColor: primary ? 'var(--text-secondary)' : 'var(--border-strong)' }}
+        />
       )}
       {[BREADTH_WEAK, BREADTH_MID, BREADTH_HOT].map((t) => (
-        <div
-          key={t}
-          className="absolute top-0 h-2 w-px bg-[var(--border-strong)]"
-          style={{ left: `${t}%` }}
-        />
+        <div key={t} className="absolute top-0 h-1.5 w-px bg-[var(--bg-card)]" style={{ left: `${t}%` }} />
       ))}
     </div>
   )
 }
 
-function MetricBlock({
-  label,
-  sub,
-  m,
-  primary = false,
-  note,
-}: {
-  label: string
-  sub: string
-  m: BreadthMetric
-  primary?: boolean
-  note?: string
-}) {
+function MetricRow({ label, m, primary = false }: { label: string; m: BreadthMetric; primary?: boolean }) {
   return (
     <div>
-      <div className="flex items-baseline justify-between gap-2">
-        <span className={`text-small ${primary ? 'font-medium text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}`}>
+      <div className="flex items-baseline justify-between gap-2 font-mono tabular-nums">
+        <span className={`font-sans ${primary ? 'text-[var(--text-primary)] font-medium' : 'text-[var(--text-muted)]'}`}>
           {label}
-          <span className="ml-1.5 text-caption text-[var(--text-muted)]">{sub}</span>
+          {primary && <span className="ml-1 text-caption font-normal text-[var(--text-muted)]">判定</span>}
         </span>
-        <span className="font-mono tabular-nums">
-          <span className={primary ? 'text-title font-medium text-[var(--text-primary)]' : 'text-small font-medium text-[var(--text-primary)]'}>
+        <span>
+          <span className={primary ? 'text-title font-medium text-[var(--text-primary)]' : 'text-[var(--text-primary)]'}>
             {m.value != null ? `${m.value.toFixed(1)}%` : '—'}
           </span>
           <span className="ml-2 text-caption" title={DELTA_NOTE}>
@@ -78,96 +69,129 @@ function MetricBlock({
           </span>
         </span>
       </div>
-      <div className="mt-1.5">
-        <LevelBar value={m.value} />
+      <div className="mt-1">
+        <LevelBar value={m.value} primary={primary} />
       </div>
-      {note && <p className="text-caption text-[var(--text-muted)] mt-1">{note}</p>}
     </div>
   )
 }
 
-export default function BreadthStateCard({ market }: { market: MarketConditions | null }) {
-  const { selectedDate, isLatest } = useDate()
-  const [state, setState] = useState<BreadthState | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [showDetail, setShowDetail] = useState(false)
+const BREADTH_LINES = [
+  { key: 'sma20', label: '20日線', color: BREADTH_SERIES.sma20 },
+  { key: 'sma50', label: '50日線', color: BREADTH_SERIES.sma50, width: 2 },
+  { key: 'sma150', label: 'EMA150', color: BREADTH_SERIES.sma150 },
+] as const
+const PCT_RANGE: [number, number] = [0, 100]
+const BREADTH_REFS = [BREADTH_WEAK, BREADTH_MID, BREADTH_HOT]
+const fmtPct = (v: number) => `${v.toFixed(1)}%`
 
-  const endDate = isLatest ? undefined : selectedDate || undefined
+export const HISTORY_RANGES = [
+  { key: '6m', label: '6M', days: 183 },
+  { key: '1y', label: '1Y', days: 365 },
+  { key: '3y', label: '3Y', days: 1095 },
+] as const
+export type HistoryRange = (typeof HISTORY_RANGES)[number]['key']
+
+function BreadthDetailModal({
+  state,
+  market,
+  endDate,
+  onClose,
+}: {
+  state: BreadthState
+  market: MarketConditions | null
+  endDate?: string
+  onClose: () => void
+}) {
+  const [range, setRange] = useState<HistoryRange>('1y')
+  const [points, setPoints] = useState<BreadthHistoryPoint[] | null>(null)
 
   useEffect(() => {
     let cancelled = false
-    fetchBreadthState(endDate).then((res) => {
-      if (cancelled) return
-      setState(res.state)
-      setError(res.error)
+    const days = HISTORY_RANGES.find((r) => r.key === range)!.days
+    fetchBreadthHistory(days, endDate).then((res) => {
+      if (!cancelled) setPoints(res.points)
     })
     return () => {
       cancelled = true
     }
-  }, [endDate])
-
-  const sig = state?.signal ? SIGNAL_STYLE[state.signal] : null
+  }, [range, endDate])
 
   return (
-    <section>
-      <div className="card p-5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3 flex-wrap">
-            <h2 className="text-small font-medium text-[var(--text-primary)]">Market Breadth</h2>
-            {sig && state && (
-              <span
-                className="flex items-center gap-2 rounded-md border px-3 py-1.5 text-small"
-                style={{ backgroundColor: sig.bg, borderColor: sig.bd, color: sig.fg }}
-              >
-                <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ backgroundColor: sig.fg }} />
-                <span className="font-medium">{sig.name}</span>
-                {state.label}
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="text-caption text-[var(--text-muted)]">
-              移動平均より上にある銘柄の割合・右は {BREADTH_LOOKBACK} 日差
-            </span>
-            <button
-              onClick={() => setShowDetail((v) => !v)}
-              aria-expanded={showDetail}
-              className="text-caption px-2.5 py-1 rounded-md border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)]"
-            >
-              {showDetail ? '▾ 詳細を閉じる' : '▸ 詳細'}
-            </button>
+    <Modal open onClose={onClose} title="Market Breadth" size="xl">
+      <div className="p-6 space-y-5">
+        <div className="flex flex-wrap items-center gap-4">
+          {state.signal && <SignalPill signal={state.signal} label={state.label} />}
+          <p className="text-caption text-[var(--text-muted)]">
+            50日線の目安: {BREADTH_HOT}% 以上 = 広範な強さ / {BREADTH_MID}〜{BREADTH_HOT}% = 健全 /{' '}
+            {BREADTH_WEAK}〜{BREADTH_MID}% = まちまち / {BREADTH_WEAK}% 未満 = 弱い・売られすぎ（底の保証ではない）
+          </p>
+        </div>
+
+        <div>
+          <p className="text-small font-medium text-[var(--text-primary)] mb-2">移動平均より上にある銘柄の割合</p>
+          {points ? (
+            <LineHistoryChart points={points} lines={BREADTH_LINES} format={fmtPct} range={PCT_RANGE} refLines={BREADTH_REFS} />
+          ) : (
+            <div className="flex items-center justify-center rounded-md bg-[var(--bg-card-hover)] text-small text-[var(--text-muted)] h-[320px]">
+              読み込み中…
+            </div>
+          )}
+          <div className="mt-2">
+            <RangeBar ranges={[...HISTORY_RANGES]} value={range} onChange={setRange} />
           </div>
         </div>
 
+        {market && <BreadthPanel market={market} />}
+      </div>
+    </Modal>
+  )
+}
+
+export default function BreadthStateCard({
+  state,
+  error,
+  market,
+  endDate,
+}: {
+  state: BreadthState | null
+  error: string | null
+  market: MarketConditions | null
+  endDate?: string
+}) {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <>
+      <CardButton onClick={() => setOpen(true)} label="Market Breadth" className="p-5">
+        <h3 className="text-small font-medium text-[var(--text-primary)]">Market Breadth</h3>
         {error ? (
-          <p className="mt-3 text-small text-[var(--sem-weak-fg)]">Breadth 取得エラー: {error}</p>
+          <p className="mt-3 text-small text-[var(--sem-weak-fg)]">取得エラー: {error}</p>
         ) : !state ? (
           <p className="mt-3 text-small text-[var(--text-muted)]">読み込み中…</p>
         ) : (
           <>
-            <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-5">
-              <MetricBlock
-                label="20日線"
-                sub="短期"
-                m={state.sma20}
-                note={state.sma20.value == null ? 'バッチ側で列を追加中（未供給）' : undefined}
-              />
-              <MetricBlock label="50日線" sub="中期・判定に使う" m={state.sma50} primary />
-              <MetricBlock label="200日線" sub="長期" m={state.sma200} />
+            <div className="mt-3">
+              {state.signal ? (
+                <SignalPill signal={state.signal} label={state.label} />
+              ) : (
+                <p className="text-small text-[var(--text-muted)]">{state.label}</p>
+              )}
             </div>
             <p className="mt-3 text-caption text-[var(--text-muted)]">
-              50日線の目安: {BREADTH_HOT}% 以上 = 広範な強さ（伸び切り注意）/ {BREADTH_MID}〜{BREADTH_HOT}% = 健全 /{' '}
-              {BREADTH_WEAK}〜{BREADTH_MID}% = まちまち / {BREADTH_WEAK}% 未満 = 弱い・売られすぎ（底の保証ではない）
+              移動平均より上にある銘柄の割合（右は {BREADTH_LOOKBACK} 日差）
             </p>
+            <div className="mt-2 space-y-3 text-small">
+              <MetricRow label="20日線" m={state.sma20} />
+              <MetricRow label="50日線" m={state.sma50} primary />
+              <MetricRow label="EMA150" m={state.sma150} />
+            </div>
           </>
         )}
-      </div>
-
-      {showDetail && market && (
-        <div className="mt-4">
-          <BreadthPanel market={market} />
-        </div>
+      </CardButton>
+      {open && state && (
+        <BreadthDetailModal state={state} market={market} endDate={endDate} onClose={() => setOpen(false)} />
       )}
-    </section>
+    </>
   )
 }

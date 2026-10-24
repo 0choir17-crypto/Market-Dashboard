@@ -7,9 +7,11 @@ type Props = {
   onClose: () => void
   children: React.ReactNode
   title?: string
+  /** 既定は lg（フォーム用）。チャートを出すときは xl */
+  size?: 'lg' | 'xl'
 }
 
-export default function Modal({ open, onClose, children, title }: Props) {
+export default function Modal({ open, onClose, children, title, size = 'lg' }: Props) {
   useEffect(() => {
     if (!open) return
     function onKey(e: KeyboardEvent) {
@@ -36,7 +38,7 @@ export default function Modal({ open, onClose, children, title }: Props) {
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="relative bg-[var(--bg-card)] rounded-xl shadow-xl w-full max-w-lg mx-4 overflow-y-auto max-h-[90vh]"
+        className={`relative bg-[var(--bg-card)] rounded-xl shadow-xl w-full ${size === 'xl' ? 'max-w-6xl' : 'max-w-lg'} mx-4 overflow-y-auto max-h-[90vh]`}
       >
         {title && (
           <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border)]">
