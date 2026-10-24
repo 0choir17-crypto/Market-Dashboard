@@ -98,9 +98,8 @@ export default function Page() {
         </div>
       )}
 
-      {/* 自分の成績を一番上に置く（混乱したら自分の資産曲線だけ見ればいい、という考え方）。
-          幅は下の Market Regime のカード 1 枚ぶんに揃える */}
-      <div className="mb-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6 gap-4">
+      {/* 自分の成績を一番上に横いっぱいで置く（資産曲線こそ唯一の真実。判断の順番は常に自分から） */}
+      <div className="mb-6">
         <MyTradesCard />
       </div>
 

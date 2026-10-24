@@ -71,7 +71,7 @@ app/layout.tsx  (RootLayout, lang="ja")
 1. `PageHeader`（タイトル / 日付 / Refresh）
 2. 過去日バナー（最新以外を選択中のときのみ、アンバー）
 3. ローディング / データなしカード
-4. **My Trades** `components/market/MyTradesCard.tsx` — Market Regime の上の列に 1 枚（幅は Market Regime のカード 1 枚ぶん）。
+4. **My Trades** `components/market/MyTradesCard.tsx` — Market Regime の上の列に横いっぱいで 1 枚。左に数字、右に資産曲線（カードの中で常に表示）。
    保有中の含み益の建玉数と平均の含み損益率・直近 10 件の勝敗と平均損益率・連敗・資産曲線（損益率の累計）が直近 10 件平均の上か下か。
    **色の判定は持たない**（損益率の符号の緑赤は損益色）。成績は損益率（`pnl_pct`、無ければ 決済値 ÷ 建値 − 1）。
    R（初期ストップ基準）や ATR 倍は使わない。SBI の取り込み経由の行に初期ストップが無く損切りも柔軟で R を後から推定できず、

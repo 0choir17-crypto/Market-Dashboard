@@ -10,7 +10,8 @@ import { pnlColorClass } from '@/lib/format'
 import { RECENT_TRADES, fetchMyTradesState, type EquityPoint, type MyTradesState } from '@/lib/myTradesState'
 import { CardButton } from './trendAtoms'
 
-// 自分の成績。Market Regime の上の列に置く（混乱したら自分の資産曲線だけ見ればいい、という考え方）。
+// 自分の成績。Market Regime の上の列に横いっぱいで置き、資産曲線をカードの中で大きく見せる
+// （資産曲線こそ唯一の真実。判断の順番は常に自分から、という考え方）。
 // 色の判定は持たない。損益率の符号の緑赤は損益色（docs/DESIGN_DIRECTION.md 3.2）で、判定ではない。
 // 成績は損益率（%）。理由は lib/myTradesState.ts 冒頭。
 // トレード記録は日付ピッカーに連動させず、常に最新を出す。
@@ -27,24 +28,6 @@ function byDay(points: EquityPoint[]): EquityPoint[] {
   const m = new Map<string, EquityPoint>()
   for (const p of points) m.set(p.date, p)
   return [...m.values()]
-}
-
-/** 損益率の累計の小さな折れ線（直近 20 点） */
-function Sparkline({ points }: { points: EquityPoint[] }) {
-  const pts = points.slice(-20)
-  if (pts.length < 2) return null
-  const vals = pts.map((p) => p.cumPct)
-  const min = Math.min(...vals)
-  const max = Math.max(...vals)
-  const span = max - min || 1
-  const d = pts
-    .map((p, i) => `${i === 0 ? 'M' : 'L'}${(i / (pts.length - 1)) * 100},${28 - ((p.cumPct - min) / span) * 26 - 1}`)
-    .join(' ')
-  return (
-    <svg viewBox="0 0 100 28" preserveAspectRatio="none" className="w-full h-7" aria-hidden>
-      <path d={d} fill="none" stroke="var(--text-secondary)" strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
-    </svg>
-  )
 }
 
 function Line({ label, children }: { label: string; children: React.ReactNode }) {
@@ -156,6 +139,7 @@ export default function MyTradesCard() {
   }, [])
 
   const last = s?.equity.at(-1)
+  const points = useMemo(() => (s ? byDay(s.equity) : []), [s])
   return (
     <>
       <CardButton onClick={() => setOpen(true)} label="My Trades" className="p-5">
@@ -165,24 +149,24 @@ export default function MyTradesCard() {
         ) : s.error ? (
           <p className="mt-3 text-small text-[var(--sem-weak-fg)]">取得エラー: {s.error}</p>
         ) : (
-          <div className="mt-3 space-y-1.5 text-small">
-            <Line label="保有中の含み益（平均）">
-              {s.openInProfit} / {s.openPriced}
-              <span className="ml-2"><PctValue v={s.openAvgPct} /></span>
-            </Line>
-            <Line label={`直近 ${RECENT_TRADES} 件（平均）`}>
-              {s.recentWins}勝 {s.recentLosses}敗
-              <span className="ml-2"><PctValue v={s.recentAvgPct} /></span>
-            </Line>
-            <Line label="連敗">{s.lossStreak}</Line>
-            <div className="pt-2 mt-1 border-t border-[var(--border)]">
-              <div className="flex items-baseline justify-between gap-2 text-caption">
-                <span className="text-[var(--text-muted)]">資産曲線（損益率の累計）</span>
-                <span className="font-mono text-[var(--text-secondary)]">
-                  {last?.ma == null ? '—' : `${RECENT_TRADES} 件平均の${last.cumPct >= last.ma ? '上' : '下'}`}
-                </span>
-              </div>
-              <Sparkline points={s.equity} />
+          <div className="mt-3 grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-5">
+            <div className="space-y-1.5 text-small">
+              <Line label="保有中の含み益（平均）">
+                {s.openInProfit} / {s.openPriced}
+                <span className="ml-2"><PctValue v={s.openAvgPct} /></span>
+              </Line>
+              <Line label={`直近 ${RECENT_TRADES} 件（平均）`}>
+                {s.recentWins}勝 {s.recentLosses}敗
+                <span className="ml-2"><PctValue v={s.recentAvgPct} /></span>
+              </Line>
+              <Line label="連敗">{s.lossStreak}</Line>
+              <Line label={`資産曲線 vs ${RECENT_TRADES} 件平均`}>
+                {last?.ma == null ? '—' : last.cumPct >= last.ma ? '上' : '下'}
+              </Line>
+            </div>
+            {/* 資産曲線はカードの主役なので、クリックしなくても大きく見せる */}
+            <div className="min-w-0">
+              <LineHistoryChart points={points} lines={EQUITY_LINES} format={(v) => fmtPct(v)} height={220} />
             </div>
           </div>
         )}
