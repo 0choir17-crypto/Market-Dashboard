@@ -2,6 +2,7 @@ import { supabase } from './supabase'
 import { fetchAllPaged } from './pagedFetch'
 import type { OhlcvBar, VolumeBar } from '@/types/chart'
 import type { IndexKey } from './indexTrendFetch'
+import { barsToCalendarDays, emaWarmupBars } from './indicators'
 
 // 3 指数（TOPIX / 日経225 / グロース250）のチャート + 市場出来高。
 // すべて market_conditions（1行 = 営業日）から取る。
@@ -33,10 +34,10 @@ export const INDEX_RANGES: { key: IndexRangeKey; label: string; days: number | n
 export const DEFAULT_INDEX_RANGE: IndexRangeKey = '6m'
 
 /**
- * EMA150 の助走ぶん。EMA は先頭 length 本を seed に使うため、表示したい期間の
- * 手前に余分な足が要る。150営業日 ≈ 220暦日 なので余裕を見て 260日。
+ * EMA150 の助走ぶん。表示したい期間の手前に、EMA150 が TradingView の値に収束するまでの
+ * 足（約 670 本 ≈ 1,070 暦日）を余分に取る。理由は lib/indicators.ts の emaWarmupBars。
  */
-const WARMUP_DAYS = 260
+const WARMUP_DAYS = barsToCalendarDays(emaWarmupBars(150))
 
 export type IndexChartData = {
   /** 助走ぶんを含む全足（EMA 計算用） */

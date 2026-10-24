@@ -1,5 +1,6 @@
 import { supabase } from './supabase'
 import { fetchAllPaged } from './pagedFetch'
+import { barsToCalendarDays } from './indicators'
 import { computeTrendState, type ClosePoint, type TrendState } from './trendState'
 import type { OhlcvBar, VolumeBar } from '@/types/chart'
 
@@ -8,19 +9,22 @@ import type { OhlcvBar, VolumeBar } from '@/types/chart'
 //
 // ⚠️ 業種指数の生カラムは直近 150 営業日ぶんしか非 null でない。それより古い日を
 //    選ぶと終値が足りず判定できない（カードは「データが足りません」になる）。
+// ⚠️ 150 本では TradingView と一致させるのに足りない線がある（lib/indicators.ts の emaWarmupBars）。
+//    EMA9 / EMA21 は一致する。EMA50 は起点の影響が約 2%、週足 EMA9（約 30 週）は約 1% 残る。
+//    完全に合わせるにはバッチ側で業種指数の履歴を延ばす必要がある。
 
 const TABLE = 'sector_selection_s33'
 
 const COLUMNS = 'date, sector_name_s33, sector_index_close_s33, self_t63, self_t21'
 
-/**
- * 取得する暦日数。EMA21 の向き（21 + 5 本）に EMA の収束ぶんの余裕を見て約 100 営業日。
- * 33 業種 × 約 100 日 ≈ 3,300 行なのでページングする。
- */
-const LOOKBACK_DAYS = 150
-
 /** 詳細チャートで取る足数（生カラムが非 null の範囲） */
 const SECTOR_CHART_BARS = 150
+
+/**
+ * 取得する暦日数。EMA を TradingView に近づけるため、あるだけ（150 営業日）すべて取り、
+ * 詳細チャートと同じ足で判定する。33 業種 × 150 日 ≈ 5,000 行なのでページングする。
+ */
+const LOOKBACK_DAYS = barsToCalendarDays(SECTOR_CHART_BARS)
 
 export type SectorTrend = {
   sector: string
