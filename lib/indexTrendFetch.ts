@@ -1,5 +1,6 @@
 import { supabase } from './supabase'
-import { computeTrendState, type ClosePoint, type TrendState } from './trendState'
+import { barsToCalendarDays, emaWarmupBars } from './indicators'
+import { SLOPE_LOOKBACK, computeTrendState, type ClosePoint, type TrendState } from './trendState'
 
 // 3 指数（TOPIX / 日経225 / グロース250）の地合い判定。終値は market_conditions から取る。
 // 日経・グロースは終値しか無いが、EMA の計算には終値だけあれば足りる。
@@ -15,10 +16,11 @@ export const INDEXES: { key: IndexKey; label: string; column: string }[] = [
 ]
 
 /**
- * 取得する暦日数。EMA50 の助走と週足 EMA9 の seed（9 週）に余裕を見て約 1 年強。
- * 営業日で 270 本前後なので Supabase の 1,000 行上限には掛からない。
+ * 取得する暦日数。EMA50 が向き（SLOPE_LOOKBACK 本前）まで TradingView の値に収束する本数
+ * （約 230 本 ≈ 370 暦日。週足 EMA9 の 40 週もこれに収まる）。理由は lib/indicators.ts の emaWarmupBars。
+ * Supabase の 1,000 行上限には掛からない。
  */
-const LOOKBACK_DAYS = 400
+const LOOKBACK_DAYS = barsToCalendarDays(emaWarmupBars(50) + SLOPE_LOOKBACK)
 
 export type IndexTrendResult = {
   states: Record<IndexKey, TrendState | null>

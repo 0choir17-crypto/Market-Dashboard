@@ -40,6 +40,24 @@ export function ema(values: number[], length: number): (number | null)[] {
   return out
 }
 
+/**
+ * EMA が TradingView と一致するのに要る足数（起点の length 本を含む）。
+ *
+ * TradingView はチャートの先頭から EMA を計算し続けるので、起点の値の影響は残っていない。
+ * こちらは取得した範囲の先頭 length 本の SMA を起点にするため、起点の影響が
+ * (1 − α)^n で残る（α = 2 / (length + 1)、n = 起点からの更新回数）。
+ * それが 0.1% 未満になる本数: EMA9 = 40 / EMA21 = 94 / EMA50 = 223 / EMA150 = 669。
+ */
+export function emaWarmupBars(length: number): number {
+  const alpha = 2 / (length + 1)
+  return length + Math.ceil(Math.log(0.001) / Math.log(1 - alpha))
+}
+
+/** 営業日数を暦日数に換算する（年 245 営業日前後 ≈ 1.49 倍に、連休の余裕を足して 1.6 倍） */
+export function barsToCalendarDays(bars: number): number {
+  return Math.ceil(bars * 1.6)
+}
+
 /** Pine's `ta.wma` — linearly weighted moving average. */
 export function wma(values: number[], length: number): (number | null)[] {
   const out: (number | null)[] = new Array(values.length).fill(null)

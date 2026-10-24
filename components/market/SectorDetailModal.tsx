@@ -65,7 +65,7 @@ export default function SectorDetailModal({
           <TvChart title={sector.sector} bars={data.bars} volumes={data.volumes} volumeLabel="業種出来高" maLengths={MA_LENGTHS} />
         )}
         <p className="text-caption text-[var(--text-muted)]">
-          業種指数の始値・高値・安値・終値は直近 150 営業日ぶんのみ。自力 t21 / t63 = TOPIX につられた分を除いた業種の強さ
+          業種指数の始値・高値・安値・終値は直近 150 営業日ぶんのみ（そのため EMA50 は TradingView と僅かにずれることがある）。自力 t21 / t63 = TOPIX につられた分を除いた業種の強さ
         </p>
       </div>
     </Modal>
