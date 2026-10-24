@@ -7,11 +7,14 @@ import { fetchIndexTrends, INDEXES, type IndexKey, type IndexTrendResult } from 
 import { fetchBreadthState, type BreadthState } from '@/lib/breadthState'
 import type { TrendState } from '@/lib/trendState'
 import BreadthStateCard from './BreadthStateCard'
+import LeaderStateCard from './LeaderStateCard'
+import { fetchLeaderState, type LeaderStateResult } from '@/lib/leaderState'
 import IndexDetailModal from './IndexDetailModal'
 import { CardButton, CloseVs, EmaChain, SignalPill, Slopes } from './trendAtoms'
 
-// Market Regime: 3 指数（TOPIX / 日経225 / グロース250）の判定カード + Market Breadth を横 1 列。
-// 判定は日足 EMA9 / EMA21 の位置と向き。カードをクリックすると詳細（チャート）を開く。
+// Market Regime: 3 指数（TOPIX / 日経225 / グロース250）+ Market Breadth + 主導株（大型 / 中小）の 6 枚。
+// 広い画面では横 1 列、通常の PC 幅では 3 枚 × 2 段（上 = 指数、下 = 参加度と主導株）。
+// 指数の判定は日足 EMA9 / EMA21 の位置と向き。カードをクリックすると詳細を開く。
 
 function IndexCard({ label, state, onOpen }: { label: string; state: TrendState | null; onOpen: () => void }) {
   return (
@@ -42,6 +45,7 @@ export default function IndexStateCards({ market }: { market: MarketConditions |
   const { selectedDate, isLatest } = useDate()
   const [result, setResult] = useState<IndexTrendResult | null>(null)
   const [breadth, setBreadth] = useState<{ state: BreadthState | null; error: string | null } | null>(null)
+  const [leaders, setLeaders] = useState<LeaderStateResult | null>(null)
   const [openIndex, setOpenIndex] = useState<IndexKey | null>(null)
 
   // 過去スナップショット選択時はその日以前のデータで判定する
@@ -55,6 +59,9 @@ export default function IndexStateCards({ market }: { market: MarketConditions |
     fetchBreadthState(endDate).then((res) => {
       if (!cancelled) setBreadth(res)
     })
+    fetchLeaderState(endDate).then((res) => {
+      if (!cancelled) setLeaders(res)
+    })
     return () => {
       cancelled = true
     }
@@ -67,13 +74,13 @@ export default function IndexStateCards({ market }: { market: MarketConditions |
       <div className="flex items-baseline justify-between mb-3">
         <h2 className="text-title font-medium text-[var(--text-primary)]">Market Regime</h2>
         <span className="text-caption text-[var(--text-muted)]">
-          日足 EMA9 / EMA21 の位置と向き・市場の参加度。カードをクリックで詳細
+          指数の EMA9 / EMA21・市場の参加度・主導株。カードをクリックで詳細
         </span>
       </div>
       {result?.error && (
         <div className="card p-4 mb-4 text-small text-[var(--sem-weak-fg)]">指数データ取得エラー: {result.error}</div>
       )}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6 gap-4">
         {INDEXES.map((idx) =>
           result ? (
             <IndexCard
@@ -94,6 +101,17 @@ export default function IndexStateCards({ market }: { market: MarketConditions |
           market={market}
           endDate={endDate}
         />
+        {(['large', 'mid'] as const).map((tier) => (
+          <LeaderStateCard
+            key={tier}
+            tier={tier}
+            state={leaders?.tiers[tier] ?? null}
+            date={leaders?.date ?? null}
+            prevDate={leaders?.prevDate ?? null}
+            error={leaders?.error ?? null}
+            endDate={endDate}
+          />
+        ))}
       </div>
 
       {opened && (

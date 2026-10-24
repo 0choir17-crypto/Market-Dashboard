@@ -2,29 +2,32 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { ColorType, CrosshairMode, LineSeries, LineStyle, createChart } from 'lightweight-charts'
-import { BREADTH_SERIES, CHART, GRID_LINE, REF_LINE } from '@/lib/chartColors'
-import { monthlyTickMarkFormatter } from './TimeSeriesChart'
-import {
-  BREADTH_HOT,
-  BREADTH_MID,
-  BREADTH_WEAK,
-  type BreadthHistoryPoint,
-} from '@/lib/breadthState'
+import { CHART, GRID_LINE, REF_LINE } from '@/lib/chartColors'
+import { monthlyTickMarkFormatter } from '@/components/market/TimeSeriesChart'
 
-// 移動平均より上にある銘柄の割合 3 本（20 / 50 / 150 日線）の推移。
+// 複数本の推移を重ねる折れ線チャート（Breadth の割合・主導株の件数など）。
 // 凡例は TradingView と同じく左上に置き、カーソル位置の日の値に切り替える。
 
-const LINES = [
-  { key: 'sma20', label: '20日線', color: BREADTH_SERIES.sma20, width: 1 },
-  { key: 'sma50', label: '50日線', color: BREADTH_SERIES.sma50, width: 2 },
-  { key: 'sma150', label: '150日線', color: BREADTH_SERIES.sma150, width: 1 },
-] as const
+export type HistoryLine<K extends string> = { key: K; label: string; color: string; width?: 1 | 2 }
 
-export default function BreadthHistoryChart({
+type Point<K extends string> = { date: string } & Record<K, number | null>
+
+export default function LineHistoryChart<K extends string>({
   points,
+  lines,
+  format,
+  range,
+  refLines = [],
   height = 320,
 }: {
-  points: BreadthHistoryPoint[]
+  points: Point<K>[]
+  lines: readonly HistoryLine<K>[]
+  /** 凡例の値の書式 */
+  format: (v: number) => string
+  /** 縦軸の固定範囲。省略時はデータに合わせる */
+  range?: [number, number]
+  /** 点線の基準線（しきい値など） */
+  refLines?: number[]
   height?: number
 }) {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -48,21 +51,20 @@ export default function BreadthHistoryChart({
       crosshair: { mode: CrosshairMode.Normal },
       autoSize: true,
     })
-    LINES.forEach((l, li) => {
+    lines.forEach((l, li) => {
       const s = chart.addSeries(LineSeries, {
         color: l.color,
-        lineWidth: l.width,
+        lineWidth: l.width ?? 1,
         priceLineVisible: false,
         lastValueVisible: true,
-        // 縦軸は 0〜100% に固定（区分の位置が日によって動かないように）
-        autoscaleInfoProvider: () => ({ priceRange: { minValue: 0, maxValue: 100 } }),
+        ...(range
+          ? { autoscaleInfoProvider: () => ({ priceRange: { minValue: range[0], maxValue: range[1] } }) }
+          : {}),
       })
       // 欠損日は WhitespaceData にして番号（logical）を日付と揃えておく
-      s.setData(
-        points.map((p) => (p[l.key] == null ? { time: p.date } : { time: p.date, value: p[l.key] as number })),
-      )
-      if (li === 1) {
-        for (const t of [BREADTH_WEAK, BREADTH_MID, BREADTH_HOT]) {
+      s.setData(points.map((p) => (p[l.key] == null ? { time: p.date } : { time: p.date, value: p[l.key] as number })))
+      if (li === 0) {
+        for (const t of refLines) {
           s.createPriceLine({ price: t, color: REF_LINE, lineStyle: LineStyle.Dashed, lineWidth: 1, axisLabelVisible: true, title: '' })
         }
       }
@@ -74,7 +76,7 @@ export default function BreadthHistoryChart({
     })
     chart.timeScale().fitContent()
     return () => chart.remove()
-  }, [points, height])
+  }, [points, lines, range, refLines, height])
 
   if (points.length === 0) {
     return (
@@ -90,10 +92,10 @@ export default function BreadthHistoryChart({
       <div ref={containerRef} className="w-full h-full" />
       <div className="absolute left-3 top-2 z-10 pointer-events-none flex flex-wrap gap-x-4 text-caption font-mono tabular-nums">
         <span className="text-[var(--text-muted)]">{p.date}</span>
-        {LINES.map((l) => (
+        {lines.map((l) => (
           <span key={l.key}>
             <span className="text-[var(--text-muted)] font-sans">{l.label}</span>{' '}
-            <span style={{ color: l.color }}>{p[l.key] == null ? '—' : `${(p[l.key] as number).toFixed(1)}%`}</span>
+            <span style={{ color: l.color }}>{p[l.key] == null ? '—' : format(p[l.key] as number)}</span>
           </span>
         ))}
       </div>

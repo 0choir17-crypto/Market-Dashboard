@@ -71,7 +71,8 @@ app/layout.tsx  (RootLayout, lang="ja")
 1. `PageHeader`（タイトル / 日付 / Refresh）
 2. 過去日バナー（最新以外を選択中のときのみ、アンバー）
 3. ローディング / データなしカード
-4. **Market Regime** `components/market/IndexStateCards.tsx` — 1 列 4 枚（TOPIX / 日経225 / グロース250 / Market Breadth）。どのカードもクリックで詳細モーダル。
+4. **Market Regime** `components/market/IndexStateCards.tsx` — 6 枚（TOPIX / 日経225 / グロース250 / Market Breadth / Leaders 大型 / Leaders 中小）。
+   幅 1,536px 以上は横 1 列、それ未満の PC 幅は 3 枚 × 2 段。どのカードもクリックで詳細モーダル。
    - 指数カード: 信号（色 + 言葉）/ EMA の向き「EMA9 ↑ EMA21 ↑」/ 値の大きい順に > でつないだ「終値 > EMA9 > EMA21」/ 補助「終値 > 週足EMA9」「終値 > EMA50」。
      判定は日足 EMA9 / EMA21 の位置と向き（`lib/trendState.ts`、向き = 5 営業日前の EMA との比較）。
      緑 = 終値 > EMA21・EMA21↑・終値 > EMA9・EMA9↑・EMA9 > EMA21 / 黄 = 押し（上向き EMA21 は維持）・下向き EMA21 を上抜け・上向き EMA21 を割り込み / 赤 = 下向き EMA21 の下。
@@ -80,7 +81,12 @@ app/layout.tsx  (RootLayout, lang="ja")
      日経・グロースは終値しか無いので終値の線で描く（`lib/indexChartFetch.ts`）
    - Breadth カード `BreadthStateCard`: 移動平均より上にある銘柄の割合 20 / 50（判定）/ 150 日線を縦に並べ、5 営業日差を ↑↓ で添える。
      判定（`lib/breadthState.ts`）: 50 日線 ≥70% = 黄「広範な強さ（伸び切り注意）」/ 50〜70 = 緑「健全」（5 日差 ≤ −2 なら黄「健全だが低下中」）/ 30〜50 = 黄「まちまち」/ <30 = 赤「弱い・売られすぎ」（5 日差 ≥ +2 なら黄「売られすぎから回復中」）。
-     詳細 = 割合 3 本の推移（`BreadthHistoryChart`）+ 従来の **BreadthPanel**（騰落・騰落レシオ・新高値安値）
+     詳細 = 割合 3 本の推移（`LineHistoryChart`）+ 従来の **BreadthPanel**（騰落・騰落レシオ・新高値安値）
+   - Leaders カード `LeaderStateCard`（段ごとに 1 枚）: t21 / t63 の一覧の件数と 5 営業日差・5 日の出入り（t21 の一覧に入った / 外れた）・失速
+     （t63 の一覧にいて t21 の一覧にいない割合）。判定（`lib/leaderState.ts`、しきい値はたたき台）: 赤 = 失速 ≥ 50%、または t21 の件数が 20% 以上減り 外れた > 入った /
+     緑 = t21 の件数が 5 日前以上・入った ≥ 外れた・失速 < 30% / 黄 = それ以外。営業日は liquid_leaders にある日付で数える。
+     詳細 = 一覧の件数の推移（`liquid_leaders_sector` を日ごとに合算）+ 外れた・入った・失速した銘柄の一覧 + `/leaders` へのリンク。
+     価格（終値と EMA21）は liquid_leaders に無いので「崩れ」は自力の t 値で見ている
 5. **SectorStateCards** `components/market/SectorStateCards.tsx` — 33 業種の判定カード（1 列 2〜5 枚、画面幅で変わる）。書き方は指数カードと同じ + 自力 t21 / t63・注意の印（self_t63 ≤ −1）。
    並びは 緑 → 黄 → 赤、同じ色の中は self_t21 の高い順。見出し右に色ごとの件数。日付ピッカーに連動。
    クリックで `SectorDetailModal`（`TvChart`、EMA 9 / 21 / 50 + 業種出来高。業種指数の OHLC は直近 150 営業日のみ）。

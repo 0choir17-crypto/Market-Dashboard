@@ -14,7 +14,8 @@ import {
 } from '@/lib/breadthState'
 import Modal from '@/components/shared/Modal'
 import BreadthPanel from './BreadthPanel'
-import BreadthHistoryChart from './BreadthHistoryChart'
+import LineHistoryChart from '@/components/chart/LineHistoryChart'
+import { BREADTH_SERIES } from '@/lib/chartColors'
 import { RangeBar } from './IndexDetailModal'
 import { CardButton, SignalPill } from './trendAtoms'
 
@@ -75,12 +76,21 @@ function MetricRow({ label, m, primary = false }: { label: string; m: BreadthMet
   )
 }
 
-const HISTORY_RANGES = [
+const BREADTH_LINES = [
+  { key: 'sma20', label: '20日線', color: BREADTH_SERIES.sma20 },
+  { key: 'sma50', label: '50日線', color: BREADTH_SERIES.sma50, width: 2 },
+  { key: 'sma150', label: '150日線', color: BREADTH_SERIES.sma150 },
+] as const
+const PCT_RANGE: [number, number] = [0, 100]
+const BREADTH_REFS = [BREADTH_WEAK, BREADTH_MID, BREADTH_HOT]
+const fmtPct = (v: number) => `${v.toFixed(1)}%`
+
+export const HISTORY_RANGES = [
   { key: '6m', label: '6M', days: 183 },
   { key: '1y', label: '1Y', days: 365 },
   { key: '3y', label: '3Y', days: 1095 },
 ] as const
-type HistoryRange = (typeof HISTORY_RANGES)[number]['key']
+export type HistoryRange = (typeof HISTORY_RANGES)[number]['key']
 
 function BreadthDetailModal({
   state,
@@ -121,7 +131,7 @@ function BreadthDetailModal({
         <div>
           <p className="text-small font-medium text-[var(--text-primary)] mb-2">移動平均より上にある銘柄の割合</p>
           {points ? (
-            <BreadthHistoryChart points={points} />
+            <LineHistoryChart points={points} lines={BREADTH_LINES} format={fmtPct} range={PCT_RANGE} refLines={BREADTH_REFS} />
           ) : (
             <div className="flex items-center justify-center rounded-md bg-[var(--bg-card-hover)] text-small text-[var(--text-muted)] h-[320px]">
               読み込み中…
