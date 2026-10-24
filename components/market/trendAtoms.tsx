@@ -62,8 +62,8 @@ export function Slopes({ state }: { state: TrendState }) {
 }
 
 /**
- * 「終値 3,012.34 > EMA9 2,990.12 > EMA21 2,950.55」— 値の大きい順に > でつなぐ。
- * 並びそのものが状態（緑 = 終値 > EMA9 > EMA21）なので、数値を比べなくても読める。
+ * 「終値 3,012.34 > EMA9 > EMA21」— 値の大きい順に > でつなぐ。
+ * 並びそのものが状態（緑 = 終値 > EMA9 > EMA21）なので、EMA の値は出さない（main の値だけ出す）。
  */
 export function Chain({ items }: { items: { label: string; value: number; main?: boolean }[] }) {
   const sorted = [...items].sort((a, b) => b.value - a.value)
@@ -73,7 +73,8 @@ export function Chain({ items }: { items: { label: string; value: number; main?:
         <span key={it.label} className="flex items-baseline gap-1.5 whitespace-nowrap">
           {i > 0 && <span className="text-[var(--text-muted)]">&gt;</span>}
           <span className={it.main ? 'text-[var(--text-primary)] font-medium' : 'text-[var(--text-secondary)]'}>
-            {it.label} {fmtLevel(it.value)}
+            {it.label}
+            {it.main && ` ${fmtLevel(it.value)}`}
           </span>
         </span>
       ))}

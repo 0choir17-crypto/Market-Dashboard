@@ -117,7 +117,7 @@ export default function Page() {
           <span className="text-caption text-[var(--text-muted)] group-open:rotate-90 transition-transform inline-block">
             ▶
           </span>
-          業種の詳細（チャート・表・RRG）
+          Sector Details（チャート・表・RRG）
           <span className="text-caption font-normal text-[var(--text-muted)]">
             — 常に最新日を表示（日付ピッカーには連動しない）
           </span>
