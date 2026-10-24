@@ -71,9 +71,15 @@ app/layout.tsx  (RootLayout, lang="ja")
 1. `PageHeader`（タイトル / 日付 / Refresh）
 2. 過去日バナー（最新以外を選択中のときのみ、アンバー）
 3. ローディング / データなしカード
-4. **TopixChart** `components/market/TopixChart.tsx` — TOPIX ローソク足 + 市場出来高。最初に「指数そのもの」を置く
-5. **SectorSection** `components/sectors33/SectorSection.tsx` — Sectors-33 タブを統合。「どのセクターか」を先に見せる
-6. **BreadthPanel** `components/market/BreadthPanel.tsx` — 市場全体の内部状態を下段で確認
+4. **IndexStateCards** `components/market/IndexStateCards.tsx` — 地合い。TOPIX / 日経225 / グロース250 の判定カードを横 1 列。
+   判定は日足 EMA9 / EMA21 の位置と向き（`lib/trendState.ts`、向き = 5 営業日前の EMA との比較）。
+   緑 = 終値 > EMA21・EMA21↑・終値 > EMA9・EMA9↑・EMA9 > EMA21 / 黄 = 押し（上向き EMA21 は維持）・下向き EMA21 を上抜け・上向き EMA21 を割り込み / 赤 = 下向き EMA21 の下。
+   カード内に材料（終値 vs EMA9・EMA9 の向き・終値 vs EMA21・EMA21 の向き・EMA9 vs EMA21）と補助（週足 EMA9・EMA50）を出す。
+   データ: `market_conditions` の `topix_price` / `nikkei_price` / `growth_price`（`lib/indexTrendFetch.ts`）。`gate_state` 系は使わない
+5. **TopixChart** `components/market/TopixChart.tsx` — TOPIX ローソク足 + 市場出来高。初期表示は EMA9 / 21 のみ。
+   「詳細」を開くと EMA50 / 150 と数値パネル（期間リターン・52W 高値・市場出来高）を出す。SMA50/200 バッジは廃止
+6. **SectorSection** `components/sectors33/SectorSection.tsx` — Sectors-33 タブを統合。「どのセクターか」を先に見せる
+7. **BreadthPanel** `components/market/BreadthPanel.tsx` — 市場全体の内部状態を下段で確認
 
 データ: `market_conditions` から 1 行（最新モードは `order(date desc).limit(1)`、過去日モードは `eq(date)`）。
 連打対策に `requestIdRef` で後着レスポンスを破棄。

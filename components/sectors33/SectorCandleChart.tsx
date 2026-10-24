@@ -36,16 +36,19 @@ import { CHART, EMA_COLORS, GRID_LINE, emaLineColor } from '@/lib/chartColors'
 // すべて Supabase の *_sma50 列で、SMA50 として計算された別物。本リポジトリは
 // それを表示しているだけで、計算しているのは Pine とバッチ側。
 // したがって「線より上なのにバッジが下」ということが起こりうる。
-export const MA_CONFIG: { length: 10 | 21 | 50 | 150; color: string; label: string }[] = [
-  { length: 10, color: EMA_COLORS[10], label: 'EMA10' },
-  { length: 21, color: EMA_COLORS[21], label: 'EMA21' },
-  { length: 50, color: EMA_COLORS[50], label: 'EMA50' },
-  { length: 150, color: EMA_COLORS[150], label: 'EMA150' },
-]
+export type MaLength = keyof typeof EMA_COLORS
+
+export const MA_LENGTHS: MaLength[] = [10, 21, 50, 150]
 
 // チャート内の細い線だけでは移動平均の色が判別しづらいため、
 // セクションヘッダー直下に置く独立した凡例ストリップとして見せる。
-export function MaLegend({ className = '' }: { className?: string }) {
+export function MaLegend({
+  className = '',
+  lengths = MA_LENGTHS,
+}: {
+  className?: string
+  lengths?: MaLength[]
+}) {
   return (
     <div
       className={`inline-flex items-center gap-3 flex-wrap rounded-lg border border-[var(--border)] bg-[var(--bg-card-hover)] px-3 py-1.5 ${className}`}
@@ -53,14 +56,14 @@ export function MaLegend({ className = '' }: { className?: string }) {
       <span className="text-caption font-medium uppercase tracking-wide text-[var(--text-muted)]">
         EMA
       </span>
-      {MA_CONFIG.map((m) => (
-        <span key={m.length} className="flex items-center gap-1.5">
+      {lengths.map((len) => (
+        <span key={len} className="flex items-center gap-1.5">
           <span
             className="inline-block w-6 h-[3px] rounded-full"
-            style={{ backgroundColor: emaLineColor(m.length) }}
+            style={{ backgroundColor: emaLineColor(len) }}
           />
-          <span className="text-caption font-medium font-mono" style={{ color: m.color }}>
-            {m.length}
+          <span className="text-caption font-medium font-mono" style={{ color: EMA_COLORS[len] }}>
+            {len}
           </span>
         </span>
       ))}
@@ -121,6 +124,8 @@ type Props = {
    * 省略時は全期間を表示。
    */
   visibleBars?: number
+  /** 引く EMA の期間。省略時は MA_LENGTHS（10 / 21 / 50 / 150） */
+  maLengths?: MaLength[]
 }
 
 export default function SectorCandleChart({
@@ -130,6 +135,7 @@ export default function SectorCandleChart({
   volumeLabel = '出来高',
   height = 300,
   visibleBars,
+  maLengths = MA_LENGTHS,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
@@ -191,15 +197,15 @@ export default function SectorCandleChart({
     // MA は candlestick の背後に来るよう先に追加する。
     // title を付けると価格軸に EMA10/21/50/150 のバッジが積み上がって
     // 値動きを隠すため付けない（色の対応はヘッダーの MaLegend で示す）。
-    for (const m of MA_CONFIG) {
+    for (const len of maLengths) {
       const line = chart.addSeries(LineSeries, {
-        color: emaLineColor(m.length),
+        color: emaLineColor(len),
         lineWidth: 1,
         priceLineVisible: false,
         lastValueVisible: false,
         crosshairMarkerVisible: false,
       })
-      line.setData(toSeries(bars, ema(closes, m.length)))
+      line.setData(toSeries(bars, ema(closes, len)))
     }
 
     // ローソク足は白黒（TradingView 側の設定に合わせる）。陽線は白抜き、
@@ -296,7 +302,7 @@ export default function SectorCandleChart({
       chart.remove()
       chartRef.current = null
     }
-  }, [bars, metric, volumes, hasVolume, height, visibleBars])
+  }, [bars, metric, volumes, hasVolume, height, visibleBars, maLengths])
 
   if (bars.length === 0) {
     return (

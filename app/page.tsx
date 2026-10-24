@@ -6,6 +6,7 @@ import { MarketConditions } from '@/types/market'
 import { useDate } from '@/contexts/DateContext'
 import BreadthPanel from '@/components/market/BreadthPanel'
 import TopixChart from '@/components/market/TopixChart'
+import IndexStateCards from '@/components/market/IndexStateCards'
 import SectorSection from '@/components/sectors33/SectorSection'
 import PageHeader from '@/components/shared/PageHeader'
 
@@ -95,8 +96,13 @@ export default function Page() {
         </div>
       )}
 
+      {/* 最初に地合い（3 指数の EMA9 / 21 判定）を置く */}
+      <div className="mb-6">
+        <IndexStateCards />
+      </div>
+
       {market && (
-        /* 指数そのもの (TOPIX ローソク足 + 市場出来高) を最初に置く */
+        /* 指数そのもの (TOPIX ローソク足 + 市場出来高) */
         <div className="mb-6">
           <TopixChart market={market} />
         </div>
