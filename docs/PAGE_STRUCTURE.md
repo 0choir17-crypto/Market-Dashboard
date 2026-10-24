@@ -79,7 +79,7 @@ app/layout.tsx  (RootLayout, lang="ja")
      データ: `market_conditions` の `topix_price` / `nikkei_price` / `growth_price`（`lib/indexTrendFetch.ts`）。`gate_state` 系は使わない
    - 指数の詳細 `IndexDetailModal`: 判定の材料・期間リターン（1W / 1M / YTD / 1Y / To 52W High）・`TvChart`（EMA 9 / 21 / 50 / 150 + 市場出来高、期間 3M〜全期間）。
      日経・グロースは終値しか無いので終値の線で描く（`lib/indexChartFetch.ts`）
-   - Breadth カード `BreadthStateCard`: 移動平均より上にある銘柄の割合 20 / 50（判定）/ 150 日線を縦に並べ、5 営業日差を ↑↓ で添える。
+   - Breadth カード `BreadthStateCard`: 移動平均より上にある銘柄の割合 20 / 50 日線（判定）/ EMA150（`pct_above_ema150`）を縦に並べ、5 営業日差を ↑↓ で添える。
      判定（`lib/breadthState.ts`）: 50 日線 ≥70% = 黄「広範な強さ（伸び切り注意）」/ 50〜70 = 緑「健全」（5 日差 ≤ −2 なら黄「健全だが低下中」）/ 30〜50 = 黄「まちまち」/ <30 = 赤「弱い・売られすぎ」（5 日差 ≥ +2 なら黄「売られすぎから回復中」）。
      詳細 = 割合 3 本の推移（`LineHistoryChart`）+ 従来の **BreadthPanel**（騰落・騰落レシオ・新高値安値）
    - Leaders カード `LeaderStateCard`（段ごとに 1 枚）: t21 / t63 の一覧の件数と 5 営業日差・5 日の出入り（t21 の一覧に入った / 外れた）・失速

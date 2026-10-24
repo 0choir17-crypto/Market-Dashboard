@@ -8,7 +8,7 @@ import { fetchAllPaged } from './pagedFetch'
 // - 低い … 投げるべき人はかなり投げ終わった。ただし買い手が戻った証拠ではない
 // なので水準だけでなく「増えているか減っているか」（5 営業日前との差）を添える。
 //
-// 長期は 200 日線ではなく 150 日線（pct_above_sma150）を見る。
+// 長期は 200 日線ではなく EMA150（pct_above_ema150。SMA150 の列は無い）を見る。
 
 export type BreadthSignal = 'green' | 'yellow' | 'red'
 
@@ -102,7 +102,7 @@ export async function fetchBreadthState(
 ): Promise<{ state: BreadthState | null; error: string | null }> {
   let q = supabase
     .from('market_conditions')
-    .select('date, pct_above_sma20, pct_above_sma50, pct_above_sma150')
+    .select('date, pct_above_sma20, pct_above_sma50, pct_above_ema150')
     .order('date', { ascending: false })
     .limit(BREADTH_LOOKBACK + 1)
   if (endDate) q = q.lte('date', endDate)
@@ -126,7 +126,7 @@ export async function fetchBreadthState(
       date: rows[0].date as string,
       sma20: metric(rows, 'pct_above_sma20'),
       sma50,
-      sma150: metric(rows, 'pct_above_sma150'),
+      sma150: metric(rows, 'pct_above_ema150'),
       ...judged,
     },
     error: null,
@@ -152,7 +152,7 @@ export async function fetchBreadthHistory(
   const { rows, error } = await fetchAllPaged<Record<string, unknown>>((from, to) => {
     let q = supabase
       .from('market_conditions')
-      .select('date, pct_above_sma20, pct_above_sma50, pct_above_sma150')
+      .select('date, pct_above_sma20, pct_above_sma50, pct_above_ema150')
       .gte('date', start)
       .order('date', { ascending: true })
     if (endDate) q = q.lte('date', endDate)
@@ -170,7 +170,7 @@ export async function fetchBreadthHistory(
       date: r.date as string,
       sma20: num(r.pct_above_sma20),
       sma50: num(r.pct_above_sma50),
-      sma150: num(r.pct_above_sma150),
+      sma150: num(r.pct_above_ema150),
     })),
     error: null,
   }

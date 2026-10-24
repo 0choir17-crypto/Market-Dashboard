@@ -57,7 +57,7 @@ export type MarketConditions = {
   pct_above_sma200: number | null
   // 20 / 150 日線より上の割合（Breadth 判定カード用）
   pct_above_sma20?: number | null
-  pct_above_sma150?: number | null
+  pct_above_ema150?: number | null
   // ── 市場出来高（2026-08-17 追加。2008-05-08 以降 全行 non-null）────────────
   // 個別株（ETF/ETN/JDR/REIT を除く）の出来高を全銘柄合算した値。単位は「株」。
   // ⚠️ TOPIX 指数そのものに出来高は存在しないため「TOPIX 出来高」とは呼ばないこと。

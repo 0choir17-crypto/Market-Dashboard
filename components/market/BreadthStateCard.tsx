@@ -79,7 +79,7 @@ function MetricRow({ label, m, primary = false }: { label: string; m: BreadthMet
 const BREADTH_LINES = [
   { key: 'sma20', label: '20日線', color: BREADTH_SERIES.sma20 },
   { key: 'sma50', label: '50日線', color: BREADTH_SERIES.sma50, width: 2 },
-  { key: 'sma150', label: '150日線', color: BREADTH_SERIES.sma150 },
+  { key: 'sma150', label: 'EMA150', color: BREADTH_SERIES.sma150 },
 ] as const
 const PCT_RANGE: [number, number] = [0, 100]
 const BREADTH_REFS = [BREADTH_WEAK, BREADTH_MID, BREADTH_HOT]
@@ -184,7 +184,7 @@ export default function BreadthStateCard({
             <div className="mt-2 space-y-3 text-small">
               <MetricRow label="20日線" m={state.sma20} />
               <MetricRow label="50日線" m={state.sma50} primary />
-              <MetricRow label="150日線" m={state.sma150} />
+              <MetricRow label="EMA150" m={state.sma150} />
             </div>
           </>
         )}
