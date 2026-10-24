@@ -104,3 +104,13 @@ export const OVERLAY_SERIES = {
   selfT63: '#6366f1',
   selfT21: '#ec4899',
 } as const
+
+/**
+ * Breadth（移動平均より上の銘柄の割合）3 本の色。系列の区別のためだけで意味は持たない。
+ * 判定に使う 50 日線を一番濃い青にし、20 / 150 はそれより弱く見せる。
+ */
+export const BREADTH_SERIES = {
+  sma20: '#00bcd4',
+  sma50: '#2962ff',
+  sma150: '#673ab7',
+} as const

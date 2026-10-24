@@ -24,10 +24,10 @@ export type TrendState = {
   /** 終値の EMA からの乖離（%） */
   distEma9Pct: number
   distEma21Pct: number
-  /** 週足 EMA9 の上か。週足の本数が足りなければ null */
-  aboveWeeklyEma9: boolean | null
-  /** 日足 EMA50 の上か。本数が足りなければ null */
-  aboveEma50: boolean | null
+  /** 週足 EMA9（最終週は途中でも最新の終値で締める）。週足の本数が足りなければ null */
+  weeklyEma9: number | null
+  /** 日足 EMA50。本数が足りなければ null */
+  ema50: number | null
   signal: TrendSignal
   /** 判定の言葉。色だけでは理由が分からないので必ず添える */
   label: string
@@ -115,8 +115,8 @@ export function computeTrendState(points: ClosePoint[]): TrendState | null {
     ema21Up,
     distEma9Pct: (close / ema9 - 1) * 100,
     distEma21Pct: (close / ema21 - 1) * 100,
-    aboveWeeklyEma9: weeklyEma9 == null ? null : close > weeklyEma9,
-    aboveEma50: ema50 == null ? null : close > ema50,
+    weeklyEma9: weeklyEma9 ?? null,
+    ema50: ema50 ?? null,
     ...classifyTrend({ close, ema9, ema21, ema9Up, ema21Up }),
   }
 }

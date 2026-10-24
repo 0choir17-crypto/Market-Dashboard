@@ -4,8 +4,6 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { MarketConditions } from '@/types/market'
 import { useDate } from '@/contexts/DateContext'
-import BreadthStateCard from '@/components/market/BreadthStateCard'
-import TopixChart from '@/components/market/TopixChart'
 import IndexStateCards from '@/components/market/IndexStateCards'
 import SectorStateCards from '@/components/market/SectorStateCards'
 import SectorSection from '@/components/sectors33/SectorSection'
@@ -99,22 +97,11 @@ export default function Page() {
         </div>
       )}
 
-      {/* 最初に地合い（3 指数の EMA9 / 21 判定）を置く */}
+      {/* 最初に Market Regime（3 指数の EMA9 / 21 判定 + Market Breadth）を置く。
+          TOPIX チャートと従来の Breadth 4 枚は各カードの詳細（クリック）に移した */}
       <div className="mb-6">
-        <IndexStateCards />
+        <IndexStateCards market={market} />
       </div>
-
-      {/* 市場の参加度。従来の Breadth 4 枚はこのカードの「詳細」に畳んである */}
-      <div className="mb-6">
-        <BreadthStateCard market={market} />
-      </div>
-
-      {market && (
-        /* 指数そのもの (TOPIX ローソク足 + 市場出来高) */
-        <div className="mb-6">
-          <TopixChart market={market} />
-        </div>
-      )}
 
       {/* 業種は 33 枚あるので一番下に置き、ごちゃつきを防ぐ */}
       <div className="mt-10">

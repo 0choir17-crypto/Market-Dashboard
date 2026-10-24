@@ -71,22 +71,24 @@ app/layout.tsx  (RootLayout, lang="ja")
 1. `PageHeader`（タイトル / 日付 / Refresh）
 2. 過去日バナー（最新以外を選択中のときのみ、アンバー）
 3. ローディング / データなしカード
-4. **IndexStateCards** `components/market/IndexStateCards.tsx` — 地合い。TOPIX / 日経225 / グロース250 の判定カードを横 1 列。
-   判定は日足 EMA9 / EMA21 の位置と向き（`lib/trendState.ts`、向き = 5 営業日前の EMA との比較）。
-   緑 = 終値 > EMA21・EMA21↑・終値 > EMA9・EMA9↑・EMA9 > EMA21 / 黄 = 押し（上向き EMA21 は維持）・下向き EMA21 を上抜け・上向き EMA21 を割り込み / 赤 = 下向き EMA21 の下。
-   カード内に材料（終値 vs EMA9・EMA9 の向き・終値 vs EMA21・EMA21 の向き・EMA9 vs EMA21）と補助（週足 EMA9・EMA50）を出す。
-   データ: `market_conditions` の `topix_price` / `nikkei_price` / `growth_price`（`lib/indexTrendFetch.ts`）。`gate_state` 系は使わない
-5. **BreadthStateCard** `components/market/BreadthStateCard.tsx` — Market Breadth の判定（横長 1 枚）。
-   移動平均より上にある銘柄の割合 20 日線（`pct_above_sma20`、バッチ側へ追加依頼中 = `docs/BATCH_REQUEST_PCT_ABOVE_SMA20.md`。届くまで「未供給」）/ 50 日線（判定に使う）/ 200 日線と、それぞれの 5 営業日差。
-   判定（`lib/breadthState.ts`）: 50 日線 ≥70% = 黄「広範な強さ（伸び切り注意）」/ 50〜70 = 緑「健全」（5 日差 ≤ −2 なら黄「健全だが低下中」）/ 30〜50 = 黄「まちまち」/ <30 = 赤「弱い・売られすぎ」（5 日差 ≥ +2 なら黄「売られすぎから回復中」）。
-   「詳細」を開くと従来の **BreadthPanel**（騰落・騰落レシオ・新高値安値・SMA 上割合の 4 枚）を出す
-6. **TopixChart** `components/market/TopixChart.tsx` — TOPIX ローソク足 + 市場出来高。初期表示は EMA9 / 21 のみ。
-   「詳細」を開くと EMA50 / 150 と数値パネル（期間リターン・52W 高値・市場出来高）を出す。SMA50/200 バッジは廃止
-7. **SectorStateCards** `components/market/SectorStateCards.tsx` — 33 業種の判定カード（1 列 2〜5 枚、画面幅で変わる）。
-   判定は指数カードと同じ。カード内 = 信号と言葉・EMA9 / EMA21（上下・乖離・向き）・自力 t21 / t63・注意の印（self_t63 ≤ −1）。
+4. **Market Regime** `components/market/IndexStateCards.tsx` — 1 列 4 枚（TOPIX / 日経225 / グロース250 / Market Breadth）。どのカードもクリックで詳細モーダル。
+   - 指数カード: 信号（色 + 言葉）/ EMA の向き「EMA9 ↑ EMA21 ↑」/ 値の大きい順に > でつないだ「終値 > EMA9 > EMA21」/ 補助「終値 > 週足EMA9」「終値 > EMA50」。
+     判定は日足 EMA9 / EMA21 の位置と向き（`lib/trendState.ts`、向き = 5 営業日前の EMA との比較）。
+     緑 = 終値 > EMA21・EMA21↑・終値 > EMA9・EMA9↑・EMA9 > EMA21 / 黄 = 押し（上向き EMA21 は維持）・下向き EMA21 を上抜け・上向き EMA21 を割り込み / 赤 = 下向き EMA21 の下。
+     データ: `market_conditions` の `topix_price` / `nikkei_price` / `growth_price`（`lib/indexTrendFetch.ts`）。`gate_state` 系は使わない
+   - 指数の詳細 `IndexDetailModal`: 判定の材料・期間リターン（1W / 1M / YTD / 1Y / To 52W High）・`TvChart`（EMA 9 / 21 / 50 / 150 + 市場出来高、期間 3M〜全期間）。
+     日経・グロースは終値しか無いので終値の線で描く（`lib/indexChartFetch.ts`）
+   - Breadth カード `BreadthStateCard`: 移動平均より上にある銘柄の割合 20 / 50（判定）/ 150 日線を縦に並べ、5 営業日差を ↑↓ で添える。
+     判定（`lib/breadthState.ts`）: 50 日線 ≥70% = 黄「広範な強さ（伸び切り注意）」/ 50〜70 = 緑「健全」（5 日差 ≤ −2 なら黄「健全だが低下中」）/ 30〜50 = 黄「まちまち」/ <30 = 赤「弱い・売られすぎ」（5 日差 ≥ +2 なら黄「売られすぎから回復中」）。
+     詳細 = 割合 3 本の推移（`BreadthHistoryChart`）+ 従来の **BreadthPanel**（騰落・騰落レシオ・新高値安値）
+5. **SectorStateCards** `components/market/SectorStateCards.tsx` — 33 業種の判定カード（1 列 2〜5 枚、画面幅で変わる）。書き方は指数カードと同じ + 自力 t21 / t63・注意の印（self_t63 ≤ −1）。
    並びは 緑 → 黄 → 赤、同じ色の中は self_t21 の高い順。見出し右に色ごとの件数。日付ピッカーに連動。
-   データ: `sector_selection_s33` の `sector_index_close_s33` / `self_t63` / `self_t21`（`lib/sectorTrendFetch.ts`）
-8. **業種の詳細**（`<details>`、既定は閉じる）— 開いたときだけ `SectorSection` を描画・取得する。常に最新日（日付ピッカー非連動）
+   クリックで `SectorDetailModal`（`TvChart`、EMA 9 / 21 / 50 + 業種出来高。業種指数の OHLC は直近 150 営業日のみ）。
+   データ: `sector_selection_s33`（`lib/sectorTrendFetch.ts`）
+6. **業種の詳細**（`<details>`、既定は閉じる）— 開いたときだけ `SectorSection` を描画・取得する。常に最新日（日付ピッカー非連動）
+
+`components/chart/TvChart.tsx` = TradingView の構成に寄せた詳細チャート（左上の凡例: 名前・1D・日付・OHLC・前日比・EMA 値・出来高、カーソル位置に追従 / 右軸に最新値 / 下段に出来高 / ホイールで拡大縮小）。
+旧 TOPIX チャート（`TopixChart`）と `PctAboveSmaChart` は削除。
 
 データ: `market_conditions` から 1 行（最新モードは `order(date desc).limit(1)`、過去日モードは `eq(date)`）。
 連打対策に `requestIdRef` で後着レスポンスを破棄。
@@ -103,13 +105,12 @@ app/layout.tsx  (RootLayout, lang="ja")
 - 下部: 「N営業日の推移（RRG: self_t63 × self_t21）」— 既定は折りたたみ（`<details>`）。`SectorRRG33` = 横 self_t63 / 縦 self_t21、0 中心、横 −1 に注意の点線
 - データ: `sector_selection_s33` ほか（`lib/sectorSelectionFetch.ts`, `sectorSelectionHistoryFetch.ts`（`selfDiffs` で 5 日差）, `sectorIndexChangeFetch.ts`, `sectorPriceFetch.ts`）
 
-#### BreadthPanel の内訳（カード 4 枚）
+#### BreadthPanel の内訳（カード 3 枚。Breadth カードの詳細モーダル内）
 | カード | チャート |
 |---|---|
 | Adv / Dec（値上がり比率の推移） | `AdvDecChart` |
 | Adv/Dec Ratio（騰落レシオ＝過熱度） | `AdvDecRatioChart` |
 | New Highs / Lows | `NhNlDiffChart` |
-| % Above SMA | `PctAboveSmaChart` |
 
 ---
 
@@ -270,7 +271,7 @@ Env 表示 / `market_conditions` 最新行プローブ / anon ロールでのテ
 
 | テーブル | 使用画面 |
 |---|---|
-| `market_conditions` | `/`（TopixChart / BreadthPanel）、`/debug` |
+| `market_conditions` | `/`（Market Regime の指数・Breadth カードと各詳細）、`/debug` |
 | `sector_selection_s33` | `/`, `/sectors33` |
 | `earnings_quality` | `/earnings` |
 | `liquid_leaders` | `/leaders`（日次一覧・5 日比・日付ピッカー） |
@@ -317,7 +318,7 @@ Env 表示 / `market_conditions` 最新行プローブ / anon ロールでのテ
 ## 7. 画面遷移図
 
 ```
-NavBar ──┬─ /            Market ─── TopixChart / SectorSection / BreadthPanel
+NavBar ──┬─ /            Market ─── Market Regime（指数 3 + Breadth）/ 業種カード / SectorSection（畳み）
          ├─ /leaders     Liquid Leaders
          ├─ /earnings    Earnings Quality
          ├─ /today       Daily Watch ── Structure Pivot / EMA Setups

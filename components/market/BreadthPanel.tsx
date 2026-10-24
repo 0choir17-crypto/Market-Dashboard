@@ -2,7 +2,6 @@ import { MarketConditions } from '@/types/market'
 import { AdvDecChart } from './AdvDecChart'
 import { AdvDecRatioChart } from './AdvDecRatioChart'
 import { NhNlDiffChart } from './NhNlDiffChart'
-import { PctAboveSmaChart } from './PctAboveSmaChart'
 
 type Props = { market: MarketConditions | null }
 
@@ -20,18 +19,6 @@ function AdRatioColor(ratio: number | null | undefined) {
   if (ratio === null || ratio === undefined) return 'var(--text-muted)'
   if (ratio < 70 || ratio > 120) return 'var(--negative)'
   return 'var(--positive)'
-}
-
-function ProgressBar({ pct, color }: { pct: number | null | undefined; color: string }) {
-  const value = pct ?? 0
-  return (
-    <div className="w-full bg-[var(--bg-primary)] rounded-full h-2 overflow-hidden">
-      <div
-        className="h-2 rounded-full transition-all"
-        style={{ width: `${Math.min(Math.max(value, 0), 100)}%`, backgroundColor: color }}
-      />
-    </div>
-  )
 }
 
 // 各指標をカード化して余白を確保することで、内部のチャートが横幅を広く取れる。
@@ -64,21 +51,11 @@ export default function BreadthPanel({ market }: Props) {
   const adRatio10Color = AdRatioColor(market?.ad_ratio_10)
   const adRatio25Color = AdRatioColor(market?.ad_ratio_25)
 
-  const sma50pct = market?.pct_above_sma50 ?? 0
-  const sma200pct = market?.pct_above_sma200 ?? 0
-
   return (
-    <div className="card p-6">
-      <div className="flex items-baseline justify-between mb-5">
-        <h2 className="text-title font-medium text-[var(--text-primary)]">
-          Market Breadth
-        </h2>
-        <span className="text-caption text-[var(--text-muted)]">
-          市場の内部状態（騰落・新高安・移動平均上）
-        </span>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+    // Breadth 判定カードの詳細モーダル内に置くので、外枠と見出しは持たない。
+    // 移動平均より上の割合は判定カード側の推移チャート（BreadthHistoryChart）に移した。
+    <div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
 
         {/* Adv / Dec */}
         <BreadthCard title="Adv / Dec" subtitle="値上がり比率(Adv%)の推移">
@@ -158,43 +135,6 @@ export default function BreadthPanel({ market }: Props) {
             </div>
           </div>
           <NhNlDiffChart height={200} />
-        </BreadthCard>
-
-        {/* % Above SMA */}
-        <BreadthCard title="% Above SMA">
-          <div className="space-y-3">
-            <div>
-              <div className="flex justify-between text-small mb-1">
-                <span className="text-[var(--text-secondary)]">SMA50</span>
-                <span
-                  className="font-mono font-medium"
-                  style={{ color: sma50pct >= 50 ? 'var(--positive)' : 'var(--negative)' }}
-                >
-                  {fmt(market?.pct_above_sma50)}%
-                </span>
-              </div>
-              <ProgressBar
-                pct={sma50pct}
-                color={sma50pct >= 50 ? 'var(--positive)' : 'var(--negative)'}
-              />
-            </div>
-            <div>
-              <div className="flex justify-between text-small mb-1">
-                <span className="text-[var(--text-secondary)]">SMA200</span>
-                <span
-                  className="font-mono font-medium"
-                  style={{ color: sma200pct >= 50 ? 'var(--positive)' : 'var(--negative)' }}
-                >
-                  {fmt(market?.pct_above_sma200)}%
-                </span>
-              </div>
-              <ProgressBar
-                pct={sma200pct}
-                color={sma200pct >= 50 ? 'var(--positive)' : 'var(--negative)'}
-              />
-            </div>
-          </div>
-          <PctAboveSmaChart height={200} />
         </BreadthCard>
 
       </div>

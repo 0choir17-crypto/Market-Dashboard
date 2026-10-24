@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { fetchAllPaged } from './pagedFetch'
 
 // Market Breadth の判定。主役は「50日線より上の銘柄の割合」(pct_above_sma50)。
 //
@@ -7,9 +8,7 @@ import { supabase } from './supabase'
 // - 低い … 投げるべき人はかなり投げ終わった。ただし買い手が戻った証拠ではない
 // なので水準だけでなく「増えているか減っているか」（5 営業日前との差）を添える。
 //
-// ⚠️ pct_above_sma20 はバッチ側への追加依頼中（docs/BATCH_REQUEST_PCT_ABOVE_SMA20.md）。
-//    列が無い間に名指しで select すると PostgREST がエラーを返すので select('*') で取り、
-//    届いていなければ null として扱う。
+// 長期は 200 日線ではなく 150 日線（pct_above_sma150）を見る。
 
 export type BreadthSignal = 'green' | 'yellow' | 'red'
 
@@ -35,7 +34,7 @@ export type BreadthState = {
   date: string
   sma20: BreadthMetric
   sma50: BreadthMetric
-  sma200: BreadthMetric
+  sma150: BreadthMetric
   level: BreadthLevel | null
   signal: BreadthSignal | null
   label: string
@@ -103,7 +102,7 @@ export async function fetchBreadthState(
 ): Promise<{ state: BreadthState | null; error: string | null }> {
   let q = supabase
     .from('market_conditions')
-    .select('*')
+    .select('date, pct_above_sma20, pct_above_sma50, pct_above_sma150')
     .order('date', { ascending: false })
     .limit(BREADTH_LOOKBACK + 1)
   if (endDate) q = q.lte('date', endDate)
@@ -127,9 +126,52 @@ export async function fetchBreadthState(
       date: rows[0].date as string,
       sma20: metric(rows, 'pct_above_sma20'),
       sma50,
-      sma200: metric(rows, 'pct_above_sma200'),
+      sma150: metric(rows, 'pct_above_sma150'),
       ...judged,
     },
+    error: null,
+  }
+}
+
+export type BreadthHistoryPoint = {
+  date: string
+  sma20: number | null
+  sma50: number | null
+  sma150: number | null
+}
+
+/** 割合 3 本の推移。@param lookbackDays 暦日 */
+export async function fetchBreadthHistory(
+  lookbackDays: number,
+  endDate?: string,
+): Promise<{ points: BreadthHistoryPoint[]; error: string | null }> {
+  const d = endDate ? new Date(`${endDate}T00:00:00Z`) : new Date()
+  d.setUTCDate(d.getUTCDate() - lookbackDays)
+  const start = d.toISOString().slice(0, 10)
+
+  const { rows, error } = await fetchAllPaged<Record<string, unknown>>((from, to) => {
+    let q = supabase
+      .from('market_conditions')
+      .select('date, pct_above_sma20, pct_above_sma50, pct_above_sma150')
+      .gte('date', start)
+      .order('date', { ascending: true })
+    if (endDate) q = q.lte('date', endDate)
+    return q.range(from, to) as unknown as PromiseLike<{
+      data: Record<string, unknown>[] | null
+      error: { message: string } | null
+    }>
+  })
+  if (error) {
+    console.error('[market_conditions breadth history]', error)
+    return { points: [], error }
+  }
+  return {
+    points: rows.map((r) => ({
+      date: r.date as string,
+      sma20: num(r.pct_above_sma20),
+      sma50: num(r.pct_above_sma50),
+      sma150: num(r.pct_above_sma150),
+    })),
     error: null,
   }
 }
