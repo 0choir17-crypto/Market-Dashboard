@@ -22,7 +22,7 @@ import type { MaLength } from '@/components/sectors33/SectorCandleChart'
 // - 左上の凡例: 銘柄名・足種 / 始高安終と前日比 / EMA ごとの値 / 出来高。
 //   カーソルを載せた足の値に切り替わり、外すと最新足に戻る
 // - 右の価格軸に最新値のラベル、下段に出来高（平常比で色分け）
-// - ホイールで拡大縮小、ドラッグで移動（モーダル内なのでページのスクロールとは干渉しない）
+// - ドラッグで移動、ピンチ・軸のドラッグで拡大縮小。ホイールはスクロールに譲る（モーダルのスクロールで拡大縮小してしまうため）
 // 足は白黒、EMA は TradingView と同じ色（docs/DESIGN_DIRECTION.md 3.6）。
 
 type Props = {
@@ -90,6 +90,20 @@ export default function TvChart({
       },
       crosshair: { mode: CrosshairMode.Normal },
       autoSize: true,
+      // ページ / モーダルをスクロールしたときにチャートが拡大縮小しないよう
+      // ホイール操作は無効化する（ドラッグ/ピンチでの操作は残す）。
+      handleScroll: {
+        mouseWheel: false,
+        pressedMouseMove: true,
+        horzTouchDrag: true,
+        vertTouchDrag: false,
+      },
+      handleScale: {
+        mouseWheel: false,
+        pinch: true,
+        axisPressedMouseMove: true,
+        axisDoubleClickReset: true,
+      },
     })
 
     for (const { len, values } of emas) {

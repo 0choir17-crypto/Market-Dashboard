@@ -50,6 +50,20 @@ export default function LineHistoryChart<K extends string>({
       rightPriceScale: { borderColor: CHART.borderStrong, scaleMargins: { top: 0.14, bottom: 0.04 } },
       crosshair: { mode: CrosshairMode.Normal },
       autoSize: true,
+      // ページ / モーダルをスクロールしたときにチャートが拡大縮小しないよう
+      // ホイール操作は無効化する（ドラッグ/ピンチでの操作は残す）。
+      handleScroll: {
+        mouseWheel: false,
+        pressedMouseMove: true,
+        horzTouchDrag: true,
+        vertTouchDrag: false,
+      },
+      handleScale: {
+        mouseWheel: false,
+        pinch: true,
+        axisPressedMouseMove: true,
+        axisDoubleClickReset: true,
+      },
     })
     lines.forEach((l, li) => {
       const s = chart.addSeries(LineSeries, {
