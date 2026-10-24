@@ -8,13 +8,13 @@ import { fetchBreadthState, type BreadthState } from '@/lib/breadthState'
 import type { TrendState } from '@/lib/trendState'
 import BreadthStateCard from './BreadthStateCard'
 import LeaderStateCard from './LeaderStateCard'
-import MyTradesCard from './MyTradesCard'
 import { fetchLeaderState, type LeaderStateResult } from '@/lib/leaderState'
 import IndexDetailModal from './IndexDetailModal'
 import { CardButton, CloseVs, EmaChain, SignalPill, Slopes } from './trendAtoms'
 
-// Market Regime: My Trades + 3 指数（TOPIX / 日経225 / グロース250）+ Market Breadth + 主導株（大型 / 中小）の 7 枚。
-// PC 幅では 4 枚 + 3 枚の 2 段（上 = 自分の成績と指数、下 = 参加度と主導株）。
+// Market Regime: 3 指数（TOPIX / 日経225 / グロース250）+ Market Breadth + 主導株（大型 / 中小）の 6 枚。
+// 広い画面では横 1 列、通常の PC 幅では 3 枚 × 2 段（上 = 指数、下 = 参加度と主導株）。
+// 自分の成績（My Trades）はこの上の列に別に置く（app/page.tsx）。
 // 指数の判定は日足 EMA9 / EMA21 の位置と向き。カードをクリックすると詳細を開く。
 
 function IndexCard({ label, state, onOpen }: { label: string; state: TrendState | null; onOpen: () => void }) {
@@ -75,14 +75,13 @@ export default function IndexStateCards({ market }: { market: MarketConditions |
       <div className="flex items-baseline justify-between mb-3">
         <h2 className="text-title font-medium text-[var(--text-primary)]">Market Regime</h2>
         <span className="text-caption text-[var(--text-muted)]">
-          自分の成績・指数の EMA9 / EMA21・市場の参加度・主導株。カードをクリックで詳細
+          指数の EMA9 / EMA21・市場の参加度・主導株。カードをクリックで詳細
         </span>
       </div>
       {result?.error && (
         <div className="card p-4 mb-4 text-small text-[var(--sem-weak-fg)]">指数データ取得エラー: {result.error}</div>
       )}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-        <MyTradesCard />
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6 gap-4">
         {INDEXES.map((idx) =>
           result ? (
             <IndexCard

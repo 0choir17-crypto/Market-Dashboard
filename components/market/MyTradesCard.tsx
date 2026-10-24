@@ -10,7 +10,7 @@ import { formatR, pnlColorClass } from '@/lib/format'
 import { RECENT_TRADES, fetchMyTradesState, type EquityPoint, type MyTradesState } from '@/lib/myTradesState'
 import { CardButton } from './trendAtoms'
 
-// 自分の成績。Market Regime の先頭に置く（混乱したら自分の資産曲線だけ見ればいい、という考え方）。
+// 自分の成績。Market Regime の上の列に置く（混乱したら自分の資産曲線だけ見ればいい、という考え方）。
 // 色の判定は持たない。R の符号の緑赤は損益色（docs/DESIGN_DIRECTION.md 3.2）で、判定ではない。
 // トレード記録は日付ピッカーに連動させず、常に最新を出す。
 
