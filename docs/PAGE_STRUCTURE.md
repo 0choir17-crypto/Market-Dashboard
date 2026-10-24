@@ -71,13 +71,16 @@ app/layout.tsx  (RootLayout, lang="ja")
 1. `PageHeader`（タイトル / 日付 / Refresh）
 2. 過去日バナー（最新以外を選択中のときのみ、アンバー）
 3. ローディング / データなしカード
-4. **My Trades** `components/market/MyTradesCard.tsx` — Market Regime の上の列に 1 枚（幅は Market Regime のカード 1 枚ぶん）。
-   保有中の含み益の建玉数と平均の含み損益率・直近 10 件の勝敗と平均損益率・連敗・資産曲線（損益率の累計）が直近 10 件平均の上か下か。
-   **色の判定は持たない**（損益率の符号の緑赤は損益色）。成績は損益率（`pnl_pct`、無ければ 決済値 ÷ 建値 − 1）。
+4. **My Trades** `components/market/MyTradesCard.tsx` — Market Regime の上の列に横いっぱいで 1 枚。左に数字、右に資産曲線（カードの中で常に表示）。
+   - 保有中: 含み益の建玉数と平均の含み損益率 / 最大含み益からの戻し（`watchlist_events` の HOLD に入ったイベントの `ret_since_pct − max_ret_pct` の平均。基準はその日の終値）
+   - 直近 10 件の決済: 勝敗と平均損益率 / 損益（円）/ 最大含み益 → 決済（`trades.mfe_pct` と損益率の平均。mfe が分かり mfe ≥ 決済の件だけ）/ 連敗
+   - 資産曲線（損益率の累計）: 直近 10 件平均の上か下か / 高値からの下落（pt）と何件前が高値か / 累計損益（円）
+   **色の判定は持たない**（損益の符号の緑赤は損益色）。成績は損益率（`pnl_pct`、無ければ 決済値 ÷ 建値 − 1）。
    R（初期ストップ基準）や ATR 倍は使わない。SBI の取り込み経由の行に初期ストップが無く損切りも柔軟で R を後から推定できず、
    ATR 倍も外部の埋め込みが要るわりに差が小さいため（2026-10 決定）。
-   保有中の現在値は `daily_signals` の直近の終値（スキャナーに出なくなった銘柄は古い）。日付ピッカーには連動しない（`lib/myTradesState.ts`）。
-   詳細 = 資産曲線（損益率の累計と直近 10 件の移動平均）+ 保有中の一覧 + 直近 10 件の決済 + `/journal` へのリンク
+   保有中の現在値は `watchlist_current.close_adj` を優先し、無ければ `daily_signals` の直近の終値。日付ピッカーには連動しない（`lib/myTradesState.ts`）。
+   `watchlist_events.max_ret_pct` は決済後も更新され続けるので、決済済みの取りこぼしには使わない。
+   詳細（見出しの「詳細」か左の数字から開く）= 資産曲線 + 保有中の一覧（最大列つき）+ 直近 10 件の決済（最大列つき）+ `/journal` へのリンク
 5. **Market Regime** `components/market/IndexStateCards.tsx` — 6 枚（TOPIX / 日経225 / グロース250 / Market Breadth / Leaders 大型 / Leaders 中小）。
    幅 1,536px 以上は横 1 列、それ未満の PC 幅は 3 枚 × 2 段。どのカードもクリックで詳細モーダル。
    - 指数カード: 信号（色 + 言葉）/ EMA の向き「EMA9 ↑ EMA21 ↑」/ 値の大きい順に > でつないだ「終値 3,012.34 > EMA9 > EMA21」（EMA の値は出さない）/ 補助「終値 > 週足EMA9」「終値 > EMA50」。
