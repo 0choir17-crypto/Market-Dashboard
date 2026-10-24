@@ -14,6 +14,7 @@ import { CardButton, CloseVs, EmaChain, SignalPill, Slopes } from './trendAtoms'
 
 // Market Regime: 3 指数（TOPIX / 日経225 / グロース250）+ Market Breadth + 主導株（大型 / 中小）の 6 枚。
 // 広い画面では横 1 列、通常の PC 幅では 3 枚 × 2 段（上 = 指数、下 = 参加度と主導株）。
+// 自分の成績（My Trades）はこの上の列に別に置く（app/page.tsx）。
 // 指数の判定は日足 EMA9 / EMA21 の位置と向き。カードをクリックすると詳細を開く。
 
 function IndexCard({ label, state, onOpen }: { label: string; state: TrendState | null; onOpen: () => void }) {

@@ -87,7 +87,7 @@ export default function SectorStateCards() {
     <section>
       <div className="flex flex-wrap items-baseline justify-between gap-3 mb-3">
         <div>
-          <h2 className="text-title font-medium text-[var(--text-primary)]">業種</h2>
+          <h2 className="text-title font-medium text-[var(--text-primary)]">Sectors</h2>
           <p className="text-caption text-[var(--text-muted)] mt-0.5">
             TOPIX-33 業種指数の EMA9 / EMA21 判定。並びは 緑 → 黄 → 赤、同じ色の中は自力 t21 の高い順。カードをクリックで詳細。
             t21 / t63 = 業種の自力（TOPIX につられた分を除いた強さ）

@@ -6,6 +6,7 @@ import { MarketConditions } from '@/types/market'
 import { useDate } from '@/contexts/DateContext'
 import IndexStateCards from '@/components/market/IndexStateCards'
 import SectorStateCards from '@/components/market/SectorStateCards'
+import MyTradesCard from '@/components/market/MyTradesCard'
 import SectorSection from '@/components/sectors33/SectorSection'
 import PageHeader from '@/components/shared/PageHeader'
 
@@ -97,7 +98,13 @@ export default function Page() {
         </div>
       )}
 
-      {/* 最初に Market Regime（3 指数の EMA9 / 21 判定 + Market Breadth）を置く。
+      {/* 自分の成績を一番上に置く（混乱したら自分の資産曲線だけ見ればいい、という考え方）。
+          幅は下の Market Regime のカード 1 枚ぶんに揃える */}
+      <div className="mb-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6 gap-4">
+        <MyTradesCard />
+      </div>
+
+      {/* 次に Market Regime（3 指数の EMA9 / 21 判定 + Market Breadth）を置く。
           TOPIX チャートと従来の Breadth 4 枚は各カードの詳細（クリック）に移した */}
       <div className="mb-6">
         <IndexStateCards market={market} />
@@ -117,7 +124,7 @@ export default function Page() {
           <span className="text-caption text-[var(--text-muted)] group-open:rotate-90 transition-transform inline-block">
             ▶
           </span>
-          業種の詳細（チャート・表・RRG）
+          Sector Details（チャート・表・RRG）
           <span className="text-caption font-normal text-[var(--text-muted)]">
             — 常に最新日を表示（日付ピッカーには連動しない）
           </span>

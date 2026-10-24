@@ -71,9 +71,14 @@ app/layout.tsx  (RootLayout, lang="ja")
 1. `PageHeader`（タイトル / 日付 / Refresh）
 2. 過去日バナー（最新以外を選択中のときのみ、アンバー）
 3. ローディング / データなしカード
-4. **Market Regime** `components/market/IndexStateCards.tsx` — 6 枚（TOPIX / 日経225 / グロース250 / Market Breadth / Leaders 大型 / Leaders 中小）。
+4. **My Trades** `components/market/MyTradesCard.tsx` — Market Regime の上の列に 1 枚（幅は Market Regime のカード 1 枚ぶん）。
+   保有中の含み益の建玉数と含み R・直近 10 件の勝敗と R の合計・連敗・資産曲線（R の累計）が直近 10 件平均の上か下か。
+   **色の判定は持たない**（R の符号の緑赤は損益色）。R = (決済値 − 建値) ÷ (建値 − 初期ストップ)、無ければ `r_multiple`。
+   保有中の現在値は `daily_signals` の直近の終値（スキャナーに出なくなった銘柄は古い）。日付ピッカーには連動しない（`lib/myTradesState.ts`）。
+   詳細 = 資産曲線（R の累計と直近 10 件の移動平均）+ 保有中の一覧 + 直近 10 件の決済 + `/journal` へのリンク
+5. **Market Regime** `components/market/IndexStateCards.tsx` — 6 枚（TOPIX / 日経225 / グロース250 / Market Breadth / Leaders 大型 / Leaders 中小）。
    幅 1,536px 以上は横 1 列、それ未満の PC 幅は 3 枚 × 2 段。どのカードもクリックで詳細モーダル。
-   - 指数カード: 信号（色 + 言葉）/ EMA の向き「EMA9 ↑ EMA21 ↑」/ 値の大きい順に > でつないだ「終値 > EMA9 > EMA21」/ 補助「終値 > 週足EMA9」「終値 > EMA50」。
+   - 指数カード: 信号（色 + 言葉）/ EMA の向き「EMA9 ↑ EMA21 ↑」/ 値の大きい順に > でつないだ「終値 3,012.34 > EMA9 > EMA21」（EMA の値は出さない）/ 補助「終値 > 週足EMA9」「終値 > EMA50」。
      判定は日足 EMA9 / EMA21 の位置と向き（`lib/trendState.ts`、向き = 5 営業日前の EMA との比較）。
      緑 = 終値 > EMA21・EMA21↑・終値 > EMA9・EMA9↑・EMA9 > EMA21 / 黄 = 押し（上向き EMA21 は維持）・下向き EMA21 を上抜け・上向き EMA21 を割り込み / 赤 = 下向き EMA21 の下。
      データ: `market_conditions` の `topix_price` / `nikkei_price` / `growth_price`（`lib/indexTrendFetch.ts`）。`gate_state` 系は使わない
@@ -86,11 +91,11 @@ app/layout.tsx  (RootLayout, lang="ja")
      （t63 の一覧にいて t21 の一覧にいない割合）。**色の判定は持たない**（`lib/leaderState.ts`）。2026-10 の検証で、失速は普段から 70〜85% あって
      判定が毎日ほぼ赤になること、失速の高さとその後の値動きに関係が無いことが分かったため。増減の矢印も無彩色。営業日は liquid_leaders にある日付で数える。
      詳細 = 一覧の件数の推移（`liquid_leaders_sector` を日ごとに合算）+ 外れた・入った・失速した銘柄の一覧 + `/leaders` へのリンク
-5. **SectorStateCards** `components/market/SectorStateCards.tsx` — 33 業種の判定カード（1 列 2〜5 枚、画面幅で変わる）。書き方は指数カードと同じ + 自力 t21 / t63・注意の印（self_t63 ≤ −1）。
+6. **Sectors** `components/market/SectorStateCards.tsx` — 33 業種の判定カード（1 列 2〜5 枚、画面幅で変わる）。書き方は指数カードと同じ + 自力 t21 / t63・注意の印（self_t63 ≤ −1）。
    並びは 緑 → 黄 → 赤、同じ色の中は self_t21 の高い順。見出し右に色ごとの件数。日付ピッカーに連動。
    クリックで `SectorDetailModal`（`TvChart`、EMA 9 / 21 / 50 + 業種出来高。業種指数の OHLC は直近 150 営業日のみ）。
    データ: `sector_selection_s33`（`lib/sectorTrendFetch.ts`）
-6. **業種の詳細**（`<details>`、既定は閉じる）— 開いたときだけ `SectorSection` を描画・取得する。常に最新日（日付ピッカー非連動）
+7. **Sector Details**（`<details>`、既定は閉じる）— 開いたときだけ `SectorSection` を描画・取得する。常に最新日（日付ピッカー非連動）
 
 `components/chart/TvChart.tsx` = TradingView の構成に寄せた詳細チャート（左上の凡例: 名前・1D・日付・OHLC・前日比・EMA 値・出来高、カーソル位置に追従 / 右軸に最新値 / 下段に出来高 / ホイールで拡大縮小）。
 旧 TOPIX チャート（`TopixChart`）と `PctAboveSmaChart` は削除。
