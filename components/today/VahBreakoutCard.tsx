@@ -93,7 +93,7 @@ export default function VahBreakoutCard({ row, multiHit = false, onAddPosition }
         <CrossBadge n={row.cross_n} />
         <span
           className="ml-auto text-caption text-[var(--text-muted)] tabular-nums font-mono"
-          title="期間の起点（出来高急増のまとまりの最初の日）と、起点〜前日の本数"
+          title="期間の起点（出来高の多い局面の始まり）と、起点〜前日の本数"
         >
           起点 {shortDate(row.period_start)}・{isNum(row.period_bars) ? row.period_bars : '—'}本
         </span>
@@ -140,7 +140,7 @@ export default function VahBreakoutCard({ row, multiHit = false, onAddPosition }
         </div>
       </div>
 
-      {/* 線（前日までの足で作った値・配当調整後） */}
+      {/* 線（前日までの足で作った値・配当調整なし） */}
       <div className="px-3 space-y-0.5 text-caption text-[var(--text-secondary)] tabular-nums">
         {(
           [

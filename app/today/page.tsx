@@ -108,7 +108,7 @@ export default function TodayPage() {
             tableMissing={data.vahTableMissing}
             multiHitCodes={multiHitCodes}
             title="VAH Breakouts"
-            subtitle="Volume Profile（出来高急増の起点〜前日の価格帯別出来高。TradingView の VP-JP と同じ線・配当調整後）の VAH を、終値で下から上抜けた日。同じ期間の中で何回目の上抜けかをバッジで示す（初回は緑）。灰色の「前VAH」は1つ前の期間の VAH。※検証では +2R 利確の版で平均より +0.07〜0.09R とわずかな上乗せ、利確なしではほぼ 0。初回か再上抜けか・前VAHより上か下かでは差が無い。買いシグナルではなく、毎朝チャートを開く銘柄を機械的に絞り込んだリストとして使う。"
+            subtitle="Volume Profile（出来高の多い局面の始まり〜前日の価格帯別出来高。TradingView の VP-JP と同じ線・配当調整なし）の VAH を、終値で下から上抜けた日。同じ期間の中で何回目の上抜けかをバッジで示す（初回は緑）。灰色の「前VAH」は1つ前の期間の VAH。※検証では +2R 利確の版で平均より +0.06〜0.10R とわずかな上乗せ、利確なしではほぼ 0。初回か再上抜けか・前VAHより上か下かでは差が無い。買いシグナルではなく、毎朝チャートを開く銘柄を機械的に絞り込んだリストとして使う。"
           />
           <StructurePivotSection
             rows={data.struct}
