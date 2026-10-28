@@ -74,7 +74,7 @@ export const TIER = [95, 90] as const
 export const SPREAD_LABEL = { tight: 1.0, wide: 2.5 }
 /** 業種の折れ線の日数 (直近 63 営業日) */
 export const SECTOR_DAYS = 63
-/** 「3w ago」= 何営業日前の行と比べるか */
+/** 「3W ago」= 何営業日前の行と比べるか */
 export const SECTOR_3W = 15
 
 function num(v: number | null | undefined): number | null {
