@@ -147,7 +147,7 @@ export default function SectorBoard({
                     <span className="num">
                       RS≥{RS_MIN} <b className="text-[var(--text-primary)] font-medium">{fmtPct(s.pct)}</b>{' '}
                       <span className="text-[var(--text-muted)]">
-                        (3w ago {fmtPct(s.pct3w)} · 3m ago {fmtPct(s.pct3m)})
+                        (3W ago {fmtPct(s.pct3w)} · 3M ago {fmtPct(s.pct3m)})
                       </span>
                     </span>
                     <Sparkline series={s.series} />
