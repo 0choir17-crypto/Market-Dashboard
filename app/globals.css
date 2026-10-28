@@ -126,6 +126,16 @@
   --heat-g-1: #dcefe1;
   --heat-g-2: #93cfa4;
   --heat-g-3: #2f7d4a;
+
+  /* RS Leaders の札 — 青 1 色相の 3 段（全体RS 95〜99 / 90〜94 / 80〜89） */
+  --rs-t1-bg: #104281;
+  --rs-t1-fg: #ffffff;
+  --rs-t2-bg: #3987e5;
+  --rs-t2-fg: #ffffff;
+  --rs-t3-bg: #86b6ef;
+  --rs-t3-fg: #1a1d23;
+  /* RS Leaders の業種の折れ線（同業のうち RS80 以上の割合） */
+  --rs-line: #2a78d6;
 }
 
 body {

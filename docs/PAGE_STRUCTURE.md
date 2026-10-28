@@ -27,6 +27,7 @@ app/layout.tsx  (RootLayout, lang="ja")
 |---|---|
 | Market | `/` |
 | Leaders | `/leaders` |
+| RS Leaders | `/rs-leaders` |
 | Earnings | `/earnings` |
 | Daily Watch | `/today` |
 | Watchlist | `/watchlist` |
@@ -48,6 +49,7 @@ app/layout.tsx  (RootLayout, lang="ja")
 |---|---|---|---|
 | `/` | `app/page.tsx` | 画面 | Market Dashboard（指数・セクター・ブレッド） |
 | `/leaders` | `app/leaders/page.tsx` | 画面 | Liquid Leaders (リキッド・リーダー) |
+| `/rs-leaders` | `app/rs-leaders/page.tsx` | 画面 | RS Leaders（Sector Board / Pullback Board。`rs_leaders` / `rs_leaders_sector`。札クリックで TradingView） |
 | `/earnings` | `app/earnings/page.tsx` | 画面 | Earnings Quality |
 | `/today` | `app/today/page.tsx` | 画面 | Daily Watch（当日スキャナー結果） |
 | `/watchlist` | `app/watchlist/page.tsx` | 画面 | Watchlist Journal（TradingView の操作記録・読み取り専用） |
