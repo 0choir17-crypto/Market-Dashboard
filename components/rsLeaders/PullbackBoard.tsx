@@ -62,6 +62,8 @@ export default function PullbackBoard({
         <span className="text-[var(--text-muted)]">札をクリックで TradingView を開く</span>
       </div>
 
+      {/* 列の幅は銘柄数に比例させ、列の中は札を幅 190px 前後で折り返す。
+          札の多い列だけが縦に長く伸びず、画面の幅を使い切って列の高さが揃う。 */}
       <div className="flex gap-2.5 overflow-x-auto pb-1">
         {STAGES.map((st, k) => {
           const items = columns[k]
@@ -69,9 +71,8 @@ export default function PullbackBoard({
           return (
             <div
               key={st.title}
-              className={`rounded-lg bg-[var(--bg-primary)] p-2 min-w-0 ${
-                empty ? 'flex-[0_0_110px] opacity-60' : 'flex-[0_0_200px]'
-              }`}
+              className={`rounded-lg bg-[var(--bg-primary)] p-2 ${empty ? 'flex-[0_0_110px] opacity-60' : 'min-w-[206px]'}`}
+              style={empty ? undefined : { flex: `${items.length} 1 0` }}
             >
               <p className="text-small font-medium text-[var(--text-primary)]">
                 {st.title} <span className="num text-[var(--text-muted)] font-normal">({items.length})</span>
@@ -79,7 +80,7 @@ export default function PullbackBoard({
               <p className="text-caption text-[var(--text-secondary)] mb-1.5">
                 {st.desc}・基準 {st.line}
               </p>
-              <div className="flex flex-col gap-1">
+              <div className={empty ? '' : 'grid grid-cols-[repeat(auto-fill,minmax(190px,1fr))] gap-1'}>
                 {empty ? (
                   <span className="text-small text-[var(--text-muted)]">—</span>
                 ) : (
