@@ -16,7 +16,9 @@ import { SIGNAL_ORDER, SIGNAL_STYLE } from '@/components/market/trendAtoms'
 import type { SectorTrendResult } from '@/lib/sectorTrendFetch'
 import type { TrendState } from '@/lib/trendState'
 import {
+  CHG_DAYS,
   NEAR_ATR,
+  fmtChg5,
   RS_MIN,
   SECTOR_3W,
   nearestBelow,
@@ -71,11 +73,14 @@ export default function SectorBoard({
   rows,
   sectorDays,
   sectorRank,
+  sectorRsChg,
   trends,
 }: {
   rows: RsLeader[]
   sectorDays: RsLeaderSector[]
   sectorRank: Map<string, number>
+  /** 業種RS の 5 営業日前からの変化 (code → 変化) */
+  sectorRsChg: Map<string, number>
   /** Market タブと同じ業種の判定。読み込み中は null */
   trends: SectorTrendResult | null
 }) {
@@ -149,6 +154,7 @@ export default function SectorBoard({
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mb-3 text-caption text-[var(--text-secondary)]">
         <TierLegend />
+        <span>札の数字 = 業種RS · (↑3) = {CHG_DAYS}営業日前からの変化</span>
         <span>▾0.4 = すぐ下の移動平均線 (9/21/50EMA) まで 0.4ATR ({NEAR_ATR}ATR以内のみ)</span>
         <span>折れ線 = 同業のうちRS{RS_MIN}以上の割合 (直近3か月・目盛りは業種ごと)</span>
         <span>
@@ -208,6 +214,9 @@ export default function SectorBoard({
                         >
                           {r.co_name ?? r.code}
                           <b className="ml-1 font-medium num opacity-85">{r.sector_rs ?? '—'}</b>
+                          {sectorRsChg.has(r.code) && (
+                            <span className="ml-0.5 text-caption num opacity-85">{fmtChg5(sectorRsChg.get(r.code))}</span>
+                          )}
                           {near && <span className="ml-1 text-caption num opacity-90">▾{nb!.dist.toFixed(1)}</span>}
                         </RsChip>
                       )
@@ -220,7 +229,7 @@ export default function SectorBoard({
         </div>
       )}
 
-      <ChipTooltip tip={tip} sectorRank={sectorRank} />
+      <ChipTooltip tip={tip} sectorRank={sectorRank} sectorRsChg={sectorRsChg} />
     </section>
   )
 }

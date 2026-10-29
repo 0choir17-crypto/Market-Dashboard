@@ -74,6 +74,8 @@ export const TIER = [95, 90] as const
 export const SPREAD_LABEL = { tight: 1.0, wide: 2.5 }
 /** 業種の折れ線の日数 (直近 63 営業日) */
 export const SECTOR_DAYS = 63
+/** 札のスコアの変化を何営業日前と比べるか */
+export const CHG_DAYS = 5
 /** 「3W ago」= 何営業日前の行と比べるか */
 export const SECTOR_3W = 15
 
@@ -148,8 +150,8 @@ export function fmtSigned1(v: number | null): string {
   return s.startsWith('-') ? (s === '-0.0' ? '+0.0' : s) : `+${s}`
 }
 
-/** rs_chg5 (5 営業日前からの全体RS の変化) を (↑3) / (↓5) / (→0) で。null は空文字 */
-export function fmtRsChg5(v: number | null): string {
+/** 5 営業日前からのスコアの変化を (↑3) / (↓5) / (→0) で。null は空文字 */
+export function fmtChg5(v: number | null | undefined): string {
   const d = num(v)
   if (d === null) return ''
   return d > 0 ? `(↑${d})` : d < 0 ? `(↓${Math.abs(d)})` : '(→0)'

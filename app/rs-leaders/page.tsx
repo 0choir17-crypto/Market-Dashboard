@@ -18,7 +18,7 @@ const TABS: { key: Tab; label: string }[] = [
 ]
 
 export default function RsLeadersPage() {
-  const [snapshot, setSnapshot] = useState<RsLeadersSnapshot>({ date: null, rows: [], sectorDays: [] })
+  const [snapshot, setSnapshot] = useState<RsLeadersSnapshot>({ date: null, rows: [], sectorDays: [], sectorRsChg: new Map() })
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState<Tab>('sector')
   // Market タブの業種カードと同じ判定 (Sector Board の行に添える)
@@ -118,9 +118,9 @@ export default function RsLeadersPage() {
           </div>
 
           {tab === 'sector' ? (
-            <SectorBoard rows={snapshot.rows} sectorDays={snapshot.sectorDays} sectorRank={sectorRank} trends={trends} />
+            <SectorBoard rows={snapshot.rows} sectorDays={snapshot.sectorDays} sectorRank={sectorRank} sectorRsChg={snapshot.sectorRsChg} trends={trends} />
           ) : (
-            <PullbackBoard rows={snapshot.rows} sectorRank={sectorRank} />
+            <PullbackBoard rows={snapshot.rows} sectorRank={sectorRank} sectorRsChg={snapshot.sectorRsChg} />
           )}
         </>
       )}
