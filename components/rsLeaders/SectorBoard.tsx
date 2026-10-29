@@ -4,11 +4,17 @@
 //   左: 順位・業種名・RS≥80 の割合 (3 週前 / 3 か月前) と折れ線 (直近 63 営業日)
 //   右: 全体RS が RS_MIN 以上の銘柄の札 (業種RS の降順)
 //
+// 業種の判定 (緑・黄・赤) は Market タブの業種カードと同じもの (sector_selection_s33 の業種指数の
+// 日足 EMA9 / EMA21 の位置と向き)。業種名でつなぐ (半角の「･」は全角の「・」に揃える)。
+//
 // 割合 (pct_rs80) の母集団 (売買代金 1 億円以上の全銘柄) は rs_leaders の行 (ADR などで
 // 絞った銘柄) より広い。そのため割合と、その業種に並ぶ札の数は一致しない。
 
 import { useMemo, useState } from 'react'
 import { Segmented } from '@/components/leaders/heatmapUi'
+import { SIGNAL_ORDER, SIGNAL_STYLE } from '@/components/market/trendAtoms'
+import type { SectorTrendResult } from '@/lib/sectorTrendFetch'
+import type { TrendState } from '@/lib/trendState'
 import {
   NEAR_ATR,
   RS_MIN,
@@ -19,7 +25,9 @@ import {
 } from '@/types/rsLeaders'
 import { ChipTooltip, RsChip, TierLegend, useChipTip } from './chipUi'
 
-type Sort = 'rank' | 'pct'
+type Sort = 'rank' | 'pct' | 'trend'
+
+const normName = (s: string) => s.replace(/･/g, '・').trim()
 
 type SectorRow = {
   code: string
@@ -63,24 +71,40 @@ export default function SectorBoard({
   rows,
   sectorDays,
   sectorRank,
+  trends,
 }: {
   rows: RsLeader[]
   sectorDays: RsLeaderSector[]
   sectorRank: Map<string, number>
+  /** Market タブと同じ業種の判定。読み込み中は null */
+  trends: SectorTrendResult | null
 }) {
   const [sort, setSort] = useState<Sort>('rank')
   const [nearOnly, setNearOnly] = useState(false)
   const { tip, onMove, onLeave } = useChipTip()
 
   const sectors = useMemo(() => buildSectorRows(sectorDays), [sectorDays])
+  const trendByName = useMemo(() => {
+    const m = new Map<string, TrendState | null>()
+    for (const t of trends?.sectors ?? []) m.set(normName(t.sector), t.state)
+    return m
+  }, [trends])
+  const trendOf = (s: SectorRow) => trendByName.get(normName(s.name)) ?? null
   const sorted = useMemo(() => {
     const rk = (s: SectorRow) => s.rank ?? 99
+    // 緑 → 黄 → 赤 → 判定なし。同じ色の中は業種の強さの順
+    const so = (s: SectorRow) => {
+      const st = trendByName.get(normName(s.name))
+      return st ? SIGNAL_ORDER[st.signal] : 3
+    }
     return [...sectors].sort(
       sort === 'rank'
         ? (a, b) => rk(a) - rk(b)
-        : (a, b) => (b.pct ?? -1) - (a.pct ?? -1) || rk(a) - rk(b),
+        : sort === 'trend'
+          ? (a, b) => so(a) - so(b) || rk(a) - rk(b)
+          : (a, b) => (b.pct ?? -1) - (a.pct ?? -1) || rk(a) - rk(b),
     )
-  }, [sectors, sort])
+  }, [sectors, sort, trendByName])
 
   const chipsBySector = useMemo(() => {
     const m = new Map<string, RsLeader[]>()
@@ -107,6 +131,7 @@ export default function SectorBoard({
           options={[
             { key: 'rank', label: 'Sector strength' },
             { key: 'pct', label: '% RS≥80' },
+            { key: 'trend', label: 'Trend' },
           ]}
         />
         <button
@@ -126,8 +151,17 @@ export default function SectorBoard({
         <TierLegend />
         <span>▾0.4 = すぐ下の移動平均線 (9/21/50EMA) まで 0.4ATR ({NEAR_ATR}ATR以内のみ)</span>
         <span>折れ線 = 同業のうちRS{RS_MIN}以上の割合 (直近3か月・目盛りは業種ごと)</span>
+        <span>
+          緑・黄・赤 = 業種指数の 9/21EMA の位置と向き (Market タブと同じ判定)
+          {trends?.latestDate && sectorDays.length > 0 && trends.latestDate !== sectorDays[sectorDays.length - 1].date && (
+            <span className="text-[var(--sem-watch-fg)] num"> · 判定は {trends.latestDate} 時点</span>
+          )}
+        </span>
         <span className="text-[var(--text-muted)]">札をクリックで TradingView を開く</span>
       </div>
+      {trends?.error && (
+        <p className="text-caption text-[var(--sem-weak-fg)] mb-2">業種の判定を取得できませんでした: {trends.error}</p>
+      )}
 
       {sorted.length === 0 ? (
         <p className="text-caption text-[var(--text-muted)] py-8 text-center">業種のデータがありません</p>
@@ -135,14 +169,17 @@ export default function SectorBoard({
         <div>
           {sorted.map(s => {
             const chips = chipsBySector.get(s.code) ?? []
+            const st = trendOf(s)
             return (
               <div
                 key={s.code}
-                className="grid grid-cols-1 sm:grid-cols-[290px_1fr] gap-x-3 gap-y-1.5 py-2 border-t-[0.5px] border-[var(--border)] items-start"
+                className="grid grid-cols-1 sm:grid-cols-[290px_1fr] gap-x-3 gap-y-1.5 py-2 pl-1.5 border-t-[0.5px] border-l-4 border-t-[var(--border)] items-start"
+                style={{ borderLeftColor: st ? SIGNAL_STYLE[st.signal].fg : 'transparent' }}
               >
                 <div className="grid grid-cols-[22px_1fr] gap-x-1.5">
                   <span className="text-small text-right text-[var(--text-muted)] num">{s.rank ?? '—'}</span>
                   <span className="text-small font-medium text-[var(--text-primary)]">{s.name}</span>
+                  {st && <TrendTag state={st} />}
                   <div className="col-start-2 flex flex-col items-start gap-0.5 text-caption text-[var(--text-secondary)]">
                     <span className="num">
                       RS≥{RS_MIN} <b className="text-[var(--text-primary)] font-medium">{fmtPct(s.pct)}</b>{' '}
@@ -227,5 +264,20 @@ function Sparkline({ series }: { series: (number | null)[] }) {
       <text x={0} y={9} fontSize={9} fill="var(--text-muted)">{hi.toFixed(0)}%</text>
       <text x={0} y={H - 3} fontSize={9} fill="var(--text-muted)">{lo.toFixed(0)}%</text>
     </svg>
+  )
+}
+
+// 判定の小さな札: ● 緑 上向き EMA9・21 の上
+function TrendTag({ state }: { state: TrendState }) {
+  const sig = SIGNAL_STYLE[state.signal]
+  return (
+    <span
+      className="col-start-2 justify-self-start inline-flex items-center gap-1 rounded border-[0.5px] px-1.5 my-0.5 text-caption"
+      style={{ backgroundColor: sig.bg, borderColor: sig.bd, color: sig.fg }}
+    >
+      <span aria-hidden className="inline-block w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: sig.fg }} />
+      <span className="font-medium">{sig.name}</span>
+      <span>{state.label}</span>
+    </span>
   )
 }
