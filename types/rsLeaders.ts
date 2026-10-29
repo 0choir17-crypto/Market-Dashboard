@@ -147,3 +147,10 @@ export function fmtSigned1(v: number | null): string {
   const s = d.toFixed(1)
   return s.startsWith('-') ? (s === '-0.0' ? '+0.0' : s) : `+${s}`
 }
+
+/** rs_chg5 (5 営業日前からの全体RS の変化) を (↑3) / (↓5) / (→0) で。null は空文字 */
+export function fmtRsChg5(v: number | null): string {
+  const d = num(v)
+  if (d === null) return ''
+  return d > 0 ? `(↑${d})` : d < 0 ? `(↓${Math.abs(d)})` : '(→0)'
+}

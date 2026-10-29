@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useDate } from '@/contexts/DateContext'
 import { fetchRsLeadersSnapshot, type RsLeadersSnapshot } from '@/lib/rsLeadersFetch'
+import { fetchSectorTrends, type SectorTrendResult } from '@/lib/sectorTrendFetch'
 import { RS_MIN } from '@/types/rsLeaders'
 import SectorBoard from '@/components/rsLeaders/SectorBoard'
 import PullbackBoard from '@/components/rsLeaders/PullbackBoard'
@@ -20,11 +21,17 @@ export default function RsLeadersPage() {
   const [snapshot, setSnapshot] = useState<RsLeadersSnapshot>({ date: null, rows: [], sectorDays: [] })
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState<Tab>('sector')
+  // Market タブの業種カードと同じ判定 (Sector Board の行に添える)
+  const [trends, setTrends] = useState<SectorTrendResult | null>(null)
   const requestIdRef = useRef(0)
 
   const load = useCallback(async () => {
     const reqId = ++requestIdRef.current
     setLoading(true)
+    // 判定は約 5,000 行を読むので待たずに先に札を出し、届いたら行に添える
+    fetchSectorTrends().then(tr => {
+      if (reqId === requestIdRef.current) setTrends(tr)
+    })
     const snap = await fetchRsLeadersSnapshot()
     if (reqId !== requestIdRef.current) return
     setSnapshot(snap)
@@ -111,7 +118,7 @@ export default function RsLeadersPage() {
           </div>
 
           {tab === 'sector' ? (
-            <SectorBoard rows={snapshot.rows} sectorDays={snapshot.sectorDays} sectorRank={sectorRank} />
+            <SectorBoard rows={snapshot.rows} sectorDays={snapshot.sectorDays} sectorRank={sectorRank} trends={trends} />
           ) : (
             <PullbackBoard rows={snapshot.rows} sectorRank={sectorRank} />
           )}
