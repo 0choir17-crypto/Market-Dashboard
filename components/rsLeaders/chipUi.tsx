@@ -6,7 +6,7 @@
 
 import { useCallback, useState, type CSSProperties, type MouseEvent, type ReactNode } from 'react'
 import { tradingViewUrl } from '@/lib/tickerLinks'
-import { fmtRsChg5, rsTier, spreadLabel, type RsLeader } from '@/types/rsLeaders'
+import { fmtChg5, rsTier, spreadLabel, type RsLeader } from '@/types/rsLeaders'
 
 export const TIER_STYLE: Record<1 | 2 | 3, CSSProperties> = {
   1: { backgroundColor: 'var(--rs-t1-bg)', color: 'var(--rs-t1-fg)' },
@@ -56,7 +56,16 @@ export function RsChip({
 }
 
 /** 3 行だけ: コードと銘柄名 / 業種 (順位) · 線の開き / RS · 業種RS · ADR */
-export function ChipTooltip({ tip, sectorRank }: { tip: ChipTipState; sectorRank: Map<string, number> }) {
+export function ChipTooltip({
+  tip,
+  sectorRank,
+  sectorRsChg,
+}: {
+  tip: ChipTipState
+  sectorRank: Map<string, number>
+  /** 業種RS の 5 営業日前からの変化 (code → 変化) */
+  sectorRsChg?: Map<string, number>
+}) {
   if (!tip) return null
   const r = tip.row
   const rank = r.sector_code ? sectorRank.get(r.sector_code) : undefined
@@ -78,8 +87,9 @@ export function ChipTooltip({ tip, sectorRank }: { tip: ChipTipState; sectorRank
       </div>
       <div className="text-[var(--text-secondary)]">
         RS <b className="text-[var(--text-primary)]">{r.rs_rating ?? '—'}</b>
-        {r.rs_chg5 !== null && ` ${fmtRsChg5(r.rs_chg5)}`} / Sector RS{' '}
+        {r.rs_chg5 !== null && ` ${fmtChg5(r.rs_chg5)}`} / Sector RS{' '}
         <b className="text-[var(--text-primary)]">{r.sector_rs ?? '—'}</b>
+        {sectorRsChg?.has(r.code) && ` ${fmtChg5(sectorRsChg.get(r.code))}`}
         {r.sector_ref_only ? ' (ref)' : ''} / ADR {r.adr_pct !== null ? r.adr_pct.toFixed(1) : '—'}%
       </div>
     </div>

@@ -11,7 +11,6 @@ import {
   RS_MIN,
   SPREAD_MIN,
   STAGES,
-  fmtRsChg5,
   fmtSigned1,
   nearestBelow,
   pullbackStage,
@@ -23,9 +22,11 @@ import { ChipTooltip, RsChip, TierLegend, useChipTip } from './chipUi'
 export default function PullbackBoard({
   rows,
   sectorRank,
+  sectorRsChg,
 }: {
   rows: RsLeader[]
   sectorRank: Map<string, number>
+  sectorRsChg: Map<string, number>
 }) {
   const { tip, onMove, onLeave } = useChipTip()
 
@@ -51,7 +52,7 @@ export default function PullbackBoard({
         <span className="text-caption text-[var(--text-muted)] num">{total} stocks</span>
       </div>
       <p className="text-caption text-[var(--text-secondary)] mb-2 leading-relaxed">
-        列 = 終値が上から順にどの移動平均線の上にいるか。列の中は基準の線に近い順。札の右 = 全体RS (括弧内は 5 営業日前からの変化)。
+        列 = 終値が上から順にどの移動平均線の上にいるか。列の中は基準の線に近い順。札の右 = 全体RS。
         札の下段 = 終値が各線から何ATR上か (マイナスは線の下)。太字 = その列の基準の線。
         <span className="text-[var(--positive)] font-medium">緑</span> = すぐ下の線で、{NEAR_ATR}ATR以内。
         線が密集している銘柄 (線の開き {SPREAD_MIN} 未満) はここには出さない。
@@ -69,7 +70,7 @@ export default function PullbackBoard({
             <div
               key={st.title}
               className={`rounded-lg bg-[var(--bg-primary)] p-2 min-w-0 ${
-                empty ? 'flex-[0_0_110px] opacity-60' : 'flex-[1_1_0] min-w-[180px]'
+                empty ? 'flex-[0_0_110px] opacity-60' : 'flex-[0_0_200px]'
               }`}
             >
               <p className="text-small font-medium text-[var(--text-primary)]">
@@ -86,10 +87,7 @@ export default function PullbackBoard({
                     <RsChip key={r.code} row={r} onMove={onMove} onLeave={onLeave} className="block">
                       <span className="flex items-baseline justify-between gap-1.5 min-w-0">
                         <span className="truncate min-w-0">{r.co_name ?? r.code}</span>
-                        <b className="flex-none font-medium num opacity-85">
-                          {r.rs_rating ?? '—'}
-                          {r.rs_chg5 !== null && <span className="ml-0.5 font-normal text-caption">{fmtRsChg5(r.rs_chg5)}</span>}
-                        </b>
+                        <b className="flex-none font-medium num opacity-85">{r.rs_rating ?? '—'}</b>
                       </span>
                       <Dists row={r} bold={st.bold} />
                     </RsChip>
@@ -101,7 +99,7 @@ export default function PullbackBoard({
         })}
       </div>
 
-      <ChipTooltip tip={tip} sectorRank={sectorRank} />
+      <ChipTooltip tip={tip} sectorRank={sectorRank} sectorRsChg={sectorRsChg} />
     </section>
   )
 }

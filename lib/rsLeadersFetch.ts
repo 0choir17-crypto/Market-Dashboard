@@ -1,12 +1,14 @@
 import { supabase } from '@/lib/supabase'
 import { fetchAllPaged } from '@/lib/pagedFetch'
-import { SECTOR_DAYS, type RsLeader, type RsLeaderSector } from '@/types/rsLeaders'
+import { CHG_DAYS, SECTOR_DAYS, type RsLeader, type RsLeaderSector } from '@/types/rsLeaders'
 
 export type RsLeadersSnapshot = {
   date: string | null      // rs_leaders の最新日
   rows: RsLeader[]
   /** 業種 × 日。最新日から SECTOR_DAYS 営業日ぶん (日付の昇順) */
   sectorDays: RsLeaderSector[]
+  /** 業種RS の CHG_DAYS 営業日前からの変化 (code → 変化)。その日に行の無い銘柄は入らない */
+  sectorRsChg: Map<string, number>
   error?: string | null
 }
 
@@ -29,7 +31,7 @@ export async function fetchRsLeadersSnapshot(): Promise<RsLeadersSnapshot> {
     fetchLatestDate('rs_leaders_sector'),
   ])
   const date = latest.date
-  if (!date) return { date: null, rows: [], sectorDays: [], error: latest.error ?? latestSector.error }
+  if (!date) return { date: null, rows: [], sectorDays: [], sectorRsChg: new Map(), error: latest.error ?? latestSector.error }
 
   const sectorEnd = latestSector.date
   const [stocks, sectors] = await Promise.all([
@@ -66,10 +68,36 @@ export async function fetchRsLeadersSnapshot(): Promise<RsLeadersSnapshot> {
   }
   const sectorDays = sectors.rows.filter(r => keep.has(r.date)).reverse()
 
+  // 業種RS の 5 営業日前からの変化。rs_chg5 は全体RS の変化しか無いので、
+  // CHG_DAYS 営業日前 (営業日 = rs_leaders_sector にある日付) の rs_leaders と比べて作る。
+  const days = [...keep].sort()
+  const i = days.indexOf(date)
+  const prevDate = i >= CHG_DAYS ? days[i - CHG_DAYS] : null
+  const sectorRsChg = new Map<string, number>()
+  let prevError: string | null = null
+  if (prevDate) {
+    const prev = await fetchAllPaged<{ code: string; sector_rs: number | null }>((from, to) =>
+      supabase
+        .from('rs_leaders')
+        .select('code, sector_rs')
+        .eq('date', prevDate)
+        .order('code', { ascending: true })
+        .range(from, to),
+    )
+    if (prev.error) console.error('[rs_leaders prev]', prev.error)
+    prevError = prev.error
+    const before = new Map(prev.rows.map(r => [r.code, r.sector_rs]))
+    for (const r of stocks.rows) {
+      const b = before.get(r.code)
+      if (r.sector_rs !== null && b !== null && b !== undefined) sectorRsChg.set(r.code, r.sector_rs - b)
+    }
+  }
+
   return {
     date,
     rows: stocks.rows,
     sectorDays,
-    error: [latest.error, latestSector.error, stocks.error, sectors.error].filter(Boolean).join(' / ') || null,
+    sectorRsChg,
+    error: [latest.error, latestSector.error, stocks.error, sectors.error, prevError].filter(Boolean).join(' / ') || null,
   }
 }
