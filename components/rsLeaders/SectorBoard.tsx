@@ -147,7 +147,7 @@ export default function SectorBoard({
                     <span className="num">
                       RS≥{RS_MIN} <b className="text-[var(--text-primary)] font-medium">{fmtPct(s.pct)}</b>{' '}
                       <span className="text-[var(--text-muted)]">
-                        (3W ago {fmtPct(s.pct3w)} · 3M ago {fmtPct(s.pct3m)})
+                        (vs 3W ago {fmtPtDiff(s.pct, s.pct3w)} · vs 3M ago {fmtPtDiff(s.pct, s.pct3m)})
                       </span>
                     </span>
                     <Sparkline series={s.series} />
@@ -190,6 +190,13 @@ export default function SectorBoard({
 
 function fmtPct(v: number | null): string {
   return v === null ? '—' : `${v.toFixed(0)}%`
+}
+
+// 今の割合 − その日の割合 (ポイント差)。増えていれば +、減っていれば −
+function fmtPtDiff(now: number | null, past: number | null): string {
+  if (now === null || past === null) return '—'
+  const d = Math.round(now) - Math.round(past)
+  return d === 0 ? '±0pt' : `${d > 0 ? '+' : '−'}${Math.abs(d)}pt`
 }
 
 // pct_rs80 の折れ線。目盛りは業種ごと (その業種の最小〜最大。ただし最低 10pt 幅)。

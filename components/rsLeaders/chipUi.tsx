@@ -6,7 +6,7 @@
 
 import { useCallback, useState, type CSSProperties, type MouseEvent, type ReactNode } from 'react'
 import { tradingViewUrl } from '@/lib/tickerLinks'
-import { rsTier, spreadLabel, type RsLeader } from '@/types/rsLeaders'
+import { fmtRsChg5, rsTier, spreadLabel, type RsLeader } from '@/types/rsLeaders'
 
 export const TIER_STYLE: Record<1 | 2 | 3, CSSProperties> = {
   1: { backgroundColor: 'var(--rs-t1-bg)', color: 'var(--rs-t1-fg)' },
@@ -77,7 +77,8 @@ export function ChipTooltip({ tip, sectorRank }: { tip: ChipTipState; sectorRank
         {r.spread_21_50 !== null ? r.spread_21_50.toFixed(2) : '—'} ({spreadLabel(r.spread_21_50)})
       </div>
       <div className="text-[var(--text-secondary)]">
-        RS <b className="text-[var(--text-primary)]">{r.rs_rating ?? '—'}</b> / Sector RS{' '}
+        RS <b className="text-[var(--text-primary)]">{r.rs_rating ?? '—'}</b>
+        {r.rs_chg5 !== null && ` ${fmtRsChg5(r.rs_chg5)}`} / Sector RS{' '}
         <b className="text-[var(--text-primary)]">{r.sector_rs ?? '—'}</b>
         {r.sector_ref_only ? ' (ref)' : ''} / ADR {r.adr_pct !== null ? r.adr_pct.toFixed(1) : '—'}%
       </div>
