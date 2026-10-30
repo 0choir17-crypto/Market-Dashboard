@@ -88,6 +88,13 @@ type Props<Row> = {
    * 「この群は N 件」という意味が壊れるため、groupBy があるときは無視する。
    */
   pageSize?: number
+  /**
+   * 縦に長い表で、スクロールしても列見出しを見えるままにする。
+   * 外側の overflow-x-auto がスクロール容器になるため、ページのスクロールに対する
+   * sticky は効かない。表自体に高さの上限を与えて縦スクロールさせ、その中で
+   * 見出しを固定する。
+   */
+  stickyHeader?: boolean
 }
 
 export default function DataTable<Row>({
@@ -106,6 +113,7 @@ export default function DataTable<Row>({
   tieBreak,
   summaryToggle = true,
   pageSize,
+  stickyHeader = false,
 }: Props<Row>) {
   const [sortKey, setSortKey] = useState(defaultSort.key)
   const [sortDir, setSortDir] = useState<SortDirection>(defaultSort.dir)
@@ -270,11 +278,22 @@ export default function DataTable<Row>({
         </div>
       )}
 
-      <div className="bg-[var(--bg-card)] rounded-xl border-[0.5px] border-[var(--border)] overflow-x-auto">
+      <div
+        className={`bg-[var(--bg-card)] rounded-xl border-[0.5px] border-[var(--border)] ${
+          stickyHeader ? 'overflow-auto max-h-[75vh]' : 'overflow-x-auto'
+        }`}
+      >
         {/* 幅は内容が決める。min-width を固定すると全列でも横スクロールが出るので置かない。
             画面が狭いときだけ、外側の overflow-x-auto が効く。 */}
         <table className="w-full text-body">
-          <thead className="border-b-[0.5px] border-[var(--border)]">
+          {/* sticky 中は border-collapse の罫線が見出しと一緒に動かないので、下線は影で引く */}
+          <thead
+            className={
+              stickyHeader
+                ? 'sticky top-0 z-[1] bg-[var(--bg-card)] shadow-[0_0.5px_0_var(--border)]'
+                : 'border-b-[0.5px] border-[var(--border)]'
+            }
+          >
             <tr>
               {visible.map(c =>
                 c.value && c.sortable !== false ? (
