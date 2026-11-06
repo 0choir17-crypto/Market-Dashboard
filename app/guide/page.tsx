@@ -346,8 +346,7 @@ export default function GuidePage() {
         </h2>
         <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-5 text-small text-[var(--text-primary)] space-y-3">
           <p>
-            <strong>Positions</strong>（保有中） / <strong>Journal</strong>（確定トレード＋分析） /
-            <strong>Risk</strong>（連敗・リスク設定）の 3 タブ。記録はヘッダーの
+            1 画面の上段が <strong>Positions</strong>（保有中）、下段が <strong>Journal</strong>（確定トレード＋分析）。記録はヘッダーの
             <strong className="text-[var(--sem-focus-fg)]">「＋ 新規トレード」</strong> から。
           </p>
           <ul className="list-disc pl-5 space-y-1.5">

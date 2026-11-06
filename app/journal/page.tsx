@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { fetchAllPaged } from '@/lib/pagedFetch'
 import { Trade } from '@/types/trades'
-import { RiskSettings } from '@/types/portfolio'
 import JournalStats from '@/components/journal/JournalStats'
 import EquityCurveChart from '@/components/journal/EquityCurveChart'
 import PeriodPerformance from '@/components/journal/PeriodPerformance'
@@ -15,22 +14,20 @@ import CloseTradeModal from '@/components/journal/CloseTradeModal'
 import EditTradeModal from '@/components/journal/EditTradeModal'
 import PositionModal from '@/components/portfolio/PositionModal'
 import PositionsTab from '@/components/portfolio/PositionsTab'
-import RiskTab from '@/components/portfolio/RiskTab'
 import ErrorBanner from '@/components/shared/ErrorBanner'
 import PageHeader from '@/components/shared/PageHeader'
 
-type Tab = 'positions' | 'journal' | 'risk'
+// Positions と Journal は 1 画面に統合（タブなし）。上から「保有中 → 成績 → 確定トレード」。
+// 旧 Risk タブは廃止。risk_settings.consec_losses は決済モーダルが引き続き更新する。
 
-const TABS: { key: Tab; label: string }[] = [
-  { key: 'positions', label: 'Positions' },
-  { key: 'journal',   label: 'Journal' },
-  { key: 'risk',      label: 'Risk' },
-]
+function SectionHeading({ children }: { children: React.ReactNode }) {
+  return (
+    <h2 className="text-title font-medium mb-3 text-[var(--text-primary)]">{children}</h2>
+  )
+}
 
 export default function JournalPage() {
-  const [activeTab, setActiveTab] = useState<Tab>('positions')
   const [trades, setTrades] = useState<Trade[]>([])
-  const [riskSettings, setRiskSettings] = useState<RiskSettings | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showNewTrade, setShowNewTrade] = useState(false)
@@ -41,26 +38,17 @@ export default function JournalPage() {
   const fetchAll = useCallback(async () => {
     setLoading(true)
     // trades は全件取得（旧 .limit(500) はアクティブなトレーダーの統計を黙って切り捨てる）
-    const [tradesRes, riskRes] = await Promise.all([
-      fetchAllPaged<Trade>((from, to) =>
-        supabase
-          .from('trades')
-          .select('*')
-          .order('entry_date', { ascending: false })
-          .order('id', { ascending: true })
-          .range(from, to),
-      ),
+    const tradesRes = await fetchAllPaged<Trade>((from, to) =>
       supabase
-        .from('risk_settings')
+        .from('trades')
         .select('*')
-        .limit(1)
-        .maybeSingle(),
-    ])
+        .order('entry_date', { ascending: false })
+        .order('id', { ascending: true })
+        .range(from, to),
+    )
     const errors: string[] = []
     if (tradesRes.error) errors.push(`trades: ${tradesRes.error}`)
     else setTrades(tradesRes.rows)
-    if (riskRes.error) errors.push(`risk_settings: ${riskRes.error.message}`)
-    else setRiskSettings((riskRes.data ?? null) as RiskSettings | null)
     // 取得失敗時は直前の表示内容を保持し、バナーで不完全さを明示する
     setError(errors.length > 0 ? errors.join(' / ') : null)
     setLoading(false)
@@ -85,7 +73,7 @@ export default function JournalPage() {
       {/* Header */}
       <PageHeader
         title="Trading"
-        subtitle="21 Cloud — ポジション・トレード記録・分析・リスク管理"
+        subtitle="21 Cloud — ポジション・トレード記録・分析"
         onRefresh={fetchAll}
         refreshing={loading}
       >
@@ -97,25 +85,6 @@ export default function JournalPage() {
         </button>
       </PageHeader>
 
-      {/* Tab navigation */}
-      <div className="overflow-x-auto whitespace-nowrap mb-6 -mx-4 sm:mx-0 px-4 sm:px-0">
-        <div className="inline-flex gap-1 bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-1">
-          {TABS.map(tab => (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className={`px-4 py-3 min-w-fit text-small font-medium rounded-lg transition-colors ${
-                activeTab === tab.key
-                  ? 'bg-[var(--sem-focus-fg)] text-white'
-                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)]'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
       {error && <ErrorBanner detail={error} onRetry={fetchAll} />}
 
       {/* Loading (初回のみ全面表示。再取得中は既存表示を維持し、ヘッダーの Refresh が回る) */}
@@ -123,40 +92,32 @@ export default function JournalPage() {
         <div className="text-center py-16 text-[var(--text-muted)] text-small">読み込み中…</div>
       )}
 
-      {/* Tab content */}
+      {/* Positions（保有中）→ Journal（成績・確定トレード） */}
       {!(loading && trades.length === 0) && (
         <>
-          {activeTab === 'positions' && (
+          <section className="mb-8">
+            <SectionHeading>Positions</SectionHeading>
             <PositionsTab positions={openPositions} onRefresh={fetchAll} />
-          )}
+          </section>
 
-          {activeTab === 'journal' && (
-            <>
-              <JournalStats trades={trades} />
-              <EquityCurveChart trades={trades} />
-              <PeriodPerformance trades={trades} />
-              <ReasonPerformance trades={trades} />
-              <TagPerformance trades={trades} />
-              <TradeList
-                trades={closedTrades}
-                onClose={(trade) => setClosingTrade(trade)}
-                onEdit={(trade) => setEditingTrade(trade)}
-                expandedReview={expandedReview}
-                onToggleReview={toggleReview}
-                onSectionSaved={handleSectionSaved}
-                onSectionCancel={() => setExpandedReview(null)}
-                sections={['closed']}
-              />
-            </>
-          )}
-
-          {activeTab === 'risk' && (
-            <RiskTab
-              riskSettings={riskSettings}
-              history={closedTrades}
-              onRefresh={fetchAll}
+          <section>
+            <SectionHeading>Journal</SectionHeading>
+            <JournalStats trades={trades} />
+            <EquityCurveChart trades={trades} />
+            <PeriodPerformance trades={trades} />
+            <ReasonPerformance trades={trades} />
+            <TagPerformance trades={trades} />
+            <TradeList
+              trades={closedTrades}
+              onClose={(trade) => setClosingTrade(trade)}
+              onEdit={(trade) => setEditingTrade(trade)}
+              expandedReview={expandedReview}
+              onToggleReview={toggleReview}
+              onSectionSaved={handleSectionSaved}
+              onSectionCancel={() => setExpandedReview(null)}
+              sections={['closed']}
             />
-          )}
+          </section>
         </>
       )}
 
