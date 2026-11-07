@@ -8,6 +8,8 @@ import PositionModal from '@/components/portfolio/PositionModal'
 
 type Props = {
   rows: VahBreakoutRow[]
+  /** 表が空の日に併記する、直近でヒットがあった日 */
+  lastHitDate?: string | null
   title: string
   subtitle: string
   // vah_breakouts の DDL が未実行（テーブル未配備）。「0 件の日」と区別して案内する。
@@ -45,6 +47,7 @@ const SORTS: SortDef[] = [
 
 export default function VahBreakoutSection({
   rows,
+  lastHitDate,
   title,
   subtitle,
   tableMissing = false,
@@ -128,6 +131,11 @@ export default function VahBreakoutSection({
       ) : sorted.length === 0 ? (
         <div className="py-8 text-center text-small text-[var(--text-muted)]">
           {rows.length === 0 ? '本日は該当なし。' : '絞り込み条件に一致する銘柄がありません。'}
+          {rows.length === 0 && lastHitDate && (
+            <p className="mt-1 text-caption">
+              直近のヒット日: <span className="font-mono">{lastHitDate}</span>
+            </p>
+          )}
         </div>
       ) : (
         <div className="grid gap-2.5" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))' }}>

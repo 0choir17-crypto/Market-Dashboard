@@ -8,6 +8,8 @@ import PositionModal from '@/components/portfolio/PositionModal'
 
 type Props = {
   rows: StructurePivotCardRow[]
+  /** 表が空の日に併記する、直近でヒットがあった日 */
+  lastHitDate?: string | null
   title: string
   subtitle: string
   // 複数スキャナー重複銘柄の code 集合（背景を黄色で強調）
@@ -60,7 +62,13 @@ const SORTS: SortDef[] = [
 // signal フィルタ（1st / 2nd / 全部）。両方を既定表示。
 type SignalFilter = 'all' | StructurePivotSignal
 
-export default function StructurePivotSection({ rows, title, subtitle, multiHitCodes }: Props) {
+export default function StructurePivotSection({
+  rows,
+  lastHitDate,
+  title,
+  subtitle,
+  multiHitCodes,
+}: Props) {
   const [sector, setSector] = useState<string>('all')
   const [signal, setSignal] = useState<SignalFilter>('all')
   const [sortKey, setSortKey] = useState<string>(SORTS[0].key)
@@ -156,6 +164,11 @@ export default function StructurePivotSection({ rows, title, subtitle, multiHitC
           {rows.length === 0
             ? '本日の Structure Pivot ヒットは 0 件です。'
             : '該当する銘柄がありません。'}
+          {rows.length === 0 && lastHitDate && (
+            <p className="mt-1 text-caption">
+              直近のヒット日: <span className="font-mono">{lastHitDate}</span>
+            </p>
+          )}
         </div>
       ) : (
         <div
