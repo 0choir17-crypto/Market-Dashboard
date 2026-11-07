@@ -136,7 +136,7 @@ export type StageDef = {
   desc: string
   /** 基準の線の見出し */
   line: string
-  /** 札の下段で太字にする線 (段階 3・5 は無し) */
+  /** 札の下段で太字にする線 (段階 4・5 は無し) */
   bold: MaKey | null
   dist: (r: MaDists) => number | null
 }
@@ -145,22 +145,22 @@ export const STAGES: StageDef[] = [
   { title: 'Above 9EMA', desc: 'まだ押していない', line: '9EMA', bold: '9', dist: r => num(r.d_ema9) },
   { title: '9-21EMA', desc: '浅い押し', line: '21EMA', bold: '21', dist: r => num(r.d_ema21) },
   { title: '21-50EMA', desc: '中くらいの押し', line: '50EMA', bold: '50', dist: r => num(r.d_ema50) },
-  { title: 'Below 50EMA', desc: '50EMA割れ・週足9EMAの上', line: 'W9EMA', bold: null, dist: r => num(r.d_ema9_weekly) },
-  { title: 'Below W9EMA', desc: '週足9EMA割れ・150EMAの上', line: '150EMA', bold: '150', dist: r => num(r.d_ema150) },
-  { title: 'Below 150EMA', desc: '150EMAも割れ', line: '150EMA', bold: null, dist: r => num(r.d_ema150) },
+  { title: '50-150EMA', desc: '深い押し', line: '150EMA', bold: '150', dist: r => num(r.d_ema150) },
+  { title: 'Below 150EMA', desc: '150EMA割れ・週足9EMAの上', line: 'W9EMA', bold: null, dist: r => num(r.d_ema9_weekly) },
+  { title: 'Below W9EMA', desc: '週足9EMAも割れ', line: 'W9EMA', bold: null, dist: r => num(r.d_ema9_weekly) },
 ]
 
 /**
- * 押しの段階 0〜5 = d_ema9 → d_ema21 → d_ema50 → d_ema9_weekly → d_ema150 の順に見て、最初に 0 以上の線。
- * どれも負なら 5。ただし d_ema150 が無い (null) ときは 150EMA を割ったか分からないので 4 に留める。
+ * 押しの段階 0〜5 = d_ema9 → d_ema21 → d_ema50 → d_ema150 → d_ema9_weekly の順に見て、最初に 0 以上の線。
+ * 週足 9EMA は最後に見る。どれも負なら 5。
  */
 export function pullbackStage(r: MaDists): number {
-  const lines = [r.d_ema9, r.d_ema21, r.d_ema50, r.d_ema9_weekly, r.d_ema150]
+  const lines = [r.d_ema9, r.d_ema21, r.d_ema50, r.d_ema150, r.d_ema9_weekly]
   for (let i = 0; i < lines.length; i++) {
     const d = num(lines[i])
     if (d !== null && d >= 0) return i
   }
-  return num(r.d_ema150) === null ? 4 : 5
+  return 5
 }
 
 /** 線が密集している銘柄 (spread_21_50 < SPREAD_MIN) か。押しの段階は読まず、別の列に置く */
