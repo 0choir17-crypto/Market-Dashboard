@@ -143,8 +143,8 @@ app/layout.tsx  (RootLayout, lang="ja")
      段ごとのセルの下 = 札（`byListOrder` の順）。塗り = t63 の一覧にいる（数字 t63、濃さ = 入る線 +1 以上 / 入る線以上 / 入る線未満）、枠だけ = t21 の一覧だけ（数字 t21）。
      ↑↓ = 5 営業日前からの t の増減（±0.1 以上）、新 = 5 営業日前に一覧にいない、T2.3× = Turnover 2.0× 以上。
      並び = 見込みとの差 t63（既定。大型 + 中小の合計）/ 同 t21 / Trend / 銘柄数。検索に合わない札は薄くする。札クリック → TradingView
-  2. **Pullback Board** `components/leaders/LiquidPullbackBoard.tsx` — RS Leaders の Pullback Board と同じ並べ方。上 大型 / 下 中小（切替なし）。
-     対象 = その段の全行。列 = 押しの段階 0〜5（`pullbackStage`、RS Leaders と同じ判定）+ その下に横いっぱいで「MA Tight」（spread_21_50 < 1.0 = 線が密集。押しの段階は読まない）。
+  2. **Pullback Board** `components/leaders/LiquidPullbackBoard.tsx` — RS Leaders の Pullback Board と同じ並べ方。大型・中小は分けずに 1 枚（札の濃さの基準 = 各銘柄の段の入る線。ツールチップに段を出す）。
+     対象 = 表示日の全行。列 = 押しの段階 0〜5（`pullbackStage`、RS Leaders と同じ判定）+ その下に横いっぱいで「MA Tight」（spread_21_50 < 1.0 = 線が密集。押しの段階は読まない）。
      列と描き方は RS Leaders と共用（`buildPullbackColumns` / `components/rsLeaders/StageColumns.tsx`）。列の中は基準の線に近い順（MA Tight は最も近い日足の線の順）。
      札は Sector Board と同じ（`liquidChipUi.tsx`）+ 下段に 9 / 21 / 50 / 150EMA までの ATR 距離（RS Leaders の `Dists`）。
      距離の列（d_ema9 / d_ema21 / d_ema50 / d_ema150 / d_ema9_weekly / spread_21_50）は 2026-11 に `liquid_leaders` へ追加（定義は rs_leaders と同じ）。d_ema9〜50・週足が無い行は件数だけ出す

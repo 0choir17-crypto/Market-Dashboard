@@ -172,7 +172,7 @@ export function LiquidTooltip({ tip, prev }: { tip: LiquidTipState; prev: Prev }
         <span className="font-mono">{r.code}</span> {r.co_name ?? ''}
       </div>
       <div className="text-[var(--text-secondary)]">
-        {r.sector_s33 ?? '—'} · MA spread {spread !== null ? spread.toFixed(2) : '—'} ({spreadLabel(spread)}) · ADR{' '}
+        {TIERS.find(t => t.key === r.tier)?.label ?? '中小'} · {r.sector_s33 ?? '—'} · MA spread {spread !== null ? spread.toFixed(2) : '—'} ({spreadLabel(spread)}) · ADR{' '}
         {adr !== null ? `${adr.toFixed(1)}%` : '—'}
       </div>
       <div className="text-[var(--text-secondary)]">
