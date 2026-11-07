@@ -47,7 +47,15 @@ export default function TodayPage() {
   // ページ見出しの日付は現役スキャナーの最大 date のみから決める
   // （2026-08-29 に廃止された6テーブルは参照しない。参照すると 2026-08-28 で
   //   止まった日付を「最終更新日」として出し続けてしまう）。
-  const displayDate = data.structDate ?? data.emaDate ?? data.vahDate ?? selectedDate
+  // 3本のうち一番新しい日付を出す。ヒット 0 件の日はそのテーブルの最新日が前日のままなので、
+  // 特定のテーブルを優先すると、他が更新済みでも見出しが古い日付になる（例: 2026-11-06 の
+  // 急落日は Structure Pivot が 0 件で、EMA / VAH は 11/6 なのに見出しが 11/5 になった）。
+  // date は YYYY-MM-DD なので文字列比較でよい。
+  const tableDates = [data.structDate, data.emaDate, data.vahDate].filter(
+    (d): d is string => d != null,
+  )
+  const displayDate =
+    tableDates.length > 0 ? tableDates.reduce((a, b) => (a > b ? a : b)) : selectedDate
 
   const total = data.ema.length + data.struct.length + data.vah.length
 
