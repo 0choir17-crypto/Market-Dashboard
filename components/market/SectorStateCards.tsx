@@ -5,7 +5,7 @@ import { useDate } from '@/contexts/DateContext'
 import { fetchSectorTrends, type SectorTrend, type SectorTrendResult } from '@/lib/sectorTrendFetch'
 import type { TrendSignal } from '@/lib/trendState'
 import { CautionMark } from '@/components/sectors33/SelfStrength'
-import { CardButton, EmaChain, ExtRow, SIGNAL_ORDER, SIGNAL_STYLE, SelfRow, SignalPill, Slopes } from './trendAtoms'
+import { CardButton, EmaChain, SIGNAL_ORDER, SIGNAL_STYLE, SectorStats, SignalPill, Slopes } from './trendAtoms'
 import SectorDetailModal from './SectorDetailModal'
 
 // 33 業種の地合い判定カード。判定と書き方は指数カードと同じ（日足 EMA9 / EMA21 の位置と向き）。
@@ -50,8 +50,7 @@ function SectorCard({ s, onOpen }: { s: SectorTrend; onOpen: () => void }) {
         <p className="text-caption text-[var(--text-muted)] mt-1">データが足りません</p>
       )}
 
-      <SelfRow s={s} />
-      <ExtRow s={s} />
+      <SectorStats s={s} />
     </CardButton>
   )
 }
