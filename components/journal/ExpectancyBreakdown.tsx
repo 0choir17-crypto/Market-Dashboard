@@ -1,7 +1,7 @@
 'use client'
 
 // 切り口別の期待値表。トレードを属性で分け、グループごとに computeRStats を回す
-// （Journal 上段の RiskRewardPanel と同じ定義なので数字がずれない）。
+// （Journal 上段の JournalSummary と同じ定義なので数字がずれない）。
 
 import { useMemo, useState } from 'react'
 import { Trade } from '@/types/trades'
@@ -9,6 +9,8 @@ import { computeRStats, R_BASIS_LABEL, R_UNIT, RBasis, RStats } from '@/lib/rSta
 import { ENTRY_TYPES, isPullback } from '@/lib/entryTypes'
 import { EXIT_REASONS } from '@/components/journal/CloseTradeModal'
 import { formatPct } from '@/lib/format'
+import { REVIEW_TAGS, getTagById } from '@/lib/reviewTags'
+import { tradeFlags } from '@/lib/tradeFlags'
 
 const UNSET = '未設定'
 /** これ未満の件数は参考値として薄く表示 */
@@ -17,12 +19,23 @@ const MIN_SAMPLE = 10
 type Dim = {
   key: string
   label: string
-  groupOf: (t: Trade) => string
+  /** 1 件が複数グループに入る切り口（タグ）は配列を返す */
+  groupOf: (t: Trade) => string | string[]
   /** 表示順（ここに無いグループは件数順で後ろに並べる） */
   order?: readonly string[]
 }
 
 const DIMS: Dim[] = [
+  {
+    key: 'month',
+    label: '月別',
+    groupOf: t => (t.exit_date ?? t.entry_date ?? '').slice(0, 7) || UNSET,
+  },
+  {
+    key: 'year',
+    label: '年別',
+    groupOf: t => (t.exit_date ?? t.entry_date ?? '').slice(0, 4) || UNSET,
+  },
   {
     key: 'mc',
     label: '相場環境（MC 条件）',
@@ -57,6 +70,24 @@ const DIMS: Dim[] = [
     groupOf: t => t.exit_reason?.trim() || UNSET,
     order: [...EXIT_REASONS, UNSET],
   },
+  {
+    key: 'flag',
+    label: '自動判定',
+    groupOf: t => {
+      const f = tradeFlags(t).map(x => x.label)
+      return f.length > 0 ? f : '該当なし'
+    },
+    order: ['大勝ち', '取り逃し', '吐き出し', '大きな負け', '該当なし'],
+  },
+  {
+    key: 'tag',
+    label: 'レビュータグ',
+    groupOf: t => {
+      const tags = (t.review_tags ?? []).map(id => getTagById(id)?.label).filter((x): x is string => !!x)
+      return tags.length > 0 ? tags : UNSET
+    },
+    order: [...REVIEW_TAGS.map(t => t.label), UNSET],
+  },
 ]
 
 function fmtU(v: number | null, u: string): string {
@@ -80,10 +111,12 @@ export default function ExpectancyBreakdown({ trades, basis }: { trades: Trade[]
     const groups = new Map<string, Trade[]>()
     for (const t of trades) {
       if (t.status !== 'closed' && t.status !== 'open') continue
-      const g = dim.groupOf(t)
-      const arr = groups.get(g)
-      if (arr) arr.push(t)
-      else groups.set(g, [t])
+      const gs = dim.groupOf(t)
+      for (const g of Array.isArray(gs) ? gs : [gs]) {
+        const arr = groups.get(g)
+        if (arr) arr.push(t)
+        else groups.set(g, [t])
+      }
     }
     const out: { group: string; s: RStats }[] = []
     for (const [group, ts] of groups) {
@@ -92,14 +125,15 @@ export default function ExpectancyBreakdown({ trades, basis }: { trades: Trade[]
     }
     const order = dim.order ?? []
     const rank = (g: string) => { const i = order.indexOf(g); return i < 0 ? order.length : i }
-    out.sort((a, b) => rank(a.group) - rank(b.group) || b.s.positions - a.s.positions)
+    if (dim.key === 'month' || dim.key === 'year') out.sort((a, b) => b.group.localeCompare(a.group))
+    else out.sort((a, b) => rank(a.group) - rank(b.group) || b.s.positions - a.s.positions)
     return out
   }, [trades, dim, basis])
 
   if (rows.length === 0) return null
 
   return (
-    <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-4 mb-6">
+    <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-4">
       <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
         <h3 className="text-small font-medium text-[var(--text-primary)]">
           切り口別の期待値

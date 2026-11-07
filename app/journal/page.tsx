@@ -5,31 +5,37 @@ import { supabase } from '@/lib/supabase'
 import { fetchAllPaged } from '@/lib/pagedFetch'
 import { Trade } from '@/types/trades'
 import { RiskSettings } from '@/types/portfolio'
-import JournalStats from '@/components/journal/JournalStats'
 import EquityCurveChart from '@/components/journal/EquityCurveChart'
-import PeriodPerformance from '@/components/journal/PeriodPerformance'
-import ReasonPerformance from '@/components/journal/ReasonPerformance'
-import TagPerformance from '@/components/journal/TagPerformance'
-import TradeList, { ExpandedReview } from '@/components/journal/TradeList'
-import CloseTradeModal from '@/components/journal/CloseTradeModal'
 import EditTradeModal from '@/components/journal/EditTradeModal'
 import PositionModal from '@/components/portfolio/PositionModal'
 import PositionsTab from '@/components/portfolio/PositionsTab'
-import RiskRewardPanel from '@/components/journal/RiskRewardPanel'
+import JournalSummary, { RBasisToggle, RDistribution } from '@/components/journal/JournalSummary'
 import ExpectancyBreakdown from '@/components/journal/ExpectancyBreakdown'
 import MfeCaptureChart from '@/components/journal/MfeCaptureChart'
+import ClosedTradesTable from '@/components/journal/ClosedTradesTable'
 import { computeRStats, preferredBasis, rOf, RBasis } from '@/lib/rStats'
 import { todayJST } from '@/lib/dates'
 import ErrorBanner from '@/components/shared/ErrorBanner'
 import PageHeader from '@/components/shared/PageHeader'
 
-// Positions と Journal は 1 画面に統合（タブなし）。上から「保有中 → 成績 → 確定トレード」。
-// 旧 Risk タブは廃止。risk_settings は口座資金・リスク % の既定値置き場として使う
-// （株数計算・総建玉 % 表示）。consec_losses は決済モーダルが引き続き更新する。
+// Trading = 上から「保有中 → 成績（カード 1 行）→ 分析（タブで 1 つずつ）→ 決済済み一覧」。
+// R は ATR 基準が標準。損切り基準は切り替えで残す（損切り価格を記録したトレードだけ）。
+// risk_settings は口座資金などの既定値置き場（株数計算・総建玉 % 表示）。
 
-function SectionHeading({ children }: { children: React.ReactNode }) {
+type AnalysisTab = 'equity' | 'dist' | 'breakdown' | 'mfe'
+const ANALYSIS_TABS: { key: AnalysisTab; label: string }[] = [
+  { key: 'equity', label: '資産曲線' },
+  { key: 'dist', label: '分布' },
+  { key: 'breakdown', label: '切り口別' },
+  { key: 'mfe', label: '取り逃し' },
+]
+
+function SectionHeading({ children, right }: { children: React.ReactNode; right?: React.ReactNode }) {
   return (
-    <h2 className="text-title font-medium mb-3 text-[var(--text-primary)]">{children}</h2>
+    <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+      <h2 className="text-title font-medium text-[var(--text-primary)]">{children}</h2>
+      {right}
+    </div>
   )
 }
 
@@ -39,9 +45,9 @@ export default function JournalPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showNewTrade, setShowNewTrade] = useState(false)
-  const [closingTrade, setClosingTrade] = useState<Trade | null>(null)
   const [editingTrade, setEditingTrade] = useState<Trade | null>(null)
-  const [expandedReview, setExpandedReview] = useState<ExpandedReview>(null)
+  const [tab, setTab] = useState<AnalysisTab>('equity')
+  const [focus, setFocus] = useState<{ id: number; n: number } | null>(null)
 
   const fetchAll = useCallback(async () => {
     setLoading(true)
@@ -74,22 +80,10 @@ export default function JournalPage() {
 
   useEffect(() => { fetchAll() }, [fetchAll])
 
-  const toggleReview = useCallback((tradeId: number) => {
-    setExpandedReview(prev => prev === tradeId ? null : tradeId)
+  // 散布図の点 → 一覧の該当行を開く
+  const openTrade = useCallback((tradeId: number) => {
+    setFocus(prev => ({ id: tradeId, n: (prev?.n ?? 0) + 1 }))
   }, [])
-
-  // 散布図の点 → 該当トレードの振り返りを開いてスクロール
-  const openReview = useCallback((tradeId: number) => {
-    setExpandedReview(tradeId)
-    requestAnimationFrame(() => {
-      document.getElementById(`trade-${tradeId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    })
-  }, [])
-
-  const handleSectionSaved = useCallback(async () => {
-    await fetchAll()
-    setExpandedReview(null)
-  }, [fetchAll])
 
   const openPositions = trades.filter(t => t.status === 'open')
   const closedTrades = trades.filter(t => t.status === 'closed')
@@ -104,10 +98,9 @@ export default function JournalPage() {
 
   return (
     <main className="min-h-screen p-4 sm:p-6" style={{ backgroundColor: 'var(--bg-primary)' }}>
-      {/* Header */}
       <PageHeader
         title="Trading"
-        subtitle="21 Cloud — ポジション・トレード記録・分析"
+        subtitle="保有中・成績・振り返り"
         onRefresh={fetchAll}
         refreshing={loading}
       >
@@ -121,16 +114,14 @@ export default function JournalPage() {
 
       {error && <ErrorBanner detail={error} onRetry={fetchAll} />}
 
-      {/* Loading (初回のみ全面表示。再取得中は既存表示を維持し、ヘッダーの Refresh が回る) */}
       {loading && trades.length === 0 && (
         <div className="text-center py-16 text-[var(--text-muted)] text-small">読み込み中…</div>
       )}
 
-      {/* Positions（保有中）→ Journal（成績・確定トレード） */}
       {!(loading && trades.length === 0) && (
-        <>
-          <section className="mb-8">
-            <SectionHeading>Positions</SectionHeading>
+        <div className="space-y-8">
+          <section>
+            <SectionHeading>保有中</SectionHeading>
             <PositionsTab
               positions={openPositions}
               allTrades={trades}
@@ -141,30 +132,45 @@ export default function JournalPage() {
           </section>
 
           <section>
-            <SectionHeading>Journal</SectionHeading>
-            <RiskRewardPanel stats={rStats} onBasisChange={setBasisChoice} counts={basisCounts} />
-            <ExpectancyBreakdown trades={trades} basis={basis} />
-            <MfeCaptureChart trades={closedTrades} basis={basis} onSelect={openReview} />
-            <JournalStats trades={trades} />
-            <EquityCurveChart trades={trades} />
-            <PeriodPerformance trades={trades} />
-            <ReasonPerformance trades={trades} />
-            <TagPerformance trades={trades} />
-            <TradeList
+            <SectionHeading right={<RBasisToggle basis={basis} onChange={setBasisChoice} counts={basisCounts} />}>
+              成績
+            </SectionHeading>
+            <JournalSummary stats={rStats} />
+
+            <div className="flex gap-1 border-b border-[var(--border)] mb-3" role="tablist">
+              {ANALYSIS_TABS.map(t => (
+                <button
+                  key={t.key}
+                  role="tab"
+                  aria-selected={tab === t.key}
+                  onClick={() => setTab(t.key)}
+                  className={`px-3 py-2 text-small -mb-px border-b-2 transition-colors ${
+                    tab === t.key
+                      ? 'border-[var(--sem-focus-fg)] text-[var(--text-primary)] font-medium'
+                      : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                  }`}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+            {tab === 'equity' && <EquityCurveChart trades={trades} />}
+            {tab === 'dist' && <RDistribution stats={rStats} />}
+            {tab === 'breakdown' && <ExpectancyBreakdown trades={trades} basis={basis} />}
+            {tab === 'mfe' && <MfeCaptureChart trades={closedTrades} basis={basis} onSelect={openTrade} />}
+          </section>
+
+          <section>
+            <ClosedTradesTable
               trades={closedTrades}
-              onClose={(trade) => setClosingTrade(trade)}
-              onEdit={(trade) => setEditingTrade(trade)}
-              expandedReview={expandedReview}
-              onToggleReview={toggleReview}
-              onSectionSaved={handleSectionSaved}
-              onSectionCancel={() => setExpandedReview(null)}
-              sections={['closed']}
+              basis={basis}
+              onEdit={setEditingTrade}
+              focus={focus}
             />
           </section>
-        </>
+        </div>
       )}
 
-      {/* New trade modal (統合: エントリー + 任意のリスク/イグジット) */}
       <PositionModal
         open={showNewTrade}
         onClose={() => setShowNewTrade(false)}
@@ -173,15 +179,6 @@ export default function JournalPage() {
         onSettingsSaved={fetchAll}
       />
 
-      {/* Close trade modal */}
-      <CloseTradeModal
-        open={closingTrade !== null}
-        onClose={() => setClosingTrade(null)}
-        onSaved={fetchAll}
-        trade={closingTrade}
-      />
-
-      {/* Edit trade modal */}
       <EditTradeModal
         open={editingTrade !== null}
         onClose={() => setEditingTrade(null)}

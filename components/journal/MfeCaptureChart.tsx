@@ -89,7 +89,7 @@ export default function MfeCaptureChart({
   const diagStart = Math.max(xMin, yMin, 0)
 
   return (
-    <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-4 mb-6">
+    <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2 mb-2">
         <h3 className="text-small font-medium text-[var(--text-primary)]">
           MFE vs 決済 {u}（伸ばしきれたか）
