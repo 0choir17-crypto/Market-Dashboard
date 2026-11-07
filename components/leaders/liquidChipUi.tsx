@@ -11,7 +11,7 @@ import { useCallback, useState, type CSSProperties, type MouseEvent, type ReactN
 import { tradingViewUrl } from '@/lib/tickerLinks'
 import { TIER_STYLE } from '@/components/rsLeaders/chipUi'
 import { spreadLabel } from '@/types/rsLeaders'
-import { diffColor, fmtDiff, tDiff, type LiquidLeader, type LiquidPeriod, type TDiff } from '@/types/liquidLeaders'
+import { TIERS, diffColor, fmtDiff, tDiff, type LiquidLeader, type LiquidPeriod, type TDiff } from '@/types/liquidLeaders'
 
 /** 札に Turnover を出す下限 */
 export const TURNOVER_MARK = 2.0
@@ -107,16 +107,16 @@ export function LiquidChip({
   )
 }
 
-/** 凡例の色見本 (塗り 3 段 + 枠だけ) */
-export function LiquidLegend({ enter }: { enter: number }) {
-  const e = enter.toFixed(1)
-  const e1 = (enter + 1).toFixed(1)
+/** 凡例の色見本 (塗り 3 段 + 枠だけ)。入る線は段ごと (大型 2.0 / 中小 1.5) */
+export function LiquidLegend() {
+  const lines = TIERS.map(t => `${t.label} ${t.enter.toFixed(1)}`).join(' / ')
   return (
     <>
+      <span className="text-[var(--text-muted)]">入る線 = {lines}</span>
       {([
-        [1, `t63 ${e1} 以上`],
-        [2, `t63 ${e}〜${e1}`],
-        [3, `t63 ${e} 未満（出る線までの猶予）`],
+        [1, 't63 入る線 +1 以上'],
+        [2, 't63 入る線〜+1'],
+        [3, 't63 入る線未満（出る線までの猶予）'],
       ] as const).map(([t, label]) => (
         <span key={t} className="inline-flex items-center gap-1.5">
           <span className="inline-block w-3 h-3 rounded-sm" style={TIER_STYLE[t]} />

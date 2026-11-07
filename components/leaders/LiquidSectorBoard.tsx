@@ -3,7 +3,7 @@
 // Liquid Leaders の Sector Board — RS Leaders の Sector Board と同じ並べ方。
 //   行 = 33 業種。左: 業種名・業種の判定 (Market タブと同じ)・一覧の件数と「見込みとの差」・差の折れ線
 //                 右: その業種で一覧に入っている銘柄の札
-//   段 (大型 / 中小) は切り替え。入る線が違う 2 つの段を同じ並びに混ぜないため。
+//   段 (大型 / 中小) は行の中で左右に分ける (切り替えなしで両方見る)。入る線が違う 2 つの段の札は混ぜない。
 //
 // 見込みとの差 = 業種 × 週ヒートマップと同じ計算 (その日の段全体の割合 × 業種の母数 との差)。
 // 銘柄数の多い業種が偶然で上に来るのを防ぐ。
@@ -90,12 +90,12 @@ type Props = {
   query: string
 }
 
+type TierCell = { stat: SectorStat | null; chips: LiquidLeader[] }
+
 export default function LiquidSectorBoard({ rows, prev, endDate, trends, query }: Props) {
-  const [tier, setTier] = useState<LiquidTier>('large')
   const [sort, setSort] = useState<Sort>('ex63')
   const [hideEmpty, setHideEmpty] = useState(true)
   const { tip, onMove, onLeave } = useLiquidTip()
-  const tierDef = TIERS.find(t => t.key === tier)!
 
   // 業種の件数 (両段をまとめて取得。要求キー付きで持ち、キーが違えば読み込み中)
   const [days, setDays] = useState<{
@@ -118,23 +118,26 @@ export default function LiquidSectorBoard({ rows, prev, endDate, trends, query }
   const daysLoading = days?.key !== endDate
 
   const stats = useMemo(
-    () => buildSectorStats(daysLoading ? [] : days?.rows[tier] ?? []),
-    [days, daysLoading, tier],
+    () => ({
+      large: buildSectorStats(daysLoading ? [] : days?.rows.large ?? []),
+      mid: buildSectorStats(daysLoading ? [] : days?.rows.mid ?? []),
+    }),
+    [days, daysLoading],
   )
 
-  const chipsBySector = useMemo(() => {
-    const m = new Map<string, LiquidLeader[]>()
+  const chips = useMemo(() => {
+    const m: Record<LiquidTier, Map<string, LiquidLeader[]>> = { large: new Map(), mid: new Map() }
     for (const r of rows) {
-      const t = r.tier === 'large' ? 'large' : 'mid'
-      if (t !== tier || !r.sector_s33) continue
+      if (!r.sector_s33) continue
+      const t: LiquidTier = r.tier === 'large' ? 'large' : 'mid'
       const k = normName(r.sector_s33)
-      const a = m.get(k) ?? []
+      const a = m[t].get(k) ?? []
       a.push(r)
-      m.set(k, a)
+      m[t].set(k, a)
     }
-    for (const a of m.values()) a.sort(byListOrder)
+    for (const t of TIERS) for (const a of m[t.key].values()) a.sort(byListOrder)
     return m
-  }, [rows, tier])
+  }, [rows])
 
   const trendByName = useMemo(() => {
     const m = new Map<string, TrendState | null>()
@@ -143,43 +146,42 @@ export default function LiquidSectorBoard({ rows, prev, endDate, trends, query }
   }, [trends])
 
   const sectors = useMemo(() => {
-    const names = new Set<string>([...stats.keys(), ...chipsBySector.keys()])
-    const list = [...names].map(name => ({
-      name,
-      stat: stats.get(name) ?? null,
-      chips: chipsBySector.get(name) ?? [],
-      trend: trendByName.get(name) ?? null,
-    }))
-    const ex = (s: (typeof list)[number], k: 'ex21' | 'ex63') => s.stat?.[k] ?? -Infinity
-    const so = (s: (typeof list)[number]) => (s.trend ? SIGNAL_ORDER[s.trend.signal] : 3)
-    const cmp: Record<Sort, (a: (typeof list)[number], b: (typeof list)[number]) => number> = {
+    const names = new Set<string>()
+    for (const t of TIERS) {
+      for (const k of stats[t.key].keys()) names.add(k)
+      for (const k of chips[t.key].keys()) names.add(k)
+    }
+    const list = [...names].map(name => {
+      const cells = {} as Record<LiquidTier, TierCell>
+      for (const t of TIERS) cells[t.key] = { stat: stats[t.key].get(name) ?? null, chips: chips[t.key].get(name) ?? [] }
+      return { name, cells, trend: trendByName.get(name) ?? null }
+    })
+    type Row = (typeof list)[number]
+    // 並べ替えは大型 + 中小の合計 (業種 × 週ヒートマップの「直近の差順」と同じ)
+    const ex = (s: Row, k: 'ex21' | 'ex63') => {
+      const v = TIERS.map(t => s.cells[t.key].stat?.[k]).filter((x): x is number => x !== null && x !== undefined)
+      return v.length ? v.reduce((a, b) => a + b, 0) : -Infinity
+    }
+    const nChips = (s: Row) => s.cells.large.chips.length + s.cells.mid.chips.length
+    const so = (s: Row) => (s.trend ? SIGNAL_ORDER[s.trend.signal] : 3)
+    const cmp: Record<Sort, (a: Row, b: Row) => number> = {
       ex63: (a, b) => ex(b, 'ex63') - ex(a, 'ex63') || ex(b, 'ex21') - ex(a, 'ex21'),
       ex21: (a, b) => ex(b, 'ex21') - ex(a, 'ex21') || ex(b, 'ex63') - ex(a, 'ex63'),
       trend: (a, b) => so(a) - so(b) || ex(b, 'ex63') - ex(a, 'ex63'),
-      count: (a, b) => b.chips.length - a.chips.length || ex(b, 'ex63') - ex(a, 'ex63'),
+      count: (a, b) => nChips(b) - nChips(a) || ex(b, 'ex63') - ex(a, 'ex63'),
     }
     return list
-      .filter(s => !hideEmpty || s.chips.length > 0)
+      .filter(s => !hideEmpty || nChips(s) > 0)
       .sort((a, b) => cmp[sort](a, b) || a.name.localeCompare(b.name, 'ja'))
-  }, [stats, chipsBySector, trendByName, sort, hideEmpty])
+  }, [stats, chips, trendByName, sort, hideEmpty])
 
   const q = query.trim().toLowerCase()
   const matches = (r: LiquidLeader) =>
     !q || r.code.toLowerCase().includes(q) || (r.co_name ?? '').toLowerCase().includes(q)
-  const nTier = useMemo(() => [...chipsBySector.values()].reduce((s, a) => s + a.length, 0), [chipsBySector])
+  const nOf = (t: LiquidTier) => [...chips[t].values()].reduce((s, a) => s + a.length, 0)
 
   return (
     <section className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-5">
-      <div className="flex flex-wrap items-center gap-3 mb-3">
-        <Segmented
-          label="段"
-          value={tier}
-          onChange={setTier}
-          options={TIERS.map(t => ({ key: t.key, label: t.label }))}
-        />
-        <span className="text-caption text-[var(--text-muted)]">{tierDef.hint}</span>
-        <span className="text-caption text-[var(--text-muted)] num">{nTier} 銘柄</span>
-      </div>
       <div className="flex flex-wrap items-center gap-3 mb-3">
         <span className="text-caption text-[var(--text-muted)]">Sort:</span>
         <Segmented
@@ -206,7 +208,7 @@ export default function LiquidSectorBoard({ rows, prev, endDate, trends, query }
         </button>
       </div>
 
-      <Legend enter={tierDef.enter} trends={trends} endDate={endDate} />
+      <Legend trends={trends} endDate={endDate} />
       {days?.error && !daysLoading && (
         <p className="text-caption text-[var(--sem-weak-fg)] mb-2">業種の件数を取得できませんでした: {days.error}</p>
       )}
@@ -215,45 +217,66 @@ export default function LiquidSectorBoard({ rows, prev, endDate, trends, query }
       )}
 
       {sectors.length === 0 ? (
-        <p className="text-caption text-[var(--text-muted)] py-8 text-center">この段に銘柄はありません</p>
+        <p className="text-caption text-[var(--text-muted)] py-8 text-center">銘柄はありません</p>
       ) : (
         <div>
+          {/* 見出し: 業種 | 大型 | 中小 (狭い画面では各段のセルに段の名前を出す) */}
+          <div className={`hidden lg:grid ${GRID} gap-x-4 pb-1.5 pl-2.5 text-caption`}>
+            <span className="text-[var(--text-muted)]">業種</span>
+            {TIERS.map(t => (
+              <span key={t.key}>
+                <b className="text-small font-medium text-[var(--text-primary)]">{t.label}</b>{' '}
+                <span className="num text-[var(--text-muted)]">{nOf(t.key)} 銘柄</span>
+                <span className="block text-[var(--text-muted)]">{t.hint}</span>
+              </span>
+            ))}
+          </div>
           {sectors.map(s => (
             <div
               key={s.name}
-              className="grid grid-cols-1 sm:grid-cols-[290px_1fr] gap-x-3 gap-y-1.5 py-2 pl-1.5 border-t-[0.5px] border-l-4 border-t-[var(--border)] items-start"
+              className={`grid grid-cols-1 ${GRID} gap-x-4 gap-y-1.5 py-2 pl-1.5 border-t-[0.5px] border-l-4 border-t-[var(--border)] items-start`}
               style={{ borderLeftColor: s.trend ? SIGNAL_STYLE[s.trend.signal].fg : 'transparent' }}
             >
               <div className="flex flex-col items-start gap-0.5">
                 <span className="text-small font-medium text-[var(--text-primary)]">{s.name}</span>
                 {s.trend && <TrendTag state={s.trend} />}
-                <span className="text-caption text-[var(--text-secondary)] num">
-                  t63 <b className="text-[var(--text-primary)] font-medium">{s.stat?.n63 ?? 0}</b>{' '}
-                  <span className="text-[var(--text-muted)]">({fmtEx(s.stat?.ex63)})</span> · t21{' '}
-                  <b className="text-[var(--text-primary)] font-medium">{s.stat?.n21 ?? 0}</b>{' '}
-                  <span className="text-[var(--text-muted)]">({fmtEx(s.stat?.ex21)})</span> · 母数 {s.stat?.u ?? '—'}
-                </span>
-                {s.stat && <Sparkline series={s.stat.series} />}
               </div>
-              <div className="flex flex-wrap gap-1 content-start">
-                {s.chips.length === 0 ? (
-                  <span className="text-small text-[var(--text-muted)]">—</span>
-                ) : (
-                  s.chips.map(r => (
-                    <LiquidChip
-                      key={r.code}
-                      row={r}
-                      enter={tierDef.enter}
-                      dim={!matches(r)}
-                      onMove={onMove}
-                      onLeave={onLeave}
-                      className="inline-flex items-baseline"
-                    >
-                      <ChipHead row={r} prev={prev} />
-                    </LiquidChip>
-                  ))
-                )}
-              </div>
+              {TIERS.map(t => {
+                const c = s.cells[t.key]
+                return (
+                  <div key={t.key} className="min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="lg:hidden text-caption font-medium text-[var(--text-primary)]">{t.label}</span>
+                      <span className="text-caption text-[var(--text-secondary)] num">
+                        t63 <b className="text-[var(--text-primary)] font-medium">{c.stat?.n63 ?? 0}</b>{' '}
+                        <span className="text-[var(--text-muted)]">({fmtEx(c.stat?.ex63)})</span> · t21{' '}
+                        <b className="text-[var(--text-primary)] font-medium">{c.stat?.n21 ?? 0}</b>{' '}
+                        <span className="text-[var(--text-muted)]">({fmtEx(c.stat?.ex21)})</span> · 母数 {c.stat?.u ?? '—'}
+                      </span>
+                      {c.stat && <Sparkline series={c.stat.series} />}
+                    </div>
+                    <div className="flex flex-wrap gap-1 content-start">
+                      {c.chips.length === 0 ? (
+                        <span className="text-small text-[var(--text-muted)]">—</span>
+                      ) : (
+                        c.chips.map(r => (
+                          <LiquidChip
+                            key={r.code}
+                            row={r}
+                            enter={t.enter}
+                            dim={!matches(r)}
+                            onMove={onMove}
+                            onLeave={onLeave}
+                            className="inline-flex items-baseline"
+                          >
+                            <ChipHead row={r} prev={prev} />
+                          </LiquidChip>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           ))}
         </div>
@@ -264,10 +287,13 @@ export default function LiquidSectorBoard({ rows, prev, endDate, trends, query }
   )
 }
 
-function Legend({ enter, trends, endDate }: { enter: number; trends: SectorTrendResult | null; endDate: string }) {
+/** 業種 | 大型 | 中小。幅 1,024px 未満は縦に積む */
+const GRID = 'lg:grid-cols-[150px_1fr_1fr]'
+
+function Legend({ trends, endDate }: { trends: SectorTrendResult | null; endDate: string }) {
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mb-3 text-caption text-[var(--text-secondary)]">
-      <LiquidLegend enter={enter} />
+      <LiquidLegend />
       <span>( ) = 業種の大きさから見込む件数との差 · 折れ線 = t63 の差（直近 3 か月）</span>
       <span>
         緑・黄・赤 = 業種指数の 9/21EMA の位置と向き（Market タブと同じ判定）
@@ -288,8 +314,8 @@ function fmtEx(v: number | null | undefined): string {
 
 // t63 の見込みとの差の折れ線。0 の線を点線で引く。目盛りは業種ごと (最低 ±1 件幅)。
 function Sparkline({ series }: { series: (number | null)[] }) {
-  const W = 150
-  const H = 34
+  const W = 110
+  const H = 24
   const pts = series.map((v, i) => (v === null ? null : ([i, v] as const))).filter(p => p !== null)
   if (pts.length < 2) return <svg width={W} height={H} aria-hidden="true" />
   const vals = pts.map(p => p[1])
@@ -311,8 +337,8 @@ function Sparkline({ series }: { series: (number | null)[] }) {
       <line x1={26} x2={W - 6} y1={Y(0)} y2={Y(0)} stroke="var(--text-muted)" strokeWidth={0.75} strokeDasharray="2 2" />
       <polyline points={line} fill="none" stroke="var(--rs-line)" strokeWidth={1.5} strokeLinejoin="round" />
       <circle cx={X(li)} cy={Y(lv)} r={2.5} fill="var(--rs-line)" />
-      <text x={0} y={9} fontSize={9} fill="var(--text-muted)">{fmt(hi)}</text>
-      <text x={0} y={H - 3} fontSize={9} fill="var(--text-muted)">{fmt(lo)}</text>
+      <text x={0} y={8} fontSize={8} fill="var(--text-muted)">{fmt(hi)}</text>
+      <text x={0} y={H - 2} fontSize={8} fill="var(--text-muted)">{fmt(lo)}</text>
     </svg>
   )
 }

@@ -137,13 +137,13 @@ app/layout.tsx  (RootLayout, lang="ja")
 - ヘッダー右: 日付セレクト（ページ独自。`DateContext` は使わない。選択肢は表示日と無関係に全履歴）/「最新に戻る」/ 銘柄コード・銘柄名の検索ボックス
 - 過去日バナー / ErrorBanner / ローディング / データなし
 - 本体 = タブ 4 つ（既定 Sector Board）+ 下に `ReadingNotes`（読み方の注記。既定は閉じる `<details>`）
-  1. **Sector Board** `components/leaders/LiquidSectorBoard.tsx` — RS Leaders の Sector Board と同じ並べ方。段（大型 / 中小）は切替。
-     行 = 33 業種（既定は銘柄のある業種だけ）。左 = 業種名・業種の判定（Market タブと同じ。`fetchSectorTrends(表示日)`）・t63 / t21 の件数と
+  1. **Sector Board** `components/leaders/LiquidSectorBoard.tsx` — RS Leaders の Sector Board と同じ並べ方。大型・中小は行の中で左右に並べる（幅 1,024px 未満は縦に積む。切替なし）。
+     行 = 33 業種（既定は銘柄のある業種だけ）。左 = 業種名・業種の判定（Market タブと同じ。`fetchSectorTrends(表示日)`）。段ごとのセルの上に t63 / t21 の件数と
      「業種の大きさから見込む件数との差」（業種 × 週ヒートマップと同じ計算、表示日の値）・t63 の差の折れ線（直近 63 営業日）。
-     右 = 札（`byListOrder` の順）。塗り = t63 の一覧にいる（数字 t63、濃さ = 入る線 +1 以上 / 入る線以上 / 入る線未満）、枠だけ = t21 の一覧だけ（数字 t21）。
+     段ごとのセルの下 = 札（`byListOrder` の順）。塗り = t63 の一覧にいる（数字 t63、濃さ = 入る線 +1 以上 / 入る線以上 / 入る線未満）、枠だけ = t21 の一覧だけ（数字 t21）。
      ↑↓ = 5 営業日前からの t の増減（±0.1 以上）、新 = 5 営業日前に一覧にいない、T2.3× = Turnover 2.0× 以上。
-     並び = 見込みとの差 t63（既定）/ 同 t21 / Trend / 銘柄数。検索に合わない札は薄くする。札クリック → TradingView
-  2. **Pullback Board** `components/leaders/LiquidPullbackBoard.tsx` — RS Leaders の Pullback Board と同じ並べ方。段（大型 / 中小）は切替。
+     並び = 見込みとの差 t63（既定。大型 + 中小の合計）/ 同 t21 / Trend / 銘柄数。検索に合わない札は薄くする。札クリック → TradingView
+  2. **Pullback Board** `components/leaders/LiquidPullbackBoard.tsx` — RS Leaders の Pullback Board と同じ並べ方。上 大型 / 下 中小（切替なし）。
      対象 = その段の行のうち spread_21_50 ≥ 1.0（線が密集している銘柄は出さない）。列 = 押しの段階 0〜4（`pullbackStage`、RS Leaders と同じ判定）、
      列の中は基準の線に近い順。札は Sector Board と同じ（`liquidChipUi.tsx`）+ 下段に 9 / 21 / 50EMA までの ATR 距離（RS Leaders の `Dists`）。
      距離の列（d_ema9 / d_ema21 / d_ema50 / d_ema9_weekly / spread_21_50）は 2026-11 に `liquid_leaders` へ追加（定義は rs_leaders と同じ）。距離の無い行は件数だけ出す
