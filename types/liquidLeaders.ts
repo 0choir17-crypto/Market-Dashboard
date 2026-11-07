@@ -50,6 +50,8 @@ export type LiquidLeader = {
   d_ema9: number | null
   d_ema21: number | null
   d_ema50: number | null
+  /** 150EMA から何 ATR 上か (2026-11 追加) */
+  d_ema150?: number | null
   /** 週足 9EMA から何 ATR 上か */
   d_ema9_weekly: number | null
   /** 線の開き = (21EMA − 50EMA) ÷ ATR */

@@ -49,7 +49,7 @@ app/layout.tsx  (RootLayout, lang="ja")
 |---|---|---|---|
 | `/` | `app/page.tsx` | 画面 | Market Dashboard（指数・セクター・ブレッド） |
 | `/leaders` | `app/leaders/page.tsx` | 画面 | Liquid Leaders (リキッド・リーダー) |
-| `/rs-leaders` | `app/rs-leaders/page.tsx` | 画面 | RS Leaders（Sector Board / Pullback Board。`rs_leaders` / `rs_leaders_sector`。札クリックで TradingView） |
+| `/rs-leaders` | `app/rs-leaders/page.tsx` | 画面 | RS Leaders（Sector Board / Pullback Board。`rs_leaders` / `rs_leaders_sector`。札クリックで TradingView。Pullback Board の押しの段階 = Above 9EMA / 9-21EMA / 21-50EMA / Below 50EMA / Below W9EMA（150EMA の上）/ Below 150EMA + MA Tight（線が密集）） |
 | `/earnings` | `app/earnings/page.tsx` | 画面 | Earnings Quality |
 | `/today` | `app/today/page.tsx` | 画面 | Daily Watch（当日スキャナー結果） |
 | `/watchlist` | `app/watchlist/page.tsx` | 画面 | Watchlist Journal（TradingView の操作記録・読み取り専用） |
@@ -144,9 +144,10 @@ app/layout.tsx  (RootLayout, lang="ja")
      ↑↓ = 5 営業日前からの t の増減（±0.1 以上）、新 = 5 営業日前に一覧にいない、T2.3× = Turnover 2.0× 以上。
      並び = 見込みとの差 t63（既定。大型 + 中小の合計）/ 同 t21 / Trend / 銘柄数。検索に合わない札は薄くする。札クリック → TradingView
   2. **Pullback Board** `components/leaders/LiquidPullbackBoard.tsx` — RS Leaders の Pullback Board と同じ並べ方。上 大型 / 下 中小（切替なし）。
-     対象 = その段の行のうち spread_21_50 ≥ 1.0（線が密集している銘柄は出さない）。列 = 押しの段階 0〜4（`pullbackStage`、RS Leaders と同じ判定）、
-     列の中は基準の線に近い順。札は Sector Board と同じ（`liquidChipUi.tsx`）+ 下段に 9 / 21 / 50EMA までの ATR 距離（RS Leaders の `Dists`）。
-     距離の列（d_ema9 / d_ema21 / d_ema50 / d_ema9_weekly / spread_21_50）は 2026-11 に `liquid_leaders` へ追加（定義は rs_leaders と同じ）。距離の無い行は件数だけ出す
+     対象 = その段の全行。列 = 押しの段階 0〜5（`pullbackStage`、RS Leaders と同じ判定）+ その下に横いっぱいで「MA Tight」（spread_21_50 < 1.0 = 線が密集。押しの段階は読まない）。
+     列と描き方は RS Leaders と共用（`buildPullbackColumns` / `components/rsLeaders/StageColumns.tsx`）。列の中は基準の線に近い順（MA Tight は最も近い日足の線の順）。
+     札は Sector Board と同じ（`liquidChipUi.tsx`）+ 下段に 9 / 21 / 50 / 150EMA までの ATR 距離（RS Leaders の `Dists`）。
+     距離の列（d_ema9 / d_ema21 / d_ema50 / d_ema150 / d_ema9_weekly / spread_21_50）は 2026-11 に `liquid_leaders` へ追加（定義は rs_leaders と同じ）。d_ema9〜50・週足が無い行は件数だけ出す
   3. **Table** — `LiquidLeadersTable` × 2。段 (large=大型: 売買代金上位 200 位・ADR 2% 以上・t 2.0 で入る / mid=中小: 201〜1,000 位・ADR 3% 以上・t 1.5 で入る。出る線はどちらも入った後の最高値 − 1) ごとに 1 表（幅 1,760px 以上は左 大型 / 右 中小、それより狭いと上 大型 / 下 中小）。列は Code / Name・Sector（業種）・t21 (5d Δ)・t63 (5d Δ)・Gap（t21−t63）・Turnover ×60d（代金の勢い va_trend。色なし）・Since t21・Since t63（その一覧に入った日。いなければ —）。既定は t63 の一覧にいる銘柄を t63 の高い順、その後ろに t21 の高い順
   4. **業種 × 週** `SectorWeekHeatmap` — 業種 × 週（直近 52 週。`liquid_leaders_sector` の「業種の大きさから見込む件数との差」の週平均。上 t21 / 下 t63、左 大型 / 右 中小の 4 枚を同時表示。濃淡は緑 3 段（1 未満 / 1〜3 / 3 件以上）。並びだけ切替）
   - t63 × t21 の散布図（`LeaderScatter`）は 2026-11 に削除（使っていなかったため）
