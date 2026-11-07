@@ -20,6 +20,8 @@ type Props = {
   initial?: Partial<Trade>
   /** 減速ルール発動中（連敗・月次 DD）。株数計算のリスク % を半分にする */
   slowdown?: boolean
+  /** 口座資金・リスク % を既定値として保存した後 */
+  onSettingsSaved?: () => void
 }
 
 // リスク % の既定値（risk_settings 未設定時）
@@ -32,7 +34,7 @@ const today = () => todayJST()
 // 下の「initial の値が選択肢に無ければ 1 件だけ足す」分岐で選択状態を保てる。
 const SCREEN_OPTIONS = ['EMA Setup', 'Structure Pivot']
 
-export default function PositionModal({ open, onClose, onSaved, initial, slowdown = false }: Props) {
+export default function PositionModal({ open, onClose, onSaved, initial, slowdown = false, onSettingsSaved }: Props) {
   const isEdit = !!initial?.id
 
   const [ticker, setTicker] = useState('')
@@ -124,6 +126,7 @@ export default function PositionModal({ open, onClose, onSaved, initial, slowdow
       ? await supabase.from('risk_settings').update(row).eq('id', riskSettingsId)
       : await supabase.from('risk_settings').insert(row)
     setSizingMsg(err ? `保存失敗: ${err.message}` : '既定値として保存しました')
+    if (!err) onSettingsSaved?.()
   }
 
   // イグジット価格を入れた時のリアルタイム損益プレビュー
