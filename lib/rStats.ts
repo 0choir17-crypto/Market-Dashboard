@@ -6,9 +6,45 @@
 // 分割決済は CloseModal が「同じ ticker / entry_date / entry_price を持つ closed
 // レコード」を複数作るため、そのまま数えると 1 ポジションが複数トレードに化ける。
 // ここではそれらを 1 ポジションに束ね、株数加重で R を合成する。
+// （同じ建玉は ATR も同じなので、ATR 基準では Σpnl ÷ (Σ株数 × ATR) と一致する）
+//
+// R は 2 種類あり、混ぜずに基準（RBasis）ごとに集計する:
+//   stop … r_multiple = (決済 − 建値) ÷ (建値 − 初期ストップ)。損切りどおりなら -1R
+//   atr  … r_atr      = (決済 − 建値) ÷ 買う前日の ATR14。損切り価格が無くても出せる代用値
 
 import { Trade } from '@/types/trades'
 import { effectiveResult, nextLossStreak, TradeResult } from '@/lib/tradeResult'
+
+export type RBasis = 'stop' | 'atr'
+
+export const R_BASIS_LABEL: Record<RBasis, string> = {
+  stop: '損切り基準',
+  atr: 'ATR 基準',
+}
+
+/** 単位表記。損切り基準は R、ATR 基準は ATR（値動きが 1 日平均値幅の何倍か） */
+export const R_UNIT: Record<RBasis, string> = { stop: 'R', atr: 'ATR' }
+
+export function rOf(t: Pick<Trade, 'r_multiple' | 'r_atr'>, basis: RBasis): number | null {
+  const v = basis === 'stop' ? t.r_multiple : t.r_atr
+  return v != null && Number.isFinite(v) ? v : null
+}
+
+/** 「大きすぎる負け」の線。損切り基準は損切り遅れ（-1.5R）、ATR 基準は -3ATR */
+export const DEEP_LOSS: Record<RBasis, number> = { stop: -1.5, atr: -3 }
+
+/** 件数が多いほうの基準（初期表示用） */
+export function preferredBasis(trades: Trade[]): RBasis {
+  const closed = trades.filter(t => t.status === 'closed')
+  const nStop = closed.filter(t => rOf(t, 'stop') != null).length
+  const nAtr = closed.filter(t => rOf(t, 'atr') != null).length
+  return nAtr > nStop ? 'atr' : 'stop'
+}
+
+/** 決済時の ATR 基準 R（atr_at_entry が無ければ null） */
+export function computeRAtr(entry: number, exit: number, atr: number | null | undefined): number | null {
+  return atr != null && atr > 0 ? (exit - entry) / atr : null
+}
 
 export type ClosedPosition = {
   key: string
@@ -38,7 +74,7 @@ function daysBetween(a: string | null, b: string | null): number | null {
   return Math.max(0, Math.round(ms / 86400000))
 }
 
-export function groupClosedPositions(trades: Trade[]): ClosedPosition[] {
+export function groupClosedPositions(trades: Trade[], basis: RBasis = 'stop'): ClosedPosition[] {
   const openKeys = new Set(trades.filter(t => t.status === 'open').map(positionKey))
   const groups = new Map<string, Trade[]>()
   for (const t of trades) {
@@ -53,9 +89,9 @@ export function groupClosedPositions(trades: Trade[]): ClosedPosition[] {
   for (const [key, rows] of groups) {
     const shares = rows.reduce((s, t) => s + (t.shares ?? 0), 0)
     const pnl = rows.reduce((s, t) => s + (t.pnl ?? 0), 0)
-    const allHaveR = rows.every(t => t.r_multiple != null && Number.isFinite(t.r_multiple))
+    const allHaveR = rows.every(t => rOf(t, basis) != null)
     const r = allHaveR && shares > 0
-      ? rows.reduce((s, t) => s + (t.r_multiple as number) * (t.shares ?? 0), 0) / shares
+      ? rows.reduce((s, t) => s + (rOf(t, basis) as number) * (t.shares ?? 0), 0) / shares
       : null
     const exitDate = rows
       .map(t => t.exit_date)
@@ -86,23 +122,38 @@ export function groupClosedPositions(trades: Trade[]): ClosedPosition[] {
 // ── R 分布のビン ─────────────────────────────────────────────
 export type RBin = { label: string; min: number; max: number; tone: 'deep' | 'loss' | 'small' | 'win' | 'big' }
 
-/** -1.5R 未満は「損切り遅れ」。-1R ちょうどの損切りは "-1.5〜-0.5" に入る。 */
-export const R_BINS: RBin[] = [
-  { label: '< -1.5R',   min: -Infinity, max: -1.5, tone: 'deep' },
+/** 損切り基準: -1.5R 未満は「損切り遅れ」。-1R ちょうどの損切りは "-1.5〜-0.5" に入る。 */
+const STOP_BINS: RBin[] = [
+  { label: '< -1.5',    min: -Infinity, max: -1.5, tone: 'deep' },
   { label: '-1.5〜-0.5', min: -1.5, max: -0.5, tone: 'loss' },
   { label: '-0.5〜0',    min: -0.5, max: 0,    tone: 'small' },
-  { label: '0〜1R',      min: 0,    max: 1,    tone: 'small' },
-  { label: '1〜3R',      min: 1,    max: 3,    tone: 'win' },
-  { label: '3〜5R',      min: 3,    max: 5,    tone: 'win' },
-  { label: '5R+',        min: 5,    max: Infinity, tone: 'big' },
+  { label: '0〜1',       min: 0,    max: 1,    tone: 'small' },
+  { label: '1〜3',       min: 1,    max: 3,    tone: 'win' },
+  { label: '3〜5',       min: 3,    max: 5,    tone: 'win' },
+  { label: '5+',         min: 5,    max: Infinity, tone: 'big' },
 ]
 
-function binIndex(r: number): number {
-  for (let i = 0; i < R_BINS.length; i++) {
-    const b = R_BINS[i]
+/** ATR 基準: 損切り位置に依らないので負け側を広めに切る。-3ATR 未満を「大きな負け」 */
+const ATR_BINS: RBin[] = [
+  { label: '< -3',   min: -Infinity, max: -3, tone: 'deep' },
+  { label: '-3〜-1', min: -3, max: -1, tone: 'loss' },
+  { label: '-1〜0',  min: -1, max: 0,  tone: 'small' },
+  { label: '0〜1',   min: 0,  max: 1,  tone: 'small' },
+  { label: '1〜3',   min: 1,  max: 3,  tone: 'win' },
+  { label: '3〜5',   min: 3,  max: 5,  tone: 'win' },
+  { label: '5+',     min: 5,  max: Infinity, tone: 'big' },
+]
+
+export function rBins(basis: RBasis): RBin[] {
+  return basis === 'stop' ? STOP_BINS : ATR_BINS
+}
+
+function binIndex(bins: RBin[], r: number): number {
+  for (let i = 0; i < bins.length; i++) {
+    const b = bins[i]
     if (r >= b.min && r < b.max) return i
   }
-  return R_BINS.length - 1
+  return bins.length - 1
 }
 
 // ── 減速ルール ───────────────────────────────────────────────
@@ -112,6 +163,7 @@ export const SLOWDOWN_STREAK = 5
 export const SLOWDOWN_MONTH_R = -5
 
 export type RStats = {
+  basis: RBasis
   positions: number
   /** R が算出できたポジション数（初期ストップ未設定は除外） */
   withR: number
@@ -129,7 +181,7 @@ export type RStats = {
   /** 上位 10 ポジションの R 合計と、総 R に占める割合 */
   top10R: number | null
   top10Share: number | null
-  /** -1.5R より深い負け（損切り遅れ）の件数 */
+  /** DEEP_LOSS[basis] より深い負けの件数（損切り基準なら損切り遅れ） */
   deepLosses: number
   bins: number[]
   avgHoldWin: number | null
@@ -144,8 +196,8 @@ function mean(xs: number[]): number | null {
   return xs.length > 0 ? xs.reduce((a, b) => a + b, 0) / xs.length : null
 }
 
-export function computeRStats(trades: Trade[], today: string): RStats {
-  const ps = groupClosedPositions(trades)
+export function computeRStats(trades: Trade[], today: string, basis: RBasis = 'stop'): RStats {
+  const ps = groupClosedPositions(trades, basis)
   const rs = ps.filter((p): p is ClosedPosition & { r: number } => p.r != null)
 
   const winsR = rs.filter(p => p.result === 'WIN').map(p => p.r)
@@ -164,8 +216,9 @@ export function computeRStats(trades: Trade[], today: string): RStats {
   const top10R = sortedDesc.length > 0 ? sortedDesc.slice(0, 10).reduce((a, b) => a + b, 0) : null
   const top10Share = top10R != null && totalR > 0 ? (top10R / totalR) * 100 : null
 
-  const bins = R_BINS.map(() => 0)
-  for (const p of rs) bins[binIndex(p.r)]++
+  const binDefs = rBins(basis)
+  const bins = binDefs.map(() => 0)
+  for (const p of rs) bins[binIndex(binDefs, p.r)]++
 
   // 勝率は R 有無に関係なく全ポジションで（JournalStats と同じ定義: BE は分母外）
   const wins = ps.filter(p => p.result === 'WIN').length
@@ -191,9 +244,11 @@ export function computeRStats(trades: Trade[], today: string): RStats {
 
   const reasons: string[] = []
   if (streak >= SLOWDOWN_STREAK) reasons.push(`${streak} 連敗中（基準 ${SLOWDOWN_STREAK}）`)
-  if (monthR <= SLOWDOWN_MONTH_R) reasons.push(`当月 ${monthR.toFixed(1)}R（基準 ${SLOWDOWN_MONTH_R}R）`)
+  const u = R_UNIT[basis]
+  if (monthR <= SLOWDOWN_MONTH_R) reasons.push(`当月 ${monthR.toFixed(1)}${u}（基準 ${SLOWDOWN_MONTH_R}${u}）`)
 
   return {
+    basis,
     positions: ps.length,
     withR: rs.length,
     missingR: ps.length - rs.length,
@@ -207,7 +262,7 @@ export function computeRStats(trades: Trade[], today: string): RStats {
     breakevenWinRate,
     top10R,
     top10Share,
-    deepLosses: rs.filter(p => p.r < -1.5).length,
+    deepLosses: rs.filter(p => p.r < DEEP_LOSS[basis]).length,
     bins,
     avgHoldWin: holdOf('WIN'),
     avgHoldLoss: holdOf('LOSS'),

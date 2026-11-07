@@ -18,7 +18,7 @@ import PositionsTab from '@/components/portfolio/PositionsTab'
 import RiskRewardPanel from '@/components/journal/RiskRewardPanel'
 import ExpectancyBreakdown from '@/components/journal/ExpectancyBreakdown'
 import MfeCaptureChart from '@/components/journal/MfeCaptureChart'
-import { computeRStats } from '@/lib/rStats'
+import { computeRStats, preferredBasis, rOf, RBasis } from '@/lib/rStats'
 import { todayJST } from '@/lib/dates'
 import ErrorBanner from '@/components/shared/ErrorBanner'
 import PageHeader from '@/components/shared/PageHeader'
@@ -93,7 +93,14 @@ export default function JournalPage() {
 
   const openPositions = trades.filter(t => t.status === 'open')
   const closedTrades = trades.filter(t => t.status === 'closed')
-  const rStats = useMemo(() => computeRStats(trades, todayJST()), [trades])
+  // R の基準（損切り / ATR）。未選択なら件数の多いほうを表示
+  const [basisChoice, setBasisChoice] = useState<RBasis | null>(null)
+  const basis = basisChoice ?? preferredBasis(trades)
+  const basisCounts = {
+    stop: closedTrades.filter(t => rOf(t, 'stop') != null).length,
+    atr: closedTrades.filter(t => rOf(t, 'atr') != null).length,
+  }
+  const rStats = useMemo(() => computeRStats(trades, todayJST(), basis), [trades, basis])
 
   return (
     <main className="min-h-screen p-4 sm:p-6" style={{ backgroundColor: 'var(--bg-primary)' }}>
@@ -135,9 +142,9 @@ export default function JournalPage() {
 
           <section>
             <SectionHeading>Journal</SectionHeading>
-            <RiskRewardPanel stats={rStats} />
-            <ExpectancyBreakdown trades={trades} />
-            <MfeCaptureChart trades={closedTrades} onSelect={openReview} />
+            <RiskRewardPanel stats={rStats} onBasisChange={setBasisChoice} counts={basisCounts} />
+            <ExpectancyBreakdown trades={trades} basis={basis} />
+            <MfeCaptureChart trades={closedTrades} basis={basis} onSelect={openReview} />
             <JournalStats trades={trades} />
             <EquityCurveChart trades={trades} />
             <PeriodPerformance trades={trades} />

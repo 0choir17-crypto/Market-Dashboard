@@ -28,7 +28,12 @@ export interface Trade {
   target_r: number | null
   target_price: number | null
   exit_reason: string | null
+  /** 損切り基準の R = (exit − entry) / (entry − initial_stop) */
   r_multiple: number | null
+  /** ATR 基準の R = (exit − entry) / atr_at_entry（損切り価格が無くても出せる代用値） */
+  r_atr?: number | null
+  /** 買う前日の 14 日 ATR（RMA）。分割は買った日の価格水準に補正済み */
+  atr_at_entry?: number | null
 
   // シグナルスナップショット
   signal_price: number | null

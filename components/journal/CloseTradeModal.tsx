@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
+import { computeRAtr } from '@/lib/rStats'
 import { supabase } from '@/lib/supabase'
 import { Trade } from '@/types/trades'
 import { SCREEN_NAME_MAP } from '@/lib/screenNames'
@@ -81,6 +82,10 @@ export default function CloseTradeModal({ open, onClose, onSaved, trade }: Props
         pnl_pct: pnlPct,
         result,
         r_multiple: rMult,
+        // ATR 基準の R（atr_at_entry がある時だけ）
+        ...(trade.atr_at_entry != null && trade.atr_at_entry > 0
+          ? { r_atr: computeRAtr(trade.entry_price, ep, trade.atr_at_entry) }
+          : {}),
         exit_reason: exitReason,
         status: 'closed',
         updated_at: new Date().toISOString(),
