@@ -34,6 +34,7 @@ ALTER TABLE trades ADD COLUMN IF NOT EXISTS mc_condition_at_entry text;
 ALTER TABLE trades ADD COLUMN IF NOT EXISTS review_tags           text[];
 ALTER TABLE trades ADD COLUMN IF NOT EXISTS lesson_learned        text;
 ALTER TABLE trades ADD COLUMN IF NOT EXISTS entry_reason          text;
+ALTER TABLE trades ADD COLUMN IF NOT EXISTS entry_type            text;
 ALTER TABLE trades ADD COLUMN IF NOT EXISTS reviewed_at           timestamptz;
 
 -- MFE / MAE

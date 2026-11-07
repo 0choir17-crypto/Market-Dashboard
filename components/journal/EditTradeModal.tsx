@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { updateResilient } from '@/lib/resilientWrite'
 import { Trade } from '@/types/trades'
 import { SCREEN_NAME_MAP } from '@/lib/screenNames'
+import { ENTRY_TYPES } from '@/lib/entryTypes'
 import { classifyResult } from '@/lib/tradeResult'
 import { formatYen, formatPct } from '@/lib/format'
 import Modal from '@/components/shared/Modal'
@@ -25,6 +26,7 @@ export default function EditTradeModal({ open, onClose, onSaved, trade }: Props)
   const [ticker, setTicker] = useState('')
   const [companyName, setCompanyName] = useState('')
   const [screenName, setScreenName] = useState('')
+  const [entryType, setEntryType] = useState('')
   const [entryDate, setEntryDate] = useState('')
   const [entryPrice, setEntryPrice] = useState('')
   const [shares, setShares] = useState('')
@@ -62,6 +64,7 @@ export default function EditTradeModal({ open, onClose, onSaved, trade }: Props)
       setTicker(trade.ticker)
       setCompanyName(trade.company_name ?? '')
       setScreenName(trade.screen_name ?? '')
+      setEntryType(trade.entry_type ?? '')
       setEntryDate(trade.entry_date)
       setEntryPrice(String(trade.entry_price))
       setShares(String(trade.shares))
@@ -111,6 +114,7 @@ export default function EditTradeModal({ open, onClose, onSaved, trade }: Props)
       ticker: ticker.trim(),
       company_name: companyName.trim() || null,
       screen_name: screenName || null,
+      entry_type: entryType || null,
       entry_date: entryDate,
       entry_price: parseFloat(entryPrice),
       shares: parseInt(shares, 10),
@@ -195,6 +199,24 @@ export default function EditTradeModal({ open, onClose, onSaved, trade }: Props)
                 <option key={o.value} value={o.value}>{o.label}</option>
               ))}
               <option value="other">Other</option>
+            </select>
+          </div>
+
+          {/* Entry Type */}
+          <div>
+            <label className={labelClass}>Entry Type</label>
+            <select
+              value={entryType}
+              onChange={e => setEntryType(e.target.value)}
+              className={fieldClass}
+            >
+              <option value="">-- Select --</option>
+              {entryType && !(ENTRY_TYPES as readonly string[]).includes(entryType) && (
+                <option value={entryType}>{entryType}</option>
+              )}
+              {ENTRY_TYPES.map(t => (
+                <option key={t} value={t}>{t}</option>
+              ))}
             </select>
           </div>
 

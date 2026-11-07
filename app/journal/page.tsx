@@ -16,6 +16,7 @@ import EditTradeModal from '@/components/journal/EditTradeModal'
 import PositionModal from '@/components/portfolio/PositionModal'
 import PositionsTab from '@/components/portfolio/PositionsTab'
 import RiskRewardPanel from '@/components/journal/RiskRewardPanel'
+import ExpectancyBreakdown from '@/components/journal/ExpectancyBreakdown'
 import { computeRStats } from '@/lib/rStats'
 import { todayJST } from '@/lib/dates'
 import ErrorBanner from '@/components/shared/ErrorBanner'
@@ -126,6 +127,7 @@ export default function JournalPage() {
           <section>
             <SectionHeading>Journal</SectionHeading>
             <RiskRewardPanel stats={rStats} />
+            <ExpectancyBreakdown trades={trades} />
             <JournalStats trades={trades} />
             <EquityCurveChart trades={trades} />
             <PeriodPerformance trades={trades} />

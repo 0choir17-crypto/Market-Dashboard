@@ -135,6 +135,7 @@ export default function CloseModal({ open, onClose, onSaved, position }: Props) 
         ticker: position.ticker,
         company_name: position.company_name,
         screen_name: position.screen_name,
+        entry_type: position.entry_type ?? null,
         entry_date: position.entry_date,
         entry_price: position.entry_price,
         shares: closeShares,
