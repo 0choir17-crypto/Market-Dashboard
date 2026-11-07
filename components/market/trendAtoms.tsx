@@ -138,37 +138,29 @@ export function CardButton({
   )
 }
 
-/** 業種の自力 t21 / t63 */
-export function SelfRow({ s }: { s: SectorTrend }) {
-  return (
-    <div className="mt-2 pt-2 border-t border-[var(--border)] grid grid-cols-2 gap-2 text-caption">
-      <div className="flex justify-between gap-1">
-        <span className="text-[var(--text-muted)]">自力 t21</span>
-        <TValue v={s.selfT21} strong />
-      </div>
-      <div className="flex justify-between gap-1">
-        <span className="text-[var(--text-muted)]">t63</span>
-        <TValue v={s.selfT63} />
-      </div>
-    </div>
+/**
+ * 業種の自力 t21 / t63 と、業種指数の終値と EMA9 / 21 / 50 の距離（R）。
+ * 2 行を 1 つの表にして列をそろえ、左に詰める（カードが広くても間延びしないように）。
+ *   自力   t21 +1.55   t63 +0.78
+ *   距離   9   +0.3R   21  +0.7R   50 +1.0R
+ */
+export function SectorStats({ s }: { s: SectorTrend }) {
+  const cell = (key: string, label: string, value: React.ReactNode, title?: string) => (
+    <span key={key} className="flex items-baseline justify-between gap-1.5 whitespace-nowrap" title={title}>
+      <span className="text-[var(--text-muted)]">{label}</span>
+      <span className="min-w-[3.25rem] text-right">{value}</span>
+    </span>
   )
-}
-
-/** 業種指数の終値と EMA9 / 21 / 50 の距離（R） */
-export function ExtRow({ s }: { s: SectorTrend }) {
-  const items = [
-    { label: 'EMA9', v: s.extEma9 },
-    { label: '21', v: s.extEma21 },
-    { label: '50', v: s.extEma50 },
-  ]
   return (
-    <div className="mt-1 grid grid-cols-3 gap-2 text-caption" title={EXT_R_NOTE}>
-      {items.map((it, i) => (
-        <div key={it.label} className="flex justify-between gap-1">
-          <span className="text-[var(--text-muted)]">{i === 0 ? `距離 ${it.label}` : it.label}</span>
-          <RValue v={it.v} strong={i === 1} />
-        </div>
-      ))}
+    <div className="mt-2 pt-2 border-t border-[var(--border)] grid grid-cols-[repeat(4,max-content)] gap-x-4 gap-y-1 items-baseline text-caption">
+      <span className="text-[var(--text-muted)]">自力</span>
+      {cell('t21', 't21', <TValue v={s.selfT21} strong />)}
+      {cell('t63', 't63', <TValue v={s.selfT63} />)}
+      <span />
+      <span className="text-[var(--text-muted)]" title={EXT_R_NOTE}>距離</span>
+      {cell('e9', '9', <RValue v={s.extEma9} />, `${EXT_R_NOTE}。EMA9`)}
+      {cell('e21', '21', <RValue v={s.extEma21} strong />, `${EXT_R_NOTE}。EMA21`)}
+      {cell('e50', '50', <RValue v={s.extEma50} />, `${EXT_R_NOTE}。EMA50`)}
     </div>
   )
 }
