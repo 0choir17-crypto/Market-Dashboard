@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
 import { fetchAllPaged } from '@/lib/pagedFetch'
 import { Trade } from '@/types/trades'
+import { RiskSettings } from '@/types/portfolio'
 import JournalStats from '@/components/journal/JournalStats'
 import EquityCurveChart from '@/components/journal/EquityCurveChart'
 import PeriodPerformance from '@/components/journal/PeriodPerformance'
@@ -14,11 +15,17 @@ import CloseTradeModal from '@/components/journal/CloseTradeModal'
 import EditTradeModal from '@/components/journal/EditTradeModal'
 import PositionModal from '@/components/portfolio/PositionModal'
 import PositionsTab from '@/components/portfolio/PositionsTab'
+import RiskRewardPanel from '@/components/journal/RiskRewardPanel'
+import ExpectancyBreakdown from '@/components/journal/ExpectancyBreakdown'
+import MfeCaptureChart from '@/components/journal/MfeCaptureChart'
+import { computeRStats } from '@/lib/rStats'
+import { todayJST } from '@/lib/dates'
 import ErrorBanner from '@/components/shared/ErrorBanner'
 import PageHeader from '@/components/shared/PageHeader'
 
 // Positions と Journal は 1 画面に統合（タブなし）。上から「保有中 → 成績 → 確定トレード」。
-// 旧 Risk タブは廃止。risk_settings.consec_losses は決済モーダルが引き続き更新する。
+// 旧 Risk タブは廃止。risk_settings は口座資金・リスク % の既定値置き場として使う
+// （株数計算・総建玉 % 表示）。consec_losses は決済モーダルが引き続き更新する。
 
 function SectionHeading({ children }: { children: React.ReactNode }) {
   return (
@@ -28,6 +35,7 @@ function SectionHeading({ children }: { children: React.ReactNode }) {
 
 export default function JournalPage() {
   const [trades, setTrades] = useState<Trade[]>([])
+  const [riskSettings, setRiskSettings] = useState<Pick<RiskSettings, 'account_capital' | 'max_positions'> | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showNewTrade, setShowNewTrade] = useState(false)
@@ -38,14 +46,24 @@ export default function JournalPage() {
   const fetchAll = useCallback(async () => {
     setLoading(true)
     // trades は全件取得（旧 .limit(500) はアクティブなトレーダーの統計を黙って切り捨てる）
-    const tradesRes = await fetchAllPaged<Trade>((from, to) =>
+    const [tradesRes, riskRes] = await Promise.all([
+      fetchAllPaged<Trade>((from, to) =>
+        supabase
+          .from('trades')
+          .select('*')
+          .order('entry_date', { ascending: false })
+          .order('id', { ascending: true })
+          .range(from, to),
+      ),
       supabase
-        .from('trades')
-        .select('*')
-        .order('entry_date', { ascending: false })
-        .order('id', { ascending: true })
-        .range(from, to),
-    )
+        .from('risk_settings')
+        .select('account_capital, max_positions')
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+    ])
+    // risk_settings は表示補助なので失敗してもバナーは出さない（% 表示が円表示に落ちるだけ）
+    if (!riskRes.error) setRiskSettings(riskRes.data ?? null)
     const errors: string[] = []
     if (tradesRes.error) errors.push(`trades: ${tradesRes.error}`)
     else setTrades(tradesRes.rows)
@@ -60,6 +78,14 @@ export default function JournalPage() {
     setExpandedReview(prev => prev === tradeId ? null : tradeId)
   }, [])
 
+  // 散布図の点 → 該当トレードの振り返りを開いてスクロール
+  const openReview = useCallback((tradeId: number) => {
+    setExpandedReview(tradeId)
+    requestAnimationFrame(() => {
+      document.getElementById(`trade-${tradeId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    })
+  }, [])
+
   const handleSectionSaved = useCallback(async () => {
     await fetchAll()
     setExpandedReview(null)
@@ -67,6 +93,7 @@ export default function JournalPage() {
 
   const openPositions = trades.filter(t => t.status === 'open')
   const closedTrades = trades.filter(t => t.status === 'closed')
+  const rStats = useMemo(() => computeRStats(trades, todayJST()), [trades])
 
   return (
     <main className="min-h-screen p-4 sm:p-6" style={{ backgroundColor: 'var(--bg-primary)' }}>
@@ -97,11 +124,20 @@ export default function JournalPage() {
         <>
           <section className="mb-8">
             <SectionHeading>Positions</SectionHeading>
-            <PositionsTab positions={openPositions} onRefresh={fetchAll} />
+            <PositionsTab
+              positions={openPositions}
+              allTrades={trades}
+              capital={riskSettings?.account_capital ?? null}
+              maxPositions={riskSettings?.max_positions ?? null}
+              onRefresh={fetchAll}
+            />
           </section>
 
           <section>
             <SectionHeading>Journal</SectionHeading>
+            <RiskRewardPanel stats={rStats} />
+            <ExpectancyBreakdown trades={trades} />
+            <MfeCaptureChart trades={closedTrades} onSelect={openReview} />
             <JournalStats trades={trades} />
             <EquityCurveChart trades={trades} />
             <PeriodPerformance trades={trades} />
@@ -126,6 +162,8 @@ export default function JournalPage() {
         open={showNewTrade}
         onClose={() => setShowNewTrade(false)}
         onSaved={fetchAll}
+        slowdown={rStats.slowdown.active}
+        onSettingsSaved={fetchAll}
       />
 
       {/* Close trade modal */}

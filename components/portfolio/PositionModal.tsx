@@ -2,6 +2,9 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { insertResilient, updateResilient } from '@/lib/resilientWrite'
+import { supabase } from '@/lib/supabase'
+import { suggestShares } from '@/lib/rStats'
+import { ENTRY_TYPES } from '@/lib/entryTypes'
 import { Trade } from '@/types/trades'
 import { classifyResult } from '@/lib/tradeResult'
 import { EXIT_REASONS } from '@/components/journal/CloseTradeModal'
@@ -16,7 +19,14 @@ type Props = {
   onClose: () => void
   onSaved: () => void
   initial?: Partial<Trade>
+  /** 減速ルール発動中（連敗・月次 DD）。株数計算のリスク % を半分にする */
+  slowdown?: boolean
+  /** 口座資金・リスク % を既定値として保存した後 */
+  onSettingsSaved?: () => void
 }
+
+// リスク % の既定値（risk_settings 未設定時）
+const DEFAULT_RISK_PCT = '0.5'
 
 const today = () => todayJST()
 
@@ -25,13 +35,14 @@ const today = () => todayJST()
 // 下の「initial の値が選択肢に無ければ 1 件だけ足す」分岐で選択状態を保てる。
 const SCREEN_OPTIONS = ['EMA Setup', 'Structure Pivot']
 
-export default function PositionModal({ open, onClose, onSaved, initial }: Props) {
+export default function PositionModal({ open, onClose, onSaved, initial, slowdown = false, onSettingsSaved }: Props) {
   const isEdit = !!initial?.id
 
   const [ticker, setTicker] = useState('')
   const [companyName, setCompanyName] = useState('')
   const [sector, setSector] = useState('')
   const [screenName, setScreenName] = useState('')
+  const [entryType, setEntryType] = useState('')
   const [entryDate, setEntryDate] = useState(today())
   const [entryPrice, setEntryPrice] = useState('')
   const [shares, setShares] = useState('')
@@ -48,6 +59,11 @@ export default function PositionModal({ open, onClose, onSaved, initial }: Props
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [warning, setWarning] = useState('')
+  // 株数計算（1R = 口座資金 × リスク %）。既定値は risk_settings から読む
+  const [capital, setCapital] = useState('')
+  const [riskPct, setRiskPctInput] = useState(DEFAULT_RISK_PCT)
+  const [riskSettingsId, setRiskSettingsId] = useState<string | null>(null)
+  const [sizingMsg, setSizingMsg] = useState('')
 
   const enp = parseFloat(entryPrice)
 
@@ -60,6 +76,60 @@ export default function PositionModal({ open, onClose, onSaved, initial }: Props
     !isNaN(enp) && enp > 0 && targetPrice !== '' && !isNaN(parseFloat(targetPrice))
       ? (parseFloat(targetPrice) - enp) / enp * 100
       : null
+
+  // 株数の提案。減速ルール中はリスク % を半分にして計算する
+  const effRiskPct = (parseFloat(riskPct) || 0) * (slowdown ? 0.5 : 1)
+  const sizing = useMemo(() => suggestShares({
+    capital: parseFloat(capital),
+    riskPct: effRiskPct,
+    entry: parseFloat(entryPrice),
+    stop: parseFloat(stopPrice),
+  }), [capital, effRiskPct, entryPrice, stopPrice])
+
+  // 損切り幅が ADR（平均日中値幅）より広い → 建玉が小さくなる。押し目で支持線の近くまで待つ合図
+  const adr = initial?.adr_at_entry ?? null
+  const stopWiderThanAdr = adr != null && stopPctFromEntry != null && Math.abs(stopPctFromEntry) > adr
+
+  // 入力中の株数で実際に取っているリスク
+  const currentRisk = (() => {
+    const sh = parseInt(shares)
+    const ep0 = parseFloat(entryPrice)
+    const sp0 = parseFloat(stopPrice)
+    const cap = parseFloat(capital)
+    if (!(sh > 0) || !(ep0 > sp0) || !(sp0 > 0)) return null
+    const yen = sh * (ep0 - sp0)
+    return { yen, pct: cap > 0 ? yen / cap * 100 : null, posPct: cap > 0 ? sh * ep0 / cap * 100 : null }
+  })()
+
+  useEffect(() => {
+    if (!open) return
+    let cancelled = false
+    supabase
+      .from('risk_settings')
+      .select('id, account_capital, risk_pct')
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (cancelled || !data) return
+        setRiskSettingsId((data.id as string) ?? null)
+        if (data.account_capital != null) setCapital(String(data.account_capital))
+        if (data.risk_pct != null) setRiskPctInput(String(data.risk_pct))
+      })
+    return () => { cancelled = true }
+  }, [open])
+
+  async function saveSizingDefaults() {
+    const cap = parseFloat(capital)
+    const rp = parseFloat(riskPct)
+    if (!(cap > 0) || !(rp > 0)) { setSizingMsg('口座資金とリスク % を正の数で入力してください'); return }
+    const row = { account_capital: cap, risk_pct: rp, updated_at: new Date().toISOString() }
+    const { error: err } = riskSettingsId
+      ? await supabase.from('risk_settings').update(row).eq('id', riskSettingsId)
+      : await supabase.from('risk_settings').insert(row)
+    setSizingMsg(err ? `保存失敗: ${err.message}` : '既定値として保存しました')
+    if (!err) onSettingsSaved?.()
+  }
 
   // イグジット価格を入れた時のリアルタイム損益プレビュー
   const exitPreview = useMemo(() => {
@@ -87,6 +157,7 @@ export default function PositionModal({ open, onClose, onSaved, initial }: Props
       setCompanyName(initial?.company_name ?? '')
       setSector(initial?.sector_s33 ?? '')
       setScreenName(initial?.screen_name ?? '')
+      setEntryType(initial?.entry_type ?? '')
       setEntryDate(initial?.entry_date ?? today())
       setEntryPrice(initial?.entry_price != null ? String(initial.entry_price) : '')
       setShares(initial?.shares != null ? String(initial.shares) : '')
@@ -100,6 +171,7 @@ export default function PositionModal({ open, onClose, onSaved, initial }: Props
       setExitReason(initial?.exit_reason ?? '利確')
       setError('')
       setWarning('')
+      setSizingMsg('')
     }
   }, [open, initial])
 
@@ -164,6 +236,7 @@ export default function PositionModal({ open, onClose, onSaved, initial }: Props
       company_name: companyName.trim() || null,
       sector_s33: sector.trim() || null,
       screen_name: screenName || null,
+      entry_type: entryType || null,
       entry_date: entryDate || today(),
       entry_price: ep2,
       shares: sh2,
@@ -285,6 +358,24 @@ export default function PositionModal({ open, onClose, onSaved, initial }: Props
             </select>
           </div>
 
+          {/* Entry Type（押し目 / ブレイク — 切り口別の期待値に使う） */}
+          <div>
+            <label className={labelClass}>Entry Type</label>
+            <select
+              value={entryType}
+              onChange={e => setEntryType(e.target.value)}
+              className={fieldClass}
+            >
+              <option value="">-- Select --</option>
+              {entryType && !(ENTRY_TYPES as readonly string[]).includes(entryType) && (
+                <option value={entryType}>{entryType}</option>
+              )}
+              {ENTRY_TYPES.map(t => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </select>
+          </div>
+
           {/* Entry Date */}
           <div>
             <label className={labelClass}>
@@ -379,6 +470,89 @@ export default function PositionModal({ open, onClose, onSaved, initial }: Props
               placeholder="例: 2900"
               className={fieldClass}
             />
+          </div>
+        </div>
+
+        {/* 株数計算（1R ベース）: 損切り幅が狭いほど同じリスクで大きく建てられる */}
+        <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-primary)] p-4 space-y-3">
+          <p className="text-caption font-medium text-[var(--text-secondary)]">
+            株数計算（1R = 口座資金 × リスク %）
+            {slowdown && (
+              <span className="ml-2 font-normal text-[var(--sem-watch-fg)]">⚠ 減速ルール中 — リスク % を半分で計算</span>
+            )}
+          </p>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className={labelClass}>口座資金（円）</label>
+              <input
+                type="number"
+                inputMode="numeric"
+                value={capital}
+                onChange={e => setCapital(e.target.value)}
+                placeholder="例: 5000000"
+                className={fieldClass}
+              />
+            </div>
+            <div>
+              <label className={labelClass}>リスク %（1 トレード）</label>
+              <input
+                type="number"
+                inputMode="decimal"
+                step="0.1"
+                value={riskPct}
+                onChange={e => setRiskPctInput(e.target.value)}
+                placeholder="0.3〜0.5"
+                className={fieldClass}
+              />
+            </div>
+          </div>
+          {sizing ? (
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-small">
+              <span>
+                推奨 <strong className="num text-[var(--text-primary)]">{sizing.shares.toLocaleString('ja-JP')}</strong> 株
+              </span>
+              <span className="num text-[var(--text-muted)]">
+                建玉 {formatYen(sizing.positionYen)}（資金の {formatPct(sizing.positionPct, { digits: 1 })}）
+              </span>
+              <span className="num text-[var(--text-muted)]">1R = {formatYen(sizing.riskYen)}</span>
+              {sizing.shares > 0 && String(sizing.shares) !== shares && (
+                <button
+                  type="button"
+                  onClick={() => setShares(String(sizing.shares))}
+                  className="px-2 py-1 text-caption rounded-lg bg-[var(--sem-focus-fg)] text-white hover:brightness-110"
+                >
+                  株数に反映
+                </button>
+              )}
+              {sizing.shares === 0 && (
+                <span className="text-caption text-[var(--sem-watch-fg)]">損切り幅に対しリスク額が小さく 100 株に届きません</span>
+              )}
+            </div>
+          ) : (
+            <p className="text-caption text-[var(--text-muted)]">Entry と Stop（Entry より下）を入れると推奨株数を計算します</p>
+          )}
+          {currentRisk && (
+            <p className="text-caption num text-[var(--text-muted)]">
+              入力中の株数のリスク: {formatYen(currentRisk.yen)}
+              {currentRisk.pct != null && `（資金の ${formatPct(currentRisk.pct, { digits: 2 })}）`}
+              {currentRisk.posPct != null && ` / 建玉 ${formatPct(currentRisk.posPct, { digits: 1 })}`}
+            </p>
+          )}
+          {stopWiderThanAdr && (
+            <p className="text-caption text-[var(--sem-watch-fg)]">
+              損切り幅 {formatPct(Math.abs(stopPctFromEntry!), { digits: 1 })} が ADR {formatPct(adr!, { digits: 1 })} より広い —
+              建玉が小さくなります。支持線（9/21EMA・VWAP）に近い位置まで引きつけると損切りを短くできます。
+            </p>
+          )}
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={saveSizingDefaults}
+              className="text-caption text-[var(--text-secondary)] underline hover:text-[var(--text-primary)]"
+            >
+              口座資金・リスク % を既定値として保存
+            </button>
+            {sizingMsg && <span className="text-caption text-[var(--text-muted)]">{sizingMsg}</span>}
           </div>
         </div>
 

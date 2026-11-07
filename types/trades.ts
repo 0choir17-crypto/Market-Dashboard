@@ -44,6 +44,8 @@ export interface Trade {
   review_tags?: string[]
   lesson_learned?: string | null
   entry_reason?: string | null
+  /** エントリー種別（lib/entryTypes.ts） */
+  entry_type?: string | null
   reviewed_at?: string | null
 
   // MFE / MAE (P2)
