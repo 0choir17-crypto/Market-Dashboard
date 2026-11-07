@@ -3,7 +3,7 @@
 // Pullback Board — 強い銘柄が移動平均線までどれだけ押しているかで並べる。
 // TradingView でチャートを確認する銘柄を絞るための画面。
 //   対象: rs_rating ≥ RS_MIN
-//   列 = 押しの段階 0〜4 (日足 9 → 21 → 50 → 150EMA) + その下に「線が密集」(spread_21_50 < SPREAD_MIN。押しの段階は読まない)。
+//   列 = 押しの段階 0〜4 (日足 9 → 21 → 50 → 150EMA)。線が密集している銘柄 (spread_21_50 < SPREAD_MIN) も同じ列に入れ、銘柄名の横に Tight。
 //   列の中は基準の線までの距離 (絶対値) が小さい順。
 
 import { useMemo } from 'react'
@@ -20,7 +20,7 @@ import {
   type RsLeader,
 } from '@/types/rsLeaders'
 import { ChipTooltip, RsChip, TierLegend, useChipTip } from './chipUi'
-import StageColumns from './StageColumns'
+import StageColumns, { TightMark } from './StageColumns'
 
 export default function PullbackBoard({
   rows,
@@ -49,7 +49,7 @@ export default function PullbackBoard({
         列 = 終値が上から順にどの移動平均線の上にいるか。列の中は基準の線に近い順。札の右 = 全体RS。
         札の下段 = 終値が各線から何ATR上か (マイナスは線の下)。太字 = その列の基準の線。
         <span className="text-[var(--positive)] font-medium">緑</span> = すぐ下の線で、{NEAR_ATR}ATR以内。
-        線が密集している銘柄 (21/50EMA の開き {SPREAD_MIN}ATR 未満 = もみ合い) は押しの段階を読まず、下の「MA Tight」に置く (最も近い線の順)。
+        銘柄名の横の Tight = 線が密集している (21/50EMA の開き {SPREAD_MIN}ATR 未満 = もみ合い)。列の位置の差が値幅では小さい。
       </p>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mb-3 text-caption text-[var(--text-secondary)]">
         <TierLegend />
@@ -61,7 +61,10 @@ export default function PullbackBoard({
         renderChip={(r, bold) => (
           <RsChip row={r} onMove={onMove} onLeave={onLeave} className="block">
             <span className="flex items-baseline justify-between gap-1.5 min-w-0">
-              <span className="truncate min-w-0">{r.co_name ?? r.code}</span>
+              <span className="flex items-baseline min-w-0">
+                <span className="truncate min-w-0">{r.co_name ?? r.code}</span>
+                <TightMark spread={r.spread_21_50} />
+              </span>
               <b className="flex-none font-medium num opacity-85">{r.rs_rating ?? '—'}</b>
             </span>
             <Dists row={r} bold={bold} />

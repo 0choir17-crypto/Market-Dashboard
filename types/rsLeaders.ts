@@ -171,22 +171,10 @@ export function pullbackStage(r: MaDists): number {
   return num(r.d_ema150) === null ? 3 : 4
 }
 
-/** 線が密集している銘柄 (spread_21_50 < SPREAD_MIN) か。押しの段階は読まず、別の列に置く */
+/** 線が密集している銘柄 (spread_21_50 < SPREAD_MIN = もみ合い) か。列は押しの段階のまま、札に Tight の印を付ける */
 export function isTight(spread: number | null | undefined): boolean {
   const v = num(spread)
   return v === null || v < SPREAD_MIN
-}
-
-/** 線が密集している列の見出し */
-export const TIGHT_STAGE = {
-  title: 'MA Tight',
-  desc: `線が密集 (21/50EMA の開き ${SPREAD_MIN} ATR 未満)・もみ合い`,
-}
-
-/** 線が密集している列の並び = 9 / 21 / 50EMA のうち最も近い線までの距離 (絶対値) */
-export function tightDist(r: MaDists): number {
-  const v = [r.d_ema9, r.d_ema21, r.d_ema50].map(num).filter((x): x is number => x !== null).map(Math.abs)
-  return v.length ? Math.min(...v) : Infinity
 }
 
 export function fmtSigned1(v: number | null): string {
@@ -203,19 +191,16 @@ export function fmtChg5(v: number | null | undefined): string {
   return d > 0 ? `(↑${d})` : d < 0 ? `(↓${Math.abs(d)})` : '(→0)'
 }
 
-/** Pullback Board の列の数 = 押しの段階 (STAGES) + 線が密集 (最後。画面では段階の列の下に置く) */
-export const PULLBACK_COLS = STAGES.length + 1
-
 /**
- * Pullback Board の列分け (RS Leaders / Liquid Leaders 共通)。
- * 線が密集している銘柄は最後の列 (TIGHT_STAGE)、それ以外は押しの段階の列。
- * 列の中は基準の線までの距離 (絶対値) が小さい順。密集の列は最も近い日足の線までの距離順。
+ * Pullback Board の列分け (RS Leaders / Liquid Leaders 共通)。列 = 押しの段階 (STAGES)。
+ * 線が密集している銘柄も押しの段階の列に入れ、札の Tight の印で見分ける。
+ * 列の中は基準の線までの距離 (絶対値) が小さい順。
  */
-export function buildPullbackColumns<T extends MaDists & { spread_21_50: number | null | undefined }>(rows: T[]): T[][] {
-  const cols: T[][] = Array.from({ length: PULLBACK_COLS }, () => [])
-  for (const r of rows) cols[isTight(r.spread_21_50) ? STAGES.length : pullbackStage(r)].push(r)
+export function buildPullbackColumns<T extends MaDists>(rows: T[]): T[][] {
+  const cols: T[][] = STAGES.map(() => [])
+  for (const r of rows) cols[pullbackStage(r)].push(r)
   cols.forEach((c, k) => {
-    const d = k === STAGES.length ? tightDist : (r: T) => Math.abs(STAGES[k].dist(r) ?? Infinity)
+    const d = (r: T) => Math.abs(STAGES[k].dist(r) ?? Infinity)
     c.sort((a, b) => d(a) - d(b))
   })
   return cols
