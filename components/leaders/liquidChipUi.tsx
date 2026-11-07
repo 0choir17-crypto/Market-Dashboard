@@ -54,14 +54,17 @@ export function useLiquidTip() {
 }
 
 /** 札の 1 行目: 銘柄名 · t · 5 日の増減 · Turnover の印 */
-export function ChipHead({ row, prev }: { row: LiquidLeader; prev: Prev }) {
+export function ChipHead({ row, prev, mark }: { row: LiquidLeader; prev: Prev; /** 銘柄名の横に置く印 */ mark?: ReactNode }) {
   const period: LiquidPeriod = row.in_t63 === true ? 't63' : 't21'
   const v = num(period === 't63' ? row.t63 : row.t21)
   const d = prev ? shortDiff(tDiff(v, prev.get(row.code), period)) : ''
   const turnover = num(row.va_trend)
   return (
     <>
-      <span className="truncate min-w-0">{row.co_name ?? row.code}</span>
+      <span className="flex items-baseline min-w-0">
+        <span className="truncate min-w-0">{row.co_name ?? row.code}</span>
+        {mark}
+      </span>
       <span className="flex-none">
         <b className="ml-1 font-medium num opacity-85">{v !== null ? v.toFixed(1) : '—'}</b>
         {d && <span className="ml-0.5 text-caption num opacity-85">{d}</span>}

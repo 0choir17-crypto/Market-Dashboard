@@ -109,21 +109,26 @@ export type MaDists = {
   d_ema9_weekly: number | null
 }
 
-/** 札の下段に並べる日足の線 (週足 9EMA は含めない) */
-export const MA_LINES = (r: MaDists): [MaKey, number | null | undefined][] => [
-  ['9', r.d_ema9],
-  ['21', r.d_ema21],
-  ['50', r.d_ema50],
-  ['150', r.d_ema150],
-]
+/** 日足の線 (押しの段階・すぐ下の線の判定に使う) */
+function dailyLines(r: MaDists): [MaKey, number | null | undefined][] {
+  return [
+    ['9', r.d_ema9],
+    ['21', r.d_ema21],
+    ['50', r.d_ema50],
+    ['150', r.d_ema150],
+  ]
+}
+
+/** 札の下段に並べる線 = 日足 9 / 21 / 50 / 150 (週足 9EMA は列で見るので出さない) */
+export const MA_LINES = (r: MaDists): [MaKey, number | null | undefined][] => dailyLines(r)
 
 /**
- * すぐ下の線 = d_ema9 / d_ema21 / d_ema50 / d_ema150 のうち 0 以上で最小のもの (週足 9EMA は含めない)。
+ * すぐ下の線 = 日足 d_ema9 / d_ema21 / d_ema50 / d_ema150 のうち 0 以上で最小のもの (週足 9EMA は含めない)。
  * near = その距離が NEAR_ATR 以下。
  */
 export function nearestBelow(r: MaDists): { key: MaKey; dist: number; near: boolean } | null {
   let best: { key: MaKey; dist: number } | null = null
-  for (const [key, v] of MA_LINES(r)) {
+  for (const [key, v] of dailyLines(r)) {
     const d = num(v)
     if (d === null || d < 0) continue
     if (!best || d < best.dist) best = { key, dist: d }
@@ -141,6 +146,7 @@ export type StageDef = {
   dist: (r: MaDists) => number | null
 }
 
+// 上から 9 → 21 → 50 → 150EMA の順に見て、週足 9EMA は最後に見る
 export const STAGES: StageDef[] = [
   { title: 'Above 9EMA', desc: 'まだ押していない', line: '9EMA', bold: '9', dist: r => num(r.d_ema9) },
   { title: '9-21EMA', desc: '浅い押し', line: '21EMA', bold: '21', dist: r => num(r.d_ema21) },
@@ -163,22 +169,10 @@ export function pullbackStage(r: MaDists): number {
   return 5
 }
 
-/** 線が密集している銘柄 (spread_21_50 < SPREAD_MIN) か。押しの段階は読まず、別の列に置く */
+/** 線が密集している銘柄 (spread_21_50 < SPREAD_MIN = もみ合い) か。列は押しの段階のまま、札に Tight の印を付ける */
 export function isTight(spread: number | null | undefined): boolean {
   const v = num(spread)
   return v === null || v < SPREAD_MIN
-}
-
-/** 線が密集している列の見出し */
-export const TIGHT_STAGE = {
-  title: 'MA Tight',
-  desc: `線が密集 (21/50EMA の開き ${SPREAD_MIN} ATR 未満)・もみ合い`,
-}
-
-/** 線が密集している列の並び = 9 / 21 / 50EMA のうち最も近い線までの距離 (絶対値) */
-export function tightDist(r: MaDists): number {
-  const v = [r.d_ema9, r.d_ema21, r.d_ema50].map(num).filter((x): x is number => x !== null).map(Math.abs)
-  return v.length ? Math.min(...v) : Infinity
 }
 
 export function fmtSigned1(v: number | null): string {
@@ -195,19 +189,16 @@ export function fmtChg5(v: number | null | undefined): string {
   return d > 0 ? `(↑${d})` : d < 0 ? `(↓${Math.abs(d)})` : '(→0)'
 }
 
-/** Pullback Board の列の数 = 押しの段階 (STAGES) + 線が密集 (最後。画面では段階の列の下に置く) */
-export const PULLBACK_COLS = STAGES.length + 1
-
 /**
- * Pullback Board の列分け (RS Leaders / Liquid Leaders 共通)。
- * 線が密集している銘柄は最後の列 (TIGHT_STAGE)、それ以外は押しの段階の列。
- * 列の中は基準の線までの距離 (絶対値) が小さい順。密集の列は最も近い日足の線までの距離順。
+ * Pullback Board の列分け (RS Leaders / Liquid Leaders 共通)。列 = 押しの段階 (STAGES)。
+ * 線が密集している銘柄も押しの段階の列に入れ、札の Tight の印で見分ける。
+ * 列の中は基準の線までの距離 (絶対値) が小さい順。
  */
-export function buildPullbackColumns<T extends MaDists & { spread_21_50: number | null | undefined }>(rows: T[]): T[][] {
-  const cols: T[][] = Array.from({ length: PULLBACK_COLS }, () => [])
-  for (const r of rows) cols[isTight(r.spread_21_50) ? STAGES.length : pullbackStage(r)].push(r)
+export function buildPullbackColumns<T extends MaDists>(rows: T[]): T[][] {
+  const cols: T[][] = STAGES.map(() => [])
+  for (const r of rows) cols[pullbackStage(r)].push(r)
   cols.forEach((c, k) => {
-    const d = k === STAGES.length ? tightDist : (r: T) => Math.abs(STAGES[k].dist(r) ?? Infinity)
+    const d = (r: T) => Math.abs(STAGES[k].dist(r) ?? Infinity)
     c.sort((a, b) => d(a) - d(b))
   })
   return cols
