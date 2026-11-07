@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
 import { fetchAllPaged } from '@/lib/pagedFetch'
 import { Trade } from '@/types/trades'
@@ -14,6 +14,9 @@ import CloseTradeModal from '@/components/journal/CloseTradeModal'
 import EditTradeModal from '@/components/journal/EditTradeModal'
 import PositionModal from '@/components/portfolio/PositionModal'
 import PositionsTab from '@/components/portfolio/PositionsTab'
+import RiskRewardPanel from '@/components/journal/RiskRewardPanel'
+import { computeRStats } from '@/lib/rStats'
+import { todayJST } from '@/lib/dates'
 import ErrorBanner from '@/components/shared/ErrorBanner'
 import PageHeader from '@/components/shared/PageHeader'
 
@@ -67,6 +70,7 @@ export default function JournalPage() {
 
   const openPositions = trades.filter(t => t.status === 'open')
   const closedTrades = trades.filter(t => t.status === 'closed')
+  const rStats = useMemo(() => computeRStats(trades, todayJST()), [trades])
 
   return (
     <main className="min-h-screen p-4 sm:p-6" style={{ backgroundColor: 'var(--bg-primary)' }}>
@@ -102,6 +106,7 @@ export default function JournalPage() {
 
           <section>
             <SectionHeading>Journal</SectionHeading>
+            <RiskRewardPanel stats={rStats} />
             <JournalStats trades={trades} />
             <EquityCurveChart trades={trades} />
             <PeriodPerformance trades={trades} />
@@ -126,6 +131,7 @@ export default function JournalPage() {
         open={showNewTrade}
         onClose={() => setShowNewTrade(false)}
         onSaved={fetchAll}
+        slowdown={rStats.slowdown.active}
       />
 
       {/* Close trade modal */}
