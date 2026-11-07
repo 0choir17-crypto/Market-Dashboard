@@ -9,6 +9,7 @@
 import { useMemo, useState } from 'react'
 import { Trade } from '@/types/trades'
 import { R_BASIS_LABEL, R_UNIT, rOf, RBasis } from '@/lib/rStats'
+import { mfeReliable } from '@/lib/tradeFlags'
 
 /** この MFE(R) に達したのに損で終わったものを「吐き出し」と数える */
 const GAVE_BACK_MFE_R = 2
@@ -62,7 +63,7 @@ export default function MfeCaptureChart({
   const fmtR = (v: number) => fmtU(v, u)
 
   const pts = useMemo<Pt[]>(() => trades
-    .filter(t => t.status === 'closed' && rOf(t, basis) != null)
+    .filter(t => t.status === 'closed' && rOf(t, basis) != null && mfeReliable(t))
     .map(t => {
       const mfeR = mfeIn(t, basis)
       if (mfeR == null || !Number.isFinite(mfeR)) return null
@@ -168,7 +169,7 @@ export default function MfeCaptureChart({
 
       <p className="text-caption text-[var(--text-muted)] mt-1">
         捕獲率 = 決済 ÷ MFE（MFE +1{u} 以上のみ）。早降り = 勝ちだが MFE が決済の 2 倍以上（MFE +2{u} 以上）。
-        縁取りの点 = +{GAVE_BACK_MFE_R}{u} 以上の含み益を出してから損で終了。MFE は原則終値ベース（同日決済のみ当日高値）。
+        縁取りの点 = +{GAVE_BACK_MFE_R}{u} 以上の含み益を出してから損で終了。同日決済は買う前の高値と区別できないため除外。
         {onSelect && ' 点をクリックで振り返りを開く。'}
       </p>
     </div>

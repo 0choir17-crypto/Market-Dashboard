@@ -9,6 +9,7 @@ import EquityCurveChart from '@/components/journal/EquityCurveChart'
 import EditTradeModal from '@/components/journal/EditTradeModal'
 import PositionModal from '@/components/portfolio/PositionModal'
 import PositionsTab from '@/components/portfolio/PositionsTab'
+import RiskBudget from '@/components/portfolio/RiskBudget'
 import JournalSummary, { RBasisToggle, RDistribution } from '@/components/journal/JournalSummary'
 import ExpectancyBreakdown from '@/components/journal/ExpectancyBreakdown'
 import MfeCaptureChart from '@/components/journal/MfeCaptureChart'
@@ -41,7 +42,7 @@ function SectionHeading({ children, right }: { children: React.ReactNode; right?
 
 export default function JournalPage() {
   const [trades, setTrades] = useState<Trade[]>([])
-  const [riskSettings, setRiskSettings] = useState<Pick<RiskSettings, 'account_capital' | 'max_positions'> | null>(null)
+  const [riskSettings, setRiskSettings] = useState<Pick<RiskSettings, 'id' | 'account_capital' | 'max_positions' | 'risk_pct'> | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showNewTrade, setShowNewTrade] = useState(false)
@@ -63,7 +64,7 @@ export default function JournalPage() {
       ),
       supabase
         .from('risk_settings')
-        .select('account_capital, max_positions')
+        .select('id, account_capital, max_positions, risk_pct')
         .order('updated_at', { ascending: false })
         .limit(1)
         .maybeSingle(),
@@ -120,6 +121,11 @@ export default function JournalPage() {
 
       {!(loading && trades.length === 0) && (
         <div className="space-y-8">
+          <section>
+            <SectionHeading>1 回のリスク</SectionHeading>
+            <RiskBudget settings={riskSettings} slowdown={rStats.slowdown.active} onSaved={fetchAll} />
+          </section>
+
           <section>
             <SectionHeading>保有中</SectionHeading>
             <PositionsTab

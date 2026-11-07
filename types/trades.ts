@@ -45,6 +45,11 @@ export interface Trade {
   mc_met_at_entry: boolean | null
   mc_condition_at_entry: string | null
 
+  // 売った日の指標（参考）
+  rs_at_exit?: number | null
+  rvol_at_exit?: number | null
+  adr_at_exit?: number | null
+
   // 振り返り (bigger P1)
   review_tags?: string[]
   lesson_learned?: string | null
