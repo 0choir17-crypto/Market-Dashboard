@@ -5,7 +5,7 @@
 //   列 = 押しの段階 0〜5 (RS Leaders と同じ判定 pullbackStage) + その下に「線が密集」(spread_21_50 < SPREAD_MIN)。
 //   列の中は基準の線までの距離 (絶対値) が小さい順。
 //   距離の列 (d_ema*) は 2026-11 に liquid_leaders へ追加。定義は rs_leaders と同じ。
-//   距離が無い行 (追加前の日付・EMA の足りない銘柄) は件数だけ出す。d_ema150 は無くてもよい (段階 4 に留める)。
+//   距離が無い行 (追加前の日付・EMA の足りない銘柄) は件数だけ出す。
 
 import { useMemo } from 'react'
 import { Dists } from '@/components/rsLeaders/PullbackBoard'
