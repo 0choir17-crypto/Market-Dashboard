@@ -9,7 +9,6 @@ import {
 import { DIFF_DAYS, TIERS, type LiquidLeader } from '@/types/liquidLeaders'
 import LiquidLeadersTable from '@/components/leaders/LiquidLeadersTable'
 import SectorWeekHeatmap from '@/components/leaders/SectorWeekHeatmap'
-import LeaderScatter from '@/components/leaders/LeaderScatter'
 import ErrorBanner from '@/components/shared/ErrorBanner'
 import PageHeader from '@/components/shared/PageHeader'
 
@@ -167,9 +166,8 @@ export default function LeadersPage() {
           <ReadingNotes />
 
           {selectedDate && (
-            <div className="mt-6 space-y-6">
+            <div className="mt-6">
               <SectorWeekHeatmap endDate={selectedDate} />
-              <LeaderScatter rows={snapshot.rows} prev={prev} />
             </div>
           )}
 
