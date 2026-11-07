@@ -47,7 +47,26 @@ export default function TodayPage() {
   // ページ見出しの日付は現役スキャナーの最大 date のみから決める
   // （2026-08-29 に廃止された6テーブルは参照しない。参照すると 2026-08-28 で
   //   止まった日付を「最終更新日」として出し続けてしまう）。
-  const displayDate = data.structDate ?? data.emaDate ?? data.vahDate ?? selectedDate
+  // 3本のうち一番新しい日付を出す。ヒット 0 件の日はそのテーブルの最新日が前日のままなので、
+  // 特定のテーブルを優先すると、他が更新済みでも見出しが古い日付になる（例: 2026-11-06 の
+  // 急落日は Structure Pivot が 0 件で、EMA / VAH は 11/6 なのに見出しが 11/5 になった）。
+  // date は YYYY-MM-DD なので文字列比較でよい。
+  const tableDates = [data.structDate, data.emaDate, data.vahDate].filter(
+    (d): d is string => d != null,
+  )
+  const displayDate =
+    tableDates.length > 0 ? tableDates.reduce((a, b) => (a > b ? a : b)) : selectedDate
+
+  // 各テーブルは「ヒットがあった直近日」を返すので、見出しの日より古ければその日のヒットは 0 件。
+  // 古い日の銘柄を当日分として見せないよう空にして、各セクションの「該当なし」を出す。
+  const { ema, struct, vah } = useMemo(
+    () => ({
+      ema: data.emaDate === displayDate ? data.ema : [],
+      struct: data.structDate === displayDate ? data.struct : [],
+      vah: data.vahDate === displayDate ? data.vah : [],
+    }),
+    [data, displayDate],
+  )
 
   const total = data.ema.length + data.struct.length + data.vah.length
 
@@ -63,13 +82,13 @@ export default function TodayPage() {
         counts.set(r.code, (counts.get(r.code) ?? 0) + 1)
       }
     }
-    addList(data.ema)
-    addList(data.struct)
-    addList(data.vah)
+    addList(ema)
+    addList(struct)
+    addList(vah)
     const set = new Set<string>()
     for (const [code, n] of counts) if (n >= 2) set.add(code)
     return set
-  }, [data])
+  }, [ema, struct, vah])
 
   return (
     <main className="min-h-screen p-6" style={{ backgroundColor: 'var(--bg-primary)' }}>
@@ -104,20 +123,23 @@ export default function TodayPage() {
       ) : (
         <div className="flex flex-col gap-6">
           <VahBreakoutSection
-            rows={data.vah}
+            rows={vah}
+            lastHitDate={data.vahDate}
             tableMissing={data.vahTableMissing}
             multiHitCodes={multiHitCodes}
             title="VAH Breakouts"
             subtitle="Volume Profile（出来高の多い局面の始まり〜前日の価格帯別出来高。TradingView の VP-JP と同じ線・配当調整なし）の VAH を、終値で下から上抜けた日。同じ期間の中で何回目の上抜けかをバッジで示す（初回は緑）。灰色の「前VAH」は1つ前の期間の VAH。※検証では +2R 利確の版で平均より +0.06〜0.10R とわずかな上乗せ、利確なしではほぼ 0。初回か再上抜けか・前VAHより上か下かでは差が無い。買いシグナルではなく、毎朝チャートを開く銘柄を機械的に絞り込んだリストとして使う。"
           />
           <StructurePivotSection
-            rows={data.struct}
+            rows={struct}
+            lastHitDate={data.structDate}
             multiHitCodes={multiHitCodes}
             title="Structure Pivot"
             subtitle="押し安値切り上がり（HL）から作る構造の 1st（建玉ライン=HL+0.618戻し）/ 2nd（スイングハイ）ヒット。本日ヒットした銘柄のみ表示。本日どちら（1st/2nd）にヒットしたかを明示し、1st・2nd それぞれの直近ヒット日を併記（本日ヒットは緑で強調）。終了済み（TP2/Stop）は除外。買い指示ではなくウォッチリスト（執行は手動チャート判断）。"
           />
           <EmaSetupsSection
-            rows={data.ema}
+            rows={ema}
+            lastHitDate={data.emaDate}
             tableMissing={data.emaTableMissing}
             multiHitCodes={multiHitCodes}
             title="EMA Setups"

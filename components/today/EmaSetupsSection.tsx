@@ -9,6 +9,8 @@ import PositionModal from '@/components/portfolio/PositionModal'
 
 type Props = {
   rows: EmaSetupCardRow[]
+  /** 表が空の日に併記する、直近でヒットがあった日 */
+  lastHitDate?: string | null
   title: string
   subtitle: string
   // ema_setups の DDL が未実行（テーブル未配備）。「0 件の日」と区別して案内する。
@@ -57,6 +59,7 @@ const RS_MAX = 90
 
 export default function EmaSetupsSection({
   rows,
+  lastHitDate,
   title,
   subtitle,
   tableMissing = false,
@@ -220,6 +223,11 @@ export default function EmaSetupsSection({
           {rows.length === 0
             ? '本日は該当なし。'
             : '絞り込み条件に一致する銘柄がありません。'}
+          {rows.length === 0 && lastHitDate && (
+            <p className="mt-1 text-caption">
+              直近のヒット日: <span className="font-mono">{lastHitDate}</span>
+            </p>
+          )}
         </div>
       ) : (
         <div
