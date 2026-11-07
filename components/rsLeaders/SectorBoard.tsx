@@ -155,7 +155,7 @@ export default function SectorBoard({
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mb-3 text-caption text-[var(--text-secondary)]">
         <TierLegend />
         <span>札の数字 = 業種RS · (↑3) = {CHG_DAYS}営業日前からの変化</span>
-        <span>▾0.4 = すぐ下の移動平均線 (9/21/50EMA) まで 0.4ATR ({NEAR_ATR}ATR以内のみ)</span>
+        <span>▾0.4 = すぐ下の移動平均線 (9/21/50/150EMA) まで 0.4ATR ({NEAR_ATR}ATR以内のみ)</span>
         <span>折れ線 = 同業のうちRS{RS_MIN}以上の割合 (直近3か月・目盛りは業種ごと)</span>
         <span>
           緑・黄・赤 = 業種指数の 9/21EMA の位置と向き (Market タブと同じ判定)
