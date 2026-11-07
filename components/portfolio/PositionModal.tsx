@@ -322,63 +322,6 @@ export default function PositionModal({ open, onClose, onSaved, initial, slowdow
             />
           </div>
 
-          {/* Sector (33業種プルダウン) */}
-          <div>
-            <label className={labelClass}>Sector (33業種)</label>
-            <select
-              value={sector}
-              onChange={e => setSector(e.target.value)}
-              className={fieldClass}
-            >
-              <option value="">-- Select --</option>
-              {/* 既存値が一覧に無い場合も選択を保持 */}
-              {sector && !sectorOptions.includes(sector) && (
-                <option value={sector}>{sector}</option>
-              )}
-              {sectorOptions.map(s => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Screen */}
-          <div>
-            <label className={labelClass}>Screen</label>
-            <select
-              value={screenName}
-              onChange={e => setScreenName(e.target.value)}
-              className={fieldClass}
-            >
-              <option value="">-- Select --</option>
-              {/* 既存値が選択肢に無い場合も保持 */}
-              {screenName && !SCREEN_OPTIONS.includes(screenName) && screenName !== 'Other' && (
-                <option value={screenName}>{screenName}</option>
-              )}
-              {SCREEN_OPTIONS.map(s => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-              <option value="Other">Other</option>
-            </select>
-          </div>
-
-          {/* Entry Type（押し目 / ブレイク — 切り口別の期待値に使う） */}
-          <div>
-            <label className={labelClass}>Entry Type</label>
-            <select
-              value={entryType}
-              onChange={e => setEntryType(e.target.value)}
-              className={fieldClass}
-            >
-              <option value="">-- Select --</option>
-              {entryType && !(ENTRY_TYPES as readonly string[]).includes(entryType) && (
-                <option value={entryType}>{entryType}</option>
-              )}
-              {ENTRY_TYPES.map(t => (
-                <option key={t} value={t}>{t}</option>
-              ))}
-            </select>
-          </div>
-
           {/* Entry Date */}
           <div>
             <label className={labelClass}>
@@ -420,6 +363,83 @@ export default function PositionModal({ open, onClose, onSaved, initial, slowdow
               placeholder="例: 100"
               className={fieldClass}
             />
+          </div>
+
+          {/* Screen */}
+          <div>
+            <label className={labelClass}>Screen</label>
+            <select
+              value={screenName}
+              onChange={e => setScreenName(e.target.value)}
+              className={fieldClass}
+            >
+              <option value="">-- Select --</option>
+              {/* 既存値が選択肢に無い場合も保持 */}
+              {screenName && !SCREEN_OPTIONS.includes(screenName) && screenName !== 'Other' && (
+                <option value={screenName}>{screenName}</option>
+              )}
+              {SCREEN_OPTIONS.map(s => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+              <option value="Other">Other</option>
+            </select>
+          </div>
+
+          {/* Entry Type（押し目 / ブレイク — 切り口別の期待値に使う） */}
+          <div>
+            <label className={labelClass}>Entry Type</label>
+            <select
+              value={entryType}
+              onChange={e => setEntryType(e.target.value)}
+              className={fieldClass}
+            >
+              <option value="">-- Select --</option>
+              {entryType && !(ENTRY_TYPES as readonly string[]).includes(entryType) && (
+                <option value={entryType}>{entryType}</option>
+              )}
+              {ENTRY_TYPES.map(t => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </select>
+          </div>
+
+        </div>
+
+        {/* Memo */}
+        <div>
+          <label className={labelClass}>Buy thesis</label>
+          <textarea
+            value={memo}
+            onChange={e => setMemo(e.target.value)}
+            rows={3}
+            placeholder="エントリー理由・注意点など"
+            className={`${fieldClass} resize-none`}
+          />
+        </div>
+
+        {/* 詳細（任意）: 業種・手数料込み金額・損切り・目標・株数計算 */}
+        <details className="border border-[var(--border)] rounded-lg px-4 py-2 [&[open]]:pb-4">
+          <summary className="cursor-pointer text-caption font-medium text-[var(--text-secondary)] py-1">
+            詳細（任意）<span className="ml-1 font-normal text-[var(--text-muted)]">— 業種・手数料込み金額・損切り・目標株価・株数計算</span>
+          </summary>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-3">
+          {/* Sector (33業種プルダウン) */}
+          <div>
+            <label className={labelClass}>Sector (33業種)</label>
+            <select
+              value={sector}
+              onChange={e => setSector(e.target.value)}
+              className={fieldClass}
+            >
+              <option value="">-- Select --</option>
+              {/* 既存値が一覧に無い場合も選択を保持 */}
+              {sector && !sectorOptions.includes(sector) && (
+                <option value={sector}>{sector}</option>
+              )}
+              {sectorOptions.map(s => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
           </div>
 
           {/* Cost Basis */}
@@ -474,8 +494,8 @@ export default function PositionModal({ open, onClose, onSaved, initial, slowdow
               className={fieldClass}
             />
           </div>
-        </div>
-
+          </div>
+          <div className="mt-4">
         {/* 株数計算（1R ベース）: 損切り幅が狭いほど同じリスクで大きく建てられる */}
         <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-primary)] p-4 space-y-3">
           <p className="text-caption font-medium text-[var(--text-secondary)]">
@@ -559,24 +579,15 @@ export default function PositionModal({ open, onClose, onSaved, initial, slowdow
           </div>
         </div>
 
-        {/* Memo */}
-        <div>
-          <label className={labelClass}>Buy thesis</label>
-          <textarea
-            value={memo}
-            onChange={e => setMemo(e.target.value)}
-            rows={3}
-            placeholder="エントリー理由・注意点など"
-            className={`${fieldClass} resize-none`}
-          />
-        </div>
+          </div>
+        </details>
 
         {/* Exit（任意）: 入力すると closed として確定。空ければ open のまま */}
-        <div className="border border-dashed border-[var(--border-strong)] rounded-lg p-4 space-y-3">
-          <p className="text-caption font-medium text-[var(--text-secondary)]">
-            イグジット（売り・任意）
-            <span className="ml-1 font-normal text-[var(--text-muted)]">— 入力すると「確定（closed）」として保存し損益を自動計算</span>
-          </p>
+        <details open={!!initial?.exit_price} className="border border-[var(--border)] rounded-lg px-4 py-2 [&[open]]:pb-4 [&[open]]:space-y-3">
+          <summary className="cursor-pointer text-caption font-medium text-[var(--text-secondary)] py-1">
+            売りも記録する
+            <span className="ml-1 font-normal text-[var(--text-muted)]">— 過去の売却済みトレードを一度に登録する時に</span>
+          </summary>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             {/* Exit Date */}
             <div>
@@ -642,7 +653,7 @@ export default function PositionModal({ open, onClose, onSaved, initial, slowdow
               </div>
             )
           })()}
-        </div>
+        </details>
 
         <div className="flex justify-end gap-3 pt-2">
           <button

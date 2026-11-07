@@ -184,6 +184,9 @@ export type RStats = {
   /** DEEP_LOSS[basis] より深い負けの件数（損切り基準なら損切り遅れ） */
   deepLosses: number
   bins: number[]
+  /** 損益合計（円）と PF（総利益 ÷ 総損失、ポジション単位） */
+  totalPnl: number
+  profitFactor: number | null
   avgHoldWin: number | null
   avgHoldLoss: number | null
   currentLossStreak: number
@@ -264,6 +267,12 @@ export function computeRStats(trades: Trade[], today: string, basis: RBasis = 's
     top10Share,
     deepLosses: rs.filter(p => p.r < DEEP_LOSS[basis]).length,
     bins,
+    totalPnl: ps.reduce((a, p) => a + p.pnl, 0),
+    profitFactor: (() => {
+      const gp = ps.filter(p => p.pnl > 0).reduce((a, p) => a + p.pnl, 0)
+      const gl = Math.abs(ps.filter(p => p.pnl < 0).reduce((a, p) => a + p.pnl, 0))
+      return gl > 0 ? gp / gl : gp > 0 ? Infinity : null
+    })(),
     avgHoldWin: holdOf('WIN'),
     avgHoldLoss: holdOf('LOSS'),
     currentLossStreak: streak,
@@ -291,54 +300,5 @@ export function suggestShares(opts: {
     riskYen: shares * perShare,
     positionYen: shares * entry,
     positionPct: (shares * entry) / capital * 100,
-  }
-}
-
-// ── 保有中ポジションの R ビュー ─────────────────────────────
-/** この R に達したら一部利確の目安 */
-export const PARTIAL_TAKE_R = 3
-
-/** 分割決済の判定用キー（同じ建玉から切り出された closed レコードを探す） */
-export function partialClosedKeys(trades: Trade[]): Set<string> {
-  return new Set(trades.filter(t => t.status === 'closed').map(positionKey))
-}
-
-export type OpenRiskView = {
-  /** 1 株あたりの初期リスク（Entry − 初期ストップ） */
-  riskPerShare: number | null
-  /** initial_stop が無く stop_price で代用した */
-  estimated: boolean
-  /** 含み R */
-  rNow: number | null
-  /** 現在ストップの位置（初期ストップ = -1R、建値 = 0R） */
-  stopR: number | null
-  /** ストップが建値以上（もう損失は出ない） */
-  riskFree: boolean
-  /** 一部利確済み（同じ建玉の closed レコードがある） */
-  partiallyTaken: boolean
-  /** +3R 到達かつ未利確 */
-  takePartialHint: boolean
-  /** 現在ストップまで落ちた場合の損益（負 = 損失、正 = 確定利益） */
-  pnlAtStop: number | null
-  marketValue: number | null
-}
-
-export function openRiskView(pos: Trade, current: number | null, closedKeys: Set<string>): OpenRiskView {
-  const initStop = pos.initial_stop ?? pos.stop_price ?? null
-  const estimated = pos.initial_stop == null && pos.stop_price != null
-  const rps = initStop != null && pos.entry_price > initStop ? pos.entry_price - initStop : null
-  const rNow = rps != null && current != null ? (current - pos.entry_price) / rps : null
-  const stopR = rps != null && pos.stop_price != null ? (pos.stop_price - pos.entry_price) / rps : null
-  const partiallyTaken = closedKeys.has(positionKey(pos))
-  return {
-    riskPerShare: rps,
-    estimated,
-    rNow,
-    stopR,
-    riskFree: pos.stop_price != null && pos.stop_price >= pos.entry_price,
-    partiallyTaken,
-    takePartialHint: rNow != null && rNow >= PARTIAL_TAKE_R && !partiallyTaken,
-    pnlAtStop: pos.stop_price != null ? (pos.stop_price - pos.entry_price) * pos.shares : null,
-    marketValue: current != null ? current * pos.shares : null,
   }
 }
