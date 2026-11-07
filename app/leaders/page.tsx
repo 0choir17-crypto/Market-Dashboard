@@ -10,14 +10,16 @@ import { DIFF_DAYS, TIERS, type LiquidLeader } from '@/types/liquidLeaders'
 import LiquidLeadersTable from '@/components/leaders/LiquidLeadersTable'
 import SectorWeekHeatmap from '@/components/leaders/SectorWeekHeatmap'
 import LiquidSectorBoard from '@/components/leaders/LiquidSectorBoard'
+import LiquidPullbackBoard from '@/components/leaders/LiquidPullbackBoard'
 import { fetchSectorTrends, type SectorTrendResult } from '@/lib/sectorTrendFetch'
 import ErrorBanner from '@/components/shared/ErrorBanner'
 import PageHeader from '@/components/shared/PageHeader'
 
-type Tab = 'sector' | 'table' | 'heatmap'
+type Tab = 'sector' | 'pullback' | 'table' | 'heatmap'
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'sector', label: 'Sector Board' },
+  { key: 'pullback', label: 'Pullback Board' },
   { key: 'table', label: 'Table' },
   { key: 'heatmap', label: '業種 × 週' },
 ]
@@ -210,6 +212,8 @@ export default function LeadersPage() {
           {tab === 'sector' && selectedDate && (
             <LiquidSectorBoard rows={snapshot.rows} prev={prev} endDate={selectedDate} trends={trendRes} query={query} />
           )}
+
+          {tab === 'pullback' && <LiquidPullbackBoard rows={snapshot.rows} prev={prev} query={query} />}
 
           {tab === 'heatmap' && selectedDate && <SectorWeekHeatmap endDate={selectedDate} />}
 

@@ -97,11 +97,19 @@ export function spreadLabel(s: number | null): string {
 
 export type MaKey = '9' | '21' | '50'
 
+/** 押しの判定に使う列 (rs_leaders と liquid_leaders で同じ定義) */
+export type MaDists = {
+  d_ema9: number | null
+  d_ema21: number | null
+  d_ema50: number | null
+  d_ema9_weekly: number | null
+}
+
 /**
  * すぐ下の線 = d_ema9 / d_ema21 / d_ema50 のうち 0 以上で最小のもの (週足 9EMA は含めない)。
  * near = その距離が NEAR_ATR 以下。
  */
-export function nearestBelow(r: RsLeader): { key: MaKey; dist: number; near: boolean } | null {
+export function nearestBelow(r: MaDists): { key: MaKey; dist: number; near: boolean } | null {
   let best: { key: MaKey; dist: number } | null = null
   for (const [key, v] of [
     ['9', r.d_ema9],
@@ -122,7 +130,7 @@ export type StageDef = {
   line: string
   /** 札の下段で太字にする線 (段階 3・4 は無し) */
   bold: MaKey | null
-  dist: (r: RsLeader) => number | null
+  dist: (r: MaDists) => number | null
 }
 
 export const STAGES: StageDef[] = [
@@ -134,7 +142,7 @@ export const STAGES: StageDef[] = [
 ]
 
 /** 押しの段階 0〜4 = d_ema9 → d_ema21 → d_ema50 → d_ema9_weekly の順に見て、最初に 0 以上の線。どれも負なら 4 */
-export function pullbackStage(r: RsLeader): number {
+export function pullbackStage(r: MaDists): number {
   const lines = [r.d_ema9, r.d_ema21, r.d_ema50, r.d_ema9_weekly]
   for (let i = 0; i < lines.length; i++) {
     const d = num(lines[i])

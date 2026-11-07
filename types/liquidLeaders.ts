@@ -37,6 +37,24 @@ export type LiquidLeader = {
    * 一覧には長く残るが、その後 3 か月の伸びは小さい傾向 (10 年の検証で一貫)。良し悪しの色は付けない。
    */
   va_trend: number | null
+  // ── 移動平均線までの距離 (2026-11 追加。定義は rs_leaders と同じ。追加前の行・EMA の足りない銘柄は null) ──
+  close?: number | null
+  atr14?: number | null
+  adr_pct?: number | null
+  ema9?: number | null
+  ema21?: number | null
+  ema50?: number | null
+  ema150?: number | null
+  ema9_weekly?: number | null
+  /** 終値がその線から何 ATR 上か (マイナスは線の下) */
+  d_ema9: number | null
+  d_ema21: number | null
+  d_ema50: number | null
+  /** 週足 9EMA から何 ATR 上か */
+  d_ema9_weekly: number | null
+  /** 線の開き = (21EMA − 50EMA) ÷ ATR */
+  spread_21_50: number | null
+  dist_from_high_pct?: number | null
 }
 
 export type TierDef = {
