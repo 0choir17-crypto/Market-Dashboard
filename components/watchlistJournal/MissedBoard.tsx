@@ -21,8 +21,8 @@ import DataTable, { type Column } from '@/components/shared/DataTable'
 import TickerCell from '@/components/shared/TickerCell'
 import { NumCell, PctCell, SampleSizeNote, YenCell, median } from './atoms'
 
-// READY からの離脱が最も重い。この順で並べる。
-const FROM_STATE_ORDER = ['READY', 'FOCUS', 'SECOND', 'SHORT', 'OTHERS', 'INBOX']
+// READY からの離脱が最も重い。この順で並べる。FOCUS 以降は 2026-11-07 に廃止した見出し。
+const FROM_STATE_ORDER = ['READY', 'PULLBACK', 'BREAKOUT', 'EARNINGS', 'SHORT', 'INBOX', 'FOCUS', 'SECOND', 'OTHERS']
 
 function fromStateIndex(state: string | null): number {
   const i = FROM_STATE_ORDER.indexOf(state ?? '')
@@ -194,7 +194,7 @@ export default function MissedBoard({ rows }: Props) {
       <button
         key={key ?? 'all'}
         onClick={() => setFilter(active ? null : key)}
-        title={heavy ? 'エントリー可と判断しておいて買わなかった — 最も重い見逃し' : undefined}
+        title={heavy ? '買値と損切り値まで決めて買わなかった — 最も重い見逃し' : undefined}
         className={`inline-flex items-baseline gap-1.5 px-2.5 py-1 rounded-lg border-[0.5px] whitespace-nowrap ${
           active
             ? 'border-[var(--sem-focus-bd)] bg-[var(--sem-focus-bg)]'

@@ -12,11 +12,15 @@ export type WatchState =
   | 'HOLD'
   | 'SOLD'
   | 'READY'
+  | 'PULLBACK'
+  | 'BREAKOUT'
+  | 'EARNINGS'
+  | 'SHORT'
+  | 'INBOX'
+  // 2026-11-07 に廃止した見出し。過去の記録にだけ残る
   | 'FOCUS'
   | 'SECOND'
-  | 'SHORT'
   | 'OTHERS'
-  | 'INBOX'
 
 export type WatchEventType = 'enter' | 'move' | 'exit'
 
@@ -24,11 +28,15 @@ export type WatchEventType = 'enter' | 'move' | 'exit'
 export const STATE_ORDER: WatchState[] = [
   'HOLD',
   'READY',
+  'PULLBACK',
+  'BREAKOUT',
+  'EARNINGS',
+  'SHORT',
+  'INBOX',
+  // 2026-11-07 に廃止した見出し。過去の記録を読むためだけに残す
   'FOCUS',
   'SECOND',
-  'SHORT',
   'OTHERS',
-  'INBOX',
   'SOLD',
 ]
 

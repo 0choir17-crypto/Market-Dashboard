@@ -298,20 +298,21 @@ export default function GuidePage() {
           <ul className="list-disc pl-5 space-y-1.5">
             <li>
               <strong className="text-[var(--text-primary)]">現在の状態</strong> —
-              <span className="font-mono"> HOLD / READY / FOCUS / SECOND / SHORT / OTHERS / INBOX / SOLD</span>{' '}
+              <span className="font-mono"> HOLD / READY / PULLBACK / BREAKOUT / EARNINGS / SHORT / INBOX / SOLD</span>{' '}
               ごとに現在のリストを表示。既定は<strong>滞在日数の長い順</strong>で、
               「READY で何日止まっているか」が一目で分かるようにしています。
             </li>
             <li>
               <strong className="text-[var(--text-primary)]">差分</strong> — 選んだ日の
-              新規 / 昇格 / 降格 / 削除を時系列で。優先度は
-              <span className="font-mono"> HOLD &gt; READY &gt; FOCUS &gt; SECOND &gt; OTHERS &gt; INBOX</span> で、
-              <strong>READY → HOLD（実際に買った）</strong>が最も強い昇格として出ます。
+              新規 / 移動 / 削除を時系列で。2026-11-07 からセクションは序列ではなく
+              <strong>待っている条件</strong>で分けているので、
+              <span className="font-mono"> PULLBACK / BREAKOUT / EARNINGS </span>の間に上下はありません。
+              旧セクションの <span className="font-mono">FOCUS / SECOND / OTHERS</span> は過去の記録にだけ残ります。
             </li>
             <li>
               <strong className="text-[var(--text-primary)]">見逃しボード</strong> — Watch list に入れたのに
               <strong>買わないまま落とした銘柄</strong>を、落とした後の最大上昇順に並べます。
-              <strong>READY からの離脱</strong>（エントリー可と判断しておいて買わなかった）が最も重い見逃しです。
+              <strong>READY からの離脱</strong>（買値と損切り値まで決めて買わなかった）が最も重い見逃しです。
             </li>
           </ul>
           <div className="bg-[var(--bg-card-hover)] rounded-lg p-3">
