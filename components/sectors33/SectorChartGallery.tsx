@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { SectorSelectionRow, bySelfT63, fmtT, isNum } from '@/types/sectorSelection'
+import { SectorSelectionRow, bySelfT63, fmtR, fmtT, isNum, EXT_EMA_KEYS, EXT_R_NOTE } from '@/types/sectorSelection'
 import {
   fetchAllSectorPriceHistory,
   OVERLAY_METRICS,
@@ -185,7 +185,7 @@ function SectorCard({
         </div>
       )}
 
-      {/* チャート下: Self t63 / Self t21 / Med/Idx / VA z / VA up / N */}
+      {/* チャート下: Self t63 / Self t21 / Med/Idx / VA z / VA up / N、その下に Ext R */}
       <div className="grid grid-cols-6 gap-1.5 mt-3">
         {METRIC_CELLS.map((m) => (
           <MetricCell
@@ -213,6 +213,23 @@ function SectorCard({
             <span className="text-[var(--text-muted)]">/{isNum(row.sector_stock_count_s33) ? row.sector_stock_count_s33 : '—'}</span>
           </p>
         </div>
+      </div>
+
+      {/* 業種指数の終値と EMA9 / 21 / 50 の距離 (R) */}
+      <div className="grid grid-cols-3 gap-1.5 mt-1.5">
+        {EXT_EMA_KEYS.map(({ len, key }) => (
+          <div key={key} className="rounded-md border border-[var(--border)] bg-[var(--bg-card)] px-1.5 py-1 text-center">
+            <Tooltip content={`${EXT_R_NOTE}。EMA${len}`}>
+              <p className="text-caption text-[var(--text-muted)] tracking-wide">Ext R EMA{len}</p>
+            </Tooltip>
+            <p
+              className="text-small font-mono font-medium tabular-nums"
+              style={{ color: isNum(row[key]) ? 'var(--text-primary)' : 'var(--sem-idle-fg)' }}
+            >
+              {fmtR(row[key])}
+            </p>
+          </div>
+        ))}
       </div>
     </div>
   )
