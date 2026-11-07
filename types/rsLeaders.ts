@@ -97,7 +97,7 @@ export function spreadLabel(s: number | null): string {
   return v < SPREAD_LABEL.tight ? 'Tight' : v > SPREAD_LABEL.wide ? 'Wide' : 'Normal'
 }
 
-export type MaKey = '9' | '21' | '50' | '150' | 'W9'
+export type MaKey = '9' | '21' | '50' | '150'
 
 /** 押しの判定に使う列 (rs_leaders と liquid_leaders で同じ定義) */
 export type MaDists = {
@@ -119,11 +119,8 @@ function dailyLines(r: MaDists): [MaKey, number | null | undefined][] {
   ]
 }
 
-/** 札の下段に並べる線 = 日足 9 / 21 / 50 / 150 → 最後に週足 9EMA (W9。判定には使わず参考に出す) */
-export const MA_LINES = (r: MaDists): [MaKey, number | null | undefined][] => [
-  ...dailyLines(r),
-  ['W9', r.d_ema9_weekly],
-]
+/** 札の下段に並べる線 = 日足 9 / 21 / 50 / 150 (週足 9EMA は列で見るので出さない) */
+export const MA_LINES = (r: MaDists): [MaKey, number | null | undefined][] => dailyLines(r)
 
 /**
  * すぐ下の線 = 日足 d_ema9 / d_ema21 / d_ema50 / d_ema150 のうち 0 以上で最小のもの (週足 9EMA は含めない)。
@@ -144,31 +141,32 @@ export type StageDef = {
   desc: string
   /** 基準の線の見出し */
   line: string
-  /** 札の下段で太字にする線 (最後の段階は無し) */
+  /** 札の下段で太字にする線 (段階 4・5 は無し) */
   bold: MaKey | null
   dist: (r: MaDists) => number | null
 }
 
-// 日足の線だけで、上から 9 → 21 → 50 → 150EMA の順に見る (週足 9EMA は札の下段の最後に参考で出すだけ)
+// 上から 9 → 21 → 50 → 150EMA の順に見て、週足 9EMA は最後に見る
 export const STAGES: StageDef[] = [
   { title: 'Above 9EMA', desc: 'まだ押していない', line: '9EMA', bold: '9', dist: r => num(r.d_ema9) },
   { title: '9-21EMA', desc: '浅い押し', line: '21EMA', bold: '21', dist: r => num(r.d_ema21) },
   { title: '21-50EMA', desc: '中くらいの押し', line: '50EMA', bold: '50', dist: r => num(r.d_ema50) },
-  { title: '50-150EMA', desc: '深い押し・50EMA割れ', line: '150EMA', bold: '150', dist: r => num(r.d_ema150) },
-  { title: 'Below 150EMA', desc: '150EMAも割れ', line: '150EMA', bold: null, dist: r => num(r.d_ema150) },
+  { title: '50-150EMA', desc: '深い押し', line: '150EMA', bold: '150', dist: r => num(r.d_ema150) },
+  { title: 'Below 150EMA', desc: '150EMA割れ・週足9EMAの上', line: 'W9EMA', bold: null, dist: r => num(r.d_ema9_weekly) },
+  { title: 'Below W9EMA', desc: '週足9EMAも割れ', line: 'W9EMA', bold: null, dist: r => num(r.d_ema9_weekly) },
 ]
 
 /**
- * 押しの段階 0〜4 = d_ema9 → d_ema21 → d_ema50 → d_ema150 の順に見て、最初に 0 以上の線。どれも負なら 4。
- * ただし d_ema150 が無い (null) 行で 50EMA を割っていれば、150EMA を割ったか分からないので 3 (50-150EMA) に置く。
+ * 押しの段階 0〜5 = d_ema9 → d_ema21 → d_ema50 → d_ema150 → d_ema9_weekly の順に見て、最初に 0 以上の線。
+ * 週足 9EMA は最後に見る。どれも負なら 5。
  */
 export function pullbackStage(r: MaDists): number {
-  const lines = dailyLines(r).map(([, v]) => v)
+  const lines = [r.d_ema9, r.d_ema21, r.d_ema50, r.d_ema150, r.d_ema9_weekly]
   for (let i = 0; i < lines.length; i++) {
     const d = num(lines[i])
     if (d !== null && d >= 0) return i
   }
-  return num(r.d_ema150) === null ? 3 : 4
+  return 5
 }
 
 /** 線が密集している銘柄 (spread_21_50 < SPREAD_MIN = もみ合い) か。列は押しの段階のまま、札に Tight の印を付ける */

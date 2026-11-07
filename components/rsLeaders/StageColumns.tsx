@@ -2,7 +2,7 @@
 
 // Pullback Board の列 (RS Leaders / Liquid Leaders 共通)。
 // 列 = 押しの段階 (STAGES)。線が密集している銘柄も同じ列に入れ、札の銘柄名の横の TightMark で見分ける。
-// 列の幅は銘柄数に比例させ、列の中は札を幅 248px 前後で折り返す。
+// 列の幅は銘柄数に比例させ、列の中は札を幅 196px 前後で折り返す。
 // 札の多い列だけが縦に長く伸びず、画面の幅を使い切って列の高さが揃う。
 
 import type { ReactNode } from 'react'
@@ -25,7 +25,7 @@ export default function StageColumns<T extends { code: string }>({
           return (
             <div
               key={st.title}
-              className={`rounded-lg bg-[var(--bg-primary)] p-2 ${empty ? 'flex-[0_0_104px] opacity-60' : 'min-w-[264px]'}`}
+              className={`rounded-lg bg-[var(--bg-primary)] p-2 ${empty ? 'flex-[0_0_104px] opacity-60' : 'min-w-[212px]'}`}
               style={empty ? undefined : { flex: `${items.length} 1 0` }}
             >
               <p className="text-small font-medium text-[var(--text-primary)]">
@@ -34,7 +34,7 @@ export default function StageColumns<T extends { code: string }>({
               <p className="text-caption text-[var(--text-secondary)] mb-1.5">
                 {st.desc}・基準 {st.line}
               </p>
-              <div className={empty ? '' : 'grid grid-cols-[repeat(auto-fill,minmax(248px,1fr))] gap-1'}>
+              <div className={empty ? '' : 'grid grid-cols-[repeat(auto-fill,minmax(196px,1fr))] gap-1'}>
                 {empty ? (
                   <span className="text-small text-[var(--text-muted)]">—</span>
                 ) : (

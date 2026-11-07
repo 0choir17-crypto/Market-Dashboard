@@ -3,7 +3,7 @@
 // Pullback Board — 強い銘柄が移動平均線までどれだけ押しているかで並べる。
 // TradingView でチャートを確認する銘柄を絞るための画面。
 //   対象: rs_rating ≥ RS_MIN
-//   列 = 押しの段階 0〜4 (日足 9 → 21 → 50 → 150EMA)。線が密集している銘柄 (spread_21_50 < SPREAD_MIN) も同じ列に入れ、銘柄名の横に Tight。
+//   列 = 押しの段階 0〜5 (日足 9 → 21 → 50 → 150EMA → 最後に週足 9EMA)。線が密集している銘柄 (spread_21_50 < SPREAD_MIN) も同じ列に入れ、銘柄名の横に Tight。
 //   列の中は基準の線までの距離 (絶対値) が小さい順。
 
 import { useMemo } from 'react'
@@ -77,7 +77,7 @@ export default function PullbackBoard({
   )
 }
 
-// 札の下段: 9+0.1  21+0.3  50+1.4  150+4.2 | W9+0.8 (線の名前は薄く。週足 9EMA は判定に使わず最後に参考で出す) (太字 = 列の基準の線 / 緑 = すぐ下の線で NEAR_ATR 以内)
+// 札の下段: 9+0.1  21+0.3  50+1.4  150+4.2 (線の名前は薄く) (太字 = 列の基準の線 / 緑 = すぐ下の線で NEAR_ATR 以内)
 // Liquid Leaders の Pullback Board でも使う
 export function Dists({ row, bold }: { row: MaDists; bold: MaKey | null }) {
   const nb = nearestBelow(row)
@@ -87,7 +87,7 @@ export function Dists({ row, bold }: { row: MaDists; bold: MaKey | null }) {
       {MA_LINES(row).map(([k, v]) => (
         <span
           key={k}
-          className={`${k === bold || k === green ? 'font-bold' : ''} ${k === 'W9' ? 'pl-1 border-l-[0.5px] border-[var(--border-strong)] text-[var(--text-secondary)]' : ''}`}
+          className={k === bold || k === green ? 'font-bold' : undefined}
           style={k === green ? { color: 'var(--positive)' } : undefined}
         >
           <span className="opacity-60">{k}</span>{fmtSigned1(v ?? null)}
