@@ -5,7 +5,7 @@ import { useDate } from '@/contexts/DateContext'
 import { fetchSectorTrends, type SectorTrend, type SectorTrendResult } from '@/lib/sectorTrendFetch'
 import type { TrendSignal } from '@/lib/trendState'
 import { CautionMark } from '@/components/sectors33/SelfStrength'
-import { CardButton, EmaChain, SIGNAL_ORDER, SIGNAL_STYLE, SelfRow, SignalPill, Slopes } from './trendAtoms'
+import { CardButton, EmaChain, ExtRow, SIGNAL_ORDER, SIGNAL_STYLE, SelfRow, SignalPill, Slopes } from './trendAtoms'
 import SectorDetailModal from './SectorDetailModal'
 
 // 33 業種の地合い判定カード。判定と書き方は指数カードと同じ（日足 EMA9 / EMA21 の位置と向き）。
@@ -51,6 +51,7 @@ function SectorCard({ s, onOpen }: { s: SectorTrend; onOpen: () => void }) {
       )}
 
       <SelfRow s={s} />
+      <ExtRow s={s} />
     </CardButton>
   )
 }
@@ -90,7 +91,7 @@ export default function SectorStateCards() {
           <h2 className="text-title font-medium text-[var(--text-primary)]">Sectors</h2>
           <p className="text-caption text-[var(--text-muted)] mt-0.5">
             TOPIX-33 業種指数の EMA9 / EMA21 判定。並びは 緑 → 黄 → 赤、同じ色の中は自力 t21 の高い順。カードをクリックで詳細。
-            t21 / t63 = 業種の自力（TOPIX につられた分を除いた強さ）
+            t21 / t63 = 業種の自力（TOPIX につられた分を除いた強さ）。R9 / R21 / R50 = EMA からの距離（ATR14 換算）
             {result?.latestDate && <span className="ml-2 font-mono">{result.latestDate}</span>}
           </p>
         </div>

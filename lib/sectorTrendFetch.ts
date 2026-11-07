@@ -2,6 +2,7 @@ import { supabase } from './supabase'
 import { fetchAllPaged } from './pagedFetch'
 import { barsToCalendarDays } from './indicators'
 import { computeTrendState, type ClosePoint, type TrendState } from './trendState'
+import { EXT_EMAS, type ExtEma } from '@/types/sectorSelection'
 import type { OhlcvBar, VolumeBar } from '@/types/chart'
 
 // 33 業種の地合い判定。指数カードと同じ EMA9 / EMA21 の判定を業種指数の終値に掛け、
@@ -15,7 +16,9 @@ import type { OhlcvBar, VolumeBar } from '@/types/chart'
 
 const TABLE = 'sector_selection_s33'
 
-const COLUMNS = 'date, sector_name_s33, sector_index_close_s33, self_t63, self_t21'
+const COLUMNS =
+  'date, sector_name_s33, sector_index_close_s33, self_t63, self_t21, ' +
+  'sector_index_ext_ema9_s33, sector_index_ext_ema21_s33, sector_index_ext_ema50_s33'
 
 /** 詳細チャートで取る足数（生カラムが非 null の範囲） */
 const SECTOR_CHART_BARS = 150
@@ -32,6 +35,8 @@ export type SectorTrend = {
   /** 最終日の業種の自力。無ければ null */
   selfT63: number | null
   selfT21: number | null
+  /** 最終日の EMA からの距離（ATR14 換算の R）。バッチ側で全履歴から計算した値 */
+  extR: Record<ExtEma, number | null>
 }
 
 export type SectorTrendResult = {
@@ -101,6 +106,9 @@ export async function fetchSectorTrends(endDate?: string): Promise<SectorTrendRe
       state: computeTrendState(points),
       selfT63: isLatest ? num(last.self_t63) : null,
       selfT21: isLatest ? num(last.self_t21) : null,
+      extR: Object.fromEntries(
+        EXT_EMAS.map((n) => [n, isLatest ? num(last[`sector_index_ext_ema${n}_s33`]) : null]),
+      ) as Record<ExtEma, number | null>,
     })
   }
   return { sectors, latestDate, error: null }

@@ -46,6 +46,11 @@ export type SectorSelectionRow = {
   sector_index_excess_21d_s33?: number | null
   sector_index_excess_63d_s33?: number | null
   sector_index_excess_126d_s33?: number | null
+  // 業種指数の EMA からの距離（2026-11-07 追加）。(終値 − EMA) / 同じ日の ATR14（Wilder）。符号付きの R。
+  // 表示は extR() / fmtT() を通す
+  sector_index_ext_ema9_s33?: number | null
+  sector_index_ext_ema21_s33?: number | null
+  sector_index_ext_ema50_s33?: number | null
 
   // ── ③ 業種別空売りの生内訳（short_selling 由来）──────────────────────────
   sector_sell_ex_short_va_s33?: number | null   // 空売り以外の実注文 売り代金（円）
@@ -83,6 +88,16 @@ export function bySelfT63(
   b: Pick<SectorSelectionRow, 'self_t63'>,
 ): number {
   return (isNum(b.self_t63) ? b.self_t63 : -Infinity) - (isNum(a.self_t63) ? a.self_t63 : -Infinity)
+}
+
+/** 距離（R）を出す EMA */
+export const EXT_EMAS = [9, 21, 50] as const
+export type ExtEma = (typeof EXT_EMAS)[number]
+
+/** 業種指数の EMA からの距離（R）。未投入の日は null */
+export function extR(r: SectorSelectionRow, n: ExtEma): number | null {
+  const v = r[`sector_index_ext_ema${n}_s33`]
+  return isNum(v) ? v : null
 }
 
 /** 符号付きの t 値表示 (+1.23 / −0.45 / ±0.00) */

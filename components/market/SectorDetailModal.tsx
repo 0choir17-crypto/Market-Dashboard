@@ -6,7 +6,7 @@ import TvChart from '@/components/chart/TvChart'
 import type { MaLength } from '@/components/sectors33/SectorCandleChart'
 import { fetchSectorChart, type SectorTrend } from '@/lib/sectorTrendFetch'
 import type { OhlcvBar, VolumeBar } from '@/types/chart'
-import { CloseVs, EmaChain, SelfRow, SignalPill, Slopes } from './trendAtoms'
+import { CloseVs, EmaChain, ExtRow, SelfRow, SignalPill, Slopes } from './trendAtoms'
 
 // 業種カードの詳細。判定の材料 + 自力 t 値 + TradingView 風チャート。
 // 業種指数の OHLC は直近 150 営業日しか無いので期間の切替は持たない（EMA150 は引けない）。
@@ -51,6 +51,7 @@ export default function SectorDetailModal({
         )}
         <div className="max-w-xs">
           <SelfRow s={sector} />
+          <ExtRow s={sector} />
         </div>
 
         {data?.error ? (
