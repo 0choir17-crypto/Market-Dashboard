@@ -98,7 +98,7 @@ app/layout.tsx  (RootLayout, lang="ja")
      （t63 の一覧にいて t21 の一覧にいない割合）。**色の判定は持たない**（`lib/leaderState.ts`）。2026-10 の検証で、失速は普段から 70〜85% あって
      判定が毎日ほぼ赤になること、失速の高さとその後の値動きに関係が無いことが分かったため。増減の矢印も無彩色。営業日は liquid_leaders にある日付で数える。
      詳細 = 一覧の件数の推移（`liquid_leaders_sector` を日ごとに合算）+ 外れた・入った・失速した銘柄の一覧 + `/leaders` へのリンク
-6. **Sectors** `components/market/SectorStateCards.tsx` — 33 業種の判定カード（1 列 2〜5 枚、画面幅で変わる）。書き方は指数カードと同じ + 自力 t21 / t63・注意の印（self_t63 ≤ −1）。
+6. **Sectors** `components/market/SectorStateCards.tsx` — 33 業種の判定カード（1 列 2〜5 枚、画面幅で変わる）。書き方は指数カードと同じ + 自力 t21 / t63・注意の印（self_t63 ≤ −1）・EMA9 / 21 / 50 からの距離（R。`sector_index_ext_ema{9,21,50}_s33`）。
    並びは 緑 → 黄 → 赤、同じ色の中は self_t21 の高い順。見出し右に色ごとの件数。日付ピッカーに連動。
    クリックで `SectorDetailModal`（`TvChart`、EMA 9 / 21 / 50 + 業種出来高。業種指数の OHLC は直近 150 営業日のみ）。
    データ: `sector_selection_s33`（`lib/sectorTrendFetch.ts`）
@@ -115,8 +115,8 @@ app/layout.tsx  (RootLayout, lang="ja")
 旧列は全期間 null で後日 DROP されるので、どこからも読まない。並びはすべて `self_t63` の高い順（null = 所属 5 社未満の業種は最後）。
 - ヘッダー行: 見出し（`showHeading`）/ サブタイトル + 最新日 / MA 凡例 / 表示切替（チャート ⇄ テーブル）
 - チャート表示: `SectorChartGallery`（→ `SectorCandleChart`）。カード見出し = 業種名・注意の印・Self t63 と 5 日差の矢印。
-  重ねる指標 = なし / Self t63 / Self t21（縦軸 −4〜+4 固定）。チャート下のセル = Self t63・Self t21・Med/Idx・VA z・VA up・N（対象/全銘柄）
-- テーブル表示: `SectorSelectionTable`（→ `SectorChangeCells`）。列 = Sector・Self t63・Self t21（主の指標。t 値そのもの）・Δ t63 5d・Δ t21 5d・Med vs Idx t21・VA share z250・VA up 21/63・N 対象・N 全銘柄。
+  重ねる指標 = なし / Self t63 / Self t21（縦軸 −4〜+4 固定）。チャート下のセル = Self t63・Self t21・Med/Idx・VA z・VA up・N（対象/全銘柄）、その下に Ext R EMA9 / 21 / 50
+- テーブル表示: `SectorSelectionTable`（→ `SectorChangeCells`）。列 = Sector・Self t63・Self t21（主の指標。t 値そのもの）・Δ t63 5d・Δ t21 5d・Med vs Idx t21・VA share z250・VA up 21/63・Ext R EMA9 / 21 / 50（業種指数の終値と EMA の距離）・N 対象・N 全銘柄。
   行を開くと期間リターン / TOPIX 超過と空売り内訳
 - 注意の印 = `self_t63 ≤ −1`（注意色の文字「注意」1 つだけ。塗りつぶしは使わない）。5 日差 = 一覧は別列 Δ t63 / Δ t21 に数値（±0.1 以上で緑 / 赤）、チャートカード見出しは self_t63 の矢印（`SelfStrength.tsx`）
 - 下部: 「N営業日の推移（RRG: self_t63 × self_t21）」— 既定は折りたたみ（`<details>`）。`SectorRRG33` = 横 self_t63 / 縦 self_t21、0 中心、横 −1 に注意の点線

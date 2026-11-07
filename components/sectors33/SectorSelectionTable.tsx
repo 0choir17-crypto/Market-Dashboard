@@ -1,16 +1,17 @@
 'use client'
 
 // 業種一覧 (最新日)。並びは self_t63 の高い順 (null = 所属 5 社未満の業種は最後)。
-// 列: 業種・Self t63 (注意の印)・Self t21・Δ t63 / Δ t21 (5 営業日前との差)・Med vs Idx・VA share z・VA up %・N (対象 / 全銘柄)。
+// 列: 業種・Self t63 (注意の印)・Self t21・Δ t63 / Δ t21 (5 営業日前との差)・Med vs Idx・VA share z・VA up %・
+//     Ext R EMA9 / 21 / 50 (業種指数の終値と EMA の距離)・N (対象 / 全銘柄)。
 // 主の指標は t 値そのもの。5 日差は補助として別の列に置く。
 // 行を開くと期間リターン / TOPIX 超過と空売り内訳。
 
 import { useMemo, useState } from 'react'
-import { SectorSelectionRow, isNum, SELF_T63_CAUTION, SELF_DIFF_STEP } from '@/types/sectorSelection'
+import { SectorSelectionRow, isNum, SELF_T63_CAUTION, SELF_DIFF_STEP, EXT_EMA_KEYS, EXT_R_NOTE } from '@/types/sectorSelection'
 import { SectorChangeInline } from './SectorChangeCells'
 import type { SectorIndexChangeEntry } from '@/lib/sectorIndexChangeFetch'
 import DataTable, { type Column } from '@/components/shared/DataTable'
-import { CautionMark, DiffValue, TValue, CAUTION_NOTE } from './SelfStrength'
+import { CautionMark, DiffValue, RValue, TValue, CAUTION_NOTE } from './SelfStrength'
 import type { SelfDiff } from '@/lib/sectorSelectionHistoryFetch'
 
 function fmtPctPlain(v: number | null | undefined): string {
@@ -246,6 +247,22 @@ export default function SectorSelectionTable({
           <span className="num text-[var(--text-secondary)]">{fmtPctPlain(r.va21_vs63_up_pct)}</span>
         ),
       },
+      // 業種指数の終値と EMA の距離 (R)
+      ...EXT_EMA_KEYS.map(
+        ({ len, key }): Column<SectorSelectionRow> => ({
+          key,
+          label: (
+            <span className="inline-block leading-tight">
+              Ext R
+              <br />
+              <span className="font-normal">EMA{len}</span>
+            </span>
+          ),
+          tooltip: `${EXT_R_NOTE}。EMA${len}`,
+          value: (r: SectorSelectionRow) => (isNum(r[key]) ? r[key] : null),
+          render: (r: SectorSelectionRow) => <RValue v={r[key]} strong={len === 21} />,
+        }),
+      ),
       {
         key: 'n_stocks',
         label: (
@@ -335,6 +352,8 @@ export default function SectorSelectionTable({
         </span>
         <span className="text-[var(--text-muted)]">|</span>
         <span>Med vs Idx / VA share / VA up は状況の説明用（成績の予測には効かない）</span>
+        <span className="text-[var(--text-muted)]">|</span>
+        <span>Ext R = 業種指数の終値と EMA の距離（R）</span>
         <span className="text-[var(--text-muted)]">|</span>
         <span>所属 5 社未満の業種は —（並びの最後）</span>
       </div>

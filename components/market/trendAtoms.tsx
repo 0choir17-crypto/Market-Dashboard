@@ -6,7 +6,8 @@
 
 import { SLOPE_LOOKBACK, type TrendSignal, type TrendState } from '@/lib/trendState'
 import type { SectorTrend } from '@/lib/sectorTrendFetch'
-import { TValue } from '@/components/sectors33/SelfStrength'
+import { RValue, TValue } from '@/components/sectors33/SelfStrength'
+import { EXT_R_NOTE } from '@/types/sectorSelection'
 
 export const SIGNAL_STYLE: Record<TrendSignal, { bg: string; fg: string; bd: string; name: string }> = {
   green: { bg: 'var(--sem-strong-bg)', fg: 'var(--sem-strong-fg)', bd: 'var(--sem-strong-bd)', name: '緑' },
@@ -149,6 +150,25 @@ export function SelfRow({ s }: { s: SectorTrend }) {
         <span className="text-[var(--text-muted)]">t63</span>
         <TValue v={s.selfT63} />
       </div>
+    </div>
+  )
+}
+
+/** 業種指数の終値と EMA9 / 21 / 50 の距離（R） */
+export function ExtRow({ s }: { s: SectorTrend }) {
+  const items = [
+    { label: 'EMA9', v: s.extEma9 },
+    { label: '21', v: s.extEma21 },
+    { label: '50', v: s.extEma50 },
+  ]
+  return (
+    <div className="mt-1 grid grid-cols-3 gap-2 text-caption" title={EXT_R_NOTE}>
+      {items.map((it, i) => (
+        <div key={it.label} className="flex justify-between gap-1">
+          <span className="text-[var(--text-muted)]">{i === 0 ? `距離 ${it.label}` : it.label}</span>
+          <RValue v={it.v} strong={i === 1} />
+        </div>
+      ))}
     </div>
   )
 }

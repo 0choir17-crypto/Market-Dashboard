@@ -6,7 +6,7 @@ import TvChart from '@/components/chart/TvChart'
 import type { MaLength } from '@/components/sectors33/SectorCandleChart'
 import { fetchSectorChart, type SectorTrend } from '@/lib/sectorTrendFetch'
 import type { OhlcvBar, VolumeBar } from '@/types/chart'
-import { CloseVs, EmaChain, SelfRow, SignalPill, Slopes } from './trendAtoms'
+import { CloseVs, EmaChain, ExtRow, SelfRow, SignalPill, Slopes } from './trendAtoms'
 
 // 業種カードの詳細。判定の材料 + 自力 t 値 + TradingView 風チャート。
 // 業種指数の OHLC は直近 150 営業日しか無いので期間の切替は持たない（EMA150 は引けない）。
@@ -49,8 +49,9 @@ export default function SectorDetailModal({
             </div>
           </div>
         )}
-        <div className="max-w-xs">
+        <div className="max-w-sm">
           <SelfRow s={sector} />
+          <ExtRow s={sector} />
         </div>
 
         {data?.error ? (
@@ -65,7 +66,7 @@ export default function SectorDetailModal({
           <TvChart title={sector.sector} bars={data.bars} volumes={data.volumes} volumeLabel="業種出来高" maLengths={MA_LENGTHS} />
         )}
         <p className="text-caption text-[var(--text-muted)]">
-          業種指数の始値・高値・安値・終値は直近 150 営業日ぶんのみ（そのため EMA50 は TradingView と僅かにずれることがある）。自力 t21 / t63 = TOPIX につられた分を除いた業種の強さ
+          業種指数の始値・高値・安値・終値は直近 150 営業日ぶんのみ（そのため EMA50 は TradingView と僅かにずれることがある）。自力 t21 / t63 = TOPIX につられた分を除いた業種の強さ。距離 = 終値と EMA9 / 21 / 50 の距離（R）
         </p>
       </div>
     </Modal>

@@ -46,6 +46,10 @@ export type SectorSelectionRow = {
   sector_index_excess_21d_s33?: number | null
   sector_index_excess_63d_s33?: number | null
   sector_index_excess_126d_s33?: number | null
+  // 業種指数の終値と EMA の距離（R。2026-11 追加・全期間・毎晩更新）。+ = 終値が EMA より上
+  sector_index_ext_ema9_s33?: number | null
+  sector_index_ext_ema21_s33?: number | null
+  sector_index_ext_ema50_s33?: number | null
 
   // ── ③ 業種別空売りの生内訳（short_selling 由来）──────────────────────────
   sector_sell_ex_short_va_s33?: number | null   // 空売り以外の実注文 売り代金（円）
@@ -92,3 +96,20 @@ export function fmtT(v: number | null | undefined): string {
   if (r === 0) return '±0.00'
   return `${r > 0 ? '+' : '−'}${Math.abs(r).toFixed(2)}`
 }
+
+/** EMA からの距離 (R) を符号付きで (+1.2R / −0.4R / ±0.0R) */
+export function fmtR(v: number | null | undefined): string {
+  if (!isNum(v)) return '—'
+  const r = Math.round(v * 10) / 10
+  if (r === 0) return '±0.0R'
+  return `${r > 0 ? '+' : '−'}${Math.abs(r).toFixed(1)}R`
+}
+
+/** 一覧・カードで並べる EMA 距離の列。EMA9 / 21 / 50 の順 */
+export const EXT_EMA_KEYS = [
+  { len: 9, key: 'sector_index_ext_ema9_s33' },
+  { len: 21, key: 'sector_index_ext_ema21_s33' },
+  { len: 50, key: 'sector_index_ext_ema50_s33' },
+] as const
+
+export const EXT_R_NOTE = '業種指数の終値と EMA の距離（R）。+ = 終値が EMA より上 / − = 下'

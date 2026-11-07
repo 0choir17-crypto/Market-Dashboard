@@ -9,6 +9,7 @@
 import {
   SELF_DIFF_STEP,
   SELF_T63_CAUTION,
+  fmtR,
   fmtT,
   isCaution,
   isNum,
@@ -66,6 +67,16 @@ export function DiffValue({ diff, bare = false }: { diff: number | undefined; ba
   return (
     <span className="text-caption num" style={{ color }}>
       {bare ? (ok ? fmtT(diff) : '—') : `(${ok ? fmtT(diff) : '—'})`}
+    </span>
+  )
+}
+
+/** EMA からの距離 (R)。良し悪しの色は付けない（伸びすぎ・押しの両方に使うため）。値が無ければ灰の「—」 */
+export function RValue({ v, strong = false }: { v: number | null | undefined; strong?: boolean }) {
+  if (!isNum(v)) return <span className="text-[var(--sem-idle-fg)]">—</span>
+  return (
+    <span className={`num ${strong ? 'text-[var(--text-primary)] font-medium' : 'text-[var(--text-secondary)]'}`}>
+      {fmtR(v)}
     </span>
   )
 }

@@ -15,7 +15,9 @@ import type { OhlcvBar, VolumeBar } from '@/types/chart'
 
 const TABLE = 'sector_selection_s33'
 
-const COLUMNS = 'date, sector_name_s33, sector_index_close_s33, self_t63, self_t21'
+const COLUMNS =
+  'date, sector_name_s33, sector_index_close_s33, self_t63, self_t21, ' +
+  'sector_index_ext_ema9_s33, sector_index_ext_ema21_s33, sector_index_ext_ema50_s33'
 
 /** 詳細チャートで取る足数（生カラムが非 null の範囲） */
 const SECTOR_CHART_BARS = 150
@@ -32,6 +34,10 @@ export type SectorTrend = {
   /** 最終日の業種の自力。無ければ null */
   selfT63: number | null
   selfT21: number | null
+  /** 最終日の業種指数の終値と EMA9 / 21 / 50 の距離（R）。無ければ null */
+  extEma9: number | null
+  extEma21: number | null
+  extEma50: number | null
 }
 
 export type SectorTrendResult = {
@@ -101,6 +107,9 @@ export async function fetchSectorTrends(endDate?: string): Promise<SectorTrendRe
       state: computeTrendState(points),
       selfT63: isLatest ? num(last.self_t63) : null,
       selfT21: isLatest ? num(last.self_t21) : null,
+      extEma9: isLatest ? num(last.sector_index_ext_ema9_s33) : null,
+      extEma21: isLatest ? num(last.sector_index_ext_ema21_s33) : null,
+      extEma50: isLatest ? num(last.sector_index_ext_ema50_s33) : null,
     })
   }
   return { sectors, latestDate, error: null }
