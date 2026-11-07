@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { insertResilient, updateResilient } from '@/lib/resilientWrite'
 import { supabase } from '@/lib/supabase'
-import { suggestShares } from '@/lib/rStats'
+import { suggestShares, computeRAtr } from '@/lib/rStats'
 import { ENTRY_TYPES } from '@/lib/entryTypes'
 import { Trade } from '@/types/trades'
 import { classifyResult } from '@/lib/tradeResult'
@@ -224,6 +224,9 @@ export default function PositionModal({ open, onClose, onSaved, initial, slowdow
         result: classifyResult(pnl),
         r_multiple: rMult,
         exit_reason: exitReason,
+        ...(initial?.atr_at_entry != null && initial.atr_at_entry > 0
+          ? { r_atr: computeRAtr(ep2, xp, initial.atr_at_entry) }
+          : {}),
       }
     }
 

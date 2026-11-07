@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { computeRAtr } from '@/lib/rStats'
 import { supabase } from '@/lib/supabase'
 import { insertResilient } from '@/lib/resilientWrite'
 import { Trade } from '@/types/trades'
@@ -96,6 +97,10 @@ export default function CloseModal({ open, onClose, onSaved, position }: Props) 
     const pnlPct = position.entry_price > 0
       ? ((ep2 - position.entry_price) / position.entry_price) * 100
       : null
+    // ATR 基準の R（atr_at_entry がある時だけ書く。無ければ列ごと触らない）
+    const rAtrFields = position.atr_at_entry != null && position.atr_at_entry > 0
+      ? { r_atr: computeRAtr(position.entry_price, ep2, position.atr_at_entry) }
+      : {}
 
     // MFE/MAE（取得失敗してもクローズは成功扱い）
     let mfeMaeFields: Partial<MfeMaeResult> = {}
@@ -155,6 +160,8 @@ export default function CloseModal({ open, onClose, onSaved, position }: Props) 
         target_r: position.target_r,
         exit_reason: exitReason,
         r_multiple: rMult,
+        ...rAtrFields,
+        atr_at_entry: position.atr_at_entry ?? null,
         signal_price: position.signal_price,
         rs_at_entry: position.rs_at_entry,
         rvol_at_entry: position.rvol_at_entry,
@@ -194,6 +201,7 @@ export default function CloseModal({ open, onClose, onSaved, position }: Props) 
           pnl: pnl,
           pnl_pct: pnlPct,
           r_multiple: rMult,
+          ...rAtrFields,
           exit_reason: exitReason,
           result,
           status: 'closed',

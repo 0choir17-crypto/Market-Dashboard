@@ -5,7 +5,7 @@
 
 import { useMemo, useState } from 'react'
 import { Trade } from '@/types/trades'
-import { computeRStats, RStats } from '@/lib/rStats'
+import { computeRStats, R_BASIS_LABEL, R_UNIT, RBasis, RStats } from '@/lib/rStats'
 import { ENTRY_TYPES, isPullback } from '@/lib/entryTypes'
 import { EXIT_REASONS } from '@/components/journal/CloseTradeModal'
 import { formatPct } from '@/lib/format'
@@ -59,9 +59,9 @@ const DIMS: Dim[] = [
   },
 ]
 
-function fmtR(v: number | null): string {
+function fmtU(v: number | null, u: string): string {
   if (v == null || !Number.isFinite(v)) return '—'
-  return `${v > 0 ? '+' : ''}${v.toFixed(2)}R`
+  return `${v > 0 ? '+' : ''}${v.toFixed(2)}${u}`
 }
 
 function rClass(v: number | null): string {
@@ -69,7 +69,9 @@ function rClass(v: number | null): string {
   return v > 0 ? 'text-[var(--positive)]' : v < 0 ? 'text-[var(--negative)]' : 'text-[var(--text-secondary)]'
 }
 
-export default function ExpectancyBreakdown({ trades }: { trades: Trade[] }) {
+export default function ExpectancyBreakdown({ trades, basis }: { trades: Trade[]; basis: RBasis }) {
+  const u = R_UNIT[basis]
+  const fmtR = (v: number | null) => fmtU(v, u)
   const [dimKey, setDimKey] = useState('mc')
   const dim = DIMS.find(d => d.key === dimKey) ?? DIMS[0]
 
@@ -85,21 +87,24 @@ export default function ExpectancyBreakdown({ trades }: { trades: Trade[] }) {
     }
     const out: { group: string; s: RStats }[] = []
     for (const [group, ts] of groups) {
-      const s = computeRStats(ts, '')
+      const s = computeRStats(ts, '', basis)
       if (s.positions > 0) out.push({ group, s })
     }
     const order = dim.order ?? []
     const rank = (g: string) => { const i = order.indexOf(g); return i < 0 ? order.length : i }
     out.sort((a, b) => rank(a.group) - rank(b.group) || b.s.positions - a.s.positions)
     return out
-  }, [trades, dim])
+  }, [trades, dim, basis])
 
   if (rows.length === 0) return null
 
   return (
     <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-4 mb-6">
       <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-        <h3 className="text-small font-medium text-[var(--text-primary)]">切り口別の期待値</h3>
+        <h3 className="text-small font-medium text-[var(--text-primary)]">
+          切り口別の期待値
+          <span className="ml-2 text-caption font-normal text-[var(--text-muted)]">{R_BASIS_LABEL[basis]}</span>
+        </h3>
         <select
           value={dimKey}
           onChange={e => setDimKey(e.target.value)}
@@ -119,7 +124,7 @@ export default function ExpectancyBreakdown({ trades }: { trades: Trade[] }) {
               <th className="text-right font-medium py-1.5 px-2">平均勝ち</th>
               <th className="text-right font-medium py-1.5 px-2">平均負け</th>
               <th className="text-right font-medium py-1.5 px-2">期待値</th>
-              <th className="text-right font-medium py-1.5 pl-2">合計 R</th>
+              <th className="text-right font-medium py-1.5 pl-2">合計 {u}</th>
             </tr>
           </thead>
           <tbody>
@@ -132,7 +137,7 @@ export default function ExpectancyBreakdown({ trades }: { trades: Trade[] }) {
                     {thin && <span className="ml-1.5 text-caption text-[var(--text-muted)]">参考値</span>}
                   </td>
                   <td className="py-1.5 px-2 text-right num text-[var(--text-secondary)]">
-                    {s.positions}{s.missingR > 0 && <span className="text-[var(--text-muted)]">（R {s.withR}）</span>}
+                    {s.positions}{s.missingR > 0 && <span className="text-[var(--text-muted)]">（{u} {s.withR}）</span>}
                   </td>
                   <td className="py-1.5 px-2 text-right num text-[var(--text-secondary)]">
                     {s.winRate != null ? formatPct(s.winRate, { digits: 0 }) : '—'}
@@ -150,8 +155,8 @@ export default function ExpectancyBreakdown({ trades }: { trades: Trade[] }) {
         </table>
       </div>
       <p className="text-caption text-[var(--text-muted)] mt-2">
-        件数は分割決済を束ねたポジション数。期待値・平均 R は初期ストップがあるものだけで計算。
-        R 算出 {MIN_SAMPLE} 件未満は参考値。
+        件数は分割決済を束ねたポジション数。期待値・平均は{basis === 'stop' ? '初期ストップ' : 'ATR'}があるものだけで計算。
+        算出 {MIN_SAMPLE} 件未満は参考値。
       </p>
     </div>
   )
