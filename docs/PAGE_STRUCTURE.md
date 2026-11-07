@@ -136,10 +136,16 @@ app/layout.tsx  (RootLayout, lang="ja")
 
 - ヘッダー右: 日付セレクト（ページ独自。`DateContext` は使わない。選択肢は表示日と無関係に全履歴）/「最新に戻る」/ 銘柄コード・銘柄名の検索ボックス
 - 過去日バナー / ErrorBanner / ローディング / データなし
-- 本体
-  1. `ReadingNotes`（page 内）— 読み方の注記（t 値と段ごとの入る線・ADR 下限・5 日比の色・偶然で入る分など）
-  2. `SectorWeekHeatmap` — 業種 × 週（直近 52 週。`liquid_leaders_sector` の「業種の大きさから見込む件数との差」の週平均。上 t21 / 下 t63、左 大型 / 右 中小の 4 枚を同時表示。濃淡は緑 3 段（1 未満 / 1〜3 / 3 件以上）。並びだけ切替）
-  3. `LiquidLeadersTable` × 2 — 段 (large=大型: 売買代金上位 200 位・ADR 2% 以上・t 2.0 で入る / mid=中小: 201〜1,000 位・ADR 3% 以上・t 1.5 で入る。出る線はどちらも入った後の最高値 − 1) ごとに 1 表（幅 1,760px 以上は左 大型 / 右 中小、それより狭いと上 大型 / 下 中小）。列は Code / Name・Sector（業種）・t21 (5d Δ)・t63 (5d Δ)・Gap（t21−t63）・Turnover ×60d（代金の勢い va_trend。色なし）・Since t21・Since t63（その一覧に入った日。いなければ —）。既定は t63 の一覧にいる銘柄を t63 の高い順、その後ろに t21 の高い順
+- 本体 = タブ 3 つ（既定 Sector Board）+ 下に `ReadingNotes`（読み方の注記。既定は閉じる `<details>`）
+  1. **Sector Board** `components/leaders/LiquidSectorBoard.tsx` — RS Leaders の Sector Board と同じ並べ方。段（大型 / 中小）は切替。
+     行 = 33 業種（既定は銘柄のある業種だけ）。左 = 業種名・業種の判定（Market タブと同じ。`fetchSectorTrends(表示日)`）・t63 / t21 の件数と
+     「業種の大きさから見込む件数との差」（業種 × 週ヒートマップと同じ計算、表示日の値）・t63 の差の折れ線（直近 63 営業日）。
+     右 = 札（`byListOrder` の順）。塗り = t63 の一覧にいる（数字 t63、濃さ = 入る線 +1 以上 / 入る線以上 / 入る線未満）、枠だけ = t21 の一覧だけ（数字 t21）。
+     ↑↓ = 5 営業日前からの t の増減（±0.1 以上）、新 = 5 営業日前に一覧にいない、T2.3× = Turnover 2.0× 以上。
+     並び = 見込みとの差 t63（既定）/ 同 t21 / Trend / 銘柄数。検索に合わない札は薄くする。札クリック → TradingView
+  2. **Table** — `LiquidLeadersTable` × 2。段 (large=大型: 売買代金上位 200 位・ADR 2% 以上・t 2.0 で入る / mid=中小: 201〜1,000 位・ADR 3% 以上・t 1.5 で入る。出る線はどちらも入った後の最高値 − 1) ごとに 1 表（幅 1,760px 以上は左 大型 / 右 中小、それより狭いと上 大型 / 下 中小）。列は Code / Name・Sector（業種）・t21 (5d Δ)・t63 (5d Δ)・Gap（t21−t63）・Turnover ×60d（代金の勢い va_trend。色なし）・Since t21・Since t63（その一覧に入った日。いなければ —）。既定は t63 の一覧にいる銘柄を t63 の高い順、その後ろに t21 の高い順
+  3. **業種 × 週** `SectorWeekHeatmap` — 業種 × 週（直近 52 週。`liquid_leaders_sector` の「業種の大きさから見込む件数との差」の週平均。上 t21 / 下 t63、左 大型 / 右 中小の 4 枚を同時表示。濃淡は緑 3 段（1 未満 / 1〜3 / 3 件以上）。並びだけ切替）
+  - t63 × t21 の散布図（`LeaderScatter`）は 2026-11 に削除（使っていなかったため）
 - データ: `lib/liquidLeadersFetch.ts`（`fetchLiquidLeadersSnapshot`（表示日と 5 営業日前の 2 回）/ `fetchLiquidLeaderDates` / `fetchLiquidSectorDays`）
 
 ---

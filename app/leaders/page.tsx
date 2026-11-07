@@ -9,10 +9,21 @@ import {
 import { DIFF_DAYS, TIERS, type LiquidLeader } from '@/types/liquidLeaders'
 import LiquidLeadersTable from '@/components/leaders/LiquidLeadersTable'
 import SectorWeekHeatmap from '@/components/leaders/SectorWeekHeatmap'
+import LiquidSectorBoard from '@/components/leaders/LiquidSectorBoard'
+import { fetchSectorTrends, type SectorTrendResult } from '@/lib/sectorTrendFetch'
 import ErrorBanner from '@/components/shared/ErrorBanner'
 import PageHeader from '@/components/shared/PageHeader'
 
+type Tab = 'sector' | 'table' | 'heatmap'
+
+const TABS: { key: Tab; label: string }[] = [
+  { key: 'sector', label: 'Sector Board' },
+  { key: 'table', label: 'Table' },
+  { key: 'heatmap', label: '業種 × 週' },
+]
+
 export default function LeadersPage() {
+  const [tab, setTab] = useState<Tab>('sector')
   const [snapshot, setSnapshot] = useState<LiquidLeadersSnapshot>({ date: null, rows: [] })
   const [loading, setLoading] = useState(true)
   // 日付ピッカーの選択肢は表示日と無関係に全履歴。マウント時に 1 回だけ取る
@@ -70,6 +81,20 @@ export default function LeadersPage() {
     dates.length === 0 ? undefined
       : !prevDate ? null
         : prevData?.date === prevDate ? prevData.map : undefined
+
+  // Market タブの業種カードと同じ判定 (Sector Board の行に添える)。表示日で取り直す
+  const [trends, setTrends] = useState<{ date: string; res: SectorTrendResult } | null>(null)
+  useEffect(() => {
+    if (!selectedDate) return
+    let alive = true
+    fetchSectorTrends(isLatest ? undefined : selectedDate).then(res => {
+      if (alive) setTrends({ date: selectedDate, res })
+    })
+    return () => {
+      alive = false
+    }
+  }, [selectedDate, isLatest])
+  const trendRes = trends && trends.date === selectedDate ? trends.res : null
 
   const byTier = useMemo(() => {
     const m = new Map<string, typeof snapshot.rows>()
@@ -163,29 +188,50 @@ export default function LeadersPage() {
         </div>
       ) : snapshot.rows.length > 0 && (
         <>
-          <ReadingNotes />
-
-          {selectedDate && (
-            <div className="mt-6">
-              <SectorWeekHeatmap endDate={selectedDate} />
+          <div className="flex flex-wrap items-center gap-3 mb-4">
+            <div className="inline-flex gap-1 bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-1">
+              {TABS.map(t => (
+                <button
+                  key={t.key}
+                  onClick={() => setTab(t.key)}
+                  aria-pressed={tab === t.key}
+                  className={`px-4 py-2 min-w-fit text-small font-medium rounded-lg transition-colors ${
+                    tab === t.key
+                      ? 'bg-[var(--sem-focus-fg)] text-white'
+                      : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)]'
+                  }`}
+                >
+                  {t.label}
+                </button>
+              ))}
             </div>
+          </div>
+
+          {tab === 'sector' && selectedDate && (
+            <LiquidSectorBoard rows={snapshot.rows} prev={prev} endDate={selectedDate} trends={trendRes} query={query} />
           )}
+
+          {tab === 'heatmap' && selectedDate && <SectorWeekHeatmap endDate={selectedDate} />}
 
           {/* 1 表は全列で約 800px。2 表を横に並べても横スクロールが出ない幅 (約 1,760px) からだけ並べ、
               それより狭い画面では縦に積む。 */}
-          <div className="mt-6 grid grid-cols-1 min-[1760px]:grid-cols-2 gap-x-6 gap-y-8 items-start">
-            {TIERS.map(t => (
-              <LiquidLeadersTable
-                key={t.key}
-                rows={byTier.get(t.key) ?? []}
-                prev={prev}
-                title={t.label}
-                hint={t.hint}
-                enter={t.enter}
-                query={query}
-              />
-            ))}
-          </div>
+          {tab === 'table' && (
+            <div className="grid grid-cols-1 min-[1760px]:grid-cols-2 gap-x-6 gap-y-8 items-start">
+              {TIERS.map(t => (
+                <LiquidLeadersTable
+                  key={t.key}
+                  rows={byTier.get(t.key) ?? []}
+                  prev={prev}
+                  title={t.label}
+                  hint={t.hint}
+                  enter={t.enter}
+                  query={query}
+                />
+              ))}
+            </div>
+          )}
+
+          <ReadingNotes />
         </>
       )}
     </main>
@@ -195,8 +241,9 @@ export default function LeadersPage() {
 // 読み方の注記
 function ReadingNotes() {
   return (
-    <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-5 text-caption text-[var(--text-secondary)]">
-      <ul className="list-disc pl-5 space-y-1">
+    <details className="mt-6 bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm px-5 py-3 text-caption text-[var(--text-secondary)]">
+      <summary className="cursor-pointer text-small font-medium text-[var(--text-primary)]">読み方</summary>
+      <ul className="list-disc pl-5 space-y-1 mt-2">
         <li>
           t 値 = TOPIX につられた分を除いた強さが毎日どれだけ安定しているか。大型は 2.0 以上・中小は 1.5 以上で一覧に入り、入った後の最高値から 1 下がるまで残る（そのため入る線を割った銘柄も一覧にいる）。
         </li>
@@ -219,6 +266,6 @@ function ReadingNotes() {
           業種 × 週のヒートマップの濃さも「実力ゼロでも偶然で入る分」を含む。差で補正しているが、1〜2 週だけの濃淡は偶然のことが多い。何週も続く塊を読む。
         </li>
       </ul>
-    </div>
+    </details>
   )
 }

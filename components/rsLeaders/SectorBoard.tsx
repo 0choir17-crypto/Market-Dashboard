@@ -12,7 +12,7 @@
 
 import { useMemo, useState } from 'react'
 import { Segmented } from '@/components/leaders/heatmapUi'
-import { SIGNAL_ORDER, SIGNAL_STYLE } from '@/components/market/trendAtoms'
+import { SIGNAL_ORDER, SIGNAL_STYLE, TrendTag } from '@/components/market/trendAtoms'
 import type { SectorTrendResult } from '@/lib/sectorTrendFetch'
 import type { TrendState } from '@/lib/trendState'
 import {
@@ -185,7 +185,7 @@ export default function SectorBoard({
                 <div className="grid grid-cols-[22px_1fr] gap-x-1.5">
                   <span className="text-small text-right text-[var(--text-muted)] num">{s.rank ?? '—'}</span>
                   <span className="text-small font-medium text-[var(--text-primary)]">{s.name}</span>
-                  {st && <TrendTag state={st} />}
+                  {st && <TrendTag state={st} className="col-start-2" />}
                   <div className="col-start-2 flex flex-col items-start gap-0.5 text-caption text-[var(--text-secondary)]">
                     <span className="num">
                       RS≥{RS_MIN} <b className="text-[var(--text-primary)] font-medium">{fmtPct(s.pct)}</b>{' '}
@@ -273,20 +273,5 @@ function Sparkline({ series }: { series: (number | null)[] }) {
       <text x={0} y={9} fontSize={9} fill="var(--text-muted)">{hi.toFixed(0)}%</text>
       <text x={0} y={H - 3} fontSize={9} fill="var(--text-muted)">{lo.toFixed(0)}%</text>
     </svg>
-  )
-}
-
-// 判定の小さな札: ● 緑 上向き EMA9・21 の上
-function TrendTag({ state }: { state: TrendState }) {
-  const sig = SIGNAL_STYLE[state.signal]
-  return (
-    <span
-      className="col-start-2 justify-self-start inline-flex items-center gap-1 rounded border-[0.5px] px-1.5 my-0.5 text-caption"
-      style={{ backgroundColor: sig.bg, borderColor: sig.bd, color: sig.fg }}
-    >
-      <span aria-hidden className="inline-block w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: sig.fg }} />
-      <span className="font-medium">{sig.name}</span>
-      <span>{state.label}</span>
-    </span>
   )
 }

@@ -152,3 +152,18 @@ export function SelfRow({ s }: { s: SectorTrend }) {
     </div>
   )
 }
+
+/** 判定の小さな札: ● 緑 上向き EMA9・21 の上 (RS Leaders / Liquid Leaders の Sector Board) */
+export function TrendTag({ state, className = '' }: { state: TrendState; className?: string }) {
+  const sig = SIGNAL_STYLE[state.signal]
+  return (
+    <span
+      className={`justify-self-start inline-flex items-center gap-1 rounded border-[0.5px] px-1.5 my-0.5 text-caption ${className}`}
+      style={{ backgroundColor: sig.bg, borderColor: sig.bd, color: sig.fg }}
+    >
+      <span aria-hidden className="inline-block w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: sig.fg }} />
+      <span className="font-medium">{sig.name}</span>
+      <span>{state.label}</span>
+    </span>
+  )
+}
