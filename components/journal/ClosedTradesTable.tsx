@@ -5,7 +5,7 @@
 // 旧カード表示は「レビュー」を開かないと MFE / MAE などが見えず、レビューも
 // 1 件ずつ保存ボタンを押す必要があった。ここでは
 //   - 振り返りに使う数字（R・MFE・MAE・取り逃し・自動判定）を列に出す
-//   - 行クリックでチャートとタグを開く。タグはクリックした時点で保存、
+//   - 行クリックで詳細とタグを開く。タグはクリックした時点で保存、
 //     メモは入力欄から離れた時点で自動保存（保存ボタンなし）
 // とする。
 
@@ -19,7 +19,6 @@ import { R_UNIT, rOf, RBasis } from '@/lib/rStats'
 import { missedRate, tradeFlags } from '@/lib/tradeFlags'
 import { tradingViewUrl } from '@/lib/tickerLinks'
 import { toneStyle } from '@/types/semantic'
-import TradeChart from './TradeChart'
 
 type Props = {
   trades: Trade[]
@@ -237,11 +236,8 @@ function TradeDetail({
     ['買いメモ', t.memo || t.entry_reason || null],
   ]
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+    <div className="grid gap-4 lg:grid-cols-2 text-small">
       <div className="min-w-0">
-        <TradeChart trade={t} />
-      </div>
-      <div className="space-y-3 text-small">
         <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
           {facts.filter(([, v]) => v).map(([k, v]) => (
             <Fragment key={k}>
@@ -250,6 +246,8 @@ function TradeDetail({
             </Fragment>
           ))}
         </dl>
+      </div>
+      <div className="space-y-3 min-w-0">
 
         <div>
           <p className="text-caption text-[var(--text-muted)] mb-1">タグ（クリックで保存）</p>
