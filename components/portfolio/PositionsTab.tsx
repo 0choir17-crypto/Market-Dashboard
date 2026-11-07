@@ -41,7 +41,7 @@ function Stat({ label, value, sub, valueClass, title }: {
 }) {
   return (
     <div className="min-w-0" title={title}>
-      <div className="text-caption text-[var(--text-muted)]">{label}</div>
+      <div className="text-small text-[var(--text-muted)]">{label}</div>
       <div className={`text-lead font-medium num leading-tight ${valueClass ?? 'text-[var(--text-primary)]'}`}>{value}</div>
       {sub && <div className="text-caption text-[var(--text-muted)] num">{sub}</div>}
     </div>
@@ -174,8 +174,8 @@ export default function PositionsTab({ positions, capital = null, maxPositions =
 
         {/* 表（スマホでは列を絞る） */}
         <div className="overflow-x-auto">
-          <table className="w-full text-small">
-            <thead className="border-b-[0.5px] border-[var(--border)] text-caption text-[var(--text-muted)]">
+          <table className="w-full text-body">
+            <thead className="border-b-[0.5px] border-[var(--border)] text-small text-[var(--text-muted)]">
               <tr>
                 <th className="text-left font-medium px-2.5 py-2">銘柄</th>
                 <th className="text-right font-medium px-2.5 py-2 hidden sm:table-cell">日数</th>
@@ -193,7 +193,7 @@ export default function PositionsTab({ positions, capital = null, maxPositions =
                   <td className="px-2.5 py-2 whitespace-nowrap">
                     <a href={tradingViewUrl(p.ticker)} target="_blank" rel="noopener noreferrer"
                        className="font-mono font-medium text-[var(--sem-focus-fg)] hover:underline">{p.ticker}</a>
-                    <span className="ml-1.5 text-caption text-[var(--text-secondary)]">{p.company_name}</span>
+                    <span className="ml-1.5 text-small text-[var(--text-secondary)]">{p.company_name}</span>
                     <div className="text-caption text-[var(--text-muted)] font-mono sm:hidden">{p.entry_date}</div>
                   </td>
                   <td className="px-2.5 py-2 text-right num text-[var(--text-secondary)] hidden sm:table-cell" title={p.entry_date}>{held}</td>
@@ -205,7 +205,7 @@ export default function PositionsTab({ positions, capital = null, maxPositions =
                     {pnl != null ? (
                       <>
                         <span className={`num ${pnlColorClass(pnl)}`}>{formatYen(pnl, { sign: true })}</span>
-                        <span className={`num text-caption ml-1 ${pnlColorClass(pct ?? 0)}`}>{formatPct(pct ?? 0, { digits: 1, sign: true })}</span>
+                        <span className={`num text-small ml-1.5 ${pnlColorClass(pct ?? 0)}`}>{formatPct(pct ?? 0, { digits: 1, sign: true })}</span>
                       </>
                     ) : <Dash />}
                   </td>

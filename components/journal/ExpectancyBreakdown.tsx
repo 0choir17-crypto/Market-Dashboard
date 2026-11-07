@@ -6,10 +6,9 @@
 import { useMemo, useState } from 'react'
 import { Trade } from '@/types/trades'
 import { computeRStats, R_BASIS_LABEL, R_UNIT, RBasis, RStats } from '@/lib/rStats'
-import { ENTRY_TYPES, isPullback } from '@/lib/entryTypes'
 import { EXIT_REASONS } from '@/components/journal/CloseTradeModal'
 import { formatPct } from '@/lib/format'
-import { REVIEW_TAGS, getTagById } from '@/lib/reviewTags'
+import { getTagById, tagsOf, ReviewTagCategory } from '@/lib/reviewTags'
 import { tradeFlags } from '@/lib/tradeFlags'
 
 const UNSET = '未設定'
@@ -23,6 +22,21 @@ type Dim = {
   groupOf: (t: Trade) => string | string[]
   /** 表示順（ここに無いグループは件数順で後ろに並べる） */
   order?: readonly string[]
+}
+
+function tagDim(key: string, label: string, cat: ReviewTagCategory): Dim {
+  return {
+    key,
+    label,
+    groupOf: t => {
+      const ls = (t.review_tags ?? [])
+        .map(id => getTagById(id))
+        .filter(tag => tag?.category === cat)
+        .map(tag => tag!.label)
+      return ls.length > 0 ? ls : UNSET
+    },
+    order: [...tagsOf(cat).map(t => t.label), UNSET],
+  }
 }
 
 const DIMS: Dim[] = [
@@ -48,18 +62,6 @@ const DIMS: Dim[] = [
     groupOf: t => t.mc_condition_at_entry?.trim() || UNSET,
   },
   {
-    key: 'entry_type',
-    label: 'エントリー種別',
-    groupOf: t => t.entry_type?.trim() || UNSET,
-    order: [...ENTRY_TYPES, UNSET],
-  },
-  {
-    key: 'entry_family',
-    label: '押し目 vs ブレイク',
-    groupOf: t => !t.entry_type ? UNSET : isPullback(t.entry_type) ? '押し目（計）' : t.entry_type,
-    order: ['押し目（計）', 'ブレイク', 'その他', UNSET],
-  },
-  {
     key: 'screen',
     label: 'スクリーン',
     groupOf: t => t.screen_name?.trim() || UNSET,
@@ -79,15 +81,8 @@ const DIMS: Dim[] = [
     },
     order: ['大勝ち', '取り逃し', '吐き出し', '大きな負け', '該当なし'],
   },
-  {
-    key: 'tag',
-    label: 'レビュータグ',
-    groupOf: t => {
-      const tags = (t.review_tags ?? []).map(id => getTagById(id)?.label).filter((x): x is string => !!x)
-      return tags.length > 0 ? tags : UNSET
-    },
-    order: [...REVIEW_TAGS.map(t => t.label), UNSET],
-  },
+  tagDim('entry_tag', 'エントリー理由', 'entry'),
+  tagDim('exit_tag', 'イグジット理由', 'exit'),
 ]
 
 function fmtU(v: number | null, u: string): string {
@@ -149,7 +144,7 @@ export default function ExpectancyBreakdown({ trades, basis }: { trades: Trade[]
         </select>
       </div>
       <div className="overflow-x-auto">
-        <table className="w-full text-small">
+        <table className="w-full text-body">
           <thead>
             <tr className="text-caption text-[var(--text-muted)] border-b border-[var(--border)]">
               <th className="text-left font-medium py-1.5 pr-2">グループ</th>

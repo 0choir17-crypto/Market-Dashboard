@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo } from 'react'
 import { insertResilient, updateResilient } from '@/lib/resilientWrite'
 import { supabase } from '@/lib/supabase'
 import { suggestShares, computeRAtr } from '@/lib/rStats'
-import { ENTRY_TYPES } from '@/lib/entryTypes'
 import { Trade } from '@/types/trades'
 import { classifyResult } from '@/lib/tradeResult'
 import { EXIT_REASONS } from '@/components/journal/CloseTradeModal'
@@ -42,7 +41,6 @@ export default function PositionModal({ open, onClose, onSaved, initial, slowdow
   const [companyName, setCompanyName] = useState('')
   const [sector, setSector] = useState('')
   const [screenName, setScreenName] = useState('')
-  const [entryType, setEntryType] = useState('')
   const [entryDate, setEntryDate] = useState(today())
   const [entryPrice, setEntryPrice] = useState('')
   const [shares, setShares] = useState('')
@@ -157,7 +155,6 @@ export default function PositionModal({ open, onClose, onSaved, initial, slowdow
       setCompanyName(initial?.company_name ?? '')
       setSector(initial?.sector_s33 ?? '')
       setScreenName(initial?.screen_name ?? '')
-      setEntryType(initial?.entry_type ?? '')
       setEntryDate(initial?.entry_date ?? today())
       setEntryPrice(initial?.entry_price != null ? String(initial.entry_price) : '')
       setShares(initial?.shares != null ? String(initial.shares) : '')
@@ -239,7 +236,6 @@ export default function PositionModal({ open, onClose, onSaved, initial, slowdow
       company_name: companyName.trim() || null,
       sector_s33: sector.trim() || null,
       screen_name: screenName || null,
-      entry_type: entryType || null,
       entry_date: entryDate || today(),
       entry_price: ep2,
       shares: sh2,
@@ -382,24 +378,6 @@ export default function PositionModal({ open, onClose, onSaved, initial, slowdow
                 <option key={s} value={s}>{s}</option>
               ))}
               <option value="Other">Other</option>
-            </select>
-          </div>
-
-          {/* Entry Type（押し目 / ブレイク — 切り口別の期待値に使う） */}
-          <div>
-            <label className={labelClass}>Entry Type</label>
-            <select
-              value={entryType}
-              onChange={e => setEntryType(e.target.value)}
-              className={fieldClass}
-            >
-              <option value="">-- Select --</option>
-              {entryType && !(ENTRY_TYPES as readonly string[]).includes(entryType) && (
-                <option value={entryType}>{entryType}</option>
-              )}
-              {ENTRY_TYPES.map(t => (
-                <option key={t} value={t}>{t}</option>
-              ))}
             </select>
           </div>
 

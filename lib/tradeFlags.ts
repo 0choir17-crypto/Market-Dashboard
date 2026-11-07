@@ -9,9 +9,17 @@ import type { SemanticTone } from '@/types/semantic'
 
 export type TradeFlag = { id: string; label: string; tone: SemanticTone; title: string }
 
+/** MFE / MAE を信用できるか。
+ *  同日決済は日中の高値・安値しか手がかりがなく、それが買う前についた値か後についた値か
+ *  区別できない（買う前の高値は取りようがない）ので使わない。 */
+export function mfeReliable(t: Pick<Trade, 'entry_date' | 'exit_date'>): boolean {
+  return !!t.exit_date && t.entry_date !== t.exit_date
+}
+
 /** 取り逃し率（%）。勝ちトレードで、MFE に対して実際の利益がどれだけ足りなかったか。
  *  負けトレードは分母（MFE）が小さいと値が暴れるので出さない（含み益からの負けは「吐き出し」で拾う） */
-export function missedRate(t: Pick<Trade, 'mfe_pct' | 'pnl_pct'>): number | null {
+export function missedRate(t: Pick<Trade, 'mfe_pct' | 'pnl_pct' | 'entry_date' | 'exit_date'>): number | null {
+  if (!mfeReliable(t)) return null
   if (t.mfe_pct == null || t.mfe_pct <= 0 || t.pnl_pct == null || t.pnl_pct <= 0) return null
   return Math.max(0, (t.mfe_pct - t.pnl_pct) / t.mfe_pct * 100)
 }
@@ -39,7 +47,7 @@ export function tradeFlags(t: Trade): TradeFlag[] {
   const res = effectiveResult(t)
   const out: TradeFlag[] = []
   const pnlD = inDailyRanges(t, t.pnl_pct)
-  const mfeD = inDailyRanges(t, t.mfe_pct)
+  const mfeD = mfeReliable(t) ? inDailyRanges(t, t.mfe_pct) : null
   const missed = missedRate(t)
 
   if (res === 'WIN' && pnlD != null && pnlD >= BIG_WIN_RANGES) {

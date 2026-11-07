@@ -346,29 +346,36 @@ export default function GuidePage() {
         </h2>
         <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-5 text-small text-[var(--text-primary)] space-y-3">
           <p>
-            上から <strong>保有中</strong> → <strong>成績</strong> → <strong>分析タブ</strong> → <strong>決済済み一覧</strong>。記録はヘッダーの
+            上から <strong>1 回のリスク</strong> → <strong>保有中</strong> → <strong>成績</strong> → <strong>分析タブ</strong> → <strong>決済済み一覧</strong>。記録はヘッダーの
             <strong className="text-[var(--sem-focus-fg)]">「＋ 新規トレード」</strong> から。
           </p>
           <ul className="list-disc pl-5 space-y-1.5">
             <li>
-              <strong>保有中</strong>: 含み損益・総建玉（口座資金に対する %）・含み ATR（(現在値 − 建値) ÷ 買う前日の ATR14）。
-              行の <strong>決済 / 編集 / 削除</strong> で操作。
+              <strong>1 回のリスク</strong>: 現金とリスク % を入れると 1 回の許容損失（現金 × リスク %）と、損切り幅ごとの建玉の上限
+              （許容損失 ÷ 損切り幅）を表示。損切り幅と株価を入れると株数（100 株単位）。減速ルール中はリスク % を半分で計算。
+            </li>
+            <li>
+              <strong>保有中</strong>: 含み損益・総建玉（現金に対する %）・含み ATR（(現在値 − 建値) ÷ 買う前日の ATR14）。
             </li>
             <li>
               <strong>成績</strong>: 期待値・勝率（と損益トントンになる勝率）・平均勝ち負け・損益合計（PF）・保有日数・連敗。
-              右上で R の基準を <strong>ATR 基準</strong>（標準）と <strong>損切り基準</strong>（損切り価格を記録したトレードだけ）に切り替え。
-              5 連敗か当月 -5 以下で「リスク % を半分に」の警告。
+              R の基準は <strong>ATR 基準</strong>（標準）と <strong>損切り基準</strong>（損切り価格を記録したトレードだけ）を切り替え。
             </li>
             <li>
-              <strong>分析タブ</strong>: 資産曲線 / 分布 / 切り口別（相場環境・エントリー種別・月別・自動判定・タグなど）/ 取り逃し（最大含み益と実際の決済の比較）。
+              <strong>分析タブ</strong>: 資産曲線 / 分布 / 切り口別（相場環境・月別・自動判定・エントリー理由・イグジット理由など）/ 取り逃し。
             </li>
             <li>
-              <strong>決済済み一覧</strong>: 損益・R・最大益（MFE）・最大損（MAE）・取り逃し率・<strong>自動判定</strong>
-              （大勝ち / 取り逃し / 吐き出し / 大きな負け）を一覧で表示。行をクリックすると詳細が開き、
-              タグはクリックした時点で、学んだことは入力欄を離れた時点で自動保存。
+              <strong>決済済み一覧</strong>: 決済日と期間、損益と建値 → 決済、R、最大益・最大損・取り逃し率、買った日と売った日の
+              RS · RVOL · ADR、<strong>自動判定</strong>（大勝ち / 取り逃し / 吐き出し / 大きな負け）。見出しはスクロールしても固定。
+              <strong>同日決済の最大益・最大損は出さない</strong>（日中の高値・安値が買う前についたか後についたか区別できないため）。
             </li>
             <li>
-              新規トレードは銘柄・日付・建値・株数だけで登録可。業種・損切り・目標株価・株数計算は「詳細」、
+              行をクリックすると <strong>エントリー</strong>（好決算 / EMA押し目 / サポート押し目 / レジスタンス抜け / サプライズ）と
+              <strong>イグジット</strong>（利確 / EMA割れ / サポート割れ / サプライズ）のタグ。クリックした時点で保存、
+              学んだことは入力欄を離れた時点で保存。
+            </li>
+            <li>
+              新規トレードは銘柄・日付・建値・株数だけで登録可。業種・損切り・目標株価は「詳細」、
               過去の売却済みトレードは「売りも記録する」を開いて入力。
             </li>
           </ul>
