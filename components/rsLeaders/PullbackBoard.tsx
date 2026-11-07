@@ -14,6 +14,7 @@ import {
   fmtSigned1,
   nearestBelow,
   pullbackStage,
+  type MaDists,
   type MaKey,
   type RsLeader,
 } from '@/types/rsLeaders'
@@ -106,7 +107,8 @@ export default function PullbackBoard({
 }
 
 // 札の下段: 9: +0.1  21: +0.3  50: +1.4 (太字 = 列の基準の線 / 緑 = すぐ下の線で NEAR_ATR 以内)
-function Dists({ row, bold }: { row: RsLeader; bold: MaKey | null }) {
+// Liquid Leaders の Pullback Board でも使う
+export function Dists({ row, bold }: { row: MaDists; bold: MaKey | null }) {
   const nb = nearestBelow(row)
   const green = nb?.near ? nb.key : null
   return (
