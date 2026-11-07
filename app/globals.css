@@ -100,7 +100,7 @@
   --sem-weak-fg: #b91c1c;
   --sem-weak-bd: #fecaca;
 
-  /* 未評価・未整理・無彩色 — OTHERS、INBOX、SECOND、欠損。
+  /* 未評価・未整理・無彩色 — INBOX、欠損。
      未整理は警戒ではないので琥珀から無彩色へ移した */
   --sem-idle-bg: #f4f4f5;
   --sem-idle-fg: #62626b; /* 淡色地の上で 5.5:1 */
