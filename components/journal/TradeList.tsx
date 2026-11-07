@@ -224,6 +224,7 @@ export default function TradeList({
                       return (
                         <div
                           key={t.id}
+                          id={`trade-${t.id}`}
                           className={`bg-[var(--bg-card)] rounded-lg border border-[var(--border)] hover:shadow-sm transition-shadow ${
                             expanded ? 'lg:col-span-3 md:col-span-2' : ''
                           }`}

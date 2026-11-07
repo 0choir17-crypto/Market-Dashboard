@@ -17,6 +17,7 @@ import PositionModal from '@/components/portfolio/PositionModal'
 import PositionsTab from '@/components/portfolio/PositionsTab'
 import RiskRewardPanel from '@/components/journal/RiskRewardPanel'
 import ExpectancyBreakdown from '@/components/journal/ExpectancyBreakdown'
+import MfeCaptureChart from '@/components/journal/MfeCaptureChart'
 import { computeRStats } from '@/lib/rStats'
 import { todayJST } from '@/lib/dates'
 import ErrorBanner from '@/components/shared/ErrorBanner'
@@ -77,6 +78,14 @@ export default function JournalPage() {
     setExpandedReview(prev => prev === tradeId ? null : tradeId)
   }, [])
 
+  // 散布図の点 → 該当トレードの振り返りを開いてスクロール
+  const openReview = useCallback((tradeId: number) => {
+    setExpandedReview(tradeId)
+    requestAnimationFrame(() => {
+      document.getElementById(`trade-${tradeId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    })
+  }, [])
+
   const handleSectionSaved = useCallback(async () => {
     await fetchAll()
     setExpandedReview(null)
@@ -128,6 +137,7 @@ export default function JournalPage() {
             <SectionHeading>Journal</SectionHeading>
             <RiskRewardPanel stats={rStats} />
             <ExpectancyBreakdown trades={trades} />
+            <MfeCaptureChart trades={closedTrades} onSelect={openReview} />
             <JournalStats trades={trades} />
             <EquityCurveChart trades={trades} />
             <PeriodPerformance trades={trades} />
