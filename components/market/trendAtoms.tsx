@@ -8,7 +8,7 @@ import { Fragment } from 'react'
 import { SLOPE_LOOKBACK, type TrendSignal, type TrendState } from '@/lib/trendState'
 import type { SectorTrend } from '@/lib/sectorTrendFetch'
 import { RDiff, RValue, TValue } from '@/components/sectors33/SelfStrength'
-import { EXT_DIFF_DAYS, EXT_R_NOTE } from '@/types/sectorSelection'
+import { EXT_DIFF_DAYS, EXT_HIST_DAYS, EXT_R_NOTE, fmtR, isNum, type ExtPoint } from '@/types/sectorSelection'
 
 export const SIGNAL_STYLE: Record<TrendSignal, { bg: string; fg: string; bd: string; name: string }> = {
   green: { bg: 'var(--sem-strong-bg)', fg: 'var(--sem-strong-fg)', bd: 'var(--sem-strong-bd)', name: '緑' },
@@ -234,6 +234,51 @@ export function ExtRGrid({
           </span>
         </Fragment>
       ))}
+    </div>
+  )
+}
+
+/**
+ * EMA9 距離（R）の直近 20 営業日の推移。0 を中心に、+ は上へ緑・− は下へ赤の棒。
+ * 縦の目盛りはカードごとに ±max(2, 最大の絶対値を切り上げ) R（右上に表示）。
+ * 棒にマウスを乗せると日付と値。足りない日は左を空ける（棒の幅をカード間でそろえる）。
+ */
+export function RBars({ points, height = 32, className = '' }: { points: ExtPoint[]; height?: number; className?: string }) {
+  const vals = points.map((p) => p.v).filter(isNum)
+  if (vals.length === 0) {
+    return <p className={`text-caption text-[var(--text-muted)] ${className}`}>EMA9 距離の推移: データなし</p>
+  }
+  const scale = Math.max(2, Math.ceil(Math.max(...vals.map(Math.abs))))
+  const pad: (ExtPoint | null)[] = Array(Math.max(0, EXT_HIST_DAYS - points.length)).fill(null)
+  const slots = [...pad, ...points.slice(-EXT_HIST_DAYS)]
+  return (
+    <div className={className}>
+      <div className="flex items-baseline justify-between text-caption text-[var(--text-muted)] mb-1">
+        <span>EMA9 距離 {EXT_HIST_DAYS} 日</span>
+        <span className="num">±{scale}R</span>
+      </div>
+      <div className="relative flex gap-[2px]" style={{ height }} role="img" aria-label={`EMA9 距離（R）の直近 ${EXT_HIST_DAYS} 営業日の推移`}>
+        <div aria-hidden className="absolute left-0 right-0 top-1/2 h-px bg-[var(--border-strong)]" />
+        {slots.map((p, i) => {
+          const v = p?.v
+          const h = isNum(v) ? Math.max((Math.abs(v) / scale) * 50, 3) : 0
+          const up = isNum(v) && v > 0
+          return (
+            <div key={p?.date ?? `pad-${i}`} className="relative flex-1 h-full" title={p ? `${p.date}  ${fmtR(v)}` : undefined}>
+              {isNum(v) && Math.round(v * 10) !== 0 && (
+                <div
+                  className="absolute left-0 right-0"
+                  style={{
+                    height: `${h}%`,
+                    ...(up ? { bottom: '50%', borderRadius: '2px 2px 0 0' } : { top: '50%', borderRadius: '0 0 2px 2px' }),
+                    backgroundColor: up ? 'var(--positive)' : 'var(--negative)',
+                  }}
+                />
+              )}
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }

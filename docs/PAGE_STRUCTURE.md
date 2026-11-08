@@ -88,7 +88,8 @@ app/layout.tsx  (RootLayout, lang="ja")
    - 指数カード: 名前と終値 / 信号（色 + 言葉）/ 終値と EMA9 / 21 / 50 の距離（R。`market_conditions` の `{topix,nikkei,growth}_ext_ema{9,21,50}`、バッチ計算済み・null は —。+ 緑 / − 赤）。
      2026-11 に R を入れたので、EMA の向き（↑↓）・終値と EMA の並び・週足EMA9 / EMA50 との比較はカードから外した（詳細モーダルには残す）。
      R は `market` の行（日付ピッカーで選んだ日）から `indexExtR()`（`types/market.ts`）で読む。列が無ければ — になるだけ。
-     R の横の括弧 = 5 営業日前（5 行前）からの変化（+ 緑 / − 赤）。別の問い合わせ `fetchIndexExtDiffs`（`lib/indexTrendFetch.ts`）で取る。
+     R の横の括弧 = 5 営業日前（5 行前）からの変化（+ 緑 / − 赤）。別の問い合わせ `fetchIndexExtRecent`（`lib/indexTrendFetch.ts`。直近 20 行）で取る。
+     判定と R の間に EMA9 距離（R）の直近 20 営業日の棒グラフ（`RBars`。0 中心、+ 緑上 / − 赤下、目盛りはカードごとに ±max(2, 最大の絶対値の切り上げ)R を右上に表示）。
      判定は日足 EMA9 / EMA21 の位置と向き（`lib/trendState.ts`、向き = 5 営業日前の EMA との比較）。
      緑 = 終値 > EMA21・EMA21↑・終値 > EMA9・EMA9↑・EMA9 > EMA21 / 黄 = 押し（上向き EMA21 は維持）・下向き EMA21 を上抜け・上向き EMA21 を割り込み / 赤 = 下向き EMA21 の下。
      データ: `market_conditions` の `topix_price` / `nikkei_price` / `growth_price`（`lib/indexTrendFetch.ts`）。`gate_state` 系は使わない
@@ -104,6 +105,7 @@ app/layout.tsx  (RootLayout, lang="ja")
 6. **Sectors** `components/market/SectorStateCards.tsx` — 33 業種の判定カード（1 列 2〜5 枚、画面幅で変わる）。書き方は指数カードと同じ: 信号 + EMA9 / 21 / 50 からの距離（R。`sector_index_ext_ema{9,21,50}_s33`。+ 緑 / − 赤）+ 注意の印（self_t63 ≤ −1）。
    EMA の向き・並びと自力 t21 / t63 はカードに出さない（詳細モーダルで見る）。
    R の横の括弧 = 5 営業日前（その業種の 5 行前）からの変化（+ 緑 / − 赤）。`lib/sectorTrendFetch.ts` で取得済みの行から出す。
+   判定と R の間に指数カードと同じ EMA9 距離 20 営業日の棒グラフ（`RBars`）。
    並びは 緑 → 黄 → 赤、同じ色の中は self_t21 の高い順。見出し右に色ごとの件数。日付ピッカーに連動。
    クリックで `SectorDetailModal`（`TvChart`、EMA 9 / 21 / 50 + 業種出来高。業種指数の OHLC は直近 150 営業日のみ）。
    データ: `sector_selection_s33`（`lib/sectorTrendFetch.ts`）
