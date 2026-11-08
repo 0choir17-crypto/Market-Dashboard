@@ -61,17 +61,19 @@ const btnPrimary =
 
 type Calc =
   | { kind: 'invalid' }
-  | { kind: 'ok'; stopPct: number; perShare: number; sz: ReturnType<typeof suggestShares> }
+  | { kind: 'ok'; stopPct: number; perShare: number; sz: ReturnType<typeof suggestShares>; overRisk: boolean }
 
 function calc(entry: number, stop: number, capital: number, riskPct: number): Calc | null {
   if (!(entry > 0) || !(stop > 0)) return null
   if (stop >= entry) return { kind: 'invalid' }
-  return {
-    kind: 'ok',
-    stopPct: (entry - stop) / entry * 100,
-    perShare: entry - stop,
-    sz: suggestShares({ capital, riskPct, entry, stop }),
+  const perShare = entry - stop
+  let sz = suggestShares({ capital, riskPct, entry, stop })
+  // 損切り幅が広く許容損失では 100 株に届かない時も、最小単位の 100 株で計算する（警告は残す）
+  const overRisk = sz != null && sz.shares === 0
+  if (sz != null && overRisk) {
+    sz = { shares: 100, riskYen: 100 * perShare, positionYen: 100 * entry, positionPct: 100 * entry / capital * 100 }
   }
+  return { kind: 'ok', stopPct: perShare / entry * 100, perShare, sz, overRisk }
 }
 
 /** テーブル未作成（SQL 未実行）を見分ける */
@@ -316,15 +318,16 @@ function CalcLine({ c, capital, compact = false }: { c: Calc; capital: number; c
   if (c.sz == null) {
     return <span className="inline-flex flex-wrap gap-x-4">{head}<span className="text-small text-[var(--text-muted)]">現金とリスク % を入れると株数が出ます</span></span>
   }
-  if (c.sz.shares === 0) {
-    return <span className="inline-flex flex-wrap gap-x-4">{head}<span className="text-small text-[var(--sem-watch-fg)]">損切り幅が広く 100 株に届きません</span></span>
-  }
   return (
     <span className="inline-flex flex-wrap gap-x-4 gap-y-0.5">
       {head}
       <strong className="text-[var(--text-primary)]">{c.sz.shares.toLocaleString('ja-JP')} 株</strong>
       <span className="text-[var(--text-secondary)]">建玉 {formatYen(c.sz.positionYen)}（{c.sz.positionPct.toFixed(1)}%）</span>
-      {!compact && (
+      {c.overRisk ? (
+        <span className="text-[var(--sem-watch-fg)]">
+          ⚠ 許容損失超過: 100 株で損失 {formatYen(c.sz.riskYen)}{capital > 0 ? `（${(c.sz.riskYen / capital * 100).toFixed(2)}%）` : ''}
+        </span>
+      ) : !compact && (
         <span className="text-[var(--text-secondary)]">
           損失 {formatYen(c.sz.riskYen)}{capital > 0 ? `（${(c.sz.riskYen / capital * 100).toFixed(2)}%）` : ''}
         </span>
