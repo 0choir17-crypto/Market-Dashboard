@@ -7,7 +7,7 @@
 // 株数は保存せず、現金・リスク % が変われば一覧の株数も計算し直す。
 // 「新規トレードに入力」で新規トレード画面へ引き継ぎ、記録したら一覧から消える（app/journal/page.tsx）。
 // 買付余力（現物のみ）= 口座総額（現金欄）− 保有中の取得額（エントリー × 株数）。
-//   一覧は上から順に買った場合の累計建玉で判定し、余力を超える行に「余力不足」を出す。
+//   一覧は上から順に買う前提で、残り余力を超える行は買える株数（100 株単位）まで減らす。
 
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
@@ -61,7 +61,11 @@ const btnPrimary =
 
 type Calc =
   | { kind: 'invalid' }
-  | { kind: 'ok'; stopPct: number; perShare: number; sz: ReturnType<typeof suggestShares>; overRisk: boolean }
+  | {
+      kind: 'ok'; stopPct: number; perShare: number; sz: ReturnType<typeof suggestShares>; overRisk: boolean
+      /** 残り余力で株数を減らした時: リスク計算の株数と、減らす前の残り余力 */
+      capped?: { riskShares: number; remaining: number }
+    }
 
 function calc(entry: number, stop: number, capital: number, riskPct: number): Calc | null {
   if (!(entry > 0) || !(stop > 0)) return null
@@ -74,6 +78,19 @@ function calc(entry: number, stop: number, capital: number, riskPct: number): Ca
     sz = { shares: 100, riskYen: 100 * perShare, positionYen: 100 * entry, positionPct: 100 * entry / capital * 100 }
   }
   return { kind: 'ok', stopPct: perShare / entry * 100, perShare, sz, overRisk }
+}
+
+/** 残り余力で買える株数（100 株単位）まで減らす */
+function capToPower(c: Calc | null, entry: number, remaining: number | null, capital: number): Calc | null {
+  if (c?.kind !== 'ok' || c.sz == null || remaining == null) return c
+  const affordable = Math.max(0, Math.floor(remaining / entry / 100) * 100)
+  if (c.sz.shares <= affordable) return c
+  const shares = affordable
+  return {
+    ...c,
+    sz: { shares, riskYen: shares * c.perShare, positionYen: shares * entry, positionPct: capital > 0 ? shares * entry / capital * 100 : 0 },
+    capped: { riskShares: c.sz.shares, remaining },
+  }
 }
 
 /** テーブル未作成（SQL 未実行）を見分ける */
@@ -153,17 +170,23 @@ export default function TradePlans({ capital, holdingsCost, riskPct, onUseForTra
 
   // 買付余力と、上から順に買った場合の累計建玉
   const buyingPower = capital > 0 ? capital - holdingsCost : null
-  const rows = plans.reduce<{ p: TradePlan; c: Calc | null; pos: number; cum: number; short: number }[]>((acc, p) => {
-    const c = calc(Number(p.prev_close), Number(p.stop_price), capital, riskPct)
+  const rows = plans.reduce<{ p: TradePlan; c: Calc | null; pos: number; cum: number }[]>((acc, p) => {
+    const before = acc.length ? acc[acc.length - 1].cum : 0
+    const entry = Number(p.prev_close)
+    const c = capToPower(
+      calc(entry, Number(p.stop_price), capital, riskPct), entry,
+      buyingPower != null ? buyingPower - before : null, capital,
+    )
     const pos = c?.kind === 'ok' && c.sz != null ? c.sz.positionYen : 0
-    const cum = (acc.length ? acc[acc.length - 1].cum : 0) + pos
-    const short = buyingPower != null && pos > 0 && cum > buyingPower ? cum - buyingPower : 0
-    return [...acc, { p, c, pos, cum, short }]
+    return [...acc, { p, c, pos, cum: before + pos }]
   }, [])
   const plannedTotal = rows.length ? rows[rows.length - 1].cum : 0
-  // 入力中の計画を足した時の残り（編集中の行は二重に数えない）
-  const editingPos = form.id ? rows.find(r => r.p.id === form.id)?.pos ?? 0 : 0
-  const formPos = formCalc?.kind === 'ok' && formCalc.sz != null && formCalc.sz.shares > 0 ? formCalc.sz.positionYen : null
+  // 入力中の計画: 新規は一覧の最後に足す前提、編集中はその行より上の累計を差し引いた残り余力で判定
+  const editingRow = form.id ? rows.find(r => r.p.id === form.id) : undefined
+  const formRemaining = buyingPower == null ? null
+    : buyingPower - (editingRow ? editingRow.cum - editingRow.pos : plannedTotal)
+  const formCalcCapped = capToPower(formCalc, prevClose, formRemaining, capital)
+  const formPos = formCalcCapped?.kind === 'ok' && formCalcCapped.sz != null && formCalcCapped.sz.shares > 0 ? formCalcCapped.sz.positionYen : null
 
   return (
     <div className="mt-3 pt-3 border-t-[0.5px] border-[var(--border)]">
@@ -205,15 +228,10 @@ export default function TradePlans({ capital, holdingsCost, riskPct, onUseForTra
           <span className="text-small text-[var(--text-muted)]">前日終値と損切り価格を入れると損切り幅と株数が出ます</span>
         ) : (
           <span className="inline-flex flex-wrap gap-x-4">
-            <CalcLine c={formCalc} capital={capital} />
-            {formPos != null && buyingPower != null && (() => {
-              const left = buyingPower - (plannedTotal - editingPos) - formPos
-              return (
-                <span className={left < 0 ? 'text-[var(--sem-watch-fg)]' : 'text-[var(--text-secondary)]'}>
-                  {left < 0 ? `余力不足 ${formatYen(-left)}` : `追加後の残り余力 ${formatYen(left)}`}
-                </span>
-              )
-            })()}
+            {formCalcCapped && <CalcLine c={formCalcCapped} capital={capital} />}
+            {formPos != null && formRemaining != null && (
+              <span className="text-[var(--text-secondary)]">追加後の残り余力 {formatYen(formRemaining - formPos)}</span>
+            )}
           </span>
         )}
       </div>
@@ -226,8 +244,8 @@ export default function TradePlans({ capital, holdingsCost, riskPct, onUseForTra
           <button
             type="button"
             className={btnSmall}
-            disabled={!(form.code.trim() !== '' && formCalc?.kind === 'ok' && formCalc.sz != null && formCalc.sz.shares > 0)}
-            onClick={() => handoff(form.id, form.code.trim().toUpperCase(), form.name.trim() || null, prevClose, stop, form.memo.trim() || null, formCalc)}
+            disabled={!(form.code.trim() !== '' && formPos != null)}
+            onClick={() => handoff(form.id, form.code.trim().toUpperCase(), form.name.trim() || null, prevClose, stop, form.memo.trim() || null, formCalcCapped)}
           >
             新規トレードに入力 →
           </button>
@@ -251,7 +269,7 @@ export default function TradePlans({ capital, holdingsCost, riskPct, onUseForTra
               <span>買付余力 <strong className="text-[var(--text-primary)]">{formatYen(buyingPower)}</strong>
                 <span className="text-[var(--text-muted)]">（総額 {formatYen(capital)} − 保有中 {formatYen(holdingsCost)}）</span></span>
               <span>検討中の合計 {formatYen(plannedTotal)}</span>
-              <span className={buyingPower - plannedTotal < 0 ? 'text-[var(--sem-watch-fg)]' : ''}>
+              <span>
                 全部買った後の残り <strong>{formatYen(buyingPower - plannedTotal)}</strong>
               </span>
             </span>
@@ -261,7 +279,7 @@ export default function TradePlans({ capital, holdingsCost, riskPct, onUseForTra
           <div className="text-small text-[var(--text-muted)]">まだありません</div>
         ) : (
           <ul className="divide-y-[0.5px] divide-[var(--border)]">
-            {rows.map(({ p, c, short }) => {
+            {rows.map(({ p, c }) => {
               const usable = c?.kind === 'ok' && c.sz != null && c.sz.shares > 0
               return (
                 <li key={p.id} className="py-2 flex flex-wrap items-center gap-x-4 gap-y-1">
@@ -273,9 +291,6 @@ export default function TradePlans({ capital, holdingsCost, riskPct, onUseForTra
                     {Number(p.prev_close).toLocaleString('ja-JP')} → 損切り {Number(p.stop_price).toLocaleString('ja-JP')}
                   </span>
                   <span className="text-body num">{c && <CalcLine c={c} capital={capital} compact />}</span>
-                  {short > 0 && (
-                    <span className="text-small num text-[var(--sem-watch-fg)]">余力不足（上から累計で {formatYen(short)} 超過）</span>
-                  )}
                   {p.memo && <span className="text-small text-[var(--text-muted)] basis-full sm:basis-auto">{p.memo}</span>}
                   <span className="ml-auto flex gap-1.5">
                     {onUseForTrade && (
@@ -318,11 +333,26 @@ function CalcLine({ c, capital, compact = false }: { c: Calc; capital: number; c
   if (c.sz == null) {
     return <span className="inline-flex flex-wrap gap-x-4">{head}<span className="text-small text-[var(--text-muted)]">現金とリスク % を入れると株数が出ます</span></span>
   }
+  if (c.capped && c.sz.shares === 0) {
+    return (
+      <span className="inline-flex flex-wrap gap-x-4">
+        {head}
+        <span className="text-[var(--sem-watch-fg)]">
+          余力不足で買えません（残り余力 {formatYen(Math.max(0, c.capped.remaining))}・リスク計算では {c.capped.riskShares.toLocaleString('ja-JP')} 株）
+        </span>
+      </span>
+    )
+  }
   return (
     <span className="inline-flex flex-wrap gap-x-4 gap-y-0.5">
       {head}
       <strong className="text-[var(--text-primary)]">{c.sz.shares.toLocaleString('ja-JP')} 株</strong>
       <span className="text-[var(--text-secondary)]">建玉 {formatYen(c.sz.positionYen)}（{c.sz.positionPct.toFixed(1)}%）</span>
+      {c.capped && (
+        <span className="text-[var(--sem-watch-fg)]">
+          余力不足のため減額（リスク計算では {c.capped.riskShares.toLocaleString('ja-JP')} 株）
+        </span>
+      )}
       {c.overRisk ? (
         <span className="text-[var(--sem-watch-fg)]">
           ⚠ 許容損失超過: 100 株で損失 {formatYen(c.sz.riskYen)}{capital > 0 ? `（${(c.sz.riskYen / capital * 100).toFixed(2)}%）` : ''}
