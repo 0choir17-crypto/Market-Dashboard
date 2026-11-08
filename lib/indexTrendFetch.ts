@@ -69,11 +69,16 @@ export async function fetchIndexTrends(endDate?: string): Promise<IndexTrendResu
 
 const NULL_EXT: ExtValues = { v9: null, v21: null, v50: null }
 
+/** EMA9 / 21 / 50 それぞれの推移 */
+export type ExtHist = { h9: ExtPoint[]; h21: ExtPoint[]; h50: ExtPoint[] }
+
+const EMPTY_HIST: ExtHist = { h9: [], h21: [], h50: [] }
+
 export type IndexExtRecent = {
   /** EMA9 / 21 / 50 距離（R）の 5 営業日前からの変化（最終日 − 5 行前） */
   diffs: Record<IndexKey, ExtValues>
-  /** EMA9 距離（R）の直近 20 営業日の推移（古い順） */
-  hist9: Record<IndexKey, ExtPoint[]>
+  /** EMA9 / 21 / 50 距離（R）の直近 20 営業日の推移（古い順） */
+  hist: Record<IndexKey, ExtHist>
 }
 
 function num(v: unknown): number | null {
@@ -83,14 +88,14 @@ function num(v: unknown): number | null {
 }
 
 /**
- * 3 指数の EMA 距離（R）の直近の動き: 5 営業日前からの変化と、EMA9 の 20 営業日の推移。
+ * 3 指数の EMA 距離（R）の直近の動き: 5 営業日前からの変化と、EMA9 / 21 / 50 の 20 営業日の推移。
  * 判定とは別の問い合わせにする（取れなくても判定・R は出し、変化と推移だけ空にする）。
  * @param endDate 過去スナップショット表示時の終端日（省略時は最新）
  */
 export async function fetchIndexExtRecent(endDate?: string): Promise<IndexExtRecent> {
   const empty: IndexExtRecent = {
     diffs: { topix: NULL_EXT, nikkei: NULL_EXT, growth: NULL_EXT },
-    hist9: { topix: [], nikkei: [], growth: [] },
+    hist: { topix: EMPTY_HIST, nikkei: EMPTY_HIST, growth: EMPTY_HIST },
   }
   const cols = INDEXES.flatMap((i) => [9, 21, 50].map((n) => `${i.key}_ext_ema${n}`))
   let q = supabase
@@ -113,17 +118,16 @@ export async function fetchIndexExtRecent(endDate?: string): Promise<IndexExtRec
     const b = num(prev[col])
     return a != null && b != null ? a - b : null
   }
-  const out: IndexExtRecent = { diffs: { ...empty.diffs }, hist9: { ...empty.hist9 } }
+  const out: IndexExtRecent = { diffs: { ...empty.diffs }, hist: { ...empty.hist } }
   for (const idx of INDEXES) {
     out.diffs[idx.key] = {
       v9: diff(`${idx.key}_ext_ema9`),
       v21: diff(`${idx.key}_ext_ema21`),
       v50: diff(`${idx.key}_ext_ema50`),
     }
-    out.hist9[idx.key] = rows
-      .slice(0, EXT_HIST_DAYS)
-      .reverse()
-      .map((r) => ({ date: r.date as string, v: num(r[`${idx.key}_ext_ema9`]) }))
+    const recent = rows.slice(0, EXT_HIST_DAYS).reverse()
+    const h = (n: number): ExtPoint[] => recent.map((r) => ({ date: r.date as string, v: num(r[`${idx.key}_ext_ema${n}`]) }))
+    out.hist[idx.key] = { h9: h(9), h21: h(21), h50: h(50) }
   }
   return out
 }

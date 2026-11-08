@@ -3,15 +3,14 @@
 import { useEffect, useState } from 'react'
 import { useDate } from '@/contexts/DateContext'
 import { INDEX_EXT_R_NOTE, MarketConditions, indexExtR, type ExtValues } from '@/types/market'
-import type { ExtPoint } from '@/types/sectorSelection'
-import { fetchIndexExtRecent, fetchIndexTrends, INDEXES, type IndexExtRecent, type IndexKey, type IndexTrendResult } from '@/lib/indexTrendFetch'
+import { fetchIndexExtRecent, fetchIndexTrends, INDEXES, type ExtHist, type IndexExtRecent, type IndexKey, type IndexTrendResult } from '@/lib/indexTrendFetch'
 import { fetchBreadthState, type BreadthState } from '@/lib/breadthState'
 import type { TrendState } from '@/lib/trendState'
 import BreadthStateCard from './BreadthStateCard'
 import LeaderStateCard from './LeaderStateCard'
 import { fetchLeaderState, type LeaderStateResult } from '@/lib/leaderState'
 import IndexDetailModal from './IndexDetailModal'
-import { CardButton, ExtRGrid, RSparkline, SignalPill, fmtLevel } from './trendAtoms'
+import { CardButton, ExtRGrid, RSparklines, SignalPill, fmtLevel } from './trendAtoms'
 
 // Market Regime: 3 指数（TOPIX / 日経225 / グロース250）+ Market Breadth + 主導株（大型 / 中小）の 6 枚。
 // 広い画面では横 1 列、通常の PC 幅では 3 枚 × 2 段（上 = 指数、下 = 参加度と主導株）。
@@ -26,7 +25,7 @@ function IndexCard({
   state,
   ext,
   extDiff,
-  hist9,
+  hist,
   onOpen,
 }: {
   label: string
@@ -34,8 +33,8 @@ function IndexCard({
   ext: ExtValues
   /** 5 営業日前からの変化 */
   extDiff: ExtValues | null
-  /** EMA9 距離（R）の直近 20 営業日 */
-  hist9: ExtPoint[]
+  /** EMA9 / 21 / 50 距離（R）の直近 20 営業日 */
+  hist: ExtHist | null
   onOpen: () => void
 }) {
   return (
@@ -51,7 +50,15 @@ function IndexCard({
           <SignalPill signal={state.signal} label={state.label} />
         </div>
       )}
-      <RSparkline points={hist9} height={36} className="mt-4" />
+      <RSparklines
+        series={[
+          { label: '9', points: hist?.h9 ?? [] },
+          { label: '21', points: hist?.h21 ?? [] },
+          { label: '50', points: hist?.h50 ?? [] },
+        ]}
+        rowHeight={32}
+        className="mt-4"
+      />
       <ExtRGrid
         ema9={ext.v9}
         ema21={ext.v21}
@@ -119,7 +126,7 @@ export default function IndexStateCards({ market }: { market: MarketConditions |
               state={result.states[idx.key]}
               ext={indexExtR(market, idx.key)}
               extDiff={extRecent?.diffs[idx.key] ?? null}
-              hist9={extRecent?.hist9[idx.key] ?? []}
+              hist={extRecent?.hist[idx.key] ?? null}
               onOpen={() => setOpenIndex(idx.key)}
             />
           ) : (
