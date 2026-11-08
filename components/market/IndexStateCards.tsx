@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useDate } from '@/contexts/DateContext'
 import { INDEX_EXT_R_NOTE, MarketConditions, indexExtR, type ExtValues } from '@/types/market'
-import { fetchIndexTrends, INDEXES, type IndexKey, type IndexTrendResult } from '@/lib/indexTrendFetch'
+import { fetchIndexExtDiffs, fetchIndexTrends, INDEXES, type IndexKey, type IndexTrendResult } from '@/lib/indexTrendFetch'
 import { fetchBreadthState, type BreadthState } from '@/lib/breadthState'
 import type { TrendState } from '@/lib/trendState'
 import BreadthStateCard from './BreadthStateCard'
@@ -24,11 +24,14 @@ function IndexCard({
   label,
   state,
   ext,
+  extDiff,
   onOpen,
 }: {
   label: string
   state: TrendState | null
   ext: ExtValues
+  /** 5 営業日前からの変化 */
+  extDiff: ExtValues | null
   onOpen: () => void
 }) {
   return (
@@ -48,6 +51,9 @@ function IndexCard({
         ema9={ext.v9}
         ema21={ext.v21}
         ema50={ext.v50}
+        diff9={extDiff?.v9}
+        diff21={extDiff?.v21}
+        diff50={extDiff?.v50}
         note={INDEX_EXT_R_NOTE}
         large
         className="mt-4 pt-3 border-t border-[var(--border)]"
@@ -62,6 +68,7 @@ export default function IndexStateCards({ market }: { market: MarketConditions |
   const [breadth, setBreadth] = useState<{ state: BreadthState | null; error: string | null } | null>(null)
   const [leaders, setLeaders] = useState<LeaderStateResult | null>(null)
   const [openIndex, setOpenIndex] = useState<IndexKey | null>(null)
+  const [extDiffs, setExtDiffs] = useState<Record<IndexKey, ExtValues> | null>(null)
 
   // 過去スナップショット選択時はその日以前のデータで判定する
   const endDate = isLatest ? undefined : selectedDate || undefined
@@ -70,6 +77,9 @@ export default function IndexStateCards({ market }: { market: MarketConditions |
     let cancelled = false
     fetchIndexTrends(endDate).then((res) => {
       if (!cancelled) setResult(res)
+    })
+    fetchIndexExtDiffs(endDate).then((res) => {
+      if (!cancelled) setExtDiffs(res)
     })
     fetchBreadthState(endDate).then((res) => {
       if (!cancelled) setBreadth(res)
@@ -103,6 +113,7 @@ export default function IndexStateCards({ market }: { market: MarketConditions |
               label={idx.label}
               state={result.states[idx.key]}
               ext={indexExtR(market, idx.key)}
+              extDiff={extDiffs?.[idx.key] ?? null}
               onOpen={() => setOpenIndex(idx.key)}
             />
           ) : (
@@ -135,6 +146,7 @@ export default function IndexStateCards({ market }: { market: MarketConditions |
           index={opened.key}
           label={opened.label}
           state={result?.states[opened.key] ?? null}
+          extDiff={extDiffs?.[opened.key] ?? null}
           market={market}
           endDate={endDate}
           onClose={() => setOpenIndex(null)}

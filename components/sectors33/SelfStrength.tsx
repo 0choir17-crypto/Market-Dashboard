@@ -9,7 +9,9 @@
 import {
   SELF_DIFF_STEP,
   SELF_T63_CAUTION,
+  EXT_DIFF_DAYS,
   fmtR,
+  fmtRDiff,
   fmtT,
   isCaution,
   isNum,
@@ -82,6 +84,16 @@ export function RValue({ v, strong = false }: { v: number | null | undefined; st
   return (
     <span className={`num ${strong ? 'font-medium' : ''}`} style={{ color: rColor(v) }}>
       {fmtR(v)}
+    </span>
+  )
+}
+
+/** R の 5 営業日前からの変化を括弧付きで。+ 緑 / − 赤 / 0 灰。比べる値が無ければ灰の「(—)」 */
+export function RDiff({ diff }: { diff: number | null | undefined }) {
+  const label = isNum(diff) ? `${EXT_DIFF_DAYS} 営業日前から ${fmtRDiff(diff)}R` : `${EXT_DIFF_DAYS} 営業日前の値なし`
+  return (
+    <span className="text-caption num" style={{ color: isNum(diff) ? rColor(diff) : 'var(--sem-idle-fg)' }} title={label}>
+      ({fmtRDiff(diff)})
     </span>
   )
 }

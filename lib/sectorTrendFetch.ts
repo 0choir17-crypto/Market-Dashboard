@@ -3,6 +3,7 @@ import { fetchAllPaged } from './pagedFetch'
 import { barsToCalendarDays } from './indicators'
 import { computeTrendState, type ClosePoint, type TrendState } from './trendState'
 import type { OhlcvBar, VolumeBar } from '@/types/chart'
+import { EXT_DIFF_DAYS } from '@/types/sectorSelection'
 
 // 33 業種の地合い判定。指数カードと同じ EMA9 / EMA21 の判定を業種指数の終値に掛け、
 // 業種の自力 (self_t63 / self_t21) を最終日の値で添える。
@@ -38,6 +39,10 @@ export type SectorTrend = {
   extEma9: number | null
   extEma21: number | null
   extEma50: number | null
+  /** 同・5 営業日前（その業種の 5 行前）からの変化。どちらかが無ければ null */
+  extEma9Diff: number | null
+  extEma21Diff: number | null
+  extEma50Diff: number | null
 }
 
 export type SectorTrendResult = {
@@ -81,7 +86,7 @@ export async function fetchSectorTrends(endDate?: string): Promise<SectorTrendRe
     return { sectors: [], latestDate: null, error }
   }
 
-  const bySector = new Map<string, { points: ClosePoint[]; last: Record<string, unknown> }>()
+  const bySector = new Map<string, { points: ClosePoint[]; last: Record<string, unknown>; recent: Record<string, unknown>[] }>()
   let latestDate: string | null = null
   for (const r of rows) {
     const sector = r.sector_name_s33 as string | null
@@ -90,18 +95,28 @@ export async function fetchSectorTrends(endDate?: string): Promise<SectorTrendRe
     if (!latestDate || date > latestDate) latestDate = date
     let entry = bySector.get(sector)
     if (!entry) {
-      entry = { points: [], last: r }
+      entry = { points: [], last: r, recent: [] }
       bySector.set(sector, entry)
     }
     entry.last = r // 昇順なので最後に来た行が最終日
+    entry.recent.push(r)
+    if (entry.recent.length > EXT_DIFF_DAYS + 1) entry.recent.shift()
     const close = num(r.sector_index_close_s33)
     if (close != null) entry.points.push({ date, close })
   }
 
   const sectors: SectorTrend[] = []
-  for (const [sector, { points, last }] of bySector) {
+  for (const [sector, { points, last, recent }] of bySector) {
     // 最終日に行が無い業種（上場廃止などで途切れた）は自力を出さない
     const isLatest = last.date === latestDate
+    // 5 営業日前 = その業種の 5 行前（行は営業日ごと）
+    const prev = recent.length > EXT_DIFF_DAYS ? recent[0] : null
+    const diff = (col: string): number | null => {
+      if (!isLatest || !prev) return null
+      const a = num(last[col])
+      const b = num(prev[col])
+      return a != null && b != null ? a - b : null
+    }
     sectors.push({
       sector,
       state: computeTrendState(points),
@@ -110,6 +125,9 @@ export async function fetchSectorTrends(endDate?: string): Promise<SectorTrendRe
       extEma9: isLatest ? num(last.sector_index_ext_ema9_s33) : null,
       extEma21: isLatest ? num(last.sector_index_ext_ema21_s33) : null,
       extEma50: isLatest ? num(last.sector_index_ext_ema50_s33) : null,
+      extEma9Diff: diff('sector_index_ext_ema9_s33'),
+      extEma21Diff: diff('sector_index_ext_ema21_s33'),
+      extEma50Diff: diff('sector_index_ext_ema50_s33'),
     })
   }
   return { sectors, latestDate, error: null }

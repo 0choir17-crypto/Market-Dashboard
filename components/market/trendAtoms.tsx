@@ -4,10 +4,11 @@
 // 色だけでは理由が読めないので、信号には必ず判定の言葉を添える。
 // 上下は文字ではなく ↑ / ↓ で、位置関係は「値の大きい順に > でつないだ並び」で一発で読ませる。
 
+import { Fragment } from 'react'
 import { SLOPE_LOOKBACK, type TrendSignal, type TrendState } from '@/lib/trendState'
 import type { SectorTrend } from '@/lib/sectorTrendFetch'
-import { RValue, TValue } from '@/components/sectors33/SelfStrength'
-import { EXT_R_NOTE } from '@/types/sectorSelection'
+import { RDiff, RValue, TValue } from '@/components/sectors33/SelfStrength'
+import { EXT_DIFF_DAYS, EXT_R_NOTE } from '@/types/sectorSelection'
 
 export const SIGNAL_STYLE: Record<TrendSignal, { bg: string; fg: string; bd: string; name: string }> = {
   green: { bg: 'var(--sem-strong-bg)', fg: 'var(--sem-strong-fg)', bd: 'var(--sem-strong-bd)', name: '緑' },
@@ -142,7 +143,7 @@ export function CardButton({
  * 業種の自力 t21 / t63 と、業種指数の終値と EMA9 / 21 / 50 の距離（R）。
  * 2 行を 1 つの表にして列をそろえ、左に詰める（カードが広くても間延びしないように）。
  *   自力   t21 +1.55   t63 +0.78
- *   距離   9   +0.3R   21  +0.7R   50 +1.0R
+ *   距離   9   +0.3R (+0.1)   21  +0.7R (−0.2)   50 +1.0R (+0.0)  ← 括弧 = 5 営業日前からの変化
  */
 export function SectorStats({ s }: { s: SectorTrend }) {
   const cell = (key: string, label: string, value: React.ReactNode, title?: string) => (
@@ -158,21 +159,26 @@ export function SectorStats({ s }: { s: SectorTrend }) {
       {cell('t63', 't63', <TValue v={s.selfT63} />)}
       <span />
       <span className="text-[var(--text-muted)]" title={EXT_R_NOTE}>距離</span>
-      {cell('e9', '9', <RValue v={s.extEma9} />, `${EXT_R_NOTE}。EMA9`)}
-      {cell('e21', '21', <RValue v={s.extEma21} strong />, `${EXT_R_NOTE}。EMA21`)}
-      {cell('e50', '50', <RValue v={s.extEma50} />, `${EXT_R_NOTE}。EMA50`)}
+      {cell('e9', '9', <><RValue v={s.extEma9} /> <RDiff diff={s.extEma9Diff} /></>, `${EXT_R_NOTE}。EMA9`)}
+      {cell('e21', '21', <><RValue v={s.extEma21} strong /> <RDiff diff={s.extEma21Diff} /></>, `${EXT_R_NOTE}。EMA21`)}
+      {cell('e50', '50', <><RValue v={s.extEma50} /> <RDiff diff={s.extEma50Diff} /></>, `${EXT_R_NOTE}。EMA50`)}
     </div>
   )
 }
 
 /**
- * 終値と EMA9 / 21 / 50 の距離（R）を 3 列で。見出しの下に値（+ 緑 / − 赤）。
+ * 終値と EMA9 / 21 / 50 の距離（R）と、その横に 5 営業日前からの変化（括弧）。+ 緑 / − 赤。
  * 指数カード・業種カードで使う。株価の位置はこれで読むので、EMA の向き・並びはカードに出さない。
+ *   large（指数カード）: 3 列。見出しの下に「+1.2R (+0.3)」
+ *   既定（業種カード）: 狭いので 1 行 1 本。「EMA9  +1.2R  (+0.3)」を列をそろえて左に詰める
  */
 export function ExtRGrid({
   ema9,
   ema21,
   ema50,
+  diff9,
+  diff21,
+  diff50,
   large = false,
   note = EXT_R_NOTE,
   className = '',
@@ -180,25 +186,53 @@ export function ExtRGrid({
   ema9: number | null | undefined
   ema21: number | null | undefined
   ema50: number | null | undefined
+  /** 5 営業日前からの変化。無ければ「(—)」 */
+  diff9?: number | null
+  diff21?: number | null
+  diff50?: number | null
   large?: boolean
   /** ホバーで出す説明（既定は業種の文言） */
   note?: string
   className?: string
 }) {
   const items = [
-    { label: 'EMA9', v: ema9 },
-    { label: 'EMA21', v: ema21 },
-    { label: 'EMA50', v: ema50 },
+    { label: 'EMA9', v: ema9, d: diff9 },
+    { label: 'EMA21', v: ema21, d: diff21 },
+    { label: 'EMA50', v: ema50, d: diff50 },
   ]
+  const title = `${note}。括弧 = ${EXT_DIFF_DAYS} 営業日前からの変化`
+  if (large) {
+    return (
+      <div className={`grid grid-cols-3 gap-2 ${className}`} title={title}>
+        {items.map((it) => (
+          <div key={it.label}>
+            <p className="text-caption text-[var(--text-muted)]">{it.label}</p>
+            <p className="flex items-baseline gap-1.5 whitespace-nowrap">
+              <span className="text-lead">
+                <RValue v={it.v} strong />
+              </span>
+              <RDiff diff={it.d} />
+            </p>
+          </div>
+        ))}
+      </div>
+    )
+  }
   return (
-    <div className={`grid grid-cols-3 gap-2 ${className}`} title={note}>
+    <div
+      className={`grid grid-cols-[repeat(3,max-content)] gap-x-3 gap-y-0.5 items-baseline ${className}`}
+      title={title}
+    >
       {items.map((it) => (
-        <div key={it.label}>
-          <p className="text-caption text-[var(--text-muted)]">{it.label}</p>
-          <p className={large ? 'text-lead' : 'text-small'}>
+        <Fragment key={it.label}>
+          <span className="text-caption text-[var(--text-muted)]">{it.label}</span>
+          <span className="text-small text-right">
             <RValue v={it.v} strong />
-          </p>
-        </div>
+          </span>
+          <span className="text-right">
+            <RDiff diff={it.d} />
+          </span>
+        </Fragment>
       ))}
     </div>
   )

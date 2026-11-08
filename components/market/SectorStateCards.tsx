@@ -49,6 +49,9 @@ function SectorCard({ s, onOpen }: { s: SectorTrend; onOpen: () => void }) {
         ema9={s.extEma9}
         ema21={s.extEma21}
         ema50={s.extEma50}
+        diff9={s.extEma9Diff}
+        diff21={s.extEma21Diff}
+        diff50={s.extEma50Diff}
         className="mt-2 pt-2 border-t border-[var(--border)]"
       />
     </CardButton>
