@@ -11,7 +11,7 @@ import BreadthStateCard from './BreadthStateCard'
 import LeaderStateCard from './LeaderStateCard'
 import { fetchLeaderState, type LeaderStateResult } from '@/lib/leaderState'
 import IndexDetailModal from './IndexDetailModal'
-import { CardButton, ExtRGrid, RBars, SignalPill, fmtLevel } from './trendAtoms'
+import { CardButton, ExtRGrid, RSparkline, SignalPill, fmtLevel } from './trendAtoms'
 
 // Market Regime: 3 指数（TOPIX / 日経225 / グロース250）+ Market Breadth + 主導株（大型 / 中小）の 6 枚。
 // 広い画面では横 1 列、通常の PC 幅では 3 枚 × 2 段（上 = 指数、下 = 参加度と主導株）。
@@ -51,7 +51,7 @@ function IndexCard({
           <SignalPill signal={state.signal} label={state.label} />
         </div>
       )}
-      <RBars points={hist9} height={36} className="mt-4" />
+      <RSparkline points={hist9} height={36} className="mt-4" />
       <ExtRGrid
         ema9={ext.v9}
         ema21={ext.v21}
