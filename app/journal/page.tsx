@@ -133,6 +133,7 @@ export default function JournalPage() {
               slowdown={rStats.slowdown.active}
               onSaved={fetchAll}
               plansReloadKey={plansReloadKey}
+              holdingsCost={openPositions.reduce((sum, t) => sum + (t.entry_price ?? 0) * (t.shares ?? 0), 0)}
               onUseForTrade={({ planId, ...v }) => {
                 setNewTradeInitial(v)
                 setPendingPlanId(planId)

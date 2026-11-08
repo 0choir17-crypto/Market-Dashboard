@@ -25,6 +25,8 @@ type Props = {
   onUseForTrade?: (v: PlanHandoff) => void
   /** 変わったら検討中リストを読み直す */
   plansReloadKey?: number
+  /** 保有中の取得額の合計（買付余力の計算用） */
+  holdingsCost?: number
 }
 
 function readLocal(): { cash?: string; risk?: string } {
@@ -38,7 +40,7 @@ const fieldBase =
   'border border-[var(--border-strong)] rounded-lg px-2.5 py-1.5 text-body num bg-[var(--bg-card)] text-[var(--text-primary)]'
 const field = `${fieldBase} w-full`
 
-export default function RiskBudget({ settings, slowdown = false, onSaved, onUseForTrade, plansReloadKey }: Props) {
+export default function RiskBudget({ settings, slowdown = false, onSaved, onUseForTrade, plansReloadKey, holdingsCost = 0 }: Props) {
   const [cash, setCash] = useState('')
   const [risk, setRisk] = useState('0.5')
   const [msg, setMsg] = useState('')
@@ -112,7 +114,7 @@ export default function RiskBudget({ settings, slowdown = false, onSaved, onUseF
         </div>
       </div>
 
-      <TradePlans capital={c} riskPct={effRisk} onUseForTrade={onUseForTrade} reloadKey={plansReloadKey} />
+      <TradePlans capital={c} holdingsCost={holdingsCost} riskPct={effRisk} onUseForTrade={onUseForTrade} reloadKey={plansReloadKey} />
     </div>
   )
 }
