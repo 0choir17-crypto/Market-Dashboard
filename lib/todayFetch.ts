@@ -6,6 +6,7 @@ import type {
   StructurePivotEventRow,
 } from '@/types/structurePivotEvents'
 import type { VahBreakoutRow } from '@/types/vahBreakouts'
+import type { WeeklyMaReclaimRow } from '@/types/weeklyMaReclaim'
 
 // Daily Watch — 「毎朝チャートを開く銘柄」を機械的に絞り込んだウォッチリスト。
 // jquants-scanner が毎日・平日引け後 (~18:00 JST) に当日分を upsert（冪等）。
@@ -25,6 +26,8 @@ import type { VahBreakoutRow } from '@/types/vahBreakouts'
 const EMA_SETUPS_TABLE = 'ema_setups'
 const VAH_BREAKOUTS_TABLE = 'vah_breakouts'
 const STRUCTURE_PIVOT_TABLE = 'structure_pivot_events'
+// 2026-11-09: weekly_ma_reclaim（Step1m, 週足 4 本線）を新設。週次（週の最後の営業日の夜だけ更新）。
+const WEEKLY_MA_RECLAIM_TABLE = 'weekly_ma_reclaim'
 
 // structure_pivot_events は「直近ヒット窓」モデル。upsert は直近10営業日ぶんなので
 // それに合わせて窓を10営業日に取る。
@@ -42,6 +45,10 @@ export type TodayResponse = {
   vah: VahBreakoutRow[]
   // vah_breakouts の DDL が未実行なら true（ema と同じく「0 件の日」と区別する）。
   vahTableMissing: boolean
+  // weekly_ma_reclaim は週次。weeklyDate = その週の最後の営業日で、日次テーブルの日付とはずれる。
+  weeklyDate: string | null
+  weekly: WeeklyMaReclaimRow[]
+  weeklyTableMissing: boolean
   // 取得失敗の詳細（null なら全クエリ成功）。「0 件」と「取得失敗」を UI で区別するため。
   error: string | null
 }
@@ -143,6 +150,47 @@ async function fetchVahBreakouts(date: string | null): Promise<{
   }
 
   return { date: targetDate, rows: (data ?? []) as unknown as VahBreakoutRow[], tableMissing: false, error: null }
+}
+
+// 週足 4 本線（weekly_ma_reclaim）を単一 date で読む。PK は (date, code) で 1銘柄1行。
+// fetchVahBreakouts と同じく「指定日以前で行がある直近の date」の全行を出す。
+// 週次テーブル（date = 週の最後の営業日）なので、月〜木を選ぶと前の週が出る。これで正しい。
+async function fetchWeeklyMaReclaim(date: string | null): Promise<{
+  date: string | null
+  rows: WeeklyMaReclaimRow[]
+  tableMissing: boolean
+  error: string | null
+}> {
+  let latestQuery = supabase.from(WEEKLY_MA_RECLAIM_TABLE).select('date')
+  if (date) latestQuery = latestQuery.lte('date', date)
+  const { data: latest, error: latestErr } = await latestQuery
+    .order('date', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (latestErr) {
+    if (isMissingTableError(latestErr)) {
+      console.warn(`[${WEEKLY_MA_RECLAIM_TABLE}] table not deployed yet — skipping`)
+      return { date: null, rows: [], tableMissing: true, error: null }
+    }
+    console.error(`[${WEEKLY_MA_RECLAIM_TABLE}] latest date error`, latestErr)
+    return { date: null, rows: [], tableMissing: false, error: `${WEEKLY_MA_RECLAIM_TABLE}: ${latestErr.message}` }
+  }
+
+  const targetDate = (latest?.date as string | undefined) ?? null
+  if (!targetDate) return { date: null, rows: [], tableMissing: false, error: null }
+
+  const { data, error } = await supabase.from(WEEKLY_MA_RECLAIM_TABLE).select('*').eq('date', targetDate)
+  if (error) {
+    if (isMissingTableError(error)) {
+      console.warn(`[${WEEKLY_MA_RECLAIM_TABLE}] table not deployed yet — skipping`)
+      return { date: null, rows: [], tableMissing: true, error: null }
+    }
+    console.error(`[${WEEKLY_MA_RECLAIM_TABLE}] fetch error`, error)
+    return { date: targetDate, rows: [], tableMissing: false, error: `${WEEKLY_MA_RECLAIM_TABLE}: ${error.message}` }
+  }
+
+  return { date: targetDate, rows: (data ?? []) as unknown as WeeklyMaReclaimRow[], tableMissing: false, error: null }
 }
 
 // Advanced Structure Pivot（1st / 2nd ヒット）を「直近ヒット窓」で読む。
@@ -259,13 +307,14 @@ async function fetchStructurePivotEvents(
 export async function fetchToday(opts: { date?: string }): Promise<TodayResponse> {
   const requested = opts.date ?? null
 
-  const [emaRes, structRes, vahRes] = await Promise.all([
+  const [emaRes, structRes, vahRes, weeklyRes] = await Promise.all([
     fetchEmaSetups(requested),
     fetchStructurePivotEvents(requested),
     fetchVahBreakouts(requested),
+    fetchWeeklyMaReclaim(requested),
   ])
 
-  const errors = [emaRes.error, structRes.error, vahRes.error].filter(
+  const errors = [emaRes.error, structRes.error, vahRes.error, weeklyRes.error].filter(
     (e): e is string => !!e,
   )
 
@@ -278,6 +327,9 @@ export async function fetchToday(opts: { date?: string }): Promise<TodayResponse
     vahDate: vahRes.date,
     vah: vahRes.rows,
     vahTableMissing: vahRes.tableMissing,
+    weeklyDate: weeklyRes.date,
+    weekly: weeklyRes.rows,
+    weeklyTableMissing: weeklyRes.tableMissing,
     error: errors.length > 0 ? errors.join(' / ') : null,
   }
 }

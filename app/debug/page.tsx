@@ -14,6 +14,7 @@ const TABLES = [
   'ema_setups',
   'structure_pivot_events',
   'vah_breakouts',
+  'weekly_ma_reclaim',
   'mc_v4_raw_history',
   'sector_selection_s33',
   'sector_index_prices',

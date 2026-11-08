@@ -6,6 +6,7 @@ import { fetchToday, type TodayResponse } from '@/lib/todayFetch'
 import EmaSetupsSection from '@/components/today/EmaSetupsSection'
 import StructurePivotSection from '@/components/today/StructurePivotSection'
 import VahBreakoutSection from '@/components/today/VahBreakoutSection'
+import WeeklyMaReclaimSection from '@/components/today/WeeklyMaReclaimSection'
 import ErrorBanner from '@/components/shared/ErrorBanner'
 import PageHeader from '@/components/shared/PageHeader'
 
@@ -18,6 +19,9 @@ const EMPTY: TodayResponse = {
   vahDate: null,
   vah: [],
   vahTableMissing: false,
+  weeklyDate: null,
+  weekly: [],
+  weeklyTableMissing: false,
   error: null,
 }
 
@@ -68,10 +72,14 @@ export default function TodayPage() {
     [data, displayDate],
   )
 
-  const total = data.ema.length + data.struct.length + data.vah.length
+  // weekly_ma_reclaim は週次（date = 週の最後の営業日）。日次の見出しの日とは一致しないのが普通なので、
+  // 上の「見出しの日より古ければ空にする」は掛けず、見出し日（displayDate）にも混ぜない。
+  // セクション側で「M/D 週」を出して日付の違いを示す。
+  const total = data.ema.length + data.struct.length + data.vah.length + data.weekly.length
 
   // 複数シグナル重複: 同一 code が 2 つ以上のスキャナーに当日出た銘柄。
   // 各スキャナーのカード背景を黄色で強調するために code の集合を作る。
+  // 週次の weekly_ma_reclaim は日付がずれるので数に入れない（Weekly のカードはこの集合を参照して強調だけ付ける）。
   const multiHitCodes = useMemo(() => {
     const counts = new Map<string, number>()
     const addList = (rows: { code: string }[]) => {
@@ -144,6 +152,14 @@ export default function TodayPage() {
             multiHitCodes={multiHitCodes}
             title="EMA Setups"
             subtitle="下落してきて EMA 9 / 21 / 50 または EMA21L（安値で計算した EMA21）にちょうど到達し、安値が「線のすぐ下 0.1ATR」の帯に収まって踏みとどまった日。線を明確に割った日は含まない。同じ銘柄が複数の線に同日タッチするとバッジが並ぶ。IPO バッジは上場250本未満で EMA150 系の条件を免除して載った銘柄。※このスキャナーに統計的エッジは無い（勝率 23.6% に対しベースライン 23.1%、耐えの深さ・ヒゲ/実体・EMA の別はいずれも AUC 0.50）。買いシグナルではなく、毎朝チャートを開く銘柄を機械的に絞り込んだリストとして使う。"
+          />
+          <WeeklyMaReclaimSection
+            rows={data.weekly}
+            weekDate={data.weeklyDate}
+            tableMissing={data.weeklyTableMissing}
+            multiHitCodes={multiHitCodes}
+            title="Weekly MA Reclaim"
+            subtitle="週足の終値が 9EMA・21EMA・30SMA・40SMA の 4 本の上にそろった週（前週は 1 本でも下）。週の最後の営業日（金曜。祝日なら木曜）に更新され、月〜木は前の週の結果を出す。対象は個別株・前週までの 10 日平均代金 5 億円以上・株価 200 円以上・時価総額 100 億円以上。グループは日足 EMA の段階で、中は基準の線に近い順（ATR 単位）。※検証（2018〜2025、同じ対象）では、その週の終値から 252 営業日以内に 2 倍になったのは 5.4%。252 日高値から −50〜−30% 下にいた銘柄は 8.8%（値動きの大きさを揃えた値、8 年すべてで全体を上回った）、高値のすぐ近く（−5〜0%）は 4.2%。出来高の急増はこの対象では効かなかった。買いシグナルではなく、週末にチャートを開く銘柄を機械的に絞り込んだリストとして使う。"
           />
         </div>
       )}
