@@ -8,6 +8,7 @@
 // 「新規トレードに入力」で新規トレード画面へ引き継ぎ、記録したら一覧から消える（app/journal/page.tsx）。
 // 買付余力（現物のみ）= 口座総額（現金欄）− 保有中の取得額（エントリー × 株数）。
 //   一覧は上から順に買う前提で、残り余力を超える行は買える株数（100 株単位）まで減らす。
+// 並び順 = 優先順位（sort_order）。↑↓ で入れ替える。列が未作成なら作成順。
 
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
@@ -24,6 +25,17 @@ export type TradePlan = {
   memo: string | null
   created_at: string
   updated_at: string
+  /** 優先順位（小さいほど先に買う）。列未作成・未設定は null */
+  sort_order?: number | null
+}
+
+const SORT_SQL = 'supabase/migrations/20261113_trade_plans_sort_order.sql'
+
+/** 優先順位順（sort_order 未設定は後ろ、同順位は作成順） */
+function byPriority(a: TradePlan, b: TradePlan): number {
+  const sa = a.sort_order ?? Number.MAX_SAFE_INTEGER
+  const sb = b.sort_order ?? Number.MAX_SAFE_INTEGER
+  return sa !== sb ? sa - sb : a.created_at.localeCompare(b.created_at)
 }
 
 export type PlanHandoff = {
@@ -115,7 +127,7 @@ export default function TradePlans({ capital, holdingsCost, riskPct, onUseForTra
         : `検討中の読み込みに失敗: ${error.message}`)
       return
     }
-    setPlans((data ?? []) as TradePlan[])
+    setPlans([...((data ?? []) as TradePlan[])].sort(byPriority))
   }, [])
 
   useEffect(() => { load() }, [load, reloadKey])
@@ -135,6 +147,8 @@ export default function TradePlans({ capital, holdingsCost, riskPct, onUseForTra
       stop_price: stop,
       memo: form.memo.trim() || null,
       updated_at: new Date().toISOString(),
+      // 新規は一覧の最後（最も低い優先順位）に入れる
+      ...(form.id ? {} : { sort_order: plans.reduce((m, p) => Math.max(m, p.sort_order ?? 0), 0) + 1 }),
     }
     // company_name 列が未作成でも保存は通す（列を除外して再試行）
     const { error, stripped } = form.id
@@ -152,6 +166,28 @@ export default function TradePlans({ capital, holdingsCost, riskPct, onUseForTra
       : form.id ? '更新しました' : '検討中に保存しました')
     setForm(EMPTY)
     load()
+  }
+
+  // 優先順位の入れ替え。画面は先に並べ替え、番号がずれた行だけ保存する
+  async function move(index: number, dir: -1 | 1) {
+    const j = index + dir
+    if (j < 0 || j >= plans.length) return
+    const next = [...plans]
+    ;[next[index], next[j]] = [next[j], next[index]]
+    const changed = next
+      .map((p, k) => ({ p, order: k + 1 }))
+      .filter(({ p, order }) => p.sort_order !== order)
+    setPlans(next.map((p, k) => ({ ...p, sort_order: k + 1 })))
+    const results = await Promise.all(changed.map(({ p, order }) =>
+      updateResilient('trade_plans', { sort_order: order }, { id: p.id })))
+    const failed = results.find(r => r.error)
+    if (results.some(r => r.stripped.includes('sort_order'))) {
+      setMsg(`優先順位を保存するには ${SORT_SQL} を Supabase の SQL Editor で実行してください（今は画面上だけ並べ替えています）`)
+    } else if (failed?.error) {
+      setMsg(`優先順位の保存に失敗しました（ログインが必要です）: ${failed.error.message}`)
+    } else {
+      setMsg('')
+    }
   }
 
   async function remove(p: TradePlan) {
@@ -279,10 +315,21 @@ export default function TradePlans({ capital, holdingsCost, riskPct, onUseForTra
           <div className="text-small text-[var(--text-muted)]">まだありません</div>
         ) : (
           <ul className="divide-y-[0.5px] divide-[var(--border)]">
-            {rows.map(({ p, c }) => {
+            {rows.map(({ p, c }, i) => {
               const usable = c?.kind === 'ok' && c.sz != null && c.sz.shares > 0
               return (
                 <li key={p.id} className="py-2 flex flex-wrap items-center gap-x-4 gap-y-1">
+                  <span className="flex items-center gap-1">
+                    <span className="w-5 text-center text-small num font-medium text-[var(--text-muted)]">{i + 1}</span>
+                    <span className="flex flex-col">
+                      <button type="button" aria-label={`${p.ticker} の優先順位を上げる`} disabled={i === 0}
+                              onClick={() => move(i, -1)}
+                              className="px-1.5 leading-none text-small text-[var(--text-secondary)] hover:text-[var(--text-primary)] disabled:opacity-25 disabled:cursor-not-allowed">▲</button>
+                      <button type="button" aria-label={`${p.ticker} の優先順位を下げる`} disabled={i === rows.length - 1}
+                              onClick={() => move(i, 1)}
+                              className="px-1.5 leading-none text-small text-[var(--text-secondary)] hover:text-[var(--text-primary)] disabled:opacity-25 disabled:cursor-not-allowed">▼</button>
+                    </span>
+                  </span>
                   <span className="min-w-[4rem]">
                     <strong className="text-body num text-[var(--text-primary)]">{p.ticker}</strong>
                     {p.company_name && <span className="ml-1.5 text-small text-[var(--text-secondary)]">{p.company_name}</span>}
@@ -312,7 +359,7 @@ export default function TradePlans({ capital, holdingsCost, riskPct, onUseForTra
         )}
         {plans.length > 0 && (
           <div className="text-caption text-[var(--text-muted)] mt-1">
-            新規トレードに記録すると一覧から消えます。寄り値は新規トレード画面で直してください（株数もそこで計算し直せます）。
+            番号が優先順位です（▲▼ で入れ替え）。上から順に買付余力を割り当てます。新規トレードに記録すると一覧から消えます。寄り値は新規トレード画面で直してください（株数もそこで計算し直せます）。
           </div>
         )}
       </div>
