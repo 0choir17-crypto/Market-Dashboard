@@ -6,15 +6,19 @@
 // 計画は Supabase の trade_plans に保存（全端末で共有、書き込みはログイン必須）。
 // 株数は保存せず、現金・リスク % が変われば一覧の株数も計算し直す。
 // 「新規トレードに入力」で新規トレード画面へ引き継ぎ、記録したら一覧から消える（app/journal/page.tsx）。
+// 買付余力（現物のみ）= 口座総額（現金欄）− 保有中の取得額（エントリー × 株数）。
+//   一覧は上から順に買った場合の累計建玉で判定し、余力を超える行に「余力不足」を出す。
 
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { insertResilient, updateResilient } from '@/lib/resilientWrite'
 import { suggestShares } from '@/lib/rStats'
 import { formatYen, formatPct } from '@/lib/format'
 
 export type TradePlan = {
   id: string
   ticker: string
+  company_name: string | null
   prev_close: number
   stop_price: number
   memo: string | null
@@ -25,6 +29,7 @@ export type TradePlan = {
 export type PlanHandoff = {
   planId: string | null
   ticker: string
+  company_name: string | null
   entry_price: number
   shares: number
   stop_price: number
@@ -34,6 +39,8 @@ export type PlanHandoff = {
 
 type Props = {
   capital: number
+  /** 保有中の取得額の合計（エントリー × 株数）。買付余力 = capital − これ */
+  holdingsCost: number
   /** 減速ルール適用後のリスク % */
   riskPct: number
   onUseForTrade?: (v: PlanHandoff) => void
@@ -41,8 +48,8 @@ type Props = {
   reloadKey?: number
 }
 
-type Form = { id: string | null; code: string; prevClose: string; stop: string; memo: string }
-const EMPTY: Form = { id: null, code: '', prevClose: '', stop: '', memo: '' }
+type Form = { id: string | null; code: string; name: string; prevClose: string; stop: string; memo: string }
+const EMPTY: Form = { id: null, code: '', name: '', prevClose: '', stop: '', memo: '' }
 
 const fieldBase =
   'border border-[var(--border-strong)] rounded-lg px-2.5 py-1.5 text-body bg-[var(--bg-card)] text-[var(--text-primary)]'
@@ -72,7 +79,7 @@ function isMissingTable(err: { code?: string; message: string }): boolean {
   return err.code === '42P01' || err.code === 'PGRST205' || (/trade_plans/.test(err.message) && /not find|does not exist/.test(err.message))
 }
 
-export default function TradePlans({ capital, riskPct, onUseForTrade, reloadKey = 0 }: Props) {
+export default function TradePlans({ capital, holdingsCost, riskPct, onUseForTrade, reloadKey = 0 }: Props) {
   const [form, setForm] = useState<Form>(EMPTY)
   const [plans, setPlans] = useState<TradePlan[]>([])
   const [msg, setMsg] = useState('')
@@ -104,14 +111,16 @@ export default function TradePlans({ capital, riskPct, onUseForTrade, reloadKey 
     setSaving(true)
     const row = {
       ticker: form.code.trim().toUpperCase(),
+      company_name: form.name.trim() || null,
       prev_close: prevClose,
       stop_price: stop,
       memo: form.memo.trim() || null,
       updated_at: new Date().toISOString(),
     }
-    const { error } = form.id
-      ? await supabase.from('trade_plans').update(row).eq('id', form.id)
-      : await supabase.from('trade_plans').insert(row)
+    // company_name 列が未作成でも保存は通す（列を除外して再試行）
+    const { error, stripped } = form.id
+      ? await updateResilient('trade_plans', row, { id: form.id })
+      : await insertResilient('trade_plans', row)
     setSaving(false)
     if (error) {
       setMsg(isMissingTable(error)
@@ -119,7 +128,9 @@ export default function TradePlans({ capital, riskPct, onUseForTrade, reloadKey 
         : `保存に失敗しました（ログインが必要です）: ${error.message}`)
       return
     }
-    setMsg(form.id ? '更新しました' : '検討中に保存しました')
+    setMsg(stripped.includes('company_name')
+      ? '保存しました（銘柄名は未保存: supabase/migrations/20261112_trade_plans_company_name.sql を実行してください）'
+      : form.id ? '更新しました' : '検討中に保存しました')
     setForm(EMPTY)
     load()
   }
@@ -133,10 +144,24 @@ export default function TradePlans({ capital, riskPct, onUseForTrade, reloadKey 
     load()
   }
 
-  function handoff(planId: string | null, ticker: string, entry: number, stopPx: number, memo: string | null, c: Calc | null) {
+  function handoff(planId: string | null, ticker: string, name: string | null, entry: number, stopPx: number, memo: string | null, c: Calc | null) {
     if (!onUseForTrade || c?.kind !== 'ok' || c.sz == null || c.sz.shares <= 0) return
-    onUseForTrade({ planId, ticker, entry_price: entry, shares: c.sz.shares, stop_price: stopPx, signal_price: entry, memo })
+    onUseForTrade({ planId, ticker, company_name: name, entry_price: entry, shares: c.sz.shares, stop_price: stopPx, signal_price: entry, memo })
   }
+
+  // 買付余力と、上から順に買った場合の累計建玉
+  const buyingPower = capital > 0 ? capital - holdingsCost : null
+  const rows = plans.reduce<{ p: TradePlan; c: Calc | null; pos: number; cum: number; short: number }[]>((acc, p) => {
+    const c = calc(Number(p.prev_close), Number(p.stop_price), capital, riskPct)
+    const pos = c?.kind === 'ok' && c.sz != null ? c.sz.positionYen : 0
+    const cum = (acc.length ? acc[acc.length - 1].cum : 0) + pos
+    const short = buyingPower != null && pos > 0 && cum > buyingPower ? cum - buyingPower : 0
+    return [...acc, { p, c, pos, cum, short }]
+  }, [])
+  const plannedTotal = rows.length ? rows[rows.length - 1].cum : 0
+  // 入力中の計画を足した時の残り（編集中の行は二重に数えない）
+  const editingPos = form.id ? rows.find(r => r.p.id === form.id)?.pos ?? 0 : 0
+  const formPos = formCalc?.kind === 'ok' && formCalc.sz != null && formCalc.sz.shares > 0 ? formCalc.sz.positionYen : null
 
   return (
     <div className="mt-3 pt-3 border-t-[0.5px] border-[var(--border)]">
@@ -145,11 +170,16 @@ export default function TradePlans({ capital, riskPct, onUseForTrade, reloadKey 
       </div>
 
       {/* 入力 */}
-      <div className="grid grid-cols-2 sm:grid-cols-[8rem_9rem_9rem_minmax(0,1fr)] gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-[7rem_10rem_8rem_8rem_minmax(0,1fr)] gap-3">
         <label className="block">
           <span className="block text-small text-[var(--text-muted)] mb-1">コード</span>
           <input type="text" value={form.code} onChange={e => setForm(f => ({ ...f, code: e.target.value }))}
                  placeholder="7203" className={field} />
+        </label>
+        <label className="block">
+          <span className="block text-small text-[var(--text-muted)] mb-1">銘柄名</span>
+          <input type="text" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                 placeholder="トヨタ自動車" className={`${fieldBase} w-full`} />
         </label>
         <label className="block">
           <span className="block text-small text-[var(--text-muted)] mb-1">前日終値</span>
@@ -172,7 +202,17 @@ export default function TradePlans({ capital, riskPct, onUseForTrade, reloadKey 
         {formCalc == null ? (
           <span className="text-small text-[var(--text-muted)]">前日終値と損切り価格を入れると損切り幅と株数が出ます</span>
         ) : (
-          <CalcLine c={formCalc} capital={capital} />
+          <span className="inline-flex flex-wrap gap-x-4">
+            <CalcLine c={formCalc} capital={capital} />
+            {formPos != null && buyingPower != null && (() => {
+              const left = buyingPower - (plannedTotal - editingPos) - formPos
+              return (
+                <span className={left < 0 ? 'text-[var(--sem-watch-fg)]' : 'text-[var(--text-secondary)]'}>
+                  {left < 0 ? `余力不足 ${formatYen(-left)}` : `追加後の残り余力 ${formatYen(left)}`}
+                </span>
+              )
+            })()}
+          </span>
         )}
       </div>
 
@@ -185,7 +225,7 @@ export default function TradePlans({ capital, riskPct, onUseForTrade, reloadKey 
             type="button"
             className={btnSmall}
             disabled={!(form.code.trim() !== '' && formCalc?.kind === 'ok' && formCalc.sz != null && formCalc.sz.shares > 0)}
-            onClick={() => handoff(form.id, form.code.trim().toUpperCase(), prevClose, stop, form.memo.trim() || null, formCalc)}
+            onClick={() => handoff(form.id, form.code.trim().toUpperCase(), form.name.trim() || null, prevClose, stop, form.memo.trim() || null, formCalc)}
           >
             新規トレードに入力 →
           </button>
@@ -198,33 +238,52 @@ export default function TradePlans({ capital, riskPct, onUseForTrade, reloadKey 
 
       {/* 検討中 */}
       <div className="mt-4">
-        <div className="text-small text-[var(--text-muted)] mb-1.5">
-          検討中 {plans.length > 0 && <span className="num">（{plans.length}）</span>}
+        <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 mb-1.5">
+          <span className="text-small text-[var(--text-muted)]">
+            検討中 {plans.length > 0 && <span className="num">（{plans.length}）</span>}
+          </span>
+          {buyingPower == null ? (
+            <span className="text-small text-[var(--text-muted)]">現金を入れると買付余力が出ます</span>
+          ) : (
+            <span className="text-small num text-[var(--text-secondary)] flex flex-wrap gap-x-3">
+              <span>買付余力 <strong className="text-[var(--text-primary)]">{formatYen(buyingPower)}</strong>
+                <span className="text-[var(--text-muted)]">（総額 {formatYen(capital)} − 保有中 {formatYen(holdingsCost)}）</span></span>
+              <span>検討中の合計 {formatYen(plannedTotal)}</span>
+              <span className={buyingPower - plannedTotal < 0 ? 'text-[var(--sem-watch-fg)]' : ''}>
+                全部買った後の残り <strong>{formatYen(buyingPower - plannedTotal)}</strong>
+              </span>
+            </span>
+          )}
         </div>
         {plans.length === 0 ? (
           <div className="text-small text-[var(--text-muted)]">まだありません</div>
         ) : (
           <ul className="divide-y-[0.5px] divide-[var(--border)]">
-            {plans.map(p => {
-              const c = calc(p.prev_close, p.stop_price, capital, riskPct)
+            {rows.map(({ p, c, short }) => {
               const usable = c?.kind === 'ok' && c.sz != null && c.sz.shares > 0
               return (
                 <li key={p.id} className="py-2 flex flex-wrap items-center gap-x-4 gap-y-1">
-                  <strong className="text-body num text-[var(--text-primary)] min-w-[4rem]">{p.ticker}</strong>
+                  <span className="min-w-[4rem]">
+                    <strong className="text-body num text-[var(--text-primary)]">{p.ticker}</strong>
+                    {p.company_name && <span className="ml-1.5 text-small text-[var(--text-secondary)]">{p.company_name}</span>}
+                  </span>
                   <span className="text-body num text-[var(--text-secondary)]">
                     {Number(p.prev_close).toLocaleString('ja-JP')} → 損切り {Number(p.stop_price).toLocaleString('ja-JP')}
                   </span>
                   <span className="text-body num">{c && <CalcLine c={c} capital={capital} compact />}</span>
+                  {short > 0 && (
+                    <span className="text-small num text-[var(--sem-watch-fg)]">余力不足（上から累計で {formatYen(short)} 超過）</span>
+                  )}
                   {p.memo && <span className="text-small text-[var(--text-muted)] basis-full sm:basis-auto">{p.memo}</span>}
                   <span className="ml-auto flex gap-1.5">
                     {onUseForTrade && (
                       <button type="button" className={btnSmall} disabled={!usable}
-                              onClick={() => handoff(p.id, p.ticker, Number(p.prev_close), Number(p.stop_price), p.memo, c)}>
+                              onClick={() => handoff(p.id, p.ticker, p.company_name, Number(p.prev_close), Number(p.stop_price), p.memo, c)}>
                         新規トレードに入力
                       </button>
                     )}
                     <button type="button" className={btnSmall} onClick={() => {
-                      setForm({ id: p.id, code: p.ticker, prevClose: String(p.prev_close), stop: String(p.stop_price), memo: p.memo ?? '' })
+                      setForm({ id: p.id, code: p.ticker, name: p.company_name ?? '', prevClose: String(p.prev_close), stop: String(p.stop_price), memo: p.memo ?? '' })
                       setMsg('')
                     }}>編集</button>
                     <button type="button" className={btnSmall} onClick={() => remove(p)}>削除</button>

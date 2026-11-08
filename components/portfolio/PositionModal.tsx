@@ -265,7 +265,13 @@ export default function PositionModal({ open, onClose, onSaved, initial, slowdow
       : await insertResilient('trades', record)
 
     setSaving(false)
-    if (err) { setError(err.message); return }
+    if (err) {
+      // id の連番が既存行より遅れている（id 指定で行を投入した後に起きる）。DB 側で連番を直す必要がある
+      setError(/trades_pkey/.test(err.message)
+        ? `${err.message} — trades の id 連番がずれています。supabase/migrations/20261111_fix_trades_id_seq.sql を Supabase の SQL Editor で実行してから保存し直してください。`
+        : err.message)
+      return
+    }
 
     // 入力したのに DB に列が無く保存できなかった項目を可視化（例: target_price）。
     onSaved()
