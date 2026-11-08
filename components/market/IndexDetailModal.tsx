@@ -4,8 +4,8 @@ import { useEffect, useState } from 'react'
 import Modal from '@/components/shared/Modal'
 import TvChart from '@/components/chart/TvChart'
 import type { MaLength } from '@/components/sectors33/SectorCandleChart'
-import { MarketConditions } from '@/types/market'
-import type { ExtR, IndexKey } from '@/lib/indexTrendFetch'
+import { INDEX_EXT_R_NOTE, MarketConditions, indexExtR } from '@/types/market'
+import type { IndexKey } from '@/lib/indexTrendFetch'
 import {
   DEFAULT_INDEX_RANGE,
   INDEX_RANGES,
@@ -68,7 +68,6 @@ export default function IndexDetailModal({
   index,
   label,
   state,
-  ext = null,
   market,
   endDate,
   onClose,
@@ -76,8 +75,6 @@ export default function IndexDetailModal({
   index: IndexKey
   label: string
   state: TrendState | null
-  /** 終値と EMA9 / 21 / 50 の距離（R） */
-  ext?: ExtR | null
   market: MarketConditions | null
   endDate?: string
   onClose: () => void
@@ -113,7 +110,10 @@ export default function IndexDetailModal({
           </div>
         )}
 
-        <ExtRGrid ema9={ext?.ema9} ema21={ext?.ema21} ema50={ext?.ema50} className="max-w-sm" />
+        {(() => {
+          const ext = indexExtR(market, index)
+          return <ExtRGrid ema9={ext.v9} ema21={ext.v21} ema50={ext.v50} note={INDEX_EXT_R_NOTE} className="max-w-sm" />
+        })()}
 
         <div className="flex flex-wrap gap-6">
           <Change label="1W" value={col('chg_1w')} />

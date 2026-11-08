@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { useDate } from '@/contexts/DateContext'
-import { MarketConditions } from '@/types/market'
-import { fetchIndexTrends, INDEXES, type ExtR, type IndexKey, type IndexTrendResult } from '@/lib/indexTrendFetch'
+import { INDEX_EXT_R_NOTE, MarketConditions, indexExtR, type ExtValues } from '@/types/market'
+import { fetchIndexTrends, INDEXES, type IndexKey, type IndexTrendResult } from '@/lib/indexTrendFetch'
 import { fetchBreadthState, type BreadthState } from '@/lib/breadthState'
 import type { TrendState } from '@/lib/trendState'
 import BreadthStateCard from './BreadthStateCard'
@@ -16,6 +16,7 @@ import { CardButton, ExtRGrid, SignalPill, fmtLevel } from './trendAtoms'
 // 広い画面では横 1 列、通常の PC 幅では 3 枚 × 2 段（上 = 指数、下 = 参加度と主導株）。
 // 自分の成績（My Trades）はこの上の列に別に置く（app/page.tsx）。
 // 指数の判定は日足 EMA9 / EMA21 の位置と向き。カードには判定と、終値と EMA9 / 21 / 50 の距離（R）だけを出す
+// R はバッチ側の値（market_conditions の *_ext_ema*。日付ピッカーで選んだ日の行）をそのまま表示する。
 // （株価の位置は R で読めるので、EMA の向き・並びはカードに出さない。詳細モーダルには残す）。
 // カードをクリックすると詳細を開く。
 
@@ -27,7 +28,7 @@ function IndexCard({
 }: {
   label: string
   state: TrendState | null
-  ext: ExtR | null
+  ext: ExtValues
   onOpen: () => void
 }) {
   return (
@@ -44,9 +45,10 @@ function IndexCard({
         </div>
       )}
       <ExtRGrid
-        ema9={ext?.ema9}
-        ema21={ext?.ema21}
-        ema50={ext?.ema50}
+        ema9={ext.v9}
+        ema21={ext.v21}
+        ema50={ext.v50}
+        note={INDEX_EXT_R_NOTE}
         large
         className="mt-4 pt-3 border-t border-[var(--border)]"
       />
@@ -100,7 +102,7 @@ export default function IndexStateCards({ market }: { market: MarketConditions |
               key={idx.key}
               label={idx.label}
               state={result.states[idx.key]}
-              ext={result.ext[idx.key]}
+              ext={indexExtR(market, idx.key)}
               onOpen={() => setOpenIndex(idx.key)}
             />
           ) : (
@@ -133,7 +135,6 @@ export default function IndexStateCards({ market }: { market: MarketConditions |
           index={opened.key}
           label={opened.label}
           state={result?.states[opened.key] ?? null}
-          ext={result?.ext[opened.key] ?? null}
           market={market}
           endDate={endDate}
           onClose={() => setOpenIndex(null)}

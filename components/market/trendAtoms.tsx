@@ -174,12 +174,15 @@ export function ExtRGrid({
   ema21,
   ema50,
   large = false,
+  note = EXT_R_NOTE,
   className = '',
 }: {
   ema9: number | null | undefined
   ema21: number | null | undefined
   ema50: number | null | undefined
   large?: boolean
+  /** ホバーで出す説明（既定は業種の文言） */
+  note?: string
   className?: string
 }) {
   const items = [
@@ -188,7 +191,7 @@ export function ExtRGrid({
     { label: 'EMA50', v: ema50 },
   ]
   return (
-    <div className={`grid grid-cols-3 gap-2 ${className}`} title={EXT_R_NOTE}>
+    <div className={`grid grid-cols-3 gap-2 ${className}`} title={note}>
       {items.map((it) => (
         <div key={it.label}>
           <p className="text-caption text-[var(--text-muted)]">{it.label}</p>
