@@ -1,9 +1,9 @@
 import { supabase } from './supabase'
 import { fetchAllPaged } from './pagedFetch'
 import { barsToCalendarDays } from './indicators'
-import { computeTrendState, type ClosePoint, type TrendState } from './trendState'
+import { computeTrendState, emaChart, type ClosePoint, type EmaChartPoint, type TrendState } from './trendState'
 import type { OhlcvBar, VolumeBar } from '@/types/chart'
-import { EXT_DIFF_DAYS, EXT_HIST_DAYS, type ExtPoint } from '@/types/sectorSelection'
+import { EXT_DIFF_DAYS } from '@/types/sectorSelection'
 
 // 33 業種の地合い判定。指数カードと同じ EMA9 / EMA21 の判定を業種指数の終値に掛け、
 // 業種の自力 (self_t63 / self_t21) を最終日の値で添える。
@@ -43,10 +43,8 @@ export type SectorTrend = {
   extEma9Diff: number | null
   extEma21Diff: number | null
   extEma50Diff: number | null
-  /** EMA9 / 21 / 50 距離（R）の直近 20 営業日の推移（古い順）。最終日に行が無い業種は空 */
-  extEma9Hist: ExtPoint[]
-  extEma21Hist: ExtPoint[]
-  extEma50Hist: ExtPoint[]
+  /** カードの小さなチャート（直近 60 営業日の終値と EMA9 / 21 / 50） */
+  chart: EmaChartPoint[]
 }
 
 export type SectorTrendResult = {
@@ -104,7 +102,7 @@ export async function fetchSectorTrends(endDate?: string): Promise<SectorTrendRe
     }
     entry.last = r // 昇順なので最後に来た行が最終日
     entry.recent.push(r)
-    if (entry.recent.length > Math.max(EXT_DIFF_DAYS + 1, EXT_HIST_DAYS)) entry.recent.shift()
+    if (entry.recent.length > EXT_DIFF_DAYS + 1) entry.recent.shift()
     const close = num(r.sector_index_close_s33)
     if (close != null) entry.points.push({ date, close })
   }
@@ -114,15 +112,13 @@ export async function fetchSectorTrends(endDate?: string): Promise<SectorTrendRe
     // 最終日に行が無い業種（上場廃止などで途切れた）は自力を出さない
     const isLatest = last.date === latestDate
     // 5 営業日前 = その業種の 5 行前（行は営業日ごと）
-    const prev = recent.length > EXT_DIFF_DAYS ? recent[recent.length - 1 - EXT_DIFF_DAYS] : null
+    const prev = recent.length > EXT_DIFF_DAYS ? recent[0] : null
     const diff = (col: string): number | null => {
       if (!isLatest || !prev) return null
       const a = num(last[col])
       const b = num(prev[col])
       return a != null && b != null ? a - b : null
     }
-    const hist = (col: string): ExtPoint[] =>
-      isLatest ? recent.slice(-EXT_HIST_DAYS).map((r) => ({ date: r.date as string, v: num(r[col]) })) : []
     sectors.push({
       sector,
       state: computeTrendState(points),
@@ -134,9 +130,7 @@ export async function fetchSectorTrends(endDate?: string): Promise<SectorTrendRe
       extEma9Diff: diff('sector_index_ext_ema9_s33'),
       extEma21Diff: diff('sector_index_ext_ema21_s33'),
       extEma50Diff: diff('sector_index_ext_ema50_s33'),
-      extEma9Hist: hist('sector_index_ext_ema9_s33'),
-      extEma21Hist: hist('sector_index_ext_ema21_s33'),
-      extEma50Hist: hist('sector_index_ext_ema50_s33'),
+      chart: emaChart(points),
     })
   }
   return { sectors, latestDate, error: null }

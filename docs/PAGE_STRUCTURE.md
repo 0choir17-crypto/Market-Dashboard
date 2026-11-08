@@ -89,11 +89,9 @@ app/layout.tsx  (RootLayout, lang="ja")
      2026-11 に R を入れたので、EMA の向き（↑↓）・終値と EMA の並び・週足EMA9 / EMA50 との比較はカードから外した（詳細モーダルには残す）。
      R は `market` の行（日付ピッカーで選んだ日）から `indexExtR()`（`types/market.ts`）で読む。列が無ければ — になるだけ。
      R の横の括弧 = 5 営業日前（5 行前）からの変化（+ 緑 / − 赤）。別の問い合わせ `fetchIndexExtRecent`（`lib/indexTrendFetch.ts`。直近 20 行）で取る。
-     判定と R の間に EMA9 / 21 / 50 距離（R）の直近 20 営業日を 1 つの枠に重ねた折れ線（`RSparklines`）。
-     EMA9 = 主の線（0 を挟んで上を緑・下を赤、線と 0 の間も塗る）/ EMA21 = 濃い灰 / EMA50 = 薄い灰。右端に名前。
-     線どうしの間隔 = EMA どうしの間隔（ATR 何本ぶん）。広がる = 加速 / 狭まる = 鈍化 / 交差 = EMA の交差。
-     （縦に 1 本ずつ並べると、終値が共通なので同じ揺れ方の線が並ぶだけになるため重ねた）
-     目盛りは ±max(2, 最大の絶対値の切り上げ)R を右上に表示。マウスを乗せた日は縦の点線と、見出しに日付と各線の値。値の無い日は線を切る。
+     判定と R の間に直近 60 営業日の終値と EMA9 / 21 / 50 の小さなチャート（`EmaMiniChart`。終値 = 太い濃い線、EMA = 詳細チャートと同じ色の細い線、右端に名前）。
+     EMA は判定と同じ計算（`lib/trendState.ts` の `emaChart`。取得した全期間で計算して末尾 60 本を切り出す）。縦軸は 60 日の最小〜最大で目盛りは出さない（離れ具合は下の R で読む）。
+     マウスを乗せた日は縦の点線と、見出しに日付・終値・各 EMA の値。
      判定は日足 EMA9 / EMA21 の位置と向き（`lib/trendState.ts`、向き = 5 営業日前の EMA との比較）。
      緑 = 終値 > EMA21・EMA21↑・終値 > EMA9・EMA9↑・EMA9 > EMA21 / 黄 = 押し（上向き EMA21 は維持）・下向き EMA21 を上抜け・上向き EMA21 を割り込み / 赤 = 下向き EMA21 の下。
      データ: `market_conditions` の `topix_price` / `nikkei_price` / `growth_price`（`lib/indexTrendFetch.ts`）。`gate_state` 系は使わない
@@ -109,7 +107,8 @@ app/layout.tsx  (RootLayout, lang="ja")
 6. **Sectors** `components/market/SectorStateCards.tsx` — 33 業種の判定カード（1 列 2〜5 枚、画面幅で変わる）。書き方は指数カードと同じ: 信号 + EMA9 / 21 / 50 からの距離（R。`sector_index_ext_ema{9,21,50}_s33`。+ 緑 / − 赤）+ 注意の印（self_t63 ≤ −1）。
    EMA の向き・並びと自力 t21 / t63 はカードに出さない（詳細モーダルで見る）。
    R の横の括弧 = 5 営業日前（その業種の 5 行前）からの変化（+ 緑 / − 赤）。`lib/sectorTrendFetch.ts` で取得済みの行から出す。
-   判定と R の間に指数カードと同じ EMA9 / 21 / 50 距離 20 営業日の重ねた折れ線（`RSparklines`）。
+   判定と R の間に指数カードと同じ 60 営業日の終値と EMA9 / 21 / 50 のチャート（`EmaMiniChart`。狭いので `compact`: マウスの見出しは日付と終値だけ）。
+   業種の EMA50 は業種指数の履歴が 150 営業日しか無いため TradingView と最大 2% ほどずれることがある。
    並びは 緑 → 黄 → 赤、同じ色の中は self_t21 の高い順。見出し右に色ごとの件数。日付ピッカーに連動。
    クリックで `SectorDetailModal`（`TvChart`、EMA 9 / 21 / 50 + 業種出来高。業種指数の OHLC は直近 150 営業日のみ）。
    データ: `sector_selection_s33`（`lib/sectorTrendFetch.ts`）

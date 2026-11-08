@@ -1,8 +1,8 @@
 import { supabase } from './supabase'
 import { barsToCalendarDays, emaWarmupBars } from './indicators'
 import type { ExtValues } from '@/types/market'
-import { EXT_DIFF_DAYS, EXT_HIST_DAYS, type ExtPoint } from '@/types/sectorSelection'
-import { SLOPE_LOOKBACK, computeTrendState, type ClosePoint, type TrendState } from './trendState'
+import { EXT_DIFF_DAYS } from '@/types/sectorSelection'
+import { SLOPE_LOOKBACK, computeTrendState, emaChart, type ClosePoint, type EmaChartPoint, type TrendState } from './trendState'
 
 // 3 指数（TOPIX / 日経225 / グロース250）の地合い判定。終値は market_conditions から取る。
 // 日経・グロースは終値しか無いが、EMA の計算には終値だけあれば足りる。
@@ -26,6 +26,8 @@ const LOOKBACK_DAYS = barsToCalendarDays(emaWarmupBars(50) + SLOPE_LOOKBACK)
 
 export type IndexTrendResult = {
   states: Record<IndexKey, TrendState | null>
+  /** カードの小さなチャート（直近 60 営業日の終値と EMA9 / 21 / 50） */
+  charts: Record<IndexKey, EmaChartPoint[]>
   error: string | null
 }
 
@@ -48,11 +50,12 @@ export async function fetchIndexTrends(endDate?: string): Promise<IndexTrendResu
   const empty = { topix: null, nikkei: null, growth: null }
   if (error || !data) {
     if (error) console.error('[market_conditions index trend]', error)
-    return { states: empty, error: error?.message ?? null }
+    return { states: empty, charts: { topix: [], nikkei: [], growth: [] }, error: error?.message ?? null }
   }
 
   const rows = data as unknown as Record<string, unknown>[]
   const states: Record<IndexKey, TrendState | null> = { ...empty }
+  const charts: Record<IndexKey, EmaChartPoint[]> = { topix: [], nikkei: [], growth: [] }
   for (const idx of INDEXES) {
     const points: ClosePoint[] = []
     for (const r of rows) {
@@ -63,23 +66,12 @@ export async function fetchIndexTrends(endDate?: string): Promise<IndexTrendResu
       if (Number.isFinite(close)) points.push({ date: r.date as string, close })
     }
     states[idx.key] = computeTrendState(points)
+    charts[idx.key] = emaChart(points)
   }
-  return { states, error: null }
+  return { states, charts, error: null }
 }
 
 const NULL_EXT: ExtValues = { v9: null, v21: null, v50: null }
-
-/** EMA9 / 21 / 50 それぞれの推移 */
-export type ExtHist = { h9: ExtPoint[]; h21: ExtPoint[]; h50: ExtPoint[] }
-
-const EMPTY_HIST: ExtHist = { h9: [], h21: [], h50: [] }
-
-export type IndexExtRecent = {
-  /** EMA9 / 21 / 50 距離（R）の 5 営業日前からの変化（最終日 − 5 行前） */
-  diffs: Record<IndexKey, ExtValues>
-  /** EMA9 / 21 / 50 距離（R）の直近 20 営業日の推移（古い順） */
-  hist: Record<IndexKey, ExtHist>
-}
 
 function num(v: unknown): number | null {
   if (v === null || v === undefined) return null
@@ -88,46 +80,38 @@ function num(v: unknown): number | null {
 }
 
 /**
- * 3 指数の EMA 距離（R）の直近の動き: 5 営業日前からの変化と、EMA9 / 21 / 50 の 20 営業日の推移。
- * 判定とは別の問い合わせにする（取れなくても判定・R は出し、変化と推移だけ空にする）。
+ * 3 指数の EMA9 / 21 / 50 距離（R）の、5 営業日前からの変化（最終日 − 5 行前）。
+ * 判定とは別の問い合わせにする（取れなくても判定・R は出し、変化だけ「—」にする）。
  * @param endDate 過去スナップショット表示時の終端日（省略時は最新）
  */
-export async function fetchIndexExtRecent(endDate?: string): Promise<IndexExtRecent> {
-  const empty: IndexExtRecent = {
-    diffs: { topix: NULL_EXT, nikkei: NULL_EXT, growth: NULL_EXT },
-    hist: { topix: EMPTY_HIST, nikkei: EMPTY_HIST, growth: EMPTY_HIST },
-  }
+export async function fetchIndexExtDiffs(endDate?: string): Promise<Record<IndexKey, ExtValues>> {
+  const empty = { topix: NULL_EXT, nikkei: NULL_EXT, growth: NULL_EXT }
   const cols = INDEXES.flatMap((i) => [9, 21, 50].map((n) => `${i.key}_ext_ema${n}`))
   let q = supabase
     .from('market_conditions')
     .select(['date', ...cols].join(', '))
     .order('date', { ascending: false })
-    .limit(Math.max(EXT_DIFF_DAYS + 1, EXT_HIST_DAYS))
+    .limit(EXT_DIFF_DAYS + 1)
   if (endDate) q = q.lte('date', endDate)
   const { data, error } = await q
-  if (error || !data || data.length === 0) {
-    if (error) console.error('[market_conditions index ext recent]', error)
+  if (error || !data || data.length <= EXT_DIFF_DAYS) {
+    if (error) console.error('[market_conditions index ext diff]', error)
     return empty
   }
   const rows = data as unknown as Record<string, unknown>[] // 新しい順
-  const cur = rows[0]
-  const prev = rows.length > EXT_DIFF_DAYS ? rows[EXT_DIFF_DAYS] : null
+  const [cur, prev] = [rows[0], rows[EXT_DIFF_DAYS]]
   const diff = (col: string): number | null => {
-    if (!prev) return null
     const a = num(cur[col])
     const b = num(prev[col])
     return a != null && b != null ? a - b : null
   }
-  const out: IndexExtRecent = { diffs: { ...empty.diffs }, hist: { ...empty.hist } }
+  const out = { ...empty }
   for (const idx of INDEXES) {
-    out.diffs[idx.key] = {
+    out[idx.key] = {
       v9: diff(`${idx.key}_ext_ema9`),
       v21: diff(`${idx.key}_ext_ema21`),
       v50: diff(`${idx.key}_ext_ema50`),
     }
-    const recent = rows.slice(0, EXT_HIST_DAYS).reverse()
-    const h = (n: number): ExtPoint[] => recent.map((r) => ({ date: r.date as string, v: num(r[`${idx.key}_ext_ema${n}`]) }))
-    out.hist[idx.key] = { h9: h(9), h21: h(21), h50: h(50) }
   }
   return out
 }

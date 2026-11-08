@@ -108,12 +108,6 @@ export function fmtR(v: number | null | undefined): string {
 /** EMA 距離 (R) の変化を見る営業日数 */
 export const EXT_DIFF_DAYS = 5
 
-/** EMA9 距離 (R) の推移の棒グラフに出す営業日数 */
-export const EXT_HIST_DAYS = 20
-
-/** 推移の 1 点。v が null の日は棒を出さない */
-export type ExtPoint = { date: string; v: number | null }
-
 /** R の差を符号付きで (+0.3 / −0.3 / ±0.0)。単位 R は付けない（横の値に付いているため） */
 export function fmtRDiff(v: number | null | undefined): string {
   if (!isNum(v)) return '—'
