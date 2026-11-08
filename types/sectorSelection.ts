@@ -105,6 +105,23 @@ export function fmtR(v: number | null | undefined): string {
   return `${r > 0 ? '+' : '−'}${Math.abs(r).toFixed(1)}R`
 }
 
+/** EMA 距離 (R) の変化を見る営業日数 */
+export const EXT_DIFF_DAYS = 5
+
+/** EMA9 距離 (R) の推移の棒グラフに出す営業日数 */
+export const EXT_HIST_DAYS = 20
+
+/** 推移の 1 点。v が null の日は棒を出さない */
+export type ExtPoint = { date: string; v: number | null }
+
+/** R の差を符号付きで (+0.3 / −0.3 / ±0.0)。単位 R は付けない（横の値に付いているため） */
+export function fmtRDiff(v: number | null | undefined): string {
+  if (!isNum(v)) return '—'
+  const r = Math.round(v * 10) / 10
+  if (r === 0) return '±0.0'
+  return `${r > 0 ? '+' : '−'}${Math.abs(r).toFixed(1)}`
+}
+
 /** 一覧・カードで並べる EMA 距離の列。EMA9 / 21 / 50 の順 */
 export const EXT_EMA_KEYS = [
   { len: 9, key: 'sector_index_ext_ema9_s33' },

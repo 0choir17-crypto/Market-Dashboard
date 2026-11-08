@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import Modal from '@/components/shared/Modal'
 import TvChart from '@/components/chart/TvChart'
 import type { MaLength } from '@/components/sectors33/SectorCandleChart'
-import { INDEX_EXT_R_NOTE, MarketConditions, indexExtR } from '@/types/market'
+import { INDEX_EXT_R_NOTE, MarketConditions, indexExtR, type ExtValues } from '@/types/market'
 import type { IndexKey } from '@/lib/indexTrendFetch'
 import {
   DEFAULT_INDEX_RANGE,
@@ -68,6 +68,7 @@ export default function IndexDetailModal({
   index,
   label,
   state,
+  extDiff = null,
   market,
   endDate,
   onClose,
@@ -75,6 +76,8 @@ export default function IndexDetailModal({
   index: IndexKey
   label: string
   state: TrendState | null
+  /** EMA 距離（R）の 5 営業日前からの変化 */
+  extDiff?: ExtValues | null
   market: MarketConditions | null
   endDate?: string
   onClose: () => void
@@ -112,7 +115,19 @@ export default function IndexDetailModal({
 
         {(() => {
           const ext = indexExtR(market, index)
-          return <ExtRGrid ema9={ext.v9} ema21={ext.v21} ema50={ext.v50} note={INDEX_EXT_R_NOTE} className="max-w-sm" />
+          return (
+            <ExtRGrid
+              ema9={ext.v9}
+              ema21={ext.v21}
+              ema50={ext.v50}
+              diff9={extDiff?.v9}
+              diff21={extDiff?.v21}
+              diff50={extDiff?.v50}
+              note={INDEX_EXT_R_NOTE}
+              large
+              className="max-w-md"
+            />
+          )
         })()}
 
         <div className="flex flex-wrap gap-6">

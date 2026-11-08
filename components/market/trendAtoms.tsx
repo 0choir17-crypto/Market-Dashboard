@@ -4,10 +4,11 @@
 // 色だけでは理由が読めないので、信号には必ず判定の言葉を添える。
 // 上下は文字ではなく ↑ / ↓ で、位置関係は「値の大きい順に > でつないだ並び」で一発で読ませる。
 
+import { Fragment } from 'react'
 import { SLOPE_LOOKBACK, type TrendSignal, type TrendState } from '@/lib/trendState'
 import type { SectorTrend } from '@/lib/sectorTrendFetch'
-import { RValue, TValue } from '@/components/sectors33/SelfStrength'
-import { EXT_R_NOTE } from '@/types/sectorSelection'
+import { RDiff, RValue, TValue } from '@/components/sectors33/SelfStrength'
+import { EXT_DIFF_DAYS, EXT_HIST_DAYS, EXT_R_NOTE, fmtR, isNum, type ExtPoint } from '@/types/sectorSelection'
 
 export const SIGNAL_STYLE: Record<TrendSignal, { bg: string; fg: string; bd: string; name: string }> = {
   green: { bg: 'var(--sem-strong-bg)', fg: 'var(--sem-strong-fg)', bd: 'var(--sem-strong-bd)', name: '緑' },
@@ -142,7 +143,7 @@ export function CardButton({
  * 業種の自力 t21 / t63 と、業種指数の終値と EMA9 / 21 / 50 の距離（R）。
  * 2 行を 1 つの表にして列をそろえ、左に詰める（カードが広くても間延びしないように）。
  *   自力   t21 +1.55   t63 +0.78
- *   距離   9   +0.3R   21  +0.7R   50 +1.0R
+ *   距離   9   +0.3R (+0.1)   21  +0.7R (−0.2)   50 +1.0R (+0.0)  ← 括弧 = 5 営業日前からの変化
  */
 export function SectorStats({ s }: { s: SectorTrend }) {
   const cell = (key: string, label: string, value: React.ReactNode, title?: string) => (
@@ -158,21 +159,26 @@ export function SectorStats({ s }: { s: SectorTrend }) {
       {cell('t63', 't63', <TValue v={s.selfT63} />)}
       <span />
       <span className="text-[var(--text-muted)]" title={EXT_R_NOTE}>距離</span>
-      {cell('e9', '9', <RValue v={s.extEma9} />, `${EXT_R_NOTE}。EMA9`)}
-      {cell('e21', '21', <RValue v={s.extEma21} strong />, `${EXT_R_NOTE}。EMA21`)}
-      {cell('e50', '50', <RValue v={s.extEma50} />, `${EXT_R_NOTE}。EMA50`)}
+      {cell('e9', '9', <><RValue v={s.extEma9} /> <RDiff diff={s.extEma9Diff} /></>, `${EXT_R_NOTE}。EMA9`)}
+      {cell('e21', '21', <><RValue v={s.extEma21} strong /> <RDiff diff={s.extEma21Diff} /></>, `${EXT_R_NOTE}。EMA21`)}
+      {cell('e50', '50', <><RValue v={s.extEma50} /> <RDiff diff={s.extEma50Diff} /></>, `${EXT_R_NOTE}。EMA50`)}
     </div>
   )
 }
 
 /**
- * 終値と EMA9 / 21 / 50 の距離（R）を 3 列で。見出しの下に値（+ 緑 / − 赤）。
+ * 終値と EMA9 / 21 / 50 の距離（R）と、その横に 5 営業日前からの変化（括弧）。+ 緑 / − 赤。
  * 指数カード・業種カードで使う。株価の位置はこれで読むので、EMA の向き・並びはカードに出さない。
+ *   large（指数カード）: 3 列。見出しの下に「+1.2R (+0.3)」
+ *   既定（業種カード）: 狭いので 1 行 1 本。「EMA9  +1.2R  (+0.3)」を列をそろえて左に詰める
  */
 export function ExtRGrid({
   ema9,
   ema21,
   ema50,
+  diff9,
+  diff21,
+  diff50,
   large = false,
   note = EXT_R_NOTE,
   className = '',
@@ -180,26 +186,99 @@ export function ExtRGrid({
   ema9: number | null | undefined
   ema21: number | null | undefined
   ema50: number | null | undefined
+  /** 5 営業日前からの変化。無ければ「(—)」 */
+  diff9?: number | null
+  diff21?: number | null
+  diff50?: number | null
   large?: boolean
   /** ホバーで出す説明（既定は業種の文言） */
   note?: string
   className?: string
 }) {
   const items = [
-    { label: 'EMA9', v: ema9 },
-    { label: 'EMA21', v: ema21 },
-    { label: 'EMA50', v: ema50 },
+    { label: 'EMA9', v: ema9, d: diff9 },
+    { label: 'EMA21', v: ema21, d: diff21 },
+    { label: 'EMA50', v: ema50, d: diff50 },
   ]
+  const title = `${note}。括弧 = ${EXT_DIFF_DAYS} 営業日前からの変化`
+  if (large) {
+    return (
+      <div className={`grid grid-cols-3 gap-2 ${className}`} title={title}>
+        {items.map((it) => (
+          <div key={it.label}>
+            <p className="text-caption text-[var(--text-muted)]">{it.label}</p>
+            <p className="flex items-baseline gap-1.5 whitespace-nowrap">
+              <span className="text-lead">
+                <RValue v={it.v} strong />
+              </span>
+              <RDiff diff={it.d} />
+            </p>
+          </div>
+        ))}
+      </div>
+    )
+  }
   return (
-    <div className={`grid grid-cols-3 gap-2 ${className}`} title={note}>
+    <div
+      className={`grid grid-cols-[repeat(3,max-content)] gap-x-3 gap-y-0.5 items-baseline ${className}`}
+      title={title}
+    >
       {items.map((it) => (
-        <div key={it.label}>
-          <p className="text-caption text-[var(--text-muted)]">{it.label}</p>
-          <p className={large ? 'text-lead' : 'text-small'}>
+        <Fragment key={it.label}>
+          <span className="text-caption text-[var(--text-muted)]">{it.label}</span>
+          <span className="text-small text-right">
             <RValue v={it.v} strong />
-          </p>
-        </div>
+          </span>
+          <span className="text-right">
+            <RDiff diff={it.d} />
+          </span>
+        </Fragment>
       ))}
+    </div>
+  )
+}
+
+/**
+ * EMA9 距離（R）の直近 20 営業日の推移。0 を中心に、+ は上へ緑・− は下へ赤の棒。
+ * 縦の目盛りはカードごとに ±max(2, 最大の絶対値を切り上げ) R（右上に表示）。
+ * 棒にマウスを乗せると日付と値。足りない日は左を空ける（棒の幅をカード間でそろえる）。
+ */
+export function RBars({ points, height = 32, className = '' }: { points: ExtPoint[]; height?: number; className?: string }) {
+  const vals = points.map((p) => p.v).filter(isNum)
+  if (vals.length === 0) {
+    return <p className={`text-caption text-[var(--text-muted)] ${className}`}>EMA9 距離の推移: データなし</p>
+  }
+  const scale = Math.max(2, Math.ceil(Math.max(...vals.map(Math.abs))))
+  const pad: (ExtPoint | null)[] = Array(Math.max(0, EXT_HIST_DAYS - points.length)).fill(null)
+  const slots = [...pad, ...points.slice(-EXT_HIST_DAYS)]
+  return (
+    <div className={className}>
+      <div className="flex items-baseline justify-between text-caption text-[var(--text-muted)] mb-1">
+        <span>EMA9 距離 {EXT_HIST_DAYS} 日</span>
+        <span className="num">±{scale}R</span>
+      </div>
+      <div className="relative flex gap-[2px]" style={{ height }} role="img" aria-label={`EMA9 距離（R）の直近 ${EXT_HIST_DAYS} 営業日の推移`}>
+        <div aria-hidden className="absolute left-0 right-0 top-1/2 h-px bg-[var(--border-strong)]" />
+        {slots.map((p, i) => {
+          const v = p?.v
+          const h = isNum(v) ? Math.max((Math.abs(v) / scale) * 50, 3) : 0
+          const up = isNum(v) && v > 0
+          return (
+            <div key={p?.date ?? `pad-${i}`} className="relative flex-1 h-full" title={p ? `${p.date}  ${fmtR(v)}` : undefined}>
+              {isNum(v) && Math.round(v * 10) !== 0 && (
+                <div
+                  className="absolute left-0 right-0"
+                  style={{
+                    height: `${h}%`,
+                    ...(up ? { bottom: '50%', borderRadius: '2px 2px 0 0' } : { top: '50%', borderRadius: '0 0 2px 2px' }),
+                    backgroundColor: up ? 'var(--positive)' : 'var(--negative)',
+                  }}
+                />
+              )}
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }
