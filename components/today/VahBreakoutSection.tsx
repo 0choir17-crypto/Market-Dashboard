@@ -40,6 +40,7 @@ type SortDef = { key: string; label: string; compare: (a: VahBreakoutRow, b: Vah
 const SORTS: SortDef[] = [
   { key: 'turnover', label: '売買代金 大きい順', compare: descBy(r => r.turnover_oku) },
   { key: 'breakout', label: '上抜け% 大きい順', compare: descBy(r => r.breakout_pct) },
+  { key: 'r', label: 'R 大きい順', compare: descBy(r => r.r_atr) },
   { key: 'high', label: '52週高値に近い順', compare: descBy(r => r.dist_from_high_pct) },
   { key: 'adr', label: 'ADR% 大きい順', compare: descBy(r => r.adr_pct) },
   { key: 'code', label: 'コード順', compare: (a, b) => a.code.localeCompare(b.code) },
@@ -68,7 +69,19 @@ export default function VahBreakoutSection({
     return [...filtered].sort((a, b) => def.compare(a, b))
   }, [rows, sector, sortKey])
 
-  const firstCount = useMemo(() => sorted.filter(r => r.cross_n === 1).length, [sorted])
+  // 種類ごとの件数。signal が null の旧行（11/08 より前の V35）が混じる日は「旧」として別に数える。
+  const counts = useMemo(() => {
+    const c = { base: 0, baseFirst: 0, prev: 0, switch: 0, legacy: 0 }
+    for (const r of sorted) {
+      if (r.signal === 'base') {
+        c.base++
+        if (r.cross_n === 1) c.baseFirst++
+      } else if (r.signal === 'prev') c.prev++
+      else if (r.signal === 'switch') c.switch++
+      else c.legacy++
+    }
+    return c
+  }, [sorted])
 
   const [positionTarget, setPositionTarget] = useState<Partial<Trade> | null>(null)
 
@@ -91,9 +104,15 @@ export default function VahBreakoutSection({
         <h2 className="text-title font-medium text-[var(--text-primary)]">{title}</h2>
         <span className="text-caption text-[var(--text-muted)]">
           <span className="font-mono">{sorted.length} / {rows.length}</span> 銘柄
-          <span className="ml-1.5 font-mono" title="この期間で初めて VAH を上抜けた銘柄の数">
-            （初回 {firstCount}）
-          </span>
+          {sorted.length > 0 && (
+            <span
+              className="ml-1.5 font-mono"
+              title={`▲ベースのブレイク ${counts.base}（うち初回 ${counts.baseFirst}）/ ▲前日までの VAH の上抜け ${counts.prev} / ◆切替直後 ${counts.switch}`}
+            >
+              （ベース {counts.base} / 前日VAH {counts.prev} / ◆ {counts.switch}
+              {counts.legacy > 0 && ` / 旧定義 ${counts.legacy}`}）
+            </span>
+          )}
         </span>
       </div>
       <p className="text-caption text-[var(--text-secondary)] mb-3">{subtitle}</p>

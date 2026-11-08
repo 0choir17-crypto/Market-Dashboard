@@ -128,7 +128,7 @@ export default function TodayPage() {
             tableMissing={data.vahTableMissing}
             multiHitCodes={multiHitCodes}
             title="VAH Breakouts"
-            subtitle="Volume Profile（出来高の多い局面の始まり〜前日の価格帯別出来高。TradingView の VP-JP と同じ線・配当調整なし）の VAH を、終値で下から上抜けた日。同じ期間の中で何回目の上抜けかをバッジで示す（初回は緑）。灰色の「前VAH」は1つ前の期間の VAH。※検証では +2R 利確の版で平均より +0.06〜0.10R とわずかな上乗せ、利確なしではほぼ 0。初回か再上抜けか・前VAHより上か下かでは差が無い。買いシグナルではなく、毎朝チャートを開く銘柄を機械的に絞り込んだリストとして使う。"
+            subtitle="TradingView の Volume Profile JP v9（自動：出来高急増の起点・配当調整なし）がチャートに付ける 3 種のシグナルが出た日。▲ベース＝起点から5本以上たって起点〜前日の VAH を終値で上抜けた（バッジに何回目のブレイクか。初回は緑）、▲前日VAH＝前日までの VAH を終値で上抜けた、◆切替直後＝出来高急増で起点が切り替わった直後に前の期間の VAH を上抜けた（赤紫）。R＝(終値−抜けた線)÷前日ATR14。灰色の「前VAH」は抜けた線の1つ前の期間の VAH。※検証（2016〜2026、線を損切りの売買）では旧定義（全上抜け）とほぼ差なし（d_R +0.014）。◆は1日2件ほどで +0.042 だが 2023〜25 年はマイナス。買いシグナルではなく、毎朝チャートを開く銘柄を機械的に絞り込んだリストとして使う。"
           />
           <StructurePivotSection
             rows={struct}

@@ -21,6 +21,7 @@ import type { VahBreakoutRow } from '@/types/vahBreakouts'
 //   新設 — inside_day_setups（Step1e）。
 // 2026-10-04: Inside Day を廃止。inside_day_setups はどこからも読まない。
 // 2026-10-24: vah_breakouts（Step1k, VAH 上抜け）を新設。
+// 2026-11-08: vah_breakouts を Pine v9 (v3.25) の 3 種のシグナルへ置換（signal / r_atr 列を追加。直近10営業日を毎晩入れ直し）。
 const EMA_SETUPS_TABLE = 'ema_setups'
 const VAH_BREAKOUTS_TABLE = 'vah_breakouts'
 const STRUCTURE_PIVOT_TABLE = 'structure_pivot_events'
@@ -104,8 +105,8 @@ async function fetchEmaSetups(date: string | null): Promise<{
 }
 
 // VAH 上抜け（vah_breakouts）を単一 date で読む。PK は (date, code) で 1銘柄1行。
-// ema_setups と同じく「指定日以前で行がある直近日」の全行を出す。初回 / 再上抜けの別は cross_n が持つので、
-// 連続ヒットの除外は掛けない（配信側もフィルタ条件にしていない）。
+// ema_setups と同じく「指定日以前で行がある直近日」の全行を出す。シグナルの種類は signal（base / prev / switch）、
+// ベースの何回目のブレイクかは cross_n が持つので、連続ヒットの除外は掛けない（配信側もフィルタ条件にしていない）。
 async function fetchVahBreakouts(date: string | null): Promise<{
   date: string | null
   rows: VahBreakoutRow[]
