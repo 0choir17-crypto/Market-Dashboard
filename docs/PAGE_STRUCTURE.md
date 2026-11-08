@@ -88,7 +88,7 @@ app/layout.tsx  (RootLayout, lang="ja")
    - 指数カード: 名前と終値 / 信号（色 + 言葉）/ 終値と EMA9 / 21 / 50 の距離（R。`market_conditions` の `{topix,nikkei,growth}_ext_ema{9,21,50}`、バッチ計算済み・null は —。+ 緑 / − 赤）。
      2026-11 に R を入れたので、EMA の向き（↑↓）・終値と EMA の並び・週足EMA9 / EMA50 との比較はカードから外した（詳細モーダルには残す）。
      R は `market` の行（日付ピッカーで選んだ日）から `indexExtR()`（`types/market.ts`）で読む。列が無ければ — になるだけ。
-     R の横の括弧 = 5 営業日前（5 行前）からの変化（+ 緑 / − 赤）。別の問い合わせ `fetchIndexExtRecent`（`lib/indexTrendFetch.ts`。直近 20 行）で取る。
+     R の横の括弧 = 5 営業日前（5 行前）からの変化（+ 緑 / − 赤）。別の問い合わせ `fetchIndexExtDiffs`（`lib/indexTrendFetch.ts`。直近 6 行）で取る。
      判定と R の間に直近 60 営業日の終値と EMA9 / 21 / 50 の小さなチャート（`EmaMiniChart`。終値 = 太い濃い線、EMA = 詳細チャートと同じ色の細い線、右端に名前）。
      EMA は判定と同じ計算（`lib/trendState.ts` の `emaChart`。取得した全期間で計算して末尾 60 本を切り出す）。縦軸は 60 日の最小〜最大で目盛りは出さない（離れ具合は下の R で読む）。
      マウスを乗せた日は縦の点線と、見出しに日付・終値・各 EMA の値。
