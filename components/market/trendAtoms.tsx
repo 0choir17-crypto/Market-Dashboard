@@ -240,9 +240,9 @@ export function ExtRGrid({
 }
 
 /**
- * 直近 60 営業日の終値と EMA9 / 21 / 50 を重ねた小さなチャート（指数カード・業種カード）。
- * 終値 = 太い濃い線、EMA は詳細チャート（TradingView）と同じ色の細い線で、右端に名前。
- * 縦軸は 60 日の終値・EMA の最小〜最大（目盛りは出さない。値の大きさは下の R で読む）。
+ * 直近 60 営業日の EMA9 / 21 / 50 を重ねた小さなチャート（指数カード・業種カード）。終値の線は引かない。
+ * EMA は詳細チャート（TradingView）と同じ色の線で、右端に名前。
+ * 縦軸は 60 日の EMA の最小〜最大（目盛りは出さない。終値との離れ具合は下の R で読む）。
  * マウスを乗せた日は縦の点線と、見出しに日付と終値・各 EMA の値（compact では日付と終値だけ）。
  */
 const EMA_LINES = [
@@ -264,13 +264,13 @@ export function EmaMiniChart({
   className?: string
 }) {
   const [hover, setHover] = useState<number | null>(null)
-  if (points.length < 2) {
+  if (points.length < 2 || !points.some((p) => isNum(p.e9) || isNum(p.e21) || isNum(p.e50))) {
     return <p className={`text-caption text-[var(--text-muted)] ${className}`}>チャート: データなし</p>
   }
   const N = points.length
   const W = 200
   const H = 100
-  const all = points.flatMap((p) => [p.close, p.e9, p.e21, p.e50]).filter(isNum)
+  const all = points.flatMap((p) => [p.e9, p.e21, p.e50]).filter(isNum)
   const lo = Math.min(...all)
   const hi = Math.max(...all)
   const pad = (hi - lo || Math.abs(hi) || 1) * 0.06
@@ -302,7 +302,6 @@ export function EmaMiniChart({
   const over = labels.length ? labels[labels.length - 1].px - (height - 5) : 0
   if (over > 0) labels.forEach((l) => (l.px -= over))
 
-  const at = hover ?? N - 1
   const hp = hover != null ? points[hover] : null
 
   return (
@@ -311,7 +310,7 @@ export function EmaMiniChart({
         <span className="num">{hp ? hp.date.slice(5) : `${N} 日`}</span>
         {hp && (
           <span className="num flex gap-2 overflow-hidden">
-            <span className="text-[var(--text-primary)]">{fmtLevel(hp.close)}</span>
+            <span className="text-[var(--text-primary)]">終値 {fmtLevel(hp.close)}</span>
             {!compact && EMA_LINES.map((l) => (
               <span key={l.key} style={{ color: l.color }}>
                 {l.label} {isNum(hp[l.key]) ? fmtLevel(hp[l.key] as number) : '—'}
@@ -327,7 +326,7 @@ export function EmaMiniChart({
             preserveAspectRatio="none"
             className="absolute inset-0 w-full h-full overflow-visible"
             role="img"
-            aria-label={`直近 ${N} 営業日の終値と EMA9 / 21 / 50`}
+            aria-label={`直近 ${N} 営業日の EMA9 / 21 / 50`}
           >
             {[...EMA_LINES].reverse().map((l) => (
               <path
@@ -335,29 +334,29 @@ export function EmaMiniChart({
                 d={path((p) => p[l.key])}
                 fill="none"
                 stroke={l.color}
-                strokeWidth="1.25"
+                strokeWidth="1.5"
                 strokeLinejoin="round"
                 vectorEffect="non-scaling-stroke"
               />
             ))}
-            <path
-              d={path((p) => p.close)}
-              fill="none"
-              stroke={CHART.textPrimary}
-              strokeWidth="1.75"
-              strokeLinejoin="round"
-              vectorEffect="non-scaling-stroke"
-            />
             {hover != null && (
               <line x1={x(hover)} x2={x(hover)} y1="0" y2={H} stroke={CHART.textMuted} strokeWidth="1" strokeDasharray="2 2" vectorEffect="non-scaling-stroke" />
             )}
           </svg>
-          {/* 終値の点（マウスの日、無ければ最終日）。SVG の外に置く（伸ばしても丸のまま） */}
-          <span
-            aria-hidden
-            className="absolute w-1.5 h-1.5 rounded-full -translate-x-1/2 -translate-y-1/2 ring-2 ring-[var(--bg-card)] bg-[var(--text-primary)]"
-            style={{ left: `${(x(at) / W) * 100}%`, top: `${(y(points[at].close) / H) * 100}%` }}
-          />
+          {/* マウスの日の各 EMA の点。SVG の外に置く（伸ばしても丸のまま） */}
+          {hp &&
+            EMA_LINES.map((l) => {
+              const v = hp[l.key]
+              if (!isNum(v)) return null
+              return (
+                <span
+                  key={l.key}
+                  aria-hidden
+                  className="absolute w-1.5 h-1.5 rounded-full -translate-x-1/2 -translate-y-1/2 ring-2 ring-[var(--bg-card)]"
+                  style={{ left: `${(x(hover!) / W) * 100}%`, top: `${(y(v) / H) * 100}%`, backgroundColor: l.color }}
+                />
+              )
+            })}
           {/* マウスの当たり判定（1 日 1 列） */}
           <div className="absolute inset-0 flex">
             {points.map((p, i) => (
