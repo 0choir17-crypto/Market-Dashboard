@@ -48,6 +48,9 @@ export default function JournalPage() {
   const [showNewTrade, setShowNewTrade] = useState(false)
   // 「1 回のリスク」の次に買う銘柄から引き継いだ値。state で持つ（PositionModal は initial の参照が変わると入力を初期化する）
   const [newTradeInitial, setNewTradeInitial] = useState<Partial<Trade> | undefined>(undefined)
+  // 引き継いだ検討中の計画。新規トレードを記録したら trade_plans から消す
+  const [pendingPlanId, setPendingPlanId] = useState<string | null>(null)
+  const [plansReloadKey, setPlansReloadKey] = useState(0)
   const [editingTrade, setEditingTrade] = useState<Trade | null>(null)
   const [tab, setTab] = useState<AnalysisTab>('equity')
   const [focus, setFocus] = useState<{ id: number; n: number } | null>(null)
@@ -108,7 +111,7 @@ export default function JournalPage() {
         refreshing={loading}
       >
         <button
-          onClick={() => { setNewTradeInitial(undefined); setShowNewTrade(true) }}
+          onClick={() => { setNewTradeInitial(undefined); setPendingPlanId(null); setShowNewTrade(true) }}
           className="px-4 py-1.5 rounded-lg text-small font-medium text-white bg-[var(--sem-focus-fg)] hover:brightness-110 transition-colors min-h-[36px]"
         >
           ＋ 新規トレード
@@ -129,7 +132,12 @@ export default function JournalPage() {
               settings={riskSettings}
               slowdown={rStats.slowdown.active}
               onSaved={fetchAll}
-              onUseForTrade={v => { setNewTradeInitial(v); setShowNewTrade(true) }}
+              plansReloadKey={plansReloadKey}
+              onUseForTrade={({ planId, ...v }) => {
+                setNewTradeInitial(v)
+                setPendingPlanId(planId)
+                setShowNewTrade(true)
+              }}
             />
           </section>
 
@@ -187,7 +195,14 @@ export default function JournalPage() {
       <PositionModal
         open={showNewTrade}
         onClose={() => setShowNewTrade(false)}
-        onSaved={fetchAll}
+        onSaved={async () => {
+          fetchAll()
+          if (pendingPlanId) {
+            setPendingPlanId(null)
+            await supabase.from('trade_plans').delete().eq('id', pendingPlanId)
+            setPlansReloadKey(k => k + 1)
+          }
+        }}
         initial={newTradeInitial}
         slowdown={rStats.slowdown.active}
         onSettingsSaved={fetchAll}
