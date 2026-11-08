@@ -120,3 +120,25 @@ export function computeTrendState(points: ClosePoint[]): TrendState | null {
     ...classifyTrend({ close, ema9, ema21, ema9Up, ema21Up }),
   }
 }
+
+/** カードの小さなチャートで描く営業日数 */
+export const EMA_CHART_BARS = 60
+
+/** カードの小さなチャートの 1 日。EMA は本数が足りない日は null */
+export type EmaChartPoint = { date: string; close: number; e9: number | null; e21: number | null; e50: number | null }
+
+/**
+ * 終値の系列（日付昇順）から、直近 EMA_CHART_BARS 本の終値と EMA9 / 21 / 50。
+ * EMA は判定と同じ計算（取得した全期間で計算してから末尾を切り出す。起点の影響を減らすため）。
+ */
+export function emaChart(points: ClosePoint[]): EmaChartPoint[] {
+  const closes = points.map((p) => p.close)
+  const e9 = ema(closes, 9)
+  const e21 = ema(closes, 21)
+  const e50 = ema(closes, 50)
+  const from = Math.max(0, points.length - EMA_CHART_BARS)
+  return points.slice(from).map((p, k) => {
+    const i = from + k
+    return { date: p.date, close: p.close, e9: e9[i], e21: e21[i], e50: e50[i] }
+  })
+}
