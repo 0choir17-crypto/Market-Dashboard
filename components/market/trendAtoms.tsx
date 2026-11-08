@@ -8,7 +8,6 @@ import { SLOPE_LOOKBACK, type TrendSignal, type TrendState } from '@/lib/trendSt
 import type { SectorTrend } from '@/lib/sectorTrendFetch'
 import { RValue, TValue } from '@/components/sectors33/SelfStrength'
 import { EXT_R_NOTE } from '@/types/sectorSelection'
-import type { ExtValues } from '@/types/market'
 
 export const SIGNAL_STYLE: Record<TrendSignal, { bg: string; fg: string; bd: string; name: string }> = {
   green: { bg: 'var(--sem-strong-bg)', fg: 'var(--sem-strong-fg)', bd: 'var(--sem-strong-bd)', name: '緑' },
@@ -139,46 +138,66 @@ export function CardButton({
   )
 }
 
-/** 業種の自力 t21 / t63 */
-export function SelfRow({ s }: { s: SectorTrend }) {
+/**
+ * 業種の自力 t21 / t63 と、業種指数の終値と EMA9 / 21 / 50 の距離（R）。
+ * 2 行を 1 つの表にして列をそろえ、左に詰める（カードが広くても間延びしないように）。
+ *   自力   t21 +1.55   t63 +0.78
+ *   距離   9   +0.3R   21  +0.7R   50 +1.0R
+ */
+export function SectorStats({ s }: { s: SectorTrend }) {
+  const cell = (key: string, label: string, value: React.ReactNode, title?: string) => (
+    <span key={key} className="flex items-baseline justify-between gap-1.5 whitespace-nowrap" title={title}>
+      <span className="text-[var(--text-muted)]">{label}</span>
+      <span className="min-w-[3.25rem] text-right">{value}</span>
+    </span>
+  )
   return (
-    <div className="mt-2 pt-2 border-t border-[var(--border)] grid grid-cols-2 gap-2 text-caption">
-      <div className="flex justify-between gap-1">
-        <span className="text-[var(--text-muted)]">自力 t21</span>
-        <TValue v={s.selfT21} strong />
-      </div>
-      <div className="flex justify-between gap-1">
-        <span className="text-[var(--text-muted)]">t63</span>
-        <TValue v={s.selfT63} />
-      </div>
+    <div className="mt-2 pt-2 border-t border-[var(--border)] grid grid-cols-[repeat(4,max-content)] gap-x-4 gap-y-1 items-baseline text-caption">
+      <span className="text-[var(--text-muted)]">自力</span>
+      {cell('t21', 't21', <TValue v={s.selfT21} strong />)}
+      {cell('t63', 't63', <TValue v={s.selfT63} />)}
+      <span />
+      <span className="text-[var(--text-muted)]" title={EXT_R_NOTE}>距離</span>
+      {cell('e9', '9', <RValue v={s.extEma9} />, `${EXT_R_NOTE}。EMA9`)}
+      {cell('e21', '21', <RValue v={s.extEma21} strong />, `${EXT_R_NOTE}。EMA21`)}
+      {cell('e50', '50', <RValue v={s.extEma50} />, `${EXT_R_NOTE}。EMA50`)}
     </div>
   )
 }
 
-/** 業種指数の終値と EMA9 / 21 / 50 の距離（R） */
-export function ExtRow({ s }: { s: SectorTrend }) {
-  return <ExtValuesRow v9={s.extEma9} v21={s.extEma21} v50={s.extEma50} note={EXT_R_NOTE} />
-}
-
-/** 終値と EMA9 / 21 / 50 の距離（R）の 3 項目。業種カード・指数カードで共通 */
-export function ExtValuesRow({
-  v9,
-  v21,
-  v50,
-  note,
-  className = 'mt-1',
-}: ExtValues & { note: string; className?: string }) {
+/**
+ * 終値と EMA9 / 21 / 50 の距離（R）を 3 列で。見出しの下に値（+ 緑 / − 赤）。
+ * 指数カード・業種カードで使う。株価の位置はこれで読むので、EMA の向き・並びはカードに出さない。
+ */
+export function ExtRGrid({
+  ema9,
+  ema21,
+  ema50,
+  large = false,
+  note = EXT_R_NOTE,
+  className = '',
+}: {
+  ema9: number | null | undefined
+  ema21: number | null | undefined
+  ema50: number | null | undefined
+  large?: boolean
+  /** ホバーで出す説明（既定は業種の文言） */
+  note?: string
+  className?: string
+}) {
   const items = [
-    { label: 'EMA9', v: v9 },
-    { label: '21', v: v21 },
-    { label: '50', v: v50 },
+    { label: 'EMA9', v: ema9 },
+    { label: 'EMA21', v: ema21 },
+    { label: 'EMA50', v: ema50 },
   ]
   return (
-    <div className={`grid grid-cols-3 gap-2 text-caption ${className}`} title={note}>
-      {items.map((it, i) => (
-        <div key={it.label} className="flex justify-between gap-1">
-          <span className="text-[var(--text-muted)]">{i === 0 ? `距離 ${it.label}` : it.label}</span>
-          <RValue v={it.v} strong={i === 1} />
+    <div className={`grid grid-cols-3 gap-2 ${className}`} title={note}>
+      {items.map((it) => (
+        <div key={it.label}>
+          <p className="text-caption text-[var(--text-muted)]">{it.label}</p>
+          <p className={large ? 'text-lead' : 'text-small'}>
+            <RValue v={it.v} strong />
+          </p>
         </div>
       ))}
     </div>

@@ -14,7 +14,7 @@ import {
   type IndexRangeKey,
 } from '@/lib/indexChartFetch'
 import type { TrendState } from '@/lib/trendState'
-import { CloseVs, EmaChain, ExtValuesRow, SignalPill, Slopes } from './trendAtoms'
+import { CloseVs, EmaChain, ExtRGrid, SignalPill, Slopes } from './trendAtoms'
 
 // 指数カードの詳細。判定の材料 + 期間リターン + TradingView 風チャート。
 
@@ -107,9 +107,13 @@ export default function IndexDetailModal({
               <CloseVs state={state} label="週足EMA9" value={state.weeklyEma9} />
               <CloseVs state={state} label="EMA50" value={state.ema50} />
             </div>
-            <ExtValuesRow {...indexExtR(market, index)} note={INDEX_EXT_R_NOTE} className="w-72" />
           </div>
         )}
+
+        {(() => {
+          const ext = indexExtR(market, index)
+          return <ExtRGrid ema9={ext.v9} ema21={ext.v21} ema50={ext.v50} note={INDEX_EXT_R_NOTE} className="max-w-sm" />
+        })()}
 
         <div className="flex flex-wrap gap-6">
           <Change label="1W" value={col('chg_1w')} />

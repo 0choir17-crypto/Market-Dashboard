@@ -13,7 +13,7 @@ import type { SectorIndexChangeEntry } from '@/lib/sectorIndexChangeFetch'
 import type { SelfDiff } from '@/lib/sectorSelectionHistoryFetch'
 import SectorCandleChart, { MaLegend, VolumeLegend } from './SectorCandleChart'
 import { SectorChangeStrip } from './SectorChangeCells'
-import { CautionMark, DiffArrow, TValue, CAUTION_NOTE } from './SelfStrength'
+import { CautionMark, DiffArrow, TValue, CAUTION_NOTE, rColor } from './SelfStrength'
 import Tooltip from '@/components/shared/Tooltip'
 
 type Props = {
@@ -224,7 +224,7 @@ function SectorCard({
             </Tooltip>
             <p
               className="text-small font-mono font-medium tabular-nums"
-              style={{ color: isNum(row[key]) ? 'var(--text-primary)' : 'var(--sem-idle-fg)' }}
+              style={{ color: isNum(row[key]) ? rColor(row[key]) : 'var(--sem-idle-fg)' }}
             >
               {fmtR(row[key])}
             </p>

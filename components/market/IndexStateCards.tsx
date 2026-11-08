@@ -10,13 +10,15 @@ import BreadthStateCard from './BreadthStateCard'
 import LeaderStateCard from './LeaderStateCard'
 import { fetchLeaderState, type LeaderStateResult } from '@/lib/leaderState'
 import IndexDetailModal from './IndexDetailModal'
-import { CardButton, CloseVs, EmaChain, ExtValuesRow, SignalPill, Slopes } from './trendAtoms'
+import { CardButton, ExtRGrid, SignalPill, fmtLevel } from './trendAtoms'
 
 // Market Regime: 3 指数（TOPIX / 日経225 / グロース250）+ Market Breadth + 主導株（大型 / 中小）の 6 枚。
 // 広い画面では横 1 列、通常の PC 幅では 3 枚 × 2 段（上 = 指数、下 = 参加度と主導株）。
 // 自分の成績（My Trades）はこの上の列に別に置く（app/page.tsx）。
-// 指数の判定は日足 EMA9 / EMA21 の位置と向き。カードをクリックすると詳細を開く。
-// 距離 = 終値と EMA9 / 21 / 50 の距離（R）。バッチ側の値（market_conditions の *_ext_ema*）を表示する。
+// 指数の判定は日足 EMA9 / EMA21 の位置と向き。カードには判定と、終値と EMA9 / 21 / 50 の距離（R）だけを出す
+// R はバッチ側の値（market_conditions の *_ext_ema*。日付ピッカーで選んだ日の行）をそのまま表示する。
+// （株価の位置は R で読めるので、EMA の向き・並びはカードに出さない。詳細モーダルには残す）。
+// カードをクリックすると詳細を開く。
 
 function IndexCard({
   label,
@@ -31,25 +33,25 @@ function IndexCard({
 }) {
   return (
     <CardButton onClick={onOpen} label={label} className="p-5">
-      <h3 className="text-small font-medium text-[var(--text-primary)]">{label}</h3>
+      <div className="flex items-baseline justify-between gap-2">
+        <h3 className="text-small font-medium text-[var(--text-primary)]">{label}</h3>
+        {state && <span className="num text-small text-[var(--text-secondary)]">{fmtLevel(state.close)}</span>}
+      </div>
       {!state ? (
         <p className="text-caption text-[var(--text-muted)] mt-3">データが足りません</p>
       ) : (
-        <>
-          <div className="mt-3">
-            <SignalPill signal={state.signal} label={state.label} />
-          </div>
-          <div className="mt-4 space-y-2 text-small">
-            <Slopes state={state} />
-            <EmaChain state={state} />
-          </div>
-          <div className="mt-3 pt-3 border-t border-[var(--border)] flex flex-wrap gap-x-4 gap-y-1 text-caption">
-            <CloseVs state={state} label="週足EMA9" value={state.weeklyEma9} />
-            <CloseVs state={state} label="EMA50" value={state.ema50} />
-          </div>
-          <ExtValuesRow {...ext} note={INDEX_EXT_R_NOTE} className="mt-2" />
-        </>
+        <div className="mt-3">
+          <SignalPill signal={state.signal} label={state.label} />
+        </div>
       )}
+      <ExtRGrid
+        ema9={ext.v9}
+        ema21={ext.v21}
+        ema50={ext.v50}
+        note={INDEX_EXT_R_NOTE}
+        large
+        className="mt-4 pt-3 border-t border-[var(--border)]"
+      />
     </CardButton>
   )
 }
@@ -87,7 +89,7 @@ export default function IndexStateCards({ market }: { market: MarketConditions |
       <div className="flex items-baseline justify-between mb-3">
         <h2 className="text-title font-medium text-[var(--text-primary)]">Market Regime</h2>
         <span className="text-caption text-[var(--text-muted)]">
-          指数の EMA9 / EMA21・市場の参加度・主導株。カードをクリックで詳細
+          指数の EMA9 / EMA21 判定と EMA からの距離（R）・市場の参加度・主導株。カードをクリックで詳細
         </span>
       </div>
       {result?.error && (
