@@ -46,6 +46,8 @@ export default function JournalPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showNewTrade, setShowNewTrade] = useState(false)
+  // 「1 回のリスク」の次に買う銘柄から引き継いだ値。state で持つ（PositionModal は initial の参照が変わると入力を初期化する）
+  const [newTradeInitial, setNewTradeInitial] = useState<Partial<Trade> | undefined>(undefined)
   const [editingTrade, setEditingTrade] = useState<Trade | null>(null)
   const [tab, setTab] = useState<AnalysisTab>('equity')
   const [focus, setFocus] = useState<{ id: number; n: number } | null>(null)
@@ -106,7 +108,7 @@ export default function JournalPage() {
         refreshing={loading}
       >
         <button
-          onClick={() => setShowNewTrade(true)}
+          onClick={() => { setNewTradeInitial(undefined); setShowNewTrade(true) }}
           className="px-4 py-1.5 rounded-lg text-small font-medium text-white bg-[var(--sem-focus-fg)] hover:brightness-110 transition-colors min-h-[36px]"
         >
           ＋ 新規トレード
@@ -123,7 +125,12 @@ export default function JournalPage() {
         <div className="space-y-8">
           <section>
             <SectionHeading>1 回のリスク</SectionHeading>
-            <RiskBudget settings={riskSettings} slowdown={rStats.slowdown.active} onSaved={fetchAll} />
+            <RiskBudget
+              settings={riskSettings}
+              slowdown={rStats.slowdown.active}
+              onSaved={fetchAll}
+              onUseForTrade={v => { setNewTradeInitial(v); setShowNewTrade(true) }}
+            />
           </section>
 
           <section>
@@ -181,6 +188,7 @@ export default function JournalPage() {
         open={showNewTrade}
         onClose={() => setShowNewTrade(false)}
         onSaved={fetchAll}
+        initial={newTradeInitial}
         slowdown={rStats.slowdown.active}
         onSettingsSaved={fetchAll}
       />
