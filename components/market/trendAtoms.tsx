@@ -238,116 +238,86 @@ export function ExtRGrid({
   )
 }
 
-/** 1 本の線（RSparklines の中で使う）。目盛り・マウスの位置は親が持つ */
-function SparkRow({
-  points,
-  scale,
-  hover,
-  height,
-}: {
-  points: (ExtPoint | null)[]
-  scale: number
-  hover: number | null
-  height: number
-}) {
-  const clipId = useId()
-  const N = points.length
-  const W = 200
-  const H = 100
-  const x = (i: number) => ((i + 0.5) / N) * W
-  const y = (v: number) => H / 2 - (Math.max(-scale, Math.min(scale, v)) / scale) * (H / 2)
-
-  // 値が続いている区間ごとに線と面を作る（値の無い日で線を切る）
-  const segments: { i: number; v: number }[][] = []
-  let cur: { i: number; v: number }[] = []
-  points.forEach((p, i) => {
-    if (p && isNum(p.v)) cur.push({ i, v: p.v })
-    else if (cur.length) {
-      segments.push(cur)
-      cur = []
-    }
-  })
-  if (cur.length) segments.push(cur)
-  const top = (seg: { i: number; v: number }[]) =>
-    seg.map((p, k) => `${k ? 'L' : 'M'}${x(p.i).toFixed(2)},${y(p.v).toFixed(2)}`).join('')
-  const linePath = segments.map(top).join('')
-  const areaPath = segments
-    .map((seg) => `${top(seg)}L${x(seg[seg.length - 1].i).toFixed(2)},${H / 2}L${x(seg[0].i).toFixed(2)},${H / 2}Z`)
-    .join('')
-
-  // 点 = マウスの日、無ければ最終日
-  const at = hover ?? N - 1
-  const dot = points[at]
-  const above = `${clipId}-up`
-  const below = `${clipId}-dn`
-  return (
-    <div className="relative" style={{ height }}>
-      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="absolute inset-0 w-full h-full overflow-visible" aria-hidden>
-        <defs>
-          <clipPath id={above}>
-            <rect x="0" y="0" width={W} height={H / 2} />
-          </clipPath>
-          <clipPath id={below}>
-            <rect x="0" y={H / 2} width={W} height={H / 2} />
-          </clipPath>
-        </defs>
-        <line x1="0" x2={W} y1={H / 2} y2={H / 2} stroke="var(--border-strong)" strokeWidth="1" vectorEffect="non-scaling-stroke" />
-        <path d={areaPath} fill="var(--positive)" fillOpacity="0.18" clipPath={`url(#${above})`} />
-        <path d={areaPath} fill="var(--negative)" fillOpacity="0.18" clipPath={`url(#${below})`} />
-        <path d={linePath} fill="none" stroke="var(--positive)" strokeWidth="1.5" strokeLinejoin="round" vectorEffect="non-scaling-stroke" clipPath={`url(#${above})`} />
-        <path d={linePath} fill="none" stroke="var(--negative)" strokeWidth="1.5" strokeLinejoin="round" vectorEffect="non-scaling-stroke" clipPath={`url(#${below})`} />
-        {hover != null && (
-          <line x1={x(hover)} x2={x(hover)} y1="0" y2={H} stroke="var(--text-muted)" strokeWidth="1" strokeDasharray="2 2" vectorEffect="non-scaling-stroke" />
-        )}
-      </svg>
-      {/* 点は SVG の外に置く（縦横比を崩して伸ばしても丸のまま） */}
-      {dot && isNum(dot.v) && (
-        <span
-          aria-hidden
-          className="absolute w-1.5 h-1.5 rounded-full -translate-x-1/2 -translate-y-1/2 ring-2 ring-[var(--bg-card)]"
-          style={{
-            left: `${(x(at) / W) * 100}%`,
-            top: `${(y(dot.v) / H) * 100}%`,
-            backgroundColor: dot.v >= 0 ? 'var(--positive)' : 'var(--negative)',
-          }}
-        />
-      )}
-    </div>
-  )
+/**
+ * EMA9 / 21 / 50 距離（R）の直近 20 営業日の推移を、1 つの枠に重ねた折れ線で。
+ * - EMA9 は主の線: 0 の線を挟んで上は緑・下は赤（線と 0 の間も薄く塗る）。
+ * - EMA21 / 50 は灰の細い線（21 を濃く、50 を薄く）。右端に名前を付ける。
+ * 線どうしの間隔 = EMA どうしの間隔（ATR 何本ぶん）。広がる = 加速 / 狭まる = 鈍化 / 交差 = EMA どうしの交差。
+ * 縦の目盛りは ±max(2, 全部の線の最大の絶対値を切り上げ) R（右上に表示）。値の無い日は線を切る。
+ * 足りない日は左を空ける（横の位置をカード間でそろえる）。マウスを乗せた日は縦の点線と、見出しに日付と各線の値。
+ */
+const OVERLAY_STYLE: Record<string, { stroke: string; width: number }> = {
+  '21': { stroke: 'var(--text-secondary)', width: 1.25 },
+  '50': { stroke: 'var(--text-muted)', width: 1.25 },
 }
 
-/**
- * EMA 距離（R）の直近 20 営業日の推移を、EMA ごとに 1 本ずつ縦に並べた折れ線で。
- * 0 の線を挟んで、上は緑・下は赤で線と 0 の間を塗る。
- * 傾き（伸びている / 縮んでいる）と 0 をまたいだ日（終値が EMA を上抜け・下抜けした日）を読むためのもの。
- * 縦の目盛りは 1 枚のカードの中で共通（本どうしで離れ具合を比べられるように）:
- * ±max(2, 全部の線の最大の絶対値を切り上げ) R を右上に表示。
- * 足りない日は左を空ける（横の位置をカード間でそろえる）。マウスを乗せた日は全部の線で同じ日を指し、
- * 見出しに日付と各線の値を出す。
- */
 export function RSparklines({
   series,
-  rowHeight = 24,
+  height = 64,
   className = '',
 }: {
+  /** 先頭が主の線（EMA9）。残りは灰の線 */
   series: { label: string; points: ExtPoint[] }[]
-  rowHeight?: number
+  height?: number
   className?: string
 }) {
+  const clipId = useId()
   const [hover, setHover] = useState<number | null>(null)
   const N = EXT_HIST_DAYS
   const vals = series.flatMap((s) => s.points.map((p) => p.v)).filter(isNum)
   if (vals.length === 0) {
     return <p className={`text-caption text-[var(--text-muted)] ${className}`}>EMA 距離の推移: データなし</p>
   }
+  const W = 200
+  const H = 100
   const scale = Math.max(2, Math.ceil(Math.max(...vals.map(Math.abs))))
+  const x = (i: number) => ((i + 0.5) / N) * W
+  const y = (v: number) => H / 2 - (Math.max(-scale, Math.min(scale, v)) / scale) * (H / 2)
   const padded = series.map((s) => ({
     label: s.label,
     slots: [...Array(Math.max(0, N - s.points.length)).fill(null), ...s.points.slice(-N)] as (ExtPoint | null)[],
   }))
-  // 日付は値のある最初の線から取る
   const dateAt = (i: number) => padded.map((s) => s.slots[i]?.date).find(Boolean)
   const hoverDate = hover != null ? dateAt(hover) : undefined
+
+  // 値が続いている区間ごとのパス（値の無い日で線を切る）
+  const paths = (slots: (ExtPoint | null)[]) => {
+    const segs: { i: number; v: number }[][] = []
+    let cur: { i: number; v: number }[] = []
+    slots.forEach((p, i) => {
+      if (p && isNum(p.v)) cur.push({ i, v: p.v })
+      else if (cur.length) {
+        segs.push(cur)
+        cur = []
+      }
+    })
+    if (cur.length) segs.push(cur)
+    const top = (seg: { i: number; v: number }[]) =>
+      seg.map((p, k) => `${k ? 'L' : 'M'}${x(p.i).toFixed(2)},${y(p.v).toFixed(2)}`).join('')
+    return {
+      line: segs.map(top).join(''),
+      area: segs.map((seg) => `${top(seg)}L${x(seg[seg.length - 1].i).toFixed(2)},${H / 2}L${x(seg[0].i).toFixed(2)},${H / 2}Z`).join(''),
+    }
+  }
+  const [main, ...rest] = padded
+  const mainPath = paths(main.slots)
+  const above = `${clipId}-up`
+  const below = `${clipId}-dn`
+
+  // 右端の名前: 各線の最後の値の高さに置き、近すぎるときは上下に押し広げる（最低 11px）
+  const at = hover ?? N - 1
+  const lastOf = (slots: (ExtPoint | null)[]) => {
+    for (let i = slots.length - 1; i >= 0; i--) if (slots[i] && isNum(slots[i]!.v)) return slots[i]!.v as number
+    return null
+  }
+  const labels = padded
+    .map((s) => ({ label: s.label, v: lastOf(s.slots) }))
+    .filter((l): l is { label: string; v: number } => l.v != null)
+    .map((l) => ({ ...l, px: (y(l.v) / H) * height }))
+    .sort((a, b) => a.px - b.px)
+  for (let i = 1; i < labels.length; i++) labels[i].px = Math.max(labels[i].px, labels[i - 1].px + 11)
+  const overflow = labels.length ? labels[labels.length - 1].px - (height - 5) : 0
+  if (overflow > 0) labels.forEach((l) => (l.px -= overflow))
 
   return (
     <div className={className}>
@@ -363,19 +333,84 @@ export function RSparklines({
             : `±${scale}R`}
         </span>
       </div>
-      <div className="relative" onMouseLeave={() => setHover(null)}>
-        <div className="grid grid-cols-[max-content_1fr] gap-x-2 gap-y-1 items-center">
-          {padded.map((s) => (
-            <Fragment key={s.label}>
-              <span className="text-caption text-[var(--text-muted)] num w-4 text-right">{s.label}</span>
-              <SparkRow points={s.slots} scale={scale} hover={hover} height={rowHeight} />
-            </Fragment>
-          ))}
+      <div className="flex gap-1.5">
+        <div className="relative flex-1" style={{ height }} onMouseLeave={() => setHover(null)}>
+          <svg
+            viewBox={`0 0 ${W} ${H}`}
+            preserveAspectRatio="none"
+            className="absolute inset-0 w-full h-full overflow-visible"
+            role="img"
+            aria-label={`EMA ${series.map((s) => s.label).join(' / ')} 距離（R）の直近 ${N} 営業日の推移`}
+          >
+            <defs>
+              <clipPath id={above}>
+                <rect x="0" y="0" width={W} height={H / 2} />
+              </clipPath>
+              <clipPath id={below}>
+                <rect x="0" y={H / 2} width={W} height={H / 2} />
+              </clipPath>
+            </defs>
+            <line x1="0" x2={W} y1={H / 2} y2={H / 2} stroke="var(--border-strong)" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+            <path d={mainPath.area} fill="var(--positive)" fillOpacity="0.15" clipPath={`url(#${above})`} />
+            <path d={mainPath.area} fill="var(--negative)" fillOpacity="0.15" clipPath={`url(#${below})`} />
+            {/* 灰の線は主の線の下に描く */}
+            {[...rest].reverse().map((s) => (
+              <path
+                key={s.label}
+                d={paths(s.slots).line}
+                fill="none"
+                stroke={OVERLAY_STYLE[s.label]?.stroke ?? 'var(--text-muted)'}
+                strokeWidth={OVERLAY_STYLE[s.label]?.width ?? 1.25}
+                strokeLinejoin="round"
+                vectorEffect="non-scaling-stroke"
+              />
+            ))}
+            <path d={mainPath.line} fill="none" stroke="var(--positive)" strokeWidth="2" strokeLinejoin="round" vectorEffect="non-scaling-stroke" clipPath={`url(#${above})`} />
+            <path d={mainPath.line} fill="none" stroke="var(--negative)" strokeWidth="2" strokeLinejoin="round" vectorEffect="non-scaling-stroke" clipPath={`url(#${below})`} />
+            {hover != null && (
+              <line x1={x(hover)} x2={x(hover)} y1="0" y2={H} stroke="var(--text-muted)" strokeWidth="1" strokeDasharray="2 2" vectorEffect="non-scaling-stroke" />
+            )}
+          </svg>
+          {/* 点は SVG の外に置く（縦横比を崩して伸ばしても丸のまま）。主の線は色、灰の線は灰 */}
+          {padded.map((s, k) => {
+            const p = s.slots[at]
+            if (!p || !isNum(p.v)) return null
+            const color = k === 0 ? (p.v >= 0 ? 'var(--positive)' : 'var(--negative)') : OVERLAY_STYLE[s.label]?.stroke ?? 'var(--text-muted)'
+            return (
+              <span
+                key={s.label}
+                aria-hidden
+                className={`absolute rounded-full -translate-x-1/2 -translate-y-1/2 ring-2 ring-[var(--bg-card)] ${k === 0 ? 'w-1.5 h-1.5' : 'w-1 h-1'}`}
+                style={{ left: `${(x(at) / W) * 100}%`, top: `${(y(p.v) / H) * 100}%`, backgroundColor: color }}
+              />
+            )
+          })}
+          {/* マウスの当たり判定（1 日 1 列） */}
+          <div className="absolute inset-0 flex">
+            {Array.from({ length: N }, (_, i) => (
+              <div key={i} className="flex-1 h-full" onMouseEnter={() => setHover(dateAt(i) ? i : null)} />
+            ))}
+          </div>
         </div>
-        {/* マウスの当たり判定（1 日 1 列）。ラベルの列を避けて線の上だけに置く */}
-        <div className="absolute inset-y-0 right-0 flex" style={{ left: 'calc(1rem + 0.5rem)' }}>
-          {Array.from({ length: N }, (_, i) => (
-            <div key={i} className="flex-1 h-full" onMouseEnter={() => setHover(dateAt(i) ? i : null)} />
+        {/* 右端の名前 */}
+        <div className="relative w-4 text-caption num" style={{ height }} aria-hidden>
+          {labels.map((l) => (
+            <span
+              key={l.label}
+              className="absolute left-0 -translate-y-1/2 leading-none"
+              style={{
+                top: l.px,
+                color:
+                  l.label === main.label
+                    ? l.v >= 0
+                      ? 'var(--positive)'
+                      : 'var(--negative)'
+                    : OVERLAY_STYLE[l.label]?.stroke ?? 'var(--text-muted)',
+                fontWeight: l.label === main.label ? 500 : 400,
+              }}
+            >
+              {l.label}
+            </span>
           ))}
         </div>
       </div>
