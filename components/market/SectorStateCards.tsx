@@ -49,8 +49,9 @@ function SectorCard({ s, onOpen }: { s: SectorTrend; onOpen: () => void }) {
         series={[
           { label: '9', points: s.extEma9Hist },
           { label: '21', points: s.extEma21Hist },
+          { label: '50', points: s.extEma50Hist },
         ]}
-        rowHeight={26}
+        height={56}
         className="mt-2"
       />
 

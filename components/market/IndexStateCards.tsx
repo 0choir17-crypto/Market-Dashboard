@@ -56,7 +56,7 @@ function IndexCard({
           { label: '21', points: hist?.h21 ?? [] },
           { label: '50', points: hist?.h50 ?? [] },
         ]}
-        rowHeight={32}
+        height={72}
         className="mt-4"
       />
       <ExtRGrid
