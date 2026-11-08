@@ -8,6 +8,7 @@ import { SLOPE_LOOKBACK, type TrendSignal, type TrendState } from '@/lib/trendSt
 import type { SectorTrend } from '@/lib/sectorTrendFetch'
 import { RValue, TValue } from '@/components/sectors33/SelfStrength'
 import { EXT_R_NOTE } from '@/types/sectorSelection'
+import type { ExtValues } from '@/types/market'
 
 export const SIGNAL_STYLE: Record<TrendSignal, { bg: string; fg: string; bd: string; name: string }> = {
   green: { bg: 'var(--sem-strong-bg)', fg: 'var(--sem-strong-fg)', bd: 'var(--sem-strong-bd)', name: '緑' },
@@ -156,13 +157,24 @@ export function SelfRow({ s }: { s: SectorTrend }) {
 
 /** 業種指数の終値と EMA9 / 21 / 50 の距離（R） */
 export function ExtRow({ s }: { s: SectorTrend }) {
+  return <ExtValuesRow v9={s.extEma9} v21={s.extEma21} v50={s.extEma50} note={EXT_R_NOTE} />
+}
+
+/** 終値と EMA9 / 21 / 50 の距離（R）の 3 項目。業種カード・指数カードで共通 */
+export function ExtValuesRow({
+  v9,
+  v21,
+  v50,
+  note,
+  className = 'mt-1',
+}: ExtValues & { note: string; className?: string }) {
   const items = [
-    { label: 'EMA9', v: s.extEma9 },
-    { label: '21', v: s.extEma21 },
-    { label: '50', v: s.extEma50 },
+    { label: 'EMA9', v: v9 },
+    { label: '21', v: v21 },
+    { label: '50', v: v50 },
   ]
   return (
-    <div className="mt-1 grid grid-cols-3 gap-2 text-caption" title={EXT_R_NOTE}>
+    <div className={`grid grid-cols-3 gap-2 text-caption ${className}`} title={note}>
       {items.map((it, i) => (
         <div key={it.label} className="flex justify-between gap-1">
           <span className="text-[var(--text-muted)]">{i === 0 ? `距離 ${it.label}` : it.label}</span>
