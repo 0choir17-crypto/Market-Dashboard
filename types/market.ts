@@ -13,6 +13,17 @@ export type MarketConditions = {
   topix_open?: number | null
   topix_high?: number | null
   topix_low?: number | null
+  // 3 指数の EMA9/21/50 からの距離（2026-11-08 追加）。(終値 − EMA) / 同じ日の ATR14（Wilder）。符号付きの R。
+  // 列名は {topix|nikkei|growth}_ext_ema{9|21|50}。読むときは indexExtR() を通す
+  topix_ext_ema9?: number | null
+  topix_ext_ema21?: number | null
+  topix_ext_ema50?: number | null
+  nikkei_ext_ema9?: number | null
+  nikkei_ext_ema21?: number | null
+  nikkei_ext_ema50?: number | null
+  growth_ext_ema9?: number | null
+  growth_ext_ema21?: number | null
+  growth_ext_ema50?: number | null
   topix_chg_1w: number | null
   topix_chg_1m: number | null
   topix_chg_ytd: number | null
@@ -123,4 +134,16 @@ export type MarketConditions = {
   regime_shift_event?: number | null
   days_since_regime_shift?: number | null
   regime_run_length?: number | null
+}
+
+/** 指数の EMA9/21/50 からの距離（R）。行や列が無ければ null */
+export function indexExtR(
+  m: MarketConditions | null,
+  key: 'topix' | 'nikkei' | 'growth',
+): Record<9 | 21 | 50, number | null> {
+  const pick = (n: 9 | 21 | 50) => {
+    const v = m?.[`${key}_ext_ema${n}`]
+    return v != null && Number.isFinite(v) ? v : null
+  }
+  return { 9: pick(9), 21: pick(21), 50: pick(50) }
 }

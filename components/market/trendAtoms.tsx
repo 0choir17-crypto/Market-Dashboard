@@ -7,7 +7,7 @@
 import { SLOPE_LOOKBACK, type TrendSignal, type TrendState } from '@/lib/trendState'
 import type { SectorTrend } from '@/lib/sectorTrendFetch'
 import { TValue } from '@/components/sectors33/SelfStrength'
-import { EXT_EMAS } from '@/types/sectorSelection'
+import { EXT_EMAS, type ExtEma } from '@/types/sectorSelection'
 
 export const SIGNAL_STYLE: Record<TrendSignal, { bg: string; fg: string; bd: string; name: string }> = {
   green: { bg: 'var(--sem-strong-bg)', fg: 'var(--sem-strong-fg)', bd: 'var(--sem-strong-bd)', name: '緑' },
@@ -154,17 +154,17 @@ export function SelfRow({ s }: { s: SectorTrend }) {
   )
 }
 
-/** EMA からの距離（ATR14 換算の R） */
-export function ExtRow({ s }: { s: SectorTrend }) {
+/** EMA からの距離（ATR14 換算の R）。業種カード・指数カードで共通 */
+export function ExtRow({ values, className = 'mt-1' }: { values: Record<ExtEma, number | null>; className?: string }) {
   return (
     <div
-      className="mt-1 grid grid-cols-3 gap-2 text-caption"
-      title="業種指数の終値と EMA の距離。(終値 − EMA) / ATR14。+ = EMA より上 / − = 下"
+      className={`grid grid-cols-3 gap-2 text-caption ${className}`}
+      title="終値と EMA の距離。(終値 − EMA) / ATR14。+ = EMA より上 / − = 下"
     >
       {EXT_EMAS.map((n) => (
         <div key={n} className="flex justify-between gap-1">
           <span className="text-[var(--text-muted)]">R{n}</span>
-          <TValue v={s.extR[n]} />
+          <TValue v={values[n]} />
         </div>
       ))}
     </div>

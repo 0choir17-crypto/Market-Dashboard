@@ -51,7 +51,7 @@ export default function SectorDetailModal({
         )}
         <div className="max-w-xs">
           <SelfRow s={sector} />
-          <ExtRow s={sector} />
+          <ExtRow values={sector.extR} />
         </div>
 
         {data?.error ? (

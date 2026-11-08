@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useDate } from '@/contexts/DateContext'
-import { MarketConditions } from '@/types/market'
+import { MarketConditions, indexExtR } from '@/types/market'
 import { fetchIndexTrends, INDEXES, type IndexKey, type IndexTrendResult } from '@/lib/indexTrendFetch'
 import { fetchBreadthState, type BreadthState } from '@/lib/breadthState'
 import type { TrendState } from '@/lib/trendState'
@@ -10,14 +10,25 @@ import BreadthStateCard from './BreadthStateCard'
 import LeaderStateCard from './LeaderStateCard'
 import { fetchLeaderState, type LeaderStateResult } from '@/lib/leaderState'
 import IndexDetailModal from './IndexDetailModal'
-import { CardButton, CloseVs, EmaChain, SignalPill, Slopes } from './trendAtoms'
+import { CardButton, CloseVs, EmaChain, ExtRow, SignalPill, Slopes } from './trendAtoms'
 
 // Market Regime: 3 指数（TOPIX / 日経225 / グロース250）+ Market Breadth + 主導株（大型 / 中小）の 6 枚。
 // 広い画面では横 1 列、通常の PC 幅では 3 枚 × 2 段（上 = 指数、下 = 参加度と主導株）。
 // 自分の成績（My Trades）はこの上の列に別に置く（app/page.tsx）。
 // 指数の判定は日足 EMA9 / EMA21 の位置と向き。カードをクリックすると詳細を開く。
+// R9 / R21 / R50 = EMA からの距離（ATR14 換算）。バッチ側の値（market_conditions の *_ext_ema*）を表示する。
 
-function IndexCard({ label, state, onOpen }: { label: string; state: TrendState | null; onOpen: () => void }) {
+function IndexCard({
+  label,
+  state,
+  ext,
+  onOpen,
+}: {
+  label: string
+  state: TrendState | null
+  ext: Record<9 | 21 | 50, number | null>
+  onOpen: () => void
+}) {
   return (
     <CardButton onClick={onOpen} label={label} className="p-5">
       <h3 className="text-small font-medium text-[var(--text-primary)]">{label}</h3>
@@ -36,6 +47,7 @@ function IndexCard({ label, state, onOpen }: { label: string; state: TrendState 
             <CloseVs state={state} label="週足EMA9" value={state.weeklyEma9} />
             <CloseVs state={state} label="EMA50" value={state.ema50} />
           </div>
+          <ExtRow values={ext} className="mt-2" />
         </>
       )}
     </CardButton>
@@ -75,7 +87,7 @@ export default function IndexStateCards({ market }: { market: MarketConditions |
       <div className="flex items-baseline justify-between mb-3">
         <h2 className="text-title font-medium text-[var(--text-primary)]">Market Regime</h2>
         <span className="text-caption text-[var(--text-muted)]">
-          指数の EMA9 / EMA21・市場の参加度・主導株。カードをクリックで詳細
+          指数の EMA9 / EMA21・市場の参加度・主導株。R = EMA からの距離（ATR14 換算）。カードをクリックで詳細
         </span>
       </div>
       {result?.error && (
@@ -88,6 +100,7 @@ export default function IndexStateCards({ market }: { market: MarketConditions |
               key={idx.key}
               label={idx.label}
               state={result.states[idx.key]}
+              ext={indexExtR(market, idx.key)}
               onOpen={() => setOpenIndex(idx.key)}
             />
           ) : (

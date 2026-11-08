@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import Modal from '@/components/shared/Modal'
 import TvChart from '@/components/chart/TvChart'
 import type { MaLength } from '@/components/sectors33/SectorCandleChart'
-import { MarketConditions } from '@/types/market'
+import { MarketConditions, indexExtR } from '@/types/market'
 import type { IndexKey } from '@/lib/indexTrendFetch'
 import {
   DEFAULT_INDEX_RANGE,
@@ -14,7 +14,7 @@ import {
   type IndexRangeKey,
 } from '@/lib/indexChartFetch'
 import type { TrendState } from '@/lib/trendState'
-import { CloseVs, EmaChain, SignalPill, Slopes } from './trendAtoms'
+import { CloseVs, EmaChain, ExtRow, SignalPill, Slopes } from './trendAtoms'
 
 // 指数カードの詳細。判定の材料 + 期間リターン + TradingView 風チャート。
 
@@ -107,6 +107,7 @@ export default function IndexDetailModal({
               <CloseVs state={state} label="週足EMA9" value={state.weeklyEma9} />
               <CloseVs state={state} label="EMA50" value={state.ema50} />
             </div>
+            <ExtRow values={indexExtR(market, index)} className="w-64" />
           </div>
         )}
 

@@ -51,7 +51,7 @@ function SectorCard({ s, onOpen }: { s: SectorTrend; onOpen: () => void }) {
       )}
 
       <SelfRow s={s} />
-      <ExtRow s={s} />
+      <ExtRow values={s.extR} />
     </CardButton>
   )
 }
