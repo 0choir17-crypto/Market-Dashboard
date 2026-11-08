@@ -10,7 +10,7 @@
 //   一覧は上から順に買う前提で、残り余力を超える行は買える株数（100 株単位）まで減らす。
 // 並び順 = 優先順位（sort_order）。↑↓ で入れ替える。列が未作成なら作成順。
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { insertResilient, updateResilient } from '@/lib/resilientWrite'
 import { suggestShares } from '@/lib/rStats'
@@ -30,6 +30,8 @@ export type TradePlan = {
 }
 
 const SORT_SQL = 'supabase/migrations/20261113_trade_plans_sort_order.sql'
+// RLS で書き込めない（この端末で未ログイン）と、エラーにならず 0 行更新で終わる
+const NOT_WRITTEN = '保存されませんでした。この端末でログインしているか確認してください（ログインしていないと閲覧のみ）'
 
 /** 優先順位順（sort_order 未設定は後ろ、同順位は作成順） */
 function byPriority(a: TradePlan, b: TradePlan): number {
@@ -115,6 +117,8 @@ export default function TradePlans({ capital, holdingsCost, riskPct, onUseForTra
   const [plans, setPlans] = useState<TradePlan[]>([])
   const [msg, setMsg] = useState('')
   const [saving, setSaving] = useState(false)
+  const formRef = useRef<HTMLDivElement>(null)
+  const codeRef = useRef<HTMLInputElement>(null)
 
   const load = useCallback(async () => {
     const { data, error } = await supabase
@@ -151,7 +155,7 @@ export default function TradePlans({ capital, holdingsCost, riskPct, onUseForTra
       ...(form.id ? {} : { sort_order: plans.reduce((m, p) => Math.max(m, p.sort_order ?? 0), 0) + 1 }),
     }
     // company_name 列が未作成でも保存は通す（列を除外して再試行）
-    const { error, stripped } = form.id
+    const { error, stripped, count } = form.id
       ? await updateResilient('trade_plans', row, { id: form.id })
       : await insertResilient('trade_plans', row)
     setSaving(false)
@@ -161,6 +165,7 @@ export default function TradePlans({ capital, holdingsCost, riskPct, onUseForTra
         : `保存に失敗しました（ログインが必要です）: ${error.message}`)
       return
     }
+    if (form.id && count === 0) { setMsg(NOT_WRITTEN); return }
     setMsg(stripped.includes('company_name')
       ? '保存しました（銘柄名は未保存: supabase/migrations/20261112_trade_plans_company_name.sql を実行してください）'
       : form.id ? '更新しました' : '検討中に保存しました')
@@ -181,7 +186,10 @@ export default function TradePlans({ capital, holdingsCost, riskPct, onUseForTra
     const results = await Promise.all(changed.map(({ p, order }) =>
       updateResilient('trade_plans', { sort_order: order }, { id: p.id })))
     const failed = results.find(r => r.error)
-    if (results.some(r => r.stripped.includes('sort_order'))) {
+    if (results.some(r => r.count === 0)) {
+      setMsg(NOT_WRITTEN)
+      load()
+    } else if (results.some(r => r.stripped.includes('sort_order'))) {
       setMsg(`優先順位を保存するには ${SORT_SQL} を Supabase の SQL Editor で実行してください（今は画面上だけ並べ替えています）`)
     } else if (failed?.error) {
       setMsg(`優先順位の保存に失敗しました（ログインが必要です）: ${failed.error.message}`)
@@ -192,8 +200,9 @@ export default function TradePlans({ capital, holdingsCost, riskPct, onUseForTra
 
   async function remove(p: TradePlan) {
     if (!window.confirm(`${p.ticker} の計画を削除しますか？`)) return
-    const { error } = await supabase.from('trade_plans').delete().eq('id', p.id)
+    const { error, count } = await supabase.from('trade_plans').delete({ count: 'exact' }).eq('id', p.id)
     if (error) { setMsg(`削除に失敗しました（ログインが必要です）: ${error.message}`); return }
+    if (count === 0) { setMsg(NOT_WRITTEN); return }
     if (form.id === p.id) setForm(EMPTY)
     setMsg('')
     load()
@@ -231,11 +240,17 @@ export default function TradePlans({ capital, holdingsCost, riskPct, onUseForTra
       </div>
 
       {/* 入力 */}
+      {form.id && (
+        <div className="mb-2 text-small font-medium text-[var(--sem-focus-fg)]">
+          編集中: {form.code}（変更して「計画を更新」を押す）
+        </div>
+      )}
+      <div ref={formRef} />
       <div className="grid grid-cols-2 sm:grid-cols-[7rem_10rem_8rem_8rem_minmax(0,1fr)] gap-3">
         <label className="block">
           <span className="block text-small text-[var(--text-muted)] mb-1">コード</span>
           <input type="text" value={form.code} onChange={e => setForm(f => ({ ...f, code: e.target.value }))}
-                 placeholder="7203" className={field} />
+                 ref={codeRef} placeholder="7203" className={field} />
         </label>
         <label className="block">
           <span className="block text-small text-[var(--text-muted)] mb-1">銘柄名</span>
@@ -318,7 +333,7 @@ export default function TradePlans({ capital, holdingsCost, riskPct, onUseForTra
             {rows.map(({ p, c }, i) => {
               const usable = c?.kind === 'ok' && c.sz != null && c.sz.shares > 0
               return (
-                <li key={p.id} className="py-2 flex flex-wrap items-center gap-x-4 gap-y-1">
+                <li key={p.id} className={`py-2 flex flex-wrap items-center gap-x-4 gap-y-1 ${form.id === p.id ? 'bg-[var(--sem-focus-bg,rgba(37,99,235,0.08))] rounded-lg -mx-2 px-2' : ''}`}>
                   <span className="flex items-center gap-1">
                     <span className="w-5 text-center text-small num font-medium text-[var(--text-muted)]">{i + 1}</span>
                     <span className="flex flex-col">
@@ -349,6 +364,9 @@ export default function TradePlans({ capital, holdingsCost, riskPct, onUseForTra
                     <button type="button" className={btnSmall} onClick={() => {
                       setForm({ id: p.id, code: p.ticker, name: p.company_name ?? '', prevClose: String(p.prev_close), stop: String(p.stop_price), memo: p.memo ?? '' })
                       setMsg('')
+                      // 入力欄は一覧の上にあるため、スマホでは画面外になりやすい。見える位置まで戻す
+                      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                      codeRef.current?.focus({ preventScroll: true })
                     }}>編集</button>
                     <button type="button" className={btnSmall} onClick={() => remove(p)}>削除</button>
                   </span>

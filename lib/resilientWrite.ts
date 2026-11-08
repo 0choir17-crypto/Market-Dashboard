@@ -13,11 +13,15 @@ const MISSING_COL_RE = /Could not find the '([^']+)' column/
 
 type WriteError = { code?: string; message: string } | null
 
-export type ResilientResult = { error: WriteError; stripped: string[] }
+/**
+ * count: 更新した行数（updateResilient のみ）。RLS で書き込めない時（未ログイン等）は
+ * エラーにならず 0 行更新で成功扱いになるため、呼び出し側で 0 を検出するのに使う。
+ */
+export type ResilientResult = { error: WriteError; stripped: string[]; count?: number | null }
 
 async function attempt(
   record: Record<string, unknown>,
-  exec: (rec: Record<string, unknown>) => PromiseLike<{ error: WriteError }>,
+  exec: (rec: Record<string, unknown>) => PromiseLike<{ error: WriteError; count?: number | null }>,
 ): Promise<ResilientResult> {
   const rec: Record<string, unknown> = { ...record }
   const stripped: string[] = []
@@ -25,14 +29,14 @@ async function attempt(
   const maxTries = Object.keys(rec).length + 1
 
   for (let i = 0; i < maxTries; i++) {
-    const { error } = await exec(rec)
+    const { error, count } = await exec(rec)
     if (!error) {
       if (stripped.length) {
         console.warn(
           `[resilientWrite] schema に存在しない列を除外して保存しました: ${stripped.join(', ')}`,
         )
       }
-      return { error: null, stripped }
+      return { error: null, stripped, count }
     }
 
     const col = error.code === 'PGRST204' ? MISSING_COL_RE.exec(error.message)?.[1] : undefined
@@ -55,5 +59,5 @@ export function updateResilient(
   record: Record<string, unknown>,
   match: Record<string, unknown>,
 ) {
-  return attempt(record, rec => supabase.from(table).update(rec).match(match))
+  return attempt(record, rec => supabase.from(table).update(rec, { count: 'exact' }).match(match))
 }
