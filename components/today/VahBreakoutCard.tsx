@@ -34,9 +34,58 @@ function shortDate(d: string | null): string {
   return `${Number(m)}/${Number(day)}`
 }
 
-// 何回目の上抜けか。初回だけ色を付ける（優劣ではなく「その期間で初めて」という事実の強調。
-// 検証上は初回と再上抜けで成績差は無い）。
-function CrossBadge({ n }: { n: number | null }) {
+// v9 のシグナル種別バッジ。配色は Chrome overlay 拡張と同じ（▲ベース初回 = 緑 / ◆切替直後 = 赤紫 / 他 = 灰）。
+// 色は優劣ではなく種類の区別（検証上、どの種類も買いシグナルになるほどの差は無い）。
+const BADGE_GREEN = '#1f6f4a'
+const BADGE_MAGENTA = '#8a2350'
+const BADGE_GRAY = '#3a4150'
+
+function badgeFor(row: VahBreakoutRow): { label: string; bg: string; title: string } | null {
+  const n = row.cross_n
+  switch (row.signal) {
+    case 'base': {
+      const first = n === 1
+      return {
+        label: first ? '▲ベース 初回' : isNum(n) ? `▲ベース ${n}回目` : '▲ベース',
+        bg: first ? BADGE_GREEN : BADGE_GRAY,
+        title: first
+          ? '▲ベースのブレイク（起点から5本以上たって、起点〜前日の VAH を終値で初めて上抜けた）'
+          : `▲ベースのブレイク ${isNum(n) ? `${n}回目` : ''}（失敗＝20本以内にベース VAH の下で2日 のあとの再ブレイク）`,
+      }
+    }
+    case 'prev':
+      return {
+        label: '▲前日VAH',
+        bg: BADGE_GRAY,
+        title: '▲前日までの VAH の上抜け（前日終値 ≤ 起点〜前々日の VAH、当日終値 > 起点〜前日の VAH）',
+      }
+    case 'switch':
+      return {
+        label: '◆切替直後',
+        bg: BADGE_MAGENTA,
+        title: '◆出来高急増で起点が切り替わってから5本以内に、前の期間の VAH を終値で上抜けた',
+      }
+    default:
+      return null
+  }
+}
+
+function SignalBadge({ row }: { row: VahBreakoutRow }) {
+  const b = badgeFor(row)
+  if (!b) return <LegacyCrossBadge n={row.cross_n} />
+  return (
+    <span
+      className="inline-flex items-center px-1.5 py-0.5 rounded text-caption font-medium tabular-nums"
+      style={{ backgroundColor: b.bg, color: '#ffffff' }}
+      title={b.title}
+    >
+      {b.label}
+    </span>
+  )
+}
+
+// 2026-11-08 より前の行（V35 = 全上抜け、signal が null）の表示。同じ期間の中で何回目の上抜けか。
+function LegacyCrossBadge({ n }: { n: number | null }) {
   const first = n === 1
   return (
     <span
@@ -46,7 +95,11 @@ function CrossBadge({ n }: { n: number | null }) {
         color: first ? 'var(--sem-strong-fg)' : 'var(--text-secondary)',
         borderColor: first ? 'var(--sem-strong-bd)' : 'var(--border-strong)',
       }}
-      title={first ? 'この期間で初めて VAH を上抜けた' : `この期間で ${n ?? '—'} 回目の上抜け（一度 VAH の下に戻ってから再び上抜けた）`}
+      title={
+        first
+          ? '（旧定義）この期間で初めて VAH を上抜けた'
+          : `（旧定義）この期間で ${n ?? '—'} 回目の上抜け（一度 VAH の下に戻ってから再び上抜けた）`
+      }
     >
       {first ? '初回' : isNum(n) ? `${n}回目` : '—'}
     </span>
@@ -79,7 +132,7 @@ function Metric({
 
 export default function VahBreakoutCard({ row, multiHit = false, onAddPosition }: Props) {
   const prevLabel =
-    row.vah_vs_prev === 'above' ? '今VAHより下' : row.vah_vs_prev === 'below' ? '今VAH以上' : ''
+    row.vah_vs_prev === 'above' ? '線より下' : row.vah_vs_prev === 'below' ? '線以上' : ''
   return (
     <div
       className="bg-[var(--bg-card)] rounded-lg border shadow-sm hover:shadow-md transition-shadow flex flex-col"
@@ -88,12 +141,12 @@ export default function VahBreakoutCard({ row, multiHit = false, onAddPosition }
         backgroundColor: multiHit ? 'var(--sem-watch-bg)' : 'var(--bg-card)',
       }}
     >
-      {/* 何回目か / 期間 */}
+      {/* シグナルの種類 / 期間 */}
       <div className="px-3 py-2 border-b border-[var(--border-subtle)] flex items-center gap-1.5 flex-wrap">
-        <CrossBadge n={row.cross_n} />
+        <SignalBadge row={row} />
         <span
           className="ml-auto text-caption text-[var(--text-muted)] tabular-nums font-mono"
-          title="期間の起点（出来高の多い局面の始まり）と、起点〜前日の本数"
+          title="抜けた線の期間の起点（出来高の多い局面の始まり）と、その期間の本数"
         >
           起点 {shortDate(row.period_start)}・{isNum(row.period_bars) ? row.period_bars : '—'}本
         </span>
@@ -137,6 +190,15 @@ export default function VahBreakoutCard({ row, multiHit = false, onAddPosition }
           >
             VAH {fmtSignedPct(row.breakout_pct, 2)}
           </p>
+          {isNum(row.r_atr) && (
+            <p
+              className="font-mono text-caption tabular-nums leading-tight text-[var(--text-secondary)]"
+              title="R = (終値 − 抜けた線) ÷ 前日 ATR14（チャートの R と同じ）。線を損切りにしたときの距離の目安"
+            >
+              {row.r_atr >= 0 ? '+' : ''}
+              {row.r_atr.toFixed(2)}R
+            </p>
+          )}
         </div>
       </div>
 
@@ -144,9 +206,9 @@ export default function VahBreakoutCard({ row, multiHit = false, onAddPosition }
       <div className="px-3 space-y-0.5 text-caption text-[var(--text-secondary)] tabular-nums">
         {(
           [
-            ['VAH', row.vah, '上抜けた線（前日までの期間の Value Area 上限）'],
-            ['POC', row.poc, '期間で最も出来高が多かった価格帯'],
-            ['VAL', row.val, '期間の Value Area 下限'],
+            ['VAH', row.vah, '上抜けた線（その期間の Value Area 上限）。◆切替直後は前の期間の VAH'],
+            ['POC', row.poc, '抜けた線の期間で最も出来高が多かった価格帯'],
+            ['VAL', row.val, '抜けた線の期間の Value Area 下限'],
           ] as const
         ).map(([label, v, title]) => (
           <div key={label} className="flex items-baseline justify-between gap-2" title={title}>
@@ -156,7 +218,7 @@ export default function VahBreakoutCard({ row, multiHit = false, onAddPosition }
         ))}
         <div
           className="flex items-baseline justify-between gap-2 text-[var(--text-muted)]"
-          title="1つ前の期間の VAH（TradingView の灰色の線）。検証上、今の VAH より上か下かで成績差は無い"
+          title="抜けた線の 1 つ前の期間の VAH。検証上、抜けた線より上か下かで成績差は無い"
         >
           <span className="font-mono">前VAH</span>
           <span className="font-mono">
