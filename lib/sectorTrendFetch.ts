@@ -43,8 +43,9 @@ export type SectorTrend = {
   extEma9Diff: number | null
   extEma21Diff: number | null
   extEma50Diff: number | null
-  /** EMA9 距離（R）の直近 20 営業日の推移（古い順）。最終日に行が無い業種は空 */
+  /** EMA9 / EMA21 距離（R）の直近 20 営業日の推移（古い順）。最終日に行が無い業種は空 */
   extEma9Hist: ExtPoint[]
+  extEma21Hist: ExtPoint[]
 }
 
 export type SectorTrendResult = {
@@ -119,6 +120,8 @@ export async function fetchSectorTrends(endDate?: string): Promise<SectorTrendRe
       const b = num(prev[col])
       return a != null && b != null ? a - b : null
     }
+    const hist = (col: string): ExtPoint[] =>
+      isLatest ? recent.slice(-EXT_HIST_DAYS).map((r) => ({ date: r.date as string, v: num(r[col]) })) : []
     sectors.push({
       sector,
       state: computeTrendState(points),
@@ -130,9 +133,8 @@ export async function fetchSectorTrends(endDate?: string): Promise<SectorTrendRe
       extEma9Diff: diff('sector_index_ext_ema9_s33'),
       extEma21Diff: diff('sector_index_ext_ema21_s33'),
       extEma50Diff: diff('sector_index_ext_ema50_s33'),
-      extEma9Hist: isLatest
-        ? recent.slice(-EXT_HIST_DAYS).map((r) => ({ date: r.date as string, v: num(r.sector_index_ext_ema9_s33) }))
-        : [],
+      extEma9Hist: hist('sector_index_ext_ema9_s33'),
+      extEma21Hist: hist('sector_index_ext_ema21_s33'),
     })
   }
   return { sectors, latestDate, error: null }
