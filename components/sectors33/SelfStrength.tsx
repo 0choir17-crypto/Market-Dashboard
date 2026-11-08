@@ -71,11 +71,16 @@ export function DiffValue({ diff, bare = false }: { diff: number | undefined; ba
   )
 }
 
-/** EMA からの距離 (R)。良し悪しの色は付けない（伸びすぎ・押しの両方に使うため）。値が無ければ灰の「—」 */
+/** EMA からの距離 (R)。+ = 緑 / − = 赤 / 0 = 灰。値が無ければ灰の「—」 */
+export function rColor(v: number | null | undefined): string {
+  if (!isNum(v) || Math.round(v * 10) === 0) return 'var(--text-muted)'
+  return v > 0 ? 'var(--positive)' : 'var(--negative)'
+}
+
 export function RValue({ v, strong = false }: { v: number | null | undefined; strong?: boolean }) {
   if (!isNum(v)) return <span className="text-[var(--sem-idle-fg)]">—</span>
   return (
-    <span className={`num ${strong ? 'text-[var(--text-primary)] font-medium' : 'text-[var(--text-secondary)]'}`}>
+    <span className={`num ${strong ? 'font-medium' : ''}`} style={{ color: rColor(v) }}>
       {fmtR(v)}
     </span>
   )

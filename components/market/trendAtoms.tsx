@@ -165,6 +165,42 @@ export function SectorStats({ s }: { s: SectorTrend }) {
   )
 }
 
+/**
+ * 終値と EMA9 / 21 / 50 の距離（R）を 3 列で。見出しの下に値（+ 緑 / − 赤）。
+ * 指数カード・業種カードで使う。株価の位置はこれで読むので、EMA の向き・並びはカードに出さない。
+ */
+export function ExtRGrid({
+  ema9,
+  ema21,
+  ema50,
+  large = false,
+  className = '',
+}: {
+  ema9: number | null | undefined
+  ema21: number | null | undefined
+  ema50: number | null | undefined
+  large?: boolean
+  className?: string
+}) {
+  const items = [
+    { label: 'EMA9', v: ema9 },
+    { label: 'EMA21', v: ema21 },
+    { label: 'EMA50', v: ema50 },
+  ]
+  return (
+    <div className={`grid grid-cols-3 gap-2 ${className}`} title={EXT_R_NOTE}>
+      {items.map((it) => (
+        <div key={it.label}>
+          <p className="text-caption text-[var(--text-muted)]">{it.label}</p>
+          <p className={large ? 'text-lead' : 'text-small'}>
+            <RValue v={it.v} strong />
+          </p>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 /** 判定の小さな札: ● 緑 上向き EMA9・21 の上 (RS Leaders / Liquid Leaders の Sector Board) */
 export function TrendTag({ state, className = '' }: { state: TrendState; className?: string }) {
   const sig = SIGNAL_STYLE[state.signal]

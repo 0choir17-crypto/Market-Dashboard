@@ -22,9 +22,51 @@ export const INDEXES: { key: IndexKey; label: string; column: string }[] = [
  */
 const LOOKBACK_DAYS = barsToCalendarDays(emaWarmupBars(50) + SLOPE_LOOKBACK)
 
+/** 終値と EMA9 / 21 / 50 の距離（R）。market_conditions の {key}_ext_ema{9,21,50}。バッチ側で計算済み */
+export type ExtR = { ema9: number | null; ema21: number | null; ema50: number | null }
+
 export type IndexTrendResult = {
   states: Record<IndexKey, TrendState | null>
+  /** 最終日（endDate 以前で最新の行）の EMA からの距離。取れなければ null */
+  ext: Record<IndexKey, ExtR | null>
   error: string | null
+}
+
+const EXT_COLUMNS = INDEXES.flatMap((i) => [9, 21, 50].map((n) => `${i.key}_ext_ema${n}`))
+
+function num(v: unknown): number | null {
+  if (v === null || v === undefined) return null
+  const n = Number(v)
+  return Number.isFinite(n) ? n : null
+}
+
+/**
+ * 最終日の EMA 距離（R）。判定とは別の問い合わせにする:
+ * 列がまだ無い・取れないときも、判定のカードは出し続けるため（距離は「—」になる）。
+ */
+async function fetchIndexExt(endDate?: string): Promise<Record<IndexKey, ExtR | null>> {
+  const empty = { topix: null, nikkei: null, growth: null }
+  let q = supabase
+    .from('market_conditions')
+    .select(['date', ...EXT_COLUMNS].join(', '))
+    .order('date', { ascending: false })
+    .limit(1)
+  if (endDate) q = q.lte('date', endDate)
+  const { data, error } = await q
+  if (error || !data || data.length === 0) {
+    if (error) console.error('[market_conditions index ext]', error)
+    return empty
+  }
+  const r = data[0] as unknown as Record<string, unknown>
+  const out: Record<IndexKey, ExtR | null> = { ...empty }
+  for (const idx of INDEXES) {
+    out[idx.key] = {
+      ema9: num(r[`${idx.key}_ext_ema9`]),
+      ema21: num(r[`${idx.key}_ext_ema21`]),
+      ema50: num(r[`${idx.key}_ext_ema50`]),
+    }
+  }
+  return out
 }
 
 function shiftDays(base: string | undefined, days: number): string {
@@ -42,11 +84,11 @@ export async function fetchIndexTrends(endDate?: string): Promise<IndexTrendResu
     .order('date', { ascending: true })
   if (endDate) q = q.lte('date', endDate)
 
-  const { data, error } = await q
+  const [{ data, error }, ext] = await Promise.all([q, fetchIndexExt(endDate)])
   const empty = { topix: null, nikkei: null, growth: null }
   if (error || !data) {
     if (error) console.error('[market_conditions index trend]', error)
-    return { states: empty, error: error?.message ?? null }
+    return { states: empty, ext, error: error?.message ?? null }
   }
 
   const rows = data as unknown as Record<string, unknown>[]
@@ -62,5 +104,5 @@ export async function fetchIndexTrends(endDate?: string): Promise<IndexTrendResu
     }
     states[idx.key] = computeTrendState(points)
   }
-  return { states, error: null }
+  return { states, ext, error: null }
 }

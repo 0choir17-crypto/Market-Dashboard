@@ -22,6 +22,11 @@ export type MarketConditions = {
   topix_dist_sma200: number | null
   topix_above_sma50: boolean | null
   topix_above_sma200: boolean | null
+  // 終値と EMA の距離（R）= (終値 − EMA) / 同じ日の ATR14 (Wilder)。バッチ側で計算済み（再計算しない）。
+  // 日経・グロースも同じ命名（{nikkei,growth}_ext_ema{9,21,50}）。null は「—」
+  topix_ext_ema9?: number | null
+  topix_ext_ema21?: number | null
+  topix_ext_ema50?: number | null
   // 日経225
   nikkei_price: number | null
   nikkei_chg_1w: number | null
@@ -33,6 +38,9 @@ export type MarketConditions = {
   nikkei_dist_sma200: number | null
   nikkei_above_sma50: boolean | null
   nikkei_above_sma200: boolean | null
+  nikkei_ext_ema9?: number | null
+  nikkei_ext_ema21?: number | null
+  nikkei_ext_ema50?: number | null
   // グロース250
   growth_price: number | null
   growth_chg_1w: number | null
@@ -44,6 +52,9 @@ export type MarketConditions = {
   growth_dist_sma200: number | null
   growth_above_sma50: boolean | null
   growth_above_sma200: boolean | null
+  growth_ext_ema9?: number | null
+  growth_ext_ema21?: number | null
+  growth_ext_ema50?: number | null
   // Breadth
   advances: number | null
   declines: number | null

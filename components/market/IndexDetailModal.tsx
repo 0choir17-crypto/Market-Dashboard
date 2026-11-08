@@ -5,7 +5,7 @@ import Modal from '@/components/shared/Modal'
 import TvChart from '@/components/chart/TvChart'
 import type { MaLength } from '@/components/sectors33/SectorCandleChart'
 import { MarketConditions } from '@/types/market'
-import type { IndexKey } from '@/lib/indexTrendFetch'
+import type { ExtR, IndexKey } from '@/lib/indexTrendFetch'
 import {
   DEFAULT_INDEX_RANGE,
   INDEX_RANGES,
@@ -14,7 +14,7 @@ import {
   type IndexRangeKey,
 } from '@/lib/indexChartFetch'
 import type { TrendState } from '@/lib/trendState'
-import { CloseVs, EmaChain, SignalPill, Slopes } from './trendAtoms'
+import { CloseVs, EmaChain, ExtRGrid, SignalPill, Slopes } from './trendAtoms'
 
 // 指数カードの詳細。判定の材料 + 期間リターン + TradingView 風チャート。
 
@@ -68,6 +68,7 @@ export default function IndexDetailModal({
   index,
   label,
   state,
+  ext = null,
   market,
   endDate,
   onClose,
@@ -75,6 +76,8 @@ export default function IndexDetailModal({
   index: IndexKey
   label: string
   state: TrendState | null
+  /** 終値と EMA9 / 21 / 50 の距離（R） */
+  ext?: ExtR | null
   market: MarketConditions | null
   endDate?: string
   onClose: () => void
@@ -109,6 +112,8 @@ export default function IndexDetailModal({
             </div>
           </div>
         )}
+
+        <ExtRGrid ema9={ext?.ema9} ema21={ext?.ema21} ema50={ext?.ema50} className="max-w-sm" />
 
         <div className="flex flex-wrap gap-6">
           <Change label="1W" value={col('chg_1w')} />

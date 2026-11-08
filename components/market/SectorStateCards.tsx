@@ -5,10 +5,11 @@ import { useDate } from '@/contexts/DateContext'
 import { fetchSectorTrends, type SectorTrend, type SectorTrendResult } from '@/lib/sectorTrendFetch'
 import type { TrendSignal } from '@/lib/trendState'
 import { CautionMark } from '@/components/sectors33/SelfStrength'
-import { CardButton, EmaChain, SIGNAL_ORDER, SIGNAL_STYLE, SectorStats, SignalPill, Slopes } from './trendAtoms'
+import { CardButton, ExtRGrid, SIGNAL_ORDER, SIGNAL_STYLE, SignalPill } from './trendAtoms'
 import SectorDetailModal from './SectorDetailModal'
 
 // 33 業種の地合い判定カード。判定と書き方は指数カードと同じ（日足 EMA9 / EMA21 の位置と向き）。
+// カードには判定と EMA9 / 21 / 50 からの距離（R）だけを出す。EMA の向き・並び・自力 t 値は詳細モーダルで見る。
 // 並びは 緑 → 黄 → 赤、同じ色の中は self_t21 の高い順（null は最後）。
 // カードをクリックすると詳細（チャート）を開く。
 
@@ -37,20 +38,19 @@ function SectorCard({ s, onOpen }: { s: SectorTrend; onOpen: () => void }) {
       </div>
 
       {st ? (
-        <>
-          <div className="mt-2">
-            <SignalPill signal={st.signal} label={st.label} compact />
-          </div>
-          <div className="mt-2 space-y-1 text-caption">
-            <Slopes state={st} />
-            <EmaChain state={st} />
-          </div>
-        </>
+        <div className="mt-2">
+          <SignalPill signal={st.signal} label={st.label} compact />
+        </div>
       ) : (
         <p className="text-caption text-[var(--text-muted)] mt-1">データが足りません</p>
       )}
 
-      <SectorStats s={s} />
+      <ExtRGrid
+        ema9={s.extEma9}
+        ema21={s.extEma21}
+        ema50={s.extEma50}
+        className="mt-2 pt-2 border-t border-[var(--border)]"
+      />
     </CardButton>
   )
 }
@@ -89,8 +89,8 @@ export default function SectorStateCards() {
         <div>
           <h2 className="text-title font-medium text-[var(--text-primary)]">Sectors</h2>
           <p className="text-caption text-[var(--text-muted)] mt-0.5">
-            TOPIX-33 業種指数の EMA9 / EMA21 判定。並びは 緑 → 黄 → 赤、同じ色の中は自力 t21 の高い順。カードをクリックで詳細。
-            t21 / t63 = 業種の自力（TOPIX につられた分を除いた強さ）
+            TOPIX-33 業種指数の EMA9 / EMA21 判定と EMA からの距離（R）。並びは 緑 → 黄 → 赤、同じ色の中は自力 t21 の高い順。
+            カードをクリックで詳細（自力 t21 / t63 = TOPIX につられた分を除いた強さ）
             {result?.latestDate && <span className="ml-2 font-mono">{result.latestDate}</span>}
           </p>
         </div>
