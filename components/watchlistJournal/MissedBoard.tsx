@@ -6,7 +6,7 @@
 // なっていない銘柄（lib/watchlistJournalFetch.ts#buildMissed）。
 // 同一 code の exit は畳まず全件出す（1 回ごとが独立した判断）。
 //
-// from_state 別にグループ化し、READY からの離脱を最も重く扱う
+// from_state 別にグループ化し、FOCUS からの離脱を最も重く扱う
 // （エントリー可と判断しておいて買わなかった）。並びの既定は Max Gain 降順 =
 // 「落とした後に伸びた順」。
 //
@@ -21,8 +21,10 @@ import DataTable, { type Column } from '@/components/shared/DataTable'
 import TickerCell from '@/components/shared/TickerCell'
 import { NumCell, PctCell, SampleSizeNote, YenCell, median } from './atoms'
 
-// READY からの離脱が最も重い。この順で並べる。FOCUS 以降は 2026-11-07 に廃止した見出し。
-const FROM_STATE_ORDER = ['READY', 'PULLBACK', 'BREAKOUT', 'EARNINGS', 'SHORT', 'INBOX', 'FOCUS', 'SECOND', 'OTHERS']
+// FOCUS からの離脱が最も重い。この順で並べる。READY 以降は廃止した見出し
+// （READY は 2026-11-07〜11-17、SECOND / OTHERS は 2026-11-07 まで）。
+// FOCUS は 11-07 以前の「注目」と 11-17 以降の「最優先で見る銘柄」が同じ名前で混ざる。
+const FROM_STATE_ORDER = ['FOCUS', 'PULLBACK', 'BREAKOUT', 'EARNINGS', 'SHORT', 'INBOX', 'READY', 'SECOND', 'OTHERS']
 
 function fromStateIndex(state: string | null): number {
   const i = FROM_STATE_ORDER.indexOf(state ?? '')
@@ -76,7 +78,7 @@ const COLUMNS: Column<MissedRow>[] = [
   {
     key: 'from_state',
     label: 'From',
-    tooltip: 'どの状態から落としたか（READY が最も重い順で並ぶ）',
+    tooltip: 'どの状態から落としたか（FOCUS が最も重い順で並ぶ）',
     align: 'left',
     // 五十音ではなく見逃しの重み順で並べる
     value: r => fromStateIndex(r.from_state),
@@ -221,7 +223,7 @@ export default function MissedBoard({ rows }: Props) {
           選択中の 1 組を下に大きく出す（タイルに 2 つ詰めると窮屈だった）。 */}
       <div className="flex flex-wrap items-center gap-1.5">
         {chip(null, 'All', rows.length)}
-        {groups.map(g => chip(g.state, g.state, g.count, g.state === 'READY'))}
+        {groups.map(g => chip(g.state, g.state, g.count, g.state === 'FOCUS'))}
       </div>
 
       <div className="flex flex-wrap items-baseline gap-x-6 gap-y-1 mt-3">
@@ -254,7 +256,7 @@ export default function MissedBoard({ rows }: Props) {
           rowKey={r => `${r.snapshot_id}-${r.code}`}
           defaultSort={{ key: 'max_ret_pct', dir: 'desc' }}
           // 重みは塗りではなく左端のレールで示す
-          rail={r => (r.from_state === 'READY' ? 'var(--sem-focus-fg)' : null)}
+          rail={r => (r.from_state === 'FOCUS' ? 'var(--sem-focus-fg)' : null)}
         />
       </div>
     </section>

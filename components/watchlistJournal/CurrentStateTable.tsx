@@ -3,7 +3,7 @@
 // Current State — 旧 /watchlist（手入力テーブル）の置き換え先。
 //
 // watchlist_current を状態でグループ化して表示する。既定ソートは Days 降順で、
-// 「READY で何日止まっているか」が一目で分かることを最優先にしている。
+// 「FOCUS で何日止まっているか」が一目で分かることを最優先にしている。
 // 読み取り専用: 追加・編集・削除の導線は無い（編集は TradingView 側）。
 //
 // 列は要約 7 列 + 詳細行 9 列に分けた（DESIGN_DIRECTION.md §5.1）。
@@ -35,7 +35,7 @@ const COLUMNS: Column<CurrentRowWithFirstWatch>[] = [
   {
     key: 'days',
     label: 'Days',
-    tooltip: 'since からの暦日数。READY で何日止まっているかを見る',
+    tooltip: 'since からの暦日数。FOCUS で何日止まっているかを見る',
     value: r => r.days,
     render: r => <NumCell value={r.days} digits={0} />,
   },
@@ -171,7 +171,7 @@ const COLUMNS: Column<CurrentRowWithFirstWatch>[] = [
 
 /** グループ見出しの注記。各セクションの運用ルールを添える（2026-11-07〜 待っている条件で分ける）。 */
 const GROUP_NOTE: Record<string, string> = {
-  READY: '買値と損切り値を言える銘柄。翌営業日に買うか、待ちへ戻す',
+  FOCUS: '最優先で毎日チャートを見る銘柄。買値と損切り値を決めにいく',
   PULLBACK: '待つ線まで押すのを待つ。価格アラートを付ける',
   BREAKOUT: '超えるべき価格を待つ。価格アラートを付ける',
   EARNINGS: '決算を見てから判断する。決算翌日に必ず仕分ける',
@@ -213,8 +213,8 @@ export default function CurrentStateTable({ rows }: Props) {
         // SOLD は売却済アーカイブで現在のウォッチ対象ではない。しかも記録開始前
         // からの建玉が混ざっているので、現在のリストと並べると紛らわしい。既定で畳む。
         defaultCollapsed={['SOLD']}
-        // 重みは塗りではなく左端のレールで示す。READY だけ。
-        rail={r => (r.state === 'READY' ? 'var(--sem-focus-fg)' : null)}
+        // 重みは塗りではなく左端のレールで示す。FOCUS だけ。
+        rail={r => (r.state === 'FOCUS' ? 'var(--sem-focus-fg)' : null)}
         renderGroupHeader={(state, count) => (
           <span className="inline-flex items-baseline gap-2 flex-wrap">
             <span className="text-small font-medium tracking-wide text-[var(--text-primary)]">
