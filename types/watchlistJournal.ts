@@ -11,14 +11,16 @@ import type { SemanticTone } from '@/types/semantic'
 export type WatchState =
   | 'HOLD'
   | 'SOLD'
-  | 'READY'
+  | 'FOCUS'
   | 'PULLBACK'
   | 'BREAKOUT'
   | 'EARNINGS'
   | 'SHORT'
   | 'INBOX'
-  // 2026-11-07 に廃止した見出し。過去の記録にだけ残る
-  | 'FOCUS'
+  // 廃止した見出し。過去の記録にだけ残る
+  // READY は 2026-11-07〜11-17（11-17 に FOCUS へ改名）。SECOND / OTHERS は 2026-11-07 まで。
+  // FOCUS は 11-07 以前は序列型の「注目」、11-17 以降は「最優先で見る銘柄」で意味が違う
+  | 'READY'
   | 'SECOND'
   | 'OTHERS'
 
@@ -27,14 +29,14 @@ export type WatchEventType = 'enter' | 'move' | 'exit'
 /** §3.1 の表示順。ここに無い状態（想定外の値）は末尾に回す。 */
 export const STATE_ORDER: WatchState[] = [
   'HOLD',
-  'READY',
+  'FOCUS',
   'PULLBACK',
   'BREAKOUT',
   'EARNINGS',
   'SHORT',
   'INBOX',
-  // 2026-11-07 に廃止した見出し。過去の記録を読むためだけに残す
-  'FOCUS',
+  // 廃止した見出し。過去の記録を読むためだけに残す
+  'READY',
   'SECOND',
   'OTHERS',
   'SOLD',

@@ -111,7 +111,7 @@
   --sem-archive-fg: #71717a; /* 淡色地の上で 4.6:1。現在は未使用 */
   --sem-archive-bd: #ececee;
 
-  /* 注目・選択中 — READY、リンク、ソート中の列 */
+  /* 注目・選択中 — FOCUS、リンク、ソート中の列 */
   --sem-focus-bg: #eff6ff;
   --sem-focus-fg: #1d4ed8;
   --sem-focus-bd: #93c5fd;
