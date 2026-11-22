@@ -15,7 +15,7 @@ import { formatYen } from '@/lib/format'
 import TradePlans, { type PlanHandoff } from '@/components/portfolio/TradePlans'
 
 const LS_KEY = 'trading.riskBudget'
-const STOP_STEPS = [2, 3, 5, 8, 10]
+const STOP_STEPS = [0.12, 0.25, 0.5, 1, 1.5, 2, 3]
 
 type Props = {
   /** risk_settings の最新行（無ければ null） */

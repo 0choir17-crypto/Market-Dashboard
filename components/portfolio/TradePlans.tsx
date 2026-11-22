@@ -10,7 +10,7 @@
 //   一覧は上から順に買う前提で、残り余力を超える行は買える株数（100 株単位）まで減らす。
 // 並び順 = 優先順位（sort_order）。↑↓ で入れ替える。列が未作成なら作成順。
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { supabase } from '@/lib/supabase'
 import { insertResilient, updateResilient } from '@/lib/resilientWrite'
 import { suggestShares } from '@/lib/rStats'
@@ -309,79 +309,148 @@ export default function TradePlans({ capital, holdingsCost, riskPct, onUseForTra
 
       {/* 検討中 */}
       <div className="mt-4">
-        <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 mb-1.5">
-          <span className="text-small text-[var(--text-muted)]">
-            検討中 {plans.length > 0 && <span className="num">（{plans.length}）</span>}
-          </span>
-          {buyingPower == null ? (
-            <span className="text-small text-[var(--text-muted)]">現金を入れると買付余力が出ます</span>
-          ) : (
-            <span className="text-small num text-[var(--text-secondary)] flex flex-wrap gap-x-3">
-              <span>買付余力 <strong className="text-[var(--text-primary)]">{formatYen(buyingPower)}</strong>
-                <span className="text-[var(--text-muted)]">（総額 {formatYen(capital)} − 保有中 {formatYen(holdingsCost)}）</span></span>
-              <span>検討中の合計 {formatYen(plannedTotal)}</span>
-              <span>
-                全部買った後の残り <strong>{formatYen(buyingPower - plannedTotal)}</strong>
-              </span>
-            </span>
-          )}
+        <div className="text-small font-medium text-[var(--text-secondary)] mb-1.5">
+          検討中{plans.length > 0 && <span className="num">（{plans.length}）</span>}
         </div>
+        {buyingPower == null ? (
+          <div className="text-small text-[var(--text-muted)] mb-2">現金を入れると買付余力が出ます</div>
+        ) : (
+          <div className="grid grid-cols-3 gap-2 mb-2">
+            <Stat label="買付余力" value={formatYen(buyingPower)}
+                  sub={holdingsCost > 0 ? `保有中 ${formatYen(holdingsCost)} を除く` : undefined} />
+            <Stat label="検討中の合計" value={formatYen(plannedTotal)} />
+            <Stat label="買った後の残り" value={formatYen(buyingPower - plannedTotal)}
+                  danger={buyingPower - plannedTotal < 0} />
+          </div>
+        )}
         {plans.length === 0 ? (
           <div className="text-small text-[var(--text-muted)]">まだありません</div>
         ) : (
-          <ul className="divide-y-[0.5px] divide-[var(--border)]">
-            {rows.map(({ p, c }, i) => {
-              const usable = c?.kind === 'ok' && c.sz != null && c.sz.shares > 0
-              return (
-                <li key={p.id} className={`py-2 flex flex-wrap items-center gap-x-4 gap-y-1 ${form.id === p.id ? 'bg-[var(--sem-focus-bg,rgba(37,99,235,0.08))] rounded-lg -mx-2 px-2' : ''}`}>
-                  <span className="flex items-center gap-1">
-                    <span className="w-5 text-center text-small num font-medium text-[var(--text-muted)]">{i + 1}</span>
-                    <span className="flex flex-col">
-                      <button type="button" aria-label={`${p.ticker} の優先順位を上げる`} disabled={i === 0}
-                              onClick={() => move(i, -1)}
-                              className="px-1.5 leading-none text-small text-[var(--text-secondary)] hover:text-[var(--text-primary)] disabled:opacity-25 disabled:cursor-not-allowed">▲</button>
-                      <button type="button" aria-label={`${p.ticker} の優先順位を下げる`} disabled={i === rows.length - 1}
-                              onClick={() => move(i, 1)}
-                              className="px-1.5 leading-none text-small text-[var(--text-secondary)] hover:text-[var(--text-primary)] disabled:opacity-25 disabled:cursor-not-allowed">▼</button>
-                    </span>
-                  </span>
-                  <span className="min-w-[4rem]">
-                    <strong className="text-body num text-[var(--text-primary)]">{p.ticker}</strong>
-                    {p.company_name && <span className="ml-1.5 text-small text-[var(--text-secondary)]">{p.company_name}</span>}
-                  </span>
-                  <span className="text-body num text-[var(--text-secondary)]">
-                    {Number(p.prev_close).toLocaleString('ja-JP')} → 損切り {Number(p.stop_price).toLocaleString('ja-JP')}
-                  </span>
-                  <span className="text-body num">{c && <CalcLine c={c} capital={capital} compact />}</span>
-                  {p.memo && <span className="text-small text-[var(--text-muted)] basis-full sm:basis-auto">{p.memo}</span>}
-                  <span className="ml-auto flex gap-1.5">
-                    {onUseForTrade && (
-                      <button type="button" className={btnSmall} disabled={!usable}
-                              onClick={() => handoff(p.id, p.ticker, p.company_name, Number(p.prev_close), Number(p.stop_price), p.memo, c)}>
-                        新規トレードに入力
-                      </button>
-                    )}
-                    <button type="button" className={btnSmall} onClick={() => {
-                      setForm({ id: p.id, code: p.ticker, name: p.company_name ?? '', prevClose: String(p.prev_close), stop: String(p.stop_price), memo: p.memo ?? '' })
-                      setMsg('')
-                      // 入力欄は一覧の上にあるため、スマホでは画面外になりやすい。見える位置まで戻す
-                      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-                      codeRef.current?.focus({ preventScroll: true })
-                    }}>編集</button>
-                    <button type="button" className={btnSmall} onClick={() => remove(p)}>削除</button>
-                  </span>
-                </li>
-              )
-            })}
-          </ul>
+          <div className="rounded-lg border-[0.5px] border-[var(--border)] overflow-hidden">
+            {/* 見出し（PC のみ） */}
+            <div className={`hidden md:grid ${ROW_COLS} gap-x-3 px-3 py-1.5 text-caption text-[var(--text-muted)] bg-[var(--bg-subtle,transparent)] border-b-[0.5px] border-[var(--border)]`}>
+              <span>順位</span><span>銘柄</span><span className="text-right">前日終値 → 損切り</span>
+              <span className="text-right">損切り幅</span><span className="text-right">株数</span>
+              <span className="text-right">建玉</span><span className="text-right">想定損失</span><span />
+            </div>
+            <ul className="divide-y-[0.5px] divide-[var(--border)]">
+              {rows.map(({ p, c }, i) => (
+                <PlanRow
+                  key={p.id}
+                  p={p} c={c} index={i} last={i === rows.length - 1} capital={capital}
+                  editing={form.id === p.id}
+                  onMove={dir => move(i, dir)}
+                  onUse={onUseForTrade ? () => handoff(p.id, p.ticker, p.company_name, Number(p.prev_close), Number(p.stop_price), p.memo, c) : undefined}
+                  onEdit={() => {
+                    setForm({ id: p.id, code: p.ticker, name: p.company_name ?? '', prevClose: String(p.prev_close), stop: String(p.stop_price), memo: p.memo ?? '' })
+                    setMsg('')
+                    // 入力欄は一覧の上にあるため、スマホでは画面外になりやすい。見える位置まで戻す
+                    formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                    codeRef.current?.focus({ preventScroll: true })
+                  }}
+                  onRemove={() => remove(p)}
+                />
+              ))}
+            </ul>
+          </div>
         )}
         {plans.length > 0 && (
-          <div className="text-caption text-[var(--text-muted)] mt-1">
-            番号が優先順位です（▲▼ で入れ替え）。上から順に買付余力を割り当てます。新規トレードに記録すると一覧から消えます。寄り値は新規トレード画面で直してください（株数もそこで計算し直せます）。
+          <div className="text-caption text-[var(--text-muted)] mt-1.5">
+            上から順に買付余力を割り当てます（▲▼ で順位を変更）。<span className="text-[var(--sem-weak-fg)]">赤字</span>は 1 回の許容損失を超える値。寄り値は新規トレード画面で直してください。
           </div>
         )}
       </div>
     </div>
+  )
+}
+
+// 検討中の 1 行の列幅（PC）: 順位 / 銘柄 / 価格 / 損切り幅 / 株数 / 建玉 / 想定損失 / 操作
+const ROW_COLS = 'md:grid-cols-[3rem_minmax(0,1.3fr)_minmax(0,1.2fr)_4.5rem_4.5rem_minmax(0,1.1fr)_minmax(0,1fr)_15rem]'
+const DANGER = 'text-[var(--sem-weak-fg)]'
+
+function Stat({ label, value, sub, danger = false }: { label: string; value: string; sub?: string; danger?: boolean }) {
+  return (
+    <div className="rounded-lg border-[0.5px] border-[var(--border)] px-2.5 py-1.5 min-w-0">
+      <div className="text-caption text-[var(--text-muted)] truncate">{label}</div>
+      <div className={`text-body font-medium num truncate ${danger ? DANGER : 'text-[var(--text-primary)]'}`}>{value}</div>
+      {sub && <div className="text-caption text-[var(--text-muted)] num truncate">{sub}</div>}
+    </div>
+  )
+}
+
+function PlanRow({ p, c, index, last, capital, editing, onMove, onUse, onEdit, onRemove }: {
+  p: TradePlan; c: Calc | null; index: number; last: boolean; capital: number; editing: boolean
+  onMove: (dir: -1 | 1) => void; onUse?: () => void; onEdit: () => void; onRemove: () => void
+}) {
+  const ok = c?.kind === 'ok' ? c : null
+  const sz = ok?.sz ?? null
+  const usable = sz != null && sz.shares > 0
+  const over = ok?.overRisk ?? false
+  const noPower = ok?.capped != null && sz != null && sz.shares === 0
+  const arrow = 'px-1 leading-none text-small text-[var(--text-secondary)] hover:text-[var(--text-primary)] disabled:opacity-25 disabled:cursor-not-allowed'
+  const linkBtn = 'text-small text-[var(--text-muted)] hover:text-[var(--text-primary)] px-1'
+  // スマホは「ラベル 値」で並べ、PC は見出し付きの列にする
+  const cell = (label: string, value: ReactNode, cls = '') => (
+    <span className={`num md:text-right ${cls}`}>
+      <span className="md:hidden text-caption text-[var(--text-muted)] mr-1">{label}</span>{value}
+    </span>
+  )
+
+  return (
+    <li className={`grid grid-cols-[auto_minmax(0,1fr)] ${ROW_COLS} gap-x-3 gap-y-1 px-3 py-2 items-center text-body ${editing ? 'bg-[var(--sem-focus-bg)]' : ''}`}>
+      {/* 順位 */}
+      <span className="flex items-center gap-0.5 row-span-2 md:row-span-1">
+        <span className="w-4 text-center text-small num font-medium text-[var(--text-muted)]">{index + 1}</span>
+        <span className="flex flex-col">
+          <button type="button" aria-label={`${p.ticker} の優先順位を上げる`} disabled={index === 0} onClick={() => onMove(-1)} className={arrow}>▲</button>
+          <button type="button" aria-label={`${p.ticker} の優先順位を下げる`} disabled={last} onClick={() => onMove(1)} className={arrow}>▼</button>
+        </span>
+      </span>
+
+      {/* 銘柄 */}
+      <span className="min-w-0">
+        <strong className="num text-[var(--text-primary)]">{p.ticker}</strong>
+        {p.company_name && <span className="ml-1.5 text-small text-[var(--text-secondary)]">{p.company_name}</span>}
+        {p.memo && <span className="block text-caption text-[var(--text-muted)] truncate">{p.memo}</span>}
+      </span>
+
+      {/* 数値（スマホは 2 段目にまとめる） */}
+      <span className="col-start-2 md:col-start-auto md:contents flex flex-wrap gap-x-3 gap-y-0.5 text-small md:text-body">
+        {cell('価格', <>{Number(p.prev_close).toLocaleString('ja-JP')} → {Number(p.stop_price).toLocaleString('ja-JP')}</>, 'text-[var(--text-secondary)]')}
+        {c?.kind === 'invalid' ? (
+          <span className={`md:col-span-4 text-small ${DANGER}`}>損切り価格が前日終値以上です</span>
+        ) : ok == null ? null : (
+          <>
+            {cell('損切り幅', `−${formatPct(ok.stopPct)}`, 'text-[var(--text-secondary)]')}
+            {sz == null ? (
+              <span className="md:col-span-3 text-small text-[var(--text-muted)]">現金とリスク % を入れると株数が出ます</span>
+            ) : noPower ? (
+              <span className={`md:col-span-3 text-small ${DANGER}`}>余力不足で買えません</span>
+            ) : (
+              <>
+                {cell('株数', `${sz.shares.toLocaleString('ja-JP')} 株`, `font-medium ${over ? DANGER : 'text-[var(--text-primary)]'}`)}
+                {cell('建玉', <>{formatYen(sz.positionYen)}<span className="text-caption text-[var(--text-muted)] ml-1">{sz.positionPct.toFixed(1)}%</span></>,
+                  ok.capped ? 'text-[var(--sem-watch-fg)]' : 'text-[var(--text-primary)]')}
+                {cell('想定損失', <>{formatYen(sz.riskYen)}{capital > 0 && <span className="text-caption ml-1">{(sz.riskYen / capital * 100).toFixed(2)}%</span>}</>,
+                  over ? `font-medium ${DANGER}` : 'text-[var(--text-secondary)]')}
+              </>
+            )}
+          </>
+        )}
+      </span>
+
+      {/* 操作 */}
+      <span className="col-start-2 md:col-start-auto flex items-center gap-1 md:justify-end">
+        {onUse && <button type="button" className={btnSmall} disabled={!usable} onClick={onUse}>新規トレードに入力</button>}
+        <button type="button" className={linkBtn} onClick={onEdit}>編集</button>
+        <button type="button" className={linkBtn} onClick={onRemove}>削除</button>
+      </span>
+      {ok?.capped && sz != null && sz.shares > 0 && (
+        <span className="col-start-2 md:col-start-2 md:col-span-7 text-caption text-[var(--sem-watch-fg)]">
+          余力不足のため減額（リスク計算では {ok.capped.riskShares.toLocaleString('ja-JP')} 株）
+        </span>
+      )}
+    </li>
   )
 }
 
@@ -419,7 +488,7 @@ function CalcLine({ c, capital, compact = false }: { c: Calc; capital: number; c
         </span>
       )}
       {c.overRisk ? (
-        <span className="text-[var(--sem-watch-fg)]">
+        <span className="text-[var(--sem-weak-fg)] font-medium">
           ⚠ 許容損失超過: 100 株で損失 {formatYen(c.sz.riskYen)}{capital > 0 ? `（${(c.sz.riskYen / capital * 100).toFixed(2)}%）` : ''}
         </span>
       ) : !compact && (
