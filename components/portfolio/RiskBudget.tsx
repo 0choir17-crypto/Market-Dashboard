@@ -3,6 +3,7 @@
 // 1 回あたりに取れるリスクの計算（Trading ページ最上段）。
 //   許容損失 = 現金 × リスク %
 //   建玉の上限 = 許容損失 ÷ 損切り幅 %   （損切り幅が狭いほど大きく建てられる）
+//   ポジションサイズ = 許容損失 ÷ 入力した損切り幅 %（損切り幅はこの端末にだけ保存）
 // 減速ルール中はリスク % を半分で計算。
 // 下段「次に買う銘柄」の検討中リストは TradePlans.tsx。
 // 現金・リスク % は入力欄を離れた時に risk_settings（account_capital / risk_pct）へ保存する。
@@ -29,10 +30,10 @@ type Props = {
   holdingsCost?: number
 }
 
-function readLocal(): { cash?: string; risk?: string } {
+function readLocal(): { cash?: string; risk?: string; stop?: string } {
   try { return JSON.parse(localStorage.getItem(LS_KEY) ?? '{}') } catch { return {} }
 }
-function writeLocal(v: { cash: string; risk: string }) {
+function writeLocal(v: { cash: string; risk: string; stop: string }) {
   try { localStorage.setItem(LS_KEY, JSON.stringify(v)) } catch { /* private mode 等 */ }
 }
 
@@ -43,6 +44,7 @@ const field = `${fieldBase} w-full`
 export default function RiskBudget({ settings, slowdown = false, onSaved, onUseForTrade, plansReloadKey, holdingsCost = 0 }: Props) {
   const [cash, setCash] = useState('')
   const [risk, setRisk] = useState('0.5')
+  const [stopPct, setStopPct] = useState('')
   const [msg, setMsg] = useState('')
 
   // 初期値: DB → 端末 → 既定
@@ -50,12 +52,13 @@ export default function RiskBudget({ settings, slowdown = false, onSaved, onUseF
     const l = readLocal()
     setCash(settings?.account_capital != null ? String(settings.account_capital) : l.cash ?? '')
     setRisk(settings?.risk_pct != null ? String(settings.risk_pct) : l.risk ?? '0.5')
+    setStopPct(prev => prev || (l.stop ?? ''))
   }, [settings?.account_capital, settings?.risk_pct])
 
   async function persist() {
     const c = parseFloat(cash)
     const r = parseFloat(risk)
-    writeLocal({ cash, risk })
+    writeLocal({ cash, risk, stop: stopPct })
     if (!(c > 0) || !(r > 0)) return
     if (c === settings?.account_capital && r === settings?.risk_pct) return
     const row = { account_capital: c, risk_pct: r, updated_at: new Date().toISOString() }
@@ -70,12 +73,16 @@ export default function RiskBudget({ settings, slowdown = false, onSaved, onUseF
   const baseRisk = parseFloat(risk)
   const effRisk = (baseRisk > 0 ? baseRisk : 0) * (slowdown ? 0.5 : 1)
   const budget = c > 0 && effRisk > 0 ? c * effRisk / 100 : null
+  const sp = parseFloat(stopPct)
+  // ポジションサイズ = 許容損失 ÷ 損切り幅 %
+  const positionSize = budget != null && sp > 0 ? budget / (sp / 100) : null
+  const positionPctOfCash = positionSize != null && c > 0 ? positionSize / c * 100 : null
 
   return (
     <div className="bg-[var(--bg-card)] rounded-xl border-[0.5px] border-[var(--border)] px-4 py-3">
       <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.4fr)] items-start">
         {/* 入力 */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-3 gap-3">
           <label className="block">
             <span className="block text-small text-[var(--text-muted)] mb-1">現金（円）</span>
             <input type="number" inputMode="numeric" value={cash} onChange={e => setCash(e.target.value)} onBlur={persist}
@@ -85,6 +92,11 @@ export default function RiskBudget({ settings, slowdown = false, onSaved, onUseF
             <span className="block text-small text-[var(--text-muted)] mb-1">リスク %（1 回）</span>
             <input type="number" inputMode="decimal" step="0.1" value={risk} onChange={e => setRisk(e.target.value)} onBlur={persist}
                    placeholder="0.5" className={field} />
+          </label>
+          <label className="block">
+            <span className="block text-small text-[var(--text-muted)] mb-1">損切り幅 %</span>
+            <input type="number" inputMode="decimal" step="0.1" value={stopPct} onChange={e => setStopPct(e.target.value)} onBlur={persist}
+                   placeholder="5" className={field} />
           </label>
         </div>
 
@@ -98,6 +110,17 @@ export default function RiskBudget({ settings, slowdown = false, onSaved, onUseF
             {budget != null ? formatYen(budget) : '—'}
           </div>
           {msg && <div className="text-small text-[var(--text-muted)] mt-0.5">{msg}</div>}
+          <div className="text-small text-[var(--text-muted)] mt-2 mb-1">
+            ポジションサイズ{sp > 0 && <span className="ml-1">（許容損失 ÷ {sp}%）</span>}
+          </div>
+          <div className="text-title font-medium num text-[var(--text-primary)] leading-tight">
+            {positionSize != null ? formatYen(positionSize) : '—'}
+          </div>
+          {positionPctOfCash != null && (
+            <div className={`text-small num mt-0.5 ${positionPctOfCash > 100 ? 'text-[var(--sem-watch-fg)]' : 'text-[var(--text-muted)]'}`}>
+              現金の {positionPctOfCash.toFixed(1)}%{positionPctOfCash > 100 && '（現金を超えています）'}
+            </div>
+          )}
         </div>
 
         {/* 損切り幅 → 建玉の上限 */}
