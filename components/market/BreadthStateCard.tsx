@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { MarketConditions } from '@/types/market'
 import {
   BREADTH_HOT,
   BREADTH_LOOKBACK,
@@ -13,7 +12,6 @@ import {
   type BreadthState,
 } from '@/lib/breadthState'
 import Modal from '@/components/shared/Modal'
-import BreadthPanel from './BreadthPanel'
 import LineHistoryChart from '@/components/chart/LineHistoryChart'
 import { BREADTH_SERIES } from '@/lib/chartColors'
 import { RangeBar } from './IndexDetailModal'
@@ -94,12 +92,10 @@ export type HistoryRange = (typeof HISTORY_RANGES)[number]['key']
 
 function BreadthDetailModal({
   state,
-  market,
   endDate,
   onClose,
 }: {
   state: BreadthState
-  market: MarketConditions | null
   endDate?: string
   onClose: () => void
 }) {
@@ -142,7 +138,6 @@ function BreadthDetailModal({
           </div>
         </div>
 
-        {market && <BreadthPanel market={market} />}
       </div>
     </Modal>
   )
@@ -151,12 +146,10 @@ function BreadthDetailModal({
 export default function BreadthStateCard({
   state,
   error,
-  market,
   endDate,
 }: {
   state: BreadthState | null
   error: string | null
-  market: MarketConditions | null
   endDate?: string
 }) {
   const [open, setOpen] = useState(false)
@@ -190,7 +183,7 @@ export default function BreadthStateCard({
         )}
       </CardButton>
       {open && state && (
-        <BreadthDetailModal state={state} market={market} endDate={endDate} onClose={() => setOpen(false)} />
+        <BreadthDetailModal state={state} endDate={endDate} onClose={() => setOpen(false)} />
       )}
     </>
   )
