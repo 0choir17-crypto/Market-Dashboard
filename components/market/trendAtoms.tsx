@@ -240,16 +240,13 @@ export function ExtRGrid({
 }
 
 /**
- * 直近 60 営業日の EMA9 / 21 / 50 を重ねた小さなチャート（指数カード・業種カード）。終値の線は引かない。
- * EMA は詳細チャート（TradingView）と同じ色の線で、右端に名前。
- * 縦軸は 60 日の EMA の最小〜最大（目盛りは出さない。終値との離れ具合は下の R で読む）。
- * マウスを乗せた日は縦の点線と、見出しに日付と終値・各 EMA の値（compact では日付と終値だけ）。
+ * 直近 60 営業日の終値と EMA21 の小さなチャート（指数カード・業種カード）。
+ * EMA9 / 21 / 50 を 3 本並べてもほぼ平行で同じ情報になるので、
+ *   終値（太線）= 株価の位置、EMA21（色線）= トレンドの向き
+ * の 2 本だけにし、間を「終値が上 = 緑 / 下 = 赤」で塗る。塗りの色と幅で位置関係が一目で読める。
+ * マウスを乗せた日は縦の点線と、見出しに日付・終値・EMA21（compact では日付と終値だけ）。
  */
-const EMA_LINES = [
-  { key: 'e9', label: '9', color: EMA_COLORS[9] },
-  { key: 'e21', label: '21', color: EMA_COLORS[21] },
-  { key: 'e50', label: '50', color: EMA_COLORS[50] },
-] as const
+type Seg = { pts: [number, number, number][]; up: boolean } // [x, close, ema]
 
 export function EmaMiniChart({
   points,
@@ -264,20 +261,20 @@ export function EmaMiniChart({
   className?: string
 }) {
   const [hover, setHover] = useState<number | null>(null)
-  if (points.length < 2 || !points.some((p) => isNum(p.e9) || isNum(p.e21) || isNum(p.e50))) {
+  if (points.length < 2 || !points.some((p) => isNum(p.e21))) {
     return <p className={`text-caption text-[var(--text-muted)] ${className}`}>チャート: データなし</p>
   }
   const N = points.length
   const W = 200
   const H = 100
-  const all = points.flatMap((p) => [p.e9, p.e21, p.e50]).filter(isNum)
+  const all = points.flatMap((p) => [p.close, p.e21]).filter(isNum)
   const lo = Math.min(...all)
   const hi = Math.max(...all)
   const pad = (hi - lo || Math.abs(hi) || 1) * 0.06
   const x = (i: number) => ((i + 0.5) / N) * W
   const y = (v: number) => H - ((v - (lo - pad)) / (hi - lo + 2 * pad)) * H
 
-  const path = (get: (p: EmaChartPoint) => number | null) => {
+  const line = (get: (p: EmaChartPoint) => number | null) => {
     let d = ''
     let open = false
     points.forEach((p, i) => {
@@ -292,84 +289,126 @@ export function EmaMiniChart({
     return d
   }
 
-  // 右端の名前: 各 EMA の最終値の高さに置き、近すぎるときは上下に押し広げる（最低 11px）
-  const last = points[N - 1]
-  const labels = EMA_LINES.map((l) => ({ ...l, v: last[l.key] }))
-    .filter((l): l is (typeof l & { v: number }) => isNum(l.v))
-    .map((l) => ({ ...l, px: (y(l.v) / H) * height }))
-    .sort((a, b) => a.px - b.px)
-  for (let i = 1; i < labels.length; i++) labels[i].px = Math.max(labels[i].px, labels[i - 1].px + 11)
-  const over = labels.length ? labels[labels.length - 1].px - (height - 5) : 0
-  if (over > 0) labels.forEach((l) => (l.px -= over))
+  // 終値と EMA21 の間の塗り。交差する所で区切り、区間ごとに上（緑）/ 下（赤）を決める
+  const segs: Seg[] = []
+  let cur: Seg | null = null
+  for (let i = 0; i < N; i++) {
+    const p = points[i]
+    if (!isNum(p.e21)) {
+      cur = null
+      continue
+    }
+    const diff = p.close - p.e21
+    const up = diff >= 0
+    if (cur && cur.up !== up) {
+      const q = points[i - 1]
+      const dPrev = q.close - (q.e21 as number)
+      const t = dPrev / (dPrev - diff) // 交点の位置 (0..1)
+      const cx = x(i - 1) + (x(i) - x(i - 1)) * t
+      const cv = q.close + (p.close - q.close) * t
+      cur.pts.push([cx, cv, cv])
+      segs.push(cur)
+      cur = { up, pts: [[cx, cv, cv]] }
+    } else if (!cur) {
+      cur = { up, pts: [] }
+    }
+    cur.pts.push([x(i), p.close, p.e21])
+    if (i === N - 1 || !isNum(points[i + 1]?.e21)) {
+      segs.push(cur)
+      cur = null
+    }
+  }
+  const area = (sg: Seg) =>
+    'M' +
+    sg.pts.map(([px, c]) => `${px.toFixed(2)},${y(c).toFixed(2)}`).join('L') +
+    'L' +
+    [...sg.pts].reverse().map(([px, , e]) => `${px.toFixed(2)},${y(e).toFixed(2)}`).join('L') +
+    'Z'
 
   const hp = hover != null ? points[hover] : null
+  const last = points[N - 1]
+  const lastUp = isNum(last.e21) && last.close >= last.e21
 
   return (
     <div className={className}>
       <div className="flex items-baseline justify-between gap-2 text-caption text-[var(--text-muted)] mb-1 whitespace-nowrap">
         <span className="num">{hp ? hp.date.slice(5) : `${N} 日`}</span>
-        {hp && (
+        {hp ? (
           <span className="num flex gap-2 overflow-hidden">
             <span className="text-[var(--text-primary)]">終値 {fmtLevel(hp.close)}</span>
-            {!compact && EMA_LINES.map((l) => (
-              <span key={l.key} style={{ color: l.color }}>
-                {l.label} {isNum(hp[l.key]) ? fmtLevel(hp[l.key] as number) : '—'}
-              </span>
-            ))}
+            {!compact && (
+              <span style={{ color: EMA_COLORS[21] }}>21 {isNum(hp.e21) ? fmtLevel(hp.e21) : '—'}</span>
+            )}
+          </span>
+        ) : (
+          <span className="flex items-center gap-2">
+            <span className="flex items-center gap-1">
+              <span className="inline-block w-3 h-[2px] bg-[var(--text-primary)]" />終値
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="inline-block w-3 h-[2px]" style={{ backgroundColor: EMA_COLORS[21] }} />EMA21
+            </span>
           </span>
         )}
       </div>
-      <div className="flex gap-1.5">
-        <div className="relative flex-1" style={{ height }} onMouseLeave={() => setHover(null)}>
-          <svg
-            viewBox={`0 0 ${W} ${H}`}
-            preserveAspectRatio="none"
-            className="absolute inset-0 w-full h-full overflow-visible"
-            role="img"
-            aria-label={`直近 ${N} 営業日の EMA9 / 21 / 50`}
-          >
-            {[...EMA_LINES].reverse().map((l) => (
-              <path
-                key={l.key}
-                d={path((p) => p[l.key])}
-                fill="none"
-                stroke={l.color}
-                strokeWidth="1.5"
-                strokeLinejoin="round"
-                vectorEffect="non-scaling-stroke"
-              />
-            ))}
-            {hover != null && (
-              <line x1={x(hover)} x2={x(hover)} y1="0" y2={H} stroke={CHART.textMuted} strokeWidth="1" strokeDasharray="2 2" vectorEffect="non-scaling-stroke" />
-            )}
-          </svg>
-          {/* マウスの日の各 EMA の点。SVG の外に置く（伸ばしても丸のまま） */}
-          {hp &&
-            EMA_LINES.map((l) => {
-              const v = hp[l.key]
-              if (!isNum(v)) return null
-              return (
-                <span
-                  key={l.key}
-                  aria-hidden
-                  className="absolute w-1.5 h-1.5 rounded-full -translate-x-1/2 -translate-y-1/2 ring-2 ring-[var(--bg-card)]"
-                  style={{ left: `${(x(hover!) / W) * 100}%`, top: `${(y(v) / H) * 100}%`, backgroundColor: l.color }}
-                />
-              )
-            })}
-          {/* マウスの当たり判定（1 日 1 列） */}
-          <div className="absolute inset-0 flex">
-            {points.map((p, i) => (
-              <div key={p.date} className="flex-1 h-full" onMouseEnter={() => setHover(i)} />
-            ))}
-          </div>
-        </div>
-        {/* 右端の名前 */}
-        <div className="relative w-4 text-caption num" style={{ height }} aria-hidden>
-          {labels.map((l) => (
-            <span key={l.key} className="absolute left-0 -translate-y-1/2 leading-none" style={{ top: l.px, color: l.color }}>
-              {l.label}
-            </span>
+      <div className="relative" style={{ height }} onMouseLeave={() => setHover(null)}>
+        <svg
+          viewBox={`0 0 ${W} ${H}`}
+          preserveAspectRatio="none"
+          className="absolute inset-0 w-full h-full overflow-visible"
+          role="img"
+          aria-label={`直近 ${N} 営業日の終値と EMA21。現在は終値が EMA21 の${lastUp ? '上' : '下'}`}
+        >
+          {segs.map((sg, k) => (
+            <path
+              key={k}
+              d={area(sg)}
+              style={{ fill: sg.up ? 'var(--positive)' : 'var(--negative)' }}
+              fillOpacity={0.2}
+              stroke="none"
+            />
+          ))}
+          <path
+            d={line((p) => p.e21)}
+            fill="none"
+            stroke={EMA_COLORS[21]}
+            strokeWidth="1.5"
+            strokeLinejoin="round"
+            vectorEffect="non-scaling-stroke"
+          />
+          <path
+            d={line((p) => p.close)}
+            fill="none"
+            style={{ stroke: 'var(--text-primary)' }}
+            strokeWidth="2"
+            strokeLinejoin="round"
+            vectorEffect="non-scaling-stroke"
+          />
+          {hover != null && (
+            <line x1={x(hover)} x2={x(hover)} y1="0" y2={H} stroke={CHART.textMuted} strokeWidth="1" strokeDasharray="2 2" vectorEffect="non-scaling-stroke" />
+          )}
+        </svg>
+        {/* 終値の最新点（今の位置）。SVG の外に置く（伸ばしても丸のまま） */}
+        <span
+          aria-hidden
+          className="absolute w-2 h-2 rounded-full -translate-x-1/2 -translate-y-1/2 ring-2 ring-[var(--bg-card)]"
+          style={{
+            left: `${(x(N - 1) / W) * 100}%`,
+            top: `${(y(last.close) / H) * 100}%`,
+            backgroundColor: lastUp ? 'var(--positive)' : 'var(--negative)',
+          }}
+        />
+        {hp && (
+          <span
+            aria-hidden
+            className="absolute w-1.5 h-1.5 rounded-full -translate-x-1/2 -translate-y-1/2 ring-2 ring-[var(--bg-card)] bg-[var(--text-primary)]"
+            style={{ left: `${(x(hover!) / W) * 100}%`, top: `${(y(hp.close) / H) * 100}%` }}
+          />
+        )}
+        {/* マウスの当たり判定（1 日 1 列） */}
+        <div className="absolute inset-0 flex">
+          {points.map((p, i) => (
+            <div key={p.date} className="flex-1 h-full" onMouseEnter={() => setHover(i)} />
           ))}
         </div>
       </div>
