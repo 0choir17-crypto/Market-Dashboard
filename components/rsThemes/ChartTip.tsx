@@ -1,6 +1,6 @@
 'use client'
 
-// 帯・折れ線の上に出す小さなツールチップ。親は position: relative にする。
+// 折れ線の上に出す小さなツールチップ。親は position: relative にする。
 // x は親の幅に対する位置 (0〜1)。右半分では左に出して、はみ出さないようにする。
 
 import type { ReactNode } from 'react'
@@ -18,17 +18,6 @@ export default function ChartTip({ x, top = 0, children }: { x: number; top?: nu
       }}
     >
       {children}
-    </div>
-  )
-}
-
-/** ツールチップの 1 行: 色見本 + テーマ名 + 値。 */
-export function TipRow({ color, label, value }: { color?: string; label: ReactNode; value: ReactNode }) {
-  return (
-    <div className="flex items-center gap-1.5">
-      {color && <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: color }} />}
-      <span className="text-[var(--text-primary)]">{label}</span>
-      <span className="ml-auto pl-3">{value}</span>
     </div>
   )
 }
