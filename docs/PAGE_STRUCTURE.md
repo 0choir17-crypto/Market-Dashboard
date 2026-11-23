@@ -26,6 +26,7 @@ app/layout.tsx  (RootLayout, lang="ja")
 | 表示ラベル | パス |
 |---|---|
 | Market | `/` |
+| RS Themes | `/rs-themes` |
 | Leaders | `/leaders` |
 | RS Leaders | `/rs-leaders` |
 | Earnings | `/earnings` |
@@ -48,6 +49,7 @@ app/layout.tsx  (RootLayout, lang="ja")
 | ルート | ファイル | 種別 | 概要 |
 |---|---|---|---|
 | `/` | `app/page.tsx` | 画面 | Market Dashboard（指数・セクター・ブレッド） |
+| `/rs-themes` | `app/rs-themes/page.tsx` | 画面 | RS Themes（RS 上位 約 2% の銘柄がどのテーマグループに集まっているか。`rs_themes` / `rs_themes_members`。21 日・63 日の 2 本。上から Theme Heatmap（グループ × 直近 126 営業日、上下 2 枚 + n_total の棒）/ Theme Momentum（今日の割合と 5・20 営業日前からの割合の増減 pt。件数を括弧で添える）/ 21d vs 63d（n_total に対する割合の差 ±5pt で Emerging / Fading）/ Today's Members（グループ別の銘柄一覧）。ヘッダーに As of（rs_themes の max(date)）。「その他」は表示のみで増減の並びと判定から外す。定数は `types/rsThemes.ts`） |
 | `/leaders` | `app/leaders/page.tsx` | 画面 | Liquid Leaders (リキッド・リーダー) |
 | `/rs-leaders` | `app/rs-leaders/page.tsx` | 画面 | RS Leaders（Sector Board / Pullback Board。`rs_leaders` / `rs_leaders_sector`。札クリックで TradingView。Pullback Board の押しの段階 = Above 9EMA / 9-21EMA / 21-50EMA / 50-150EMA / Below 150EMA（週足 9EMA の上）/ Below W9EMA。線が密集している銘柄（spread_21_50 < 1.0）も同じ列に入れ、銘柄名の横に Tight の印。札の下段 = 9 / 21 / 50 / 150EMA までの ATR 距離） |
 | `/earnings` | `app/earnings/page.tsx` | 画面 | Earnings Quality |
