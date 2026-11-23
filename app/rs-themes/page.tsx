@@ -8,8 +8,6 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { fetchRsThemesSnapshot, type RsThemesSnapshot } from '@/lib/rsThemesFetch'
 import LeaderRibbon from '@/components/rsThemes/LeaderRibbon'
 import ThemeLines from '@/components/rsThemes/ThemeLines'
-import ThemeMomentum from '@/components/rsThemes/ThemeMomentum'
-import ThemeDivergence from '@/components/rsThemes/ThemeDivergence'
 import ThemeMembers from '@/components/rsThemes/ThemeMembers'
 import ErrorBanner from '@/components/shared/ErrorBanner'
 import PageHeader from '@/components/shared/PageHeader'
@@ -81,8 +79,6 @@ export default function RsThemesPage() {
         <div className="space-y-6">
           <LeaderRibbon grids={snap!.grids} />
           <ThemeLines grids={snap!.grids} />
-          <ThemeMomentum grids={snap!.grids} />
-          <ThemeDivergence grids={snap!.grids} />
           <ThemeMembers members={snap!.members} grids={snap!.grids} />
         </div>
       )}

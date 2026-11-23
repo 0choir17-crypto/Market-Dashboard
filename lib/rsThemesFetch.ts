@@ -2,7 +2,6 @@ import { supabase } from '@/lib/supabase'
 import { fetchAllPaged } from '@/lib/pagedFetch'
 import {
   HEATMAP_DAYS,
-  MOMENTUM_LAGS,
   PERIODS,
   type RsPeriod,
   type RsThemeMember,
@@ -18,8 +17,8 @@ export type RsThemesSnapshot = {
   error: string | null
 }
 
-// 1 日 34 行 (17 グループ × 2 期間)。ヒートマップと 20 営業日前の比較の両方に足りる日数だけ取る。
-const DAYS = Math.max(HEATMAP_DAYS, Math.max(...MOMENTUM_LAGS) + 1)
+// 1 日 34 行 (17 グループ × 2 期間)。表示する日数だけ取る。
+const DAYS = HEATMAP_DAYS
 const ROWS_PER_DAY = 34
 
 function emptyGrid(): ThemeGrid {
