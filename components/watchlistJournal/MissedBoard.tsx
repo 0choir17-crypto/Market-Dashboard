@@ -21,10 +21,13 @@ import DataTable, { type Column } from '@/components/shared/DataTable'
 import TickerCell from '@/components/shared/TickerCell'
 import { NumCell, PctCell, SampleSizeNote, YenCell, median } from './atoms'
 
-// FOCUS からの離脱が最も重い。この順で並べる。READY 以降は廃止した見出し
-// （READY は 2026-11-07〜11-17、SECOND / OTHERS は 2026-11-07 まで）。
-// FOCUS は 11-07 以前の「注目」と 11-17 以降の「最優先で見る銘柄」が同じ名前で混ざる。
-const FROM_STATE_ORDER = ['FOCUS', 'PULLBACK', 'BREAKOUT', 'EARNINGS', 'SHORT', 'INBOX', 'READY', 'SECOND', 'OTHERS']
+// FOCUS からの離脱が最も重い。この順で並べる。MAIN 以降は廃止した見出し
+// （MAIN は 2026-11-18〜11-22、READY は 2026-11-07〜11-17、SECOND / OTHERS は 2026-11-07 まで）。
+// FOCUS は 〜11-07「注目」/ 11-17〜11-22「最優先で見る」/ 11-23〜「翌日に動きそう」が同じ名前で混ざる。
+const FROM_STATE_ORDER = [
+  'FOCUS', 'STALK', 'BREAKOUT', 'PULLBACK', 'PEG', 'EARNINGS', 'INBOX', 'SHORT',
+  'MAIN', 'READY', 'SECOND', 'OTHERS',
+]
 
 function fromStateIndex(state: string | null): number {
   const i = FROM_STATE_ORDER.indexOf(state ?? '')

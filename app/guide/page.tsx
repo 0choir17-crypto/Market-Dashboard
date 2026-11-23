@@ -298,9 +298,15 @@ export default function GuidePage() {
           <ul className="list-disc pl-5 space-y-1.5">
             <li>
               <strong className="text-[var(--text-primary)]">現在の状態</strong> —
-              <span className="font-mono"> HOLD / FOCUS / PULLBACK / BREAKOUT / EARNINGS / SHORT / INBOX / SOLD</span>{' '}
+              <span className="font-mono"> HOLD / FOCUS / STALK / BREAKOUT / PULLBACK / PEG / INBOX / SHORT / SOLD</span>{' '}
               ごとに現在のリストを表示。既定は<strong>滞在日数の長い順</strong>で、
               「FOCUS で何日止まっているか」が一目で分かるようにしています。
+              2026-11-23 から候補は TradingView の旗の色で分けています:
+              赤 <span className="font-mono">FOCUS</span>（翌日に動きそう）/
+              青 <span className="font-mono">STALK</span>（1 週間以内に動きそう）/
+              緑 <span className="font-mono">WATCHING</span>（とりあえず気になる。中を
+              <span className="font-mono"> BREAKOUT / PULLBACK / PEG / INBOX</span> の見出しで分ける）/
+              オレンジ <span className="font-mono">SHORT</span>。
             </li>
             <li>
               <strong className="text-[var(--text-primary)]">差分</strong> — 選んだ日の
@@ -311,11 +317,13 @@ export default function GuidePage() {
               2026-11-17 に <span className="font-mono">READY</span> を <span className="font-mono">FOCUS</span>
               （最優先で毎日チャートを見る銘柄）に改名しました。11-07 以前の <span className="font-mono">FOCUS</span>
               は旧セクションの「注目」で、意味が違います。
+              さらに 2026-11-23 から <span className="font-mono">FOCUS</span> は「翌日に動きそうな銘柄」になりました。
+              11-23 の青の <span className="font-mono">INBOX→STALK</span> と同日の仕分け直しは判断ではありません。
             </li>
             <li>
               <strong className="text-[var(--text-primary)]">見逃しボード</strong> — Watch list に入れたのに
               <strong>買わないまま落とした銘柄</strong>を、落とした後の最大上昇順に並べます。
-              <strong>FOCUS からの離脱</strong>（最優先で見ていたのに買わなかった）が最も重い見逃しです。
+              <strong>FOCUS からの離脱</strong>（翌日に動きそうと見ていたのに買わなかった）が最も重い見逃しです。
             </li>
           </ul>
           <div className="bg-[var(--bg-card-hover)] rounded-lg p-3">
