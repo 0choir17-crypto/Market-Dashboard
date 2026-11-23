@@ -126,6 +126,9 @@
   --heat-g-1: #dcefe1;
   --heat-g-2: #93cfa4;
   --heat-g-3: #2f7d4a;
+  /* RS Themes のヒートマップ用: 1〜2 件のごく薄い灰色と、21 件以上の最も濃い緑 */
+  --heat-gray: #e9ebee;
+  --heat-g-4: #1b4f2e;
 
   /* RS Leaders の札 — 青 1 色相の 3 段（全体RS 95〜99 / 90〜94 / 80〜89） */
   --rs-t1-bg: #104281;

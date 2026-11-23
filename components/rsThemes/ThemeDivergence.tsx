@@ -1,7 +1,7 @@
 'use client'
 
-// 21d vs 63d — 今日の 21 日と 63 日の銘柄数を、対象銘柄数に対する割合で横に並べる。
-// n_total は期間ごとに違うので、件数ではなく割合 (n_stocks ÷ n_total) の差で判定する。
+// 21d vs 63d — 今日の 21 日と 63 日の銘柄数を横棒 2 本で並べる (棒の長さ・ラベルは件数)。
+// n_total は期間ごとに違うので、判定だけは割合 (n_stocks ÷ n_total) の差で行う。画面に % は出さない。
 //   差 ≥ +DIVERGENCE_PT → Emerging (21 日で増えたが 63 日にはまだ少ない = 出始め)
 //   差 ≤ −DIVERGENCE_PT → Fading   (63 日にはあるが 21 日で減った = 落ち始め)
 // 「その他」(テーマなし) は判定しない。
@@ -62,19 +62,21 @@ export default function ThemeDivergence({ grids }: { grids: Record<RsPeriod, The
     })
   }, [g21, g63, d21, d63, t21, t63])
 
-  const maxP = Math.max(1, ...rows.map(r => Math.max(r.p21, r.p63)))
+  // 21d と 63d で同じ尺度
+  const maxN = Math.max(1, ...rows.map(r => Math.max(r.n21, r.n63)))
 
   return (
     <section className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-5">
       <div className="mb-3">
         <h2 className="text-small font-medium text-[var(--text-primary)]">21d vs 63d</h2>
         <p className="text-caption text-[var(--text-secondary)] mt-0.5">
-          対象銘柄数に対する割合で比べる（21d 対象 <span className="num">{t21}</span> / 63d 対象{' '}
-          <span className="num">{t63}</span>）。差が +{DIVERGENCE_PT}pt 以上は出始め、−{DIVERGENCE_PT}pt 以下は落ち始め。
+          21日と63日で、そのテーマに入る強い銘柄の数を比べます。対象の銘柄数 (21d <span className="num">{t21}</span> / 63d{' '}
+          <span className="num">{t63}</span>) の違いは調整して判定しています。
         </p>
-        <p className="text-caption text-[var(--text-muted)] mt-0.5">
-          1 銘柄が複数のテーマに入るため、割合の合計は 100% になりません。
+        <p className="text-caption text-[var(--text-secondary)] mt-0.5">
+          21日の方が多い = Emerging (出始め)、63日の方が多い = Fading (落ち始め)。
         </p>
+        <p className="text-caption text-[var(--text-muted)] mt-0.5">1 銘柄が複数のテーマに入ることがあります。</p>
       </div>
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mb-2 text-caption text-[var(--text-secondary)]">
@@ -86,7 +88,7 @@ export default function ThemeDivergence({ grids }: { grids: Record<RsPeriod, The
           <span className="inline-block w-3 h-2 rounded-sm bg-[var(--rs-t3-bg)]" />
           63d
         </span>
-        <span className="text-[var(--text-muted)]">Label: % (stocks / total)</span>
+        <span className="text-[var(--text-muted)]">Label: stocks / total</span>
       </div>
 
       <div className="overflow-x-auto">
@@ -95,7 +97,6 @@ export default function ThemeDivergence({ grids }: { grids: Record<RsPeriod, The
             <tr className="border-b-[0.5px] border-[var(--border)] text-caption text-[var(--text-muted)]">
               <th className="px-2.5 py-2 text-left font-normal">Theme</th>
               <th className="px-2.5 py-2 text-left font-normal w-full">21d / 63d</th>
-              <th className="px-2.5 py-2 text-right font-normal whitespace-nowrap">Diff (pt)</th>
               <th className="px-2.5 py-2 text-left font-normal">State</th>
             </tr>
           </thead>
@@ -108,12 +109,8 @@ export default function ThemeDivergence({ grids }: { grids: Record<RsPeriod, The
                     {r.group}
                   </td>
                   <td className="px-2.5 py-1.5 min-w-[14rem]">
-                    <Bar pct={r.p21} n={r.n21} total={t21} max={maxP} color="var(--rs-t2-bg)" />
-                    <Bar pct={r.p63} n={r.n63} total={t63} max={maxP} color="var(--rs-t3-bg)" />
-                  </td>
-                  <td className="px-2.5 py-1.5 text-right num text-[var(--text-primary)]">
-                    {r.diff > 0 ? '+' : ''}
-                    {r.diff.toFixed(1)}
+                    <Bar n={r.n21} total={t21} max={maxN} color="var(--rs-t2-bg)" />
+                    <Bar n={r.n63} total={t63} max={maxN} color="var(--rs-t3-bg)" />
                   </td>
                   <td className="px-2.5 py-1.5">
                     {st && (
@@ -130,14 +127,14 @@ export default function ThemeDivergence({ grids }: { grids: Record<RsPeriod, The
   )
 }
 
-function Bar({ pct, n, total, max, color }: { pct: number; n: number; total: number; max: number; color: string }) {
+function Bar({ n, total, max, color }: { n: number; total: number; max: number; color: string }) {
   return (
     <div className="flex items-center gap-2 h-[13px]">
       <div className="flex-1 h-[9px]">
-        <div className="h-full rounded-[2px]" style={{ width: `${(pct / max) * 100}%`, backgroundColor: color }} />
+        <div className="h-full rounded-[2px]" style={{ width: `${(n / max) * 100}%`, backgroundColor: color }} />
       </div>
-      <span className="text-caption num text-[var(--text-secondary)] whitespace-nowrap w-[6.5rem] text-right">
-        {pct.toFixed(1)}% ({n} / {total})
+      <span className="text-caption num text-[var(--text-secondary)] whitespace-nowrap w-[3.5rem] text-right">
+        {n} / {total}
       </span>
     </div>
   )
