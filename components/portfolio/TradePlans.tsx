@@ -76,7 +76,7 @@ const btnPrimary =
 type Calc =
   | { kind: 'invalid' }
   | {
-      kind: 'ok'; stopPct: number; perShare: number; sz: ReturnType<typeof suggestShares>; overRisk: boolean
+      kind: 'ok'; entry: number; stopPct: number; perShare: number; sz: ReturnType<typeof suggestShares>; overRisk: boolean
       /** 残り余力で株数を減らした時: リスク計算の株数と、減らす前の残り余力 */
       capped?: { riskShares: number; remaining: number }
     }
@@ -91,7 +91,7 @@ function calc(entry: number, stop: number, capital: number, riskPct: number): Ca
   if (sz != null && overRisk) {
     sz = { shares: 100, riskYen: 100 * perShare, positionYen: 100 * entry, positionPct: 100 * entry / capital * 100 }
   }
-  return { kind: 'ok', stopPct: perShare / entry * 100, perShare, sz, overRisk }
+  return { kind: 'ok', entry, stopPct: perShare / entry * 100, perShare, sz, overRisk }
 }
 
 /** 残り余力で買える株数（100 株単位）まで減らす */
@@ -356,7 +356,7 @@ export default function TradePlans({ capital, holdingsCost, riskPct, onUseForTra
         )}
         {plans.length > 0 && (
           <div className="text-caption text-[var(--text-muted)] mt-1.5">
-            上から順に買付余力を割り当てます（▲▼ で順位を変更）。<span className="text-[var(--sem-weak-fg)]">赤字</span>は 1 回の許容損失を超える値。寄り値は新規トレード画面で直してください。
+            上から順に買付余力を割り当てます（▲▼ で順位を変更）。<span className="text-[var(--sem-weak-fg)]">赤字</span>は 1 回の許容損失を超える値と、建玉が口座残高の {MAX_POSITION_PCT}% 以上になるポジションサイズ。寄り値は新規トレード画面で直してください。
           </div>
         )}
       </div>
@@ -367,10 +367,17 @@ export default function TradePlans({ capital, holdingsCost, riskPct, onUseForTra
 // 候補の 1 行の列幅（PC）: 順位 / 銘柄 / 価格 / 損切り幅 / ポジションサイズ / 株数 / 建玉 / 想定損失 / 操作
 const ROW_COLS = 'md:grid-cols-[3rem_minmax(0,1.3fr)_minmax(0,1.2fr)_4.5rem_minmax(0,1.1fr)_4.5rem_minmax(0,1.1fr)_minmax(0,1fr)_15rem]'
 
-/** ポジションサイズ（株）=（口座残高 × リスク %）÷（終値 − 損切り価格）。1 株未満は切り捨て */
+/** ポジションサイズ（株）=（口座残高 × リスク %）÷（終値 − 損切り価格）。1 株未満は切り捨て
+ *  （浮動小数の誤差で 100 が 99.999… になり 1 株減るのを防ぐため、ごくわずかに足してから切り捨てる） */
 function positionSize(capital: number, riskPct: number, perShare: number): number | null {
   if (!(capital > 0) || !(riskPct > 0) || !(perShare > 0)) return null
-  return Math.floor(capital * riskPct / 100 / perShare)
+  return Math.floor(capital * riskPct / 100 / perShare + 1e-9)
+}
+/** 1 トレードの建玉がこの割合（%）以上なら赤字 */
+const MAX_POSITION_PCT = 30
+/** ポジションサイズ × 終値 が口座残高の何 % か */
+function positionPctOf(ps: number, entry: number, capital: number): number {
+  return capital > 0 ? ps * entry / capital * 100 : 0
 }
 const DANGER = 'text-[var(--sem-weak-fg)]'
 
@@ -394,6 +401,8 @@ function PlanRow({ p, c, index, last, capital, riskPct, editing, onMove, onUse, 
   const over = ok?.overRisk ?? false
   const noPower = ok?.capped != null && sz != null && sz.shares === 0
   const ps = ok ? positionSize(capital, riskPct, ok.perShare) : null
+  const psPct = ok && ps != null ? positionPctOf(ps, ok.entry, capital) : 0
+  const psOver = psPct >= MAX_POSITION_PCT
   const arrow = 'px-1 leading-none text-small text-[var(--text-secondary)] hover:text-[var(--text-primary)] disabled:opacity-25 disabled:cursor-not-allowed'
   const linkBtn = 'text-small text-[var(--text-muted)] hover:text-[var(--text-primary)] px-1'
   // スマホは「ラベル 値」で並べ、PC は見出し付きの列にする
@@ -430,8 +439,8 @@ function PlanRow({ p, c, index, last, capital, riskPct, editing, onMove, onUse, 
           <>
             {cell('損切り幅', `−${formatPct(ok.stopPct)}`, 'text-[var(--text-secondary)]')}
             {cell('ポジションサイズ', ps != null
-              ? `${ps.toLocaleString('ja-JP')} 株`
-              : '—', 'text-[var(--text-primary)]')}
+              ? <>{ps.toLocaleString('ja-JP')} 株<span className="text-caption ml-1">{psPct.toFixed(1)}%</span></>
+              : '—', psOver ? `font-medium ${DANGER}` : 'text-[var(--text-primary)]')}
             {sz == null ? (
               <span className="md:col-span-3 text-small text-[var(--text-muted)]">現金とリスク % を入れると株数が出ます</span>
             ) : noPower ? (
@@ -475,8 +484,12 @@ function CalcLine({ c, capital, riskPct, compact = false }: { c: Calc; capital: 
     </span>
   )
   const ps = positionSize(capital, riskPct, c.perShare)
+  const psPct = ps != null ? positionPctOf(ps, c.entry, capital) : 0
   const psLine = ps != null && (
-    <span className="text-[var(--text-secondary)]">ポジションサイズ <strong className="text-[var(--text-primary)]">{ps.toLocaleString('ja-JP')} 株</strong></span>
+    <span className={psPct >= MAX_POSITION_PCT ? DANGER : 'text-[var(--text-secondary)]'}>
+      ポジションサイズ <strong className={psPct >= MAX_POSITION_PCT ? DANGER : 'text-[var(--text-primary)]'}>{ps.toLocaleString('ja-JP')} 株</strong>
+      <span className="ml-1">（{psPct.toFixed(1)}%）</span>
+    </span>
   )
   if (c.sz == null) {
     return <span className="inline-flex flex-wrap gap-x-4">{head}<span className="text-small text-[var(--text-muted)]">現金とリスク % を入れると株数が出ます</span></span>
