@@ -298,14 +298,14 @@ export default function GuidePage() {
           <ul className="list-disc pl-5 space-y-1.5">
             <li>
               <strong className="text-[var(--text-primary)]">現在の状態</strong> —
-              <span className="font-mono"> HOLD / FOCUS / STALK / BREAKOUT / PULLBACK / PEG / INBOX / SHORT / SOLD</span>{' '}
+              <span className="font-mono"> HOLD / FOCUS / STALK / BREAKOUT / PULLBACK / PEG / EP / INBOX / SHORT / SOLD</span>{' '}
               ごとに現在のリストを表示。既定は<strong>滞在日数の長い順</strong>で、
               「FOCUS で何日止まっているか」が一目で分かるようにしています。
               2026-11-23 から候補は TradingView の旗の色で分けています:
               赤 <span className="font-mono">FOCUS</span>（翌日に動きそう）/
               青 <span className="font-mono">STALK</span>（1 週間以内に動きそう）/
               緑 <span className="font-mono">WATCHING</span>（とりあえず気になる。中を
-              <span className="font-mono"> BREAKOUT / PULLBACK / PEG / INBOX</span> の見出しで分ける）/
+              <span className="font-mono"> BREAKOUT / PULLBACK / PEG / EPISODIC PIVOTS / INBOX</span> の見出しで分ける。EPISODIC PIVOTS の状態名は EP）/
               オレンジ <span className="font-mono">SHORT</span>。
             </li>
             <li>

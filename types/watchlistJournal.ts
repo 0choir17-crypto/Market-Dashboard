@@ -13,7 +13,7 @@ import type { SemanticTone } from '@/types/semantic'
  * 2026-11-23〜 の旗（記録上はどれも Watch list）:
  *   赤 FOCUS    翌日に動きそうな銘柄 → FOCUS
  *   青 STALK    1 週間以内に動きそうな銘柄 → STALK
- *   緑 WATCHING とりあえず気になる銘柄。見出し BREAKOUT / PULLBACK / PEG / INBOX
+ *   緑 WATCHING とりあえず気になる銘柄。見出し BREAKOUT / PULLBACK / PEG / EPISODIC PIVOTS(→EP) / INBOX
  *   オレンジ    SHORT
  */
 export type WatchState =
@@ -24,6 +24,7 @@ export type WatchState =
   | 'PULLBACK'
   | 'BREAKOUT'
   | 'PEG'
+  | 'EP'
   | 'EARNINGS'
   | 'SHORT'
   | 'INBOX'
@@ -46,6 +47,7 @@ export const STATE_ORDER: WatchState[] = [
   'BREAKOUT',
   'PULLBACK',
   'PEG',
+  'EP',
   'EARNINGS',
   'INBOX',
   'SHORT',

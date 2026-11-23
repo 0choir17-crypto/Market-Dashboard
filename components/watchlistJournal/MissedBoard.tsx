@@ -25,7 +25,7 @@ import { NumCell, PctCell, SampleSizeNote, YenCell, median } from './atoms'
 // （MAIN は 2026-11-18〜11-22、READY は 2026-11-07〜11-17、SECOND / OTHERS は 2026-11-07 まで）。
 // FOCUS は 〜11-07「注目」/ 11-17〜11-22「最優先で見る」/ 11-23〜「翌日に動きそう」が同じ名前で混ざる。
 const FROM_STATE_ORDER = [
-  'FOCUS', 'STALK', 'BREAKOUT', 'PULLBACK', 'PEG', 'EARNINGS', 'INBOX', 'SHORT',
+  'FOCUS', 'STALK', 'BREAKOUT', 'PULLBACK', 'PEG', 'EP', 'EARNINGS', 'INBOX', 'SHORT',
   'MAIN', 'READY', 'SECOND', 'OTHERS',
 ]
 

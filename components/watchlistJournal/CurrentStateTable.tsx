@@ -179,6 +179,7 @@ const GROUP_NOTE: Record<string, string> = {
   BREAKOUT: '緑の旗。超えるべき価格を待つ。価格アラートを付ける',
   PULLBACK: '緑の旗。待つ線まで押すのを待つ。価格アラートを付ける',
   PEG: '緑の旗。決算を見てから判断する（旧 EARNINGS）',
+  EP: '緑の旗。見出し EPISODIC PIVOTS（2026-11-23 追加）。材料で窓を開けて急騰した銘柄',
   EARNINGS: '決算を見てから判断する（2026-11-18 に PEG へ改名）',
   INBOX: '緑の旗。とりあえず気になる銘柄。仕分けるか落とす',
   SHORT: 'オレンジの旗。空売り候補',
