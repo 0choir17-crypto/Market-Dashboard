@@ -2,12 +2,12 @@
 
 // 「1 回のリスク」下段: 次に買う銘柄の候補リスト（前日夜に計画する）。
 //   寄りで買う前提。想定エントリー = 前日終値、損切り = 手入力の価格。
-//   ポジションサイズ（株）= 許容損失 ÷（前日終値 − 損切り）を 1 株未満切り捨て。100 株未満なら 100 株（赤字）。
+//   ポジションサイズ（株）= 許容損失 ÷（前日終値 − 損切り）を 100 株単位で切り捨て。100 株未満なら 100 株（赤字）。
 // 計画は Supabase の trade_plans に保存（全端末で共有、書き込みはログイン必須）。
 // 株数は保存せず、現金・リスク % が変われば一覧の株数も計算し直す。
 // 「新規トレードに入力」で新規トレード画面へ引き継ぎ、記録したら一覧から消える（app/journal/page.tsx）。
 // 買付余力（現物のみ）= 口座総額（現金欄）− 保有中の取得額（エントリー × 株数）。
-//   一覧は上から順に買う前提で、残り余力を超える行は買える株数（1 株未満切り捨て、100 株未満は買えない扱い）まで減らす。
+//   一覧は上から順に買う前提で、残り余力を超える行は買える株数（100 株単位）まで減らす。
 // 並び順 = 優先順位（sort_order）。↑↓ で入れ替える。列が未作成なら作成順。
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
@@ -74,7 +74,7 @@ const btnPrimary =
 
 type Sizing = { shares: number; riskYen: number; positionYen: number; positionPct: number }
 
-/** 1 銘柄の最低株数。ポジションサイズがこれ未満なら、この株数で計算して赤字にする */
+/** 売買単位（最低株数）。ポジションサイズはこの単位で切り捨て、これ未満ならこの株数で計算して赤字にする */
 const MIN_SHARES = 100
 /** 1 トレードの建玉が口座残高のこの割合（%）以上なら赤字 */
 const MAX_POSITION_PCT = 30
@@ -83,11 +83,11 @@ function sizing(shares: number, entry: number, perShare: number, capital: number
   return { shares, riskYen: shares * perShare, positionYen: shares * entry, positionPct: capital > 0 ? shares * entry / capital * 100 : 0 }
 }
 
-/** ポジションサイズ（株）=（口座残高 × リスク %）÷（終値 − 損切り価格）。1 株未満は切り捨て
+/** ポジションサイズ（株）=（口座残高 × リスク %）÷（終値 − 損切り価格）。売買単位の 100 株単位で切り捨て
  *  （浮動小数の誤差で 100 が 99.999… になり 1 株減るのを防ぐため、ごくわずかに足してから切り捨てる） */
 function positionSize(capital: number, riskPct: number, perShare: number): number | null {
   if (!(capital > 0) || !(riskPct > 0) || !(perShare > 0)) return null
-  return Math.floor(capital * riskPct / 100 / perShare + 1e-9)
+  return Math.floor(capital * riskPct / 100 / perShare / MIN_SHARES + 1e-9) * MIN_SHARES
 }
 
 type Calc =
@@ -109,11 +109,10 @@ function calc(entry: number, stop: number, capital: number, riskPct: number): Ca
   return { kind: 'ok', entry, stopPct: perShare / entry * 100, perShare, sz, overRisk }
 }
 
-/** 残り余力で買える株数（1 株未満切り捨て）まで減らす。100 株に届かなければ 0（買えない） */
+/** 残り余力で買える株数（100 株単位）まで減らす。100 株に届かなければ 0（買えない） */
 function capToPower(c: Calc | null, entry: number, remaining: number | null, capital: number): Calc | null {
   if (c?.kind !== 'ok' || c.sz == null || remaining == null) return c
-  const floored = Math.max(0, Math.floor(remaining / entry + 1e-9))
-  const affordable = floored >= MIN_SHARES ? floored : 0
+  const affordable = Math.max(0, Math.floor(remaining / entry / MIN_SHARES + 1e-9) * MIN_SHARES)
   if (c.sz.shares <= affordable) return c
   return {
     ...c,
