@@ -1,38 +1,29 @@
 'use client'
 
-// Theme Heatmap — テーマグループ × 日。濃さ = そのグループに入る銘柄数 (n_stocks)。
-// 21 日と 63 日を上下 2 枚に並べ、横軸と色の尺度を揃えて比べられるようにする。
-// 各格子の上に、その日の対象銘柄数 (n_total) の小さな棒を置く (全体が少ない日と区別するため)。
-//
+// Theme Lines の「Heatmap」表示。テーマグループ × 日、色 = n_stocks の段階 (HEAT_STEPS、21d / 63d 共通)。
+// 21 日と 63 日を上下 2 枚に並べ、各格子の上にその日の対象銘柄数 (n_total) の小さな棒を置く。
 // 1 銘柄は最大 3 グループで数えるので、列の合計は n_total と合わない。積み上げにはしない。
 
 import { Fragment, useMemo, useState } from 'react'
-import { HoverReadout, monthTicks } from '@/components/leaders/heatmapUi'
-import { HEATMAP_DAYS, PERIODS, type RsPeriod, type ThemeGrid } from '@/types/rsThemes'
+import { HoverReadout, Swatch, monthTicks } from '@/components/leaders/heatmapUi'
+import { spaceTicks } from './ChartTip'
+import { HEAT_STEPS, PERIODS, type RsPeriod, type ThemeGrid } from '@/types/rsThemes'
 
 type Hover = { period: RsPeriod; group: string; date: string }
 
-/** 0 は無色。1 以上は --heat-g-3 を件数に比例した濃さで混ぜる (最小 12%)。 */
-function cellColor(n: number, max: number): string | undefined {
-  if (!(n > 0) || max <= 0) return undefined
-  const pct = Math.round(12 + 88 * Math.min(n / max, 1))
-  return `color-mix(in srgb, var(--heat-g-3) ${pct}%, transparent)`
+function cellColor(n: number): string | undefined {
+  let c: string | undefined
+  for (const s of HEAT_STEPS) if (n >= s.min) c = s.color
+  return c
 }
 
 export default function ThemeHeatmap({ grids }: { grids: Record<RsPeriod, ThemeGrid> }) {
   const [hover, setHover] = useState<Hover | null>(null)
 
-  // 両期間で共通の尺度
-  const { maxN, maxTotal } = useMemo(() => {
-    let maxN = 0
-    let maxTotal = 0
-    for (const p of PERIODS) {
-      const g = grids[p.key]
-      const keep = new Set(g.dates.slice(-HEATMAP_DAYS))
-      for (const [k, v] of g.cells) if (keep.has(k.slice(k.indexOf('|') + 1))) maxN = Math.max(maxN, v)
-      for (const [d, v] of g.totals) if (keep.has(d)) maxTotal = Math.max(maxTotal, v)
-    }
-    return { maxN, maxTotal }
+  const maxTotal = useMemo(() => {
+    let m = 0
+    for (const p of PERIODS) for (const v of grids[p.key].totals.values()) m = Math.max(m, v)
+    return m
   }, [grids])
 
   const hv = hover ? grids[hover.period] : null
@@ -40,19 +31,11 @@ export default function ThemeHeatmap({ grids }: { grids: Record<RsPeriod, ThemeG
   const hoverTotal = hv && hover ? hv.totals.get(hover.date) : undefined
 
   return (
-    <section className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-5">
-      <div className="mb-3">
-        <h2 className="text-small font-medium text-[var(--text-primary)]">Theme Heatmap</h2>
-        <p className="text-caption text-[var(--text-secondary)] mt-0.5">
-          濃いほど、そのテーマの強い銘柄が多い（直近 {HEATMAP_DAYS} 営業日）。上の灰色の棒はその日の対象銘柄数。
-          1 銘柄が最大 3 グループで数えられるので、縦に足しても対象銘柄数にはならない。
-        </p>
-      </div>
-
-      <HoverReadout placeholder="Hover a cell to see date / group / stocks / total">
+    <div>
+      <HoverReadout placeholder="Hover a cell to see date / theme / stocks / total">
         {hover && (
           <>
-            <span className="text-[var(--text-primary)] font-medium">{hover.group}</span>
+            <span className="text-[var(--text-primary)] font-medium">{hover.group || 'Total'}</span>
             {'　'}{hover.period}d{'　'}{hover.date}
             {hover.group !== '' && <>{'　'}Stocks {hoverN ?? 0}</>}
             {'　'}Total {hoverTotal ?? 0}
@@ -62,36 +45,18 @@ export default function ThemeHeatmap({ grids }: { grids: Record<RsPeriod, ThemeG
 
       <div className="space-y-5" onMouseLeave={() => setHover(null)}>
         {PERIODS.map(p => (
-          <Grid
-            key={p.key}
-            period={p.key}
-            label={`${p.label}（RS ${p.key} 日）`}
-            grid={grids[p.key]}
-            maxN={maxN}
-            maxTotal={maxTotal}
-            hover={hover}
-            onHover={setHover}
-          />
+          <Grid key={p.key} period={p.key} label={p.label} grid={grids[p.key]} maxTotal={maxTotal} hover={hover} onHover={setHover} />
         ))}
       </div>
 
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-3 text-caption text-[var(--text-secondary)]">
         <span className="text-[var(--text-muted)]">Stocks:</span>
-        <span className="num">0</span>
-        <span
-          className="inline-block w-3 h-3 rounded-sm"
-          style={{ boxShadow: 'inset 0 0 0 0.5px var(--heat-grid)' }}
-        />
-        <span className="num">1</span>
-        <span
-          className="inline-block w-24 h-3 rounded-sm"
-          style={{
-            background: `linear-gradient(to right, ${cellColor(1, maxN) ?? 'transparent'}, var(--heat-g-3))`,
-          }}
-        />
-        <span className="num">{maxN}</span>
+        <Swatch color="transparent" label="0" />
+        {HEAT_STEPS.map(s => (
+          <Swatch key={s.min} color={s.color} label={s.label} />
+        ))}
       </div>
-    </section>
+    </div>
   )
 }
 
@@ -99,7 +64,6 @@ function Grid({
   period,
   label,
   grid,
-  maxN,
   maxTotal,
   hover,
   onHover,
@@ -107,13 +71,12 @@ function Grid({
   period: RsPeriod
   label: string
   grid: ThemeGrid
-  maxN: number
   maxTotal: number
   hover: Hover | null
   onHover: (h: Hover) => void
 }) {
-  const dates = useMemo(() => grid.dates.slice(-HEATMAP_DAYS), [grid.dates])
-  const ticks = useMemo(() => monthTicks(dates), [dates])
+  const dates = grid.dates
+  const ticks = useMemo(() => spaceTicks(monthTicks(dates)), [dates])
   const n = Math.max(dates.length, 1)
   const gridCols = `9rem repeat(${n}, minmax(4px, 1fr))`
 
@@ -134,11 +97,7 @@ function Grid({
           const t = grid.totals.get(d) ?? 0
           const isHover = hover?.period === period && hover.date === d
           return (
-            <div
-              key={d}
-              className="h-[22px] flex items-end"
-              onMouseEnter={() => onHover({ period, group: '', date: d })}
-            >
+            <div key={d} className="h-[22px] flex items-end" onMouseEnter={() => onHover({ period, group: '', date: d })}>
               <div
                 className="w-full rounded-t-[1px]"
                 style={{
@@ -171,8 +130,7 @@ function Grid({
                 {g.name}
               </div>
               {dates.map(d => {
-                const v = grid.cells.get(`${g.name}|${d}`) ?? 0
-                const bg = cellColor(v, maxN)
+                const bg = cellColor(grid.cells.get(`${g.name}|${d}`) ?? 0)
                 const isHover = activeRow && hover?.date === d
                 return (
                   <div

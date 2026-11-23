@@ -6,7 +6,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { fetchRsThemesSnapshot, type RsThemesSnapshot } from '@/lib/rsThemesFetch'
-import ThemeHeatmap from '@/components/rsThemes/ThemeHeatmap'
+import LeaderRibbon from '@/components/rsThemes/LeaderRibbon'
+import ThemeLines from '@/components/rsThemes/ThemeLines'
 import ThemeMomentum from '@/components/rsThemes/ThemeMomentum'
 import ThemeDivergence from '@/components/rsThemes/ThemeDivergence'
 import ThemeMembers from '@/components/rsThemes/ThemeMembers'
@@ -78,7 +79,8 @@ export default function RsThemesPage() {
         </div>
       ) : (
         <div className="space-y-6">
-          <ThemeHeatmap grids={snap!.grids} />
+          <LeaderRibbon grids={snap!.grids} />
+          <ThemeLines grids={snap!.grids} />
           <ThemeMomentum grids={snap!.grids} />
           <ThemeDivergence grids={snap!.grids} />
           <ThemeMembers members={snap!.members} grids={snap!.grids} />
