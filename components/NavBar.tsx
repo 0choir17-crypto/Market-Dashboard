@@ -12,6 +12,7 @@ const NAV_ITEMS: { href: string; label: string }[] = [
   // Sectors-33 は Market ダッシュボード (/) に統合したためタブから除外。
   // /sectors33 ルート自体は既存リンク用に残している。
   { href: '/', label: 'Market' },
+  { href: '/rs-themes', label: 'RS Themes' },
   { href: '/leaders', label: 'Leaders' },
   { href: '/rs-leaders', label: 'RS Leaders' },
   { href: '/earnings', label: 'Earnings' },
