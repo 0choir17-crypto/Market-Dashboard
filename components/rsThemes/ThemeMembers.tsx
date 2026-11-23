@@ -2,12 +2,13 @@
 
 // Today's Members — 最新日の rs_themes_members を、テーマ 1 行 × 左右 (21d / 63d) のチップで並べる。
 // 同じテーマが左右で同じ高さに来るので、「21d から抜けた」「21d に入ってきたばかり」が片側の空きで見える。
-// 行の並び = 21d の銘柄数の多い順 (同数は 63d の多い順 → group_order)。チップは RS の高い順 (同じなら騰落率の大きい順)。
+// 行の並び = 21d の銘柄数の多い順 (同数は 63d の多い順 → group_order)。チップは騰落率 (その期間の ret_pct) の大きい順。
 // 1 銘柄は最大 3 グループに入るので、同じ銘柄が複数の行に出る。
-// チップ = 銘柄名 (押すと TradingView) + RS。コードと細かいテーマ (theme1〜3) はツールチップに出す。
+// チップ = 銘柄名 (押すと TradingView) + その期間の騰落率。RS は 98 / 99 しかないので出さない。コードと細かいテーマ (theme1〜3) はツールチップに出す。
 
 import { useMemo } from 'react'
 import { tradingViewUrl } from '@/lib/tickerLinks'
+import { pnlColorClass } from '@/lib/format'
 import { OTHER_GROUP, PERIODS, type RsPeriod, type RsThemeMember, type ThemeGrid } from '@/types/rsThemes'
 
 type Row = { group: string; order: number; byPeriod: Record<RsPeriod, RsThemeMember[]> }
@@ -31,10 +32,9 @@ export default function ThemeMembers({
         map.set(g, r)
       }
     }
-    const byRs = (a: RsThemeMember, b: RsThemeMember) =>
-      (b.rs ?? -Infinity) - (a.rs ?? -Infinity) || (b.ret_pct ?? -Infinity) - (a.ret_pct ?? -Infinity)
+    const byRet = (a: RsThemeMember, b: RsThemeMember) => (b.ret_pct ?? -Infinity) - (a.ret_pct ?? -Infinity)
     const rows = [...map.values()]
-    for (const r of rows) for (const p of PERIODS) r.byPeriod[p.key].sort(byRs)
+    for (const r of rows) for (const p of PERIODS) r.byPeriod[p.key].sort(byRet)
     rows.sort(
       (a, b) =>
         (a.group === OTHER_GROUP ? 1 : 0) - (b.group === OTHER_GROUP ? 1 : 0) ||
@@ -50,7 +50,7 @@ export default function ThemeMembers({
       <h2 className="text-small font-medium text-[var(--text-primary)]">Today&apos;s Members</h2>
       <p className="text-caption text-[var(--text-secondary)] mt-0.5 mb-3">
         今日の対象銘柄をテーマ別に、21 日と 63 日を左右に並べる。片側だけにあるテーマは出始め・落ち始めの候補。
-        1 銘柄が複数のテーマに出ることがある。銘柄名 → TradingView（マウスを乗せるとコードと細かいテーマ）
+        1 銘柄が複数のテーマに出ることがある。数字はその期間の騰落率。銘柄名 → TradingView（マウスを乗せるとコード・RS・細かいテーマ）
       </p>
 
       {rows.length === 0 ? (
@@ -110,13 +110,15 @@ function Chip({ m }: { m: RsThemeMember }) {
       href={tradingViewUrl(m.code)}
       target="_blank"
       rel="noopener noreferrer"
-      title={`${m.code}（TradingView を開く）${themes ? ` · ${themes}` : ''}`}
+      title={`${m.code}（TradingView を開く）· RS ${m.rs ?? '—'}${themes ? ` · ${themes}` : ''}`}
       className="group inline-flex items-baseline gap-1.5 max-w-full rounded-md border-[0.5px] border-[var(--border-strong)] px-1.5 py-0.5 hover:bg-[var(--bg-card-hover)]"
     >
       <span className="text-caption text-[var(--text-primary)] group-hover:text-[var(--sem-focus-fg)] group-hover:underline truncate max-w-[10rem]">
         {m.co_name ?? m.code}
       </span>
-      <span className="text-caption num text-[var(--text-muted)]">{m.rs ?? '—'}</span>
+      <span className={`text-caption num ${pnlColorClass(m.ret_pct)}`}>
+        {m.ret_pct == null ? '—' : `${m.ret_pct > 0 ? '+' : ''}${m.ret_pct.toFixed(1)}%`}
+      </span>
     </a>
   )
 }
