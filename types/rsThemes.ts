@@ -11,16 +11,6 @@ export const PERIODS: { key: RsPeriod; label: string }[] = [
 /** ヒートマップに出す営業日数 (≒ 直近 6 か月)。データは約 1 年分ある。 */
 export const HEATMAP_DAYS = 126
 
-/** Theme Momentum の比較対象 (並んだ行の n 個前)。 */
-export const MOMENTUM_LAGS = [5, 20] as const
-
-/**
- * 21d vs 63d の区切り (割合の差, pt)。
- * (21 日の n_stocks ÷ n_total − 63 日の n_stocks ÷ n_total) × 100 が
- * +この値以上で Emerging、−この値以下で Fading。
- */
-export const DIVERGENCE_PT = 5
-
 /** Leader Ribbon: その日の最多の n_stocks がこれ未満なら「主役なし」(灰色)。 */
 export const RIBBON_MIN_LEADER = 3
 
