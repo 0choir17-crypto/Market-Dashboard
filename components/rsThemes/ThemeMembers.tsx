@@ -2,13 +2,12 @@
 
 // Today's Members — 最新日の rs_themes_members を、テーマ 1 行 × 左右 (21d / 63d) のチップで並べる。
 // 同じテーマが左右で同じ高さに来るので、「21d から抜けた」「21d に入ってきたばかり」が片側の空きで見える。
-// 行の並び = 21d の銘柄数の多い順 (同数は 63d の多い順 → group_order)。チップは騰落率の大きい順。
+// 行の並び = 21d の銘柄数の多い順 (同数は 63d の多い順 → group_order)。チップは RS の高い順 (同じなら騰落率の大きい順)。
 // 1 銘柄は最大 3 グループに入るので、同じ銘柄が複数の行に出る。
-// 細かいテーマ (theme1〜3) と RS はチップのツールチップに出す。
+// チップ = 銘柄名 (押すと TradingView) + RS。コードと細かいテーマ (theme1〜3) はツールチップに出す。
 
 import { useMemo } from 'react'
-import { shikihoUrl, tradingViewUrl } from '@/lib/tickerLinks'
-import { pnlColorClass } from '@/lib/format'
+import { tradingViewUrl } from '@/lib/tickerLinks'
 import { OTHER_GROUP, PERIODS, type RsPeriod, type RsThemeMember, type ThemeGrid } from '@/types/rsThemes'
 
 type Row = { group: string; order: number; byPeriod: Record<RsPeriod, RsThemeMember[]> }
@@ -32,9 +31,10 @@ export default function ThemeMembers({
         map.set(g, r)
       }
     }
-    const byRet = (a: RsThemeMember, b: RsThemeMember) => (b.ret_pct ?? -Infinity) - (a.ret_pct ?? -Infinity)
+    const byRs = (a: RsThemeMember, b: RsThemeMember) =>
+      (b.rs ?? -Infinity) - (a.rs ?? -Infinity) || (b.ret_pct ?? -Infinity) - (a.ret_pct ?? -Infinity)
     const rows = [...map.values()]
-    for (const r of rows) for (const p of PERIODS) r.byPeriod[p.key].sort(byRet)
+    for (const r of rows) for (const p of PERIODS) r.byPeriod[p.key].sort(byRs)
     rows.sort(
       (a, b) =>
         (a.group === OTHER_GROUP ? 1 : 0) - (b.group === OTHER_GROUP ? 1 : 0) ||
@@ -50,7 +50,7 @@ export default function ThemeMembers({
       <h2 className="text-small font-medium text-[var(--text-primary)]">Today&apos;s Members</h2>
       <p className="text-caption text-[var(--text-secondary)] mt-0.5 mb-3">
         今日の対象銘柄をテーマ別に、21 日と 63 日を左右に並べる。片側だけにあるテーマは出始め・落ち始めの候補。
-        1 銘柄が複数のテーマに出ることがある。コード → TradingView / 銘柄名 → 四季報（チップにマウスを乗せると RS と細かいテーマ）
+        1 銘柄が複数のテーマに出ることがある。銘柄名 → TradingView（マウスを乗せるとコードと細かいテーマ）
       </p>
 
       {rows.length === 0 ? (
@@ -105,33 +105,18 @@ export default function ThemeMembers({
 
 function Chip({ m }: { m: RsThemeMember }) {
   const themes = [m.theme1, m.theme2, m.theme3].filter(Boolean).join(' / ')
-  const tip = `RS ${m.rs ?? '—'}${themes ? ` · ${themes}` : ''}`
   return (
-    <span
-      title={tip}
-      className="inline-flex items-baseline gap-1.5 max-w-full rounded-md border-[0.5px] border-[var(--border-strong)] px-1.5 py-0.5 hover:bg-[var(--bg-card-hover)]"
+    <a
+      href={tradingViewUrl(m.code)}
+      target="_blank"
+      rel="noopener noreferrer"
+      title={`${m.code}（TradingView を開く）${themes ? ` · ${themes}` : ''}`}
+      className="group inline-flex items-baseline gap-1.5 max-w-full rounded-md border-[0.5px] border-[var(--border-strong)] px-1.5 py-0.5 hover:bg-[var(--bg-card-hover)]"
     >
-      <a
-        href={tradingViewUrl(m.code)}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="font-mono text-caption font-medium text-[var(--sem-focus-fg)] hover:underline"
-        title={`${m.code}（TradingView を開く）· ${tip}`}
-      >
-        {m.code}
-      </a>
-      <a
-        href={shikihoUrl(m.code)}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-caption text-[var(--text-secondary)] hover:text-[var(--sem-focus-fg)] hover:underline truncate max-w-[9rem]"
-        title={`${m.co_name ?? '—'}（四季報を開く）· ${tip}`}
-      >
-        {m.co_name ?? '—'}
-      </a>
-      <span className={`text-caption num ${pnlColorClass(m.ret_pct)}`}>
-        {m.ret_pct == null ? '—' : `${m.ret_pct > 0 ? '+' : ''}${m.ret_pct.toFixed(1)}`}
+      <span className="text-caption text-[var(--text-primary)] group-hover:text-[var(--sem-focus-fg)] group-hover:underline truncate max-w-[10rem]">
+        {m.co_name ?? m.code}
       </span>
-    </span>
+      <span className="text-caption num text-[var(--text-muted)]">{m.rs ?? '—'}</span>
+    </a>
   )
 }
