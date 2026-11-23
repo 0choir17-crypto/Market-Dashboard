@@ -11,9 +11,6 @@ export const PERIODS: { key: RsPeriod; label: string }[] = [
 /** ヒートマップに出す営業日数 (≒ 直近 6 か月)。データは約 1 年分ある。 */
 export const HEATMAP_DAYS = 126
 
-/** Leader Ribbon: その日の最多の n_stocks がこれ未満なら「主役なし」(灰色)。 */
-export const RIBBON_MIN_LEADER = 3
-
 /** Theme Lines: 表示期間に 21d も 63d も一度もこの件数以上にならなかったテーマは Minor themes に畳む。 */
 export const MINOR_THEME_MAX = 5
 
@@ -30,7 +27,7 @@ export const HEAT_STEPS: { min: number; label: string; color: string }[] = [
 ]
 
 /**
- * テーマグループごとの固定の色 (Leader Ribbon / Theme Lines / 凡例で共通)。「その他」は使わない。
+ * テーマグループごとの固定の色 (Theme Lines で使う)。「その他」は使わない。
  * 16 色は色覚の違いで見分けきれない組がある (8 色が上限) ので、色だけに頼らず
  * 凡例・グラフの見出し・ツールチップでテーマ名を必ず出す。
  */
@@ -54,8 +51,6 @@ export const THEME_COLORS: Record<string, string> = {
 }
 /** 「その他」と、表にない名前に使う色。 */
 export const OTHER_COLOR = '#8a9099'
-/** Leader Ribbon の「主役なし」。 */
-export const NO_LEADER_COLOR = '#dfe2e6'
 
 export function themeColor(group: string): string {
   return THEME_COLORS[group] ?? OTHER_COLOR
