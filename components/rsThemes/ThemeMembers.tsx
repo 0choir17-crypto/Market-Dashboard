@@ -1,8 +1,8 @@
 'use client'
 
-// Today's Members — 最新日の rs_themes_members を、テーマ 1 行 × 左右 (21d / 63d) のチップで並べる。
+// Today's Members — 最新日の rs_themes_members を、テーマ 1 行 × 横 3 列 (21d / 63d / 126d) のチップで並べる。
 // 同じテーマが左右で同じ高さに来るので、「21d から抜けた」「21d に入ってきたばかり」が片側の空きで見える。
-// 行の並び = 21d の銘柄数の多い順 (同数は 63d の多い順 → group_order)。チップは騰落率 (その期間の ret_pct) の大きい順。
+// 行の並び = 21d の銘柄数の多い順 (同数は 63d → 126d の多い順 → group_order)。チップは騰落率 (その期間の ret_pct) の大きい順。
 // 1 銘柄は最大 3 グループに入るので、同じ銘柄が複数の行に出る。
 // チップ = 銘柄名 (押すと TradingView) + その期間の騰落率。RS は 98 / 99 しかないので出さない。コードと細かいテーマ (theme1〜3) はツールチップに出す。
 
@@ -23,11 +23,11 @@ export default function ThemeMembers({
   const { rows, counts } = useMemo(() => {
     const order = new Map(grids[21].groups.map(g => [g.name, g.order]))
     const map = new Map<string, Row>()
-    const counts: Record<RsPeriod, number> = { 21: 0, 63: 0 }
+    const counts: Record<RsPeriod, number> = { 21: 0, 63: 0, 126: 0 }
     for (const m of members) {
       counts[m.period]++
       for (const g of new Set(m.theme_groups ?? [])) {
-        const r = map.get(g) ?? { group: g, order: order.get(g) ?? 99, byPeriod: { 21: [], 63: [] } }
+        const r = map.get(g) ?? { group: g, order: order.get(g) ?? 99, byPeriod: { 21: [], 63: [], 126: [] } }
         r.byPeriod[m.period].push(m)
         map.set(g, r)
       }
@@ -40,6 +40,7 @@ export default function ThemeMembers({
         (a.group === OTHER_GROUP ? 1 : 0) - (b.group === OTHER_GROUP ? 1 : 0) ||
         b.byPeriod[21].length - a.byPeriod[21].length ||
         b.byPeriod[63].length - a.byPeriod[63].length ||
+        b.byPeriod[126].length - a.byPeriod[126].length ||
         a.order - b.order,
     )
     return { rows, counts }
@@ -49,7 +50,7 @@ export default function ThemeMembers({
     <section className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-5">
       <h2 className="text-small font-medium text-[var(--text-primary)]">Today&apos;s Members</h2>
       <p className="text-caption text-[var(--text-secondary)] mt-0.5 mb-3">
-        今日の対象銘柄をテーマ別に、21 日と 63 日を左右に並べる。片側だけにあるテーマは出始め・落ち始めの候補。
+        今日の対象銘柄をテーマ別に、21 日・63 日・126 日を横に並べる。片側だけにあるテーマは出始め・落ち始めの候補。
         1 銘柄が複数のテーマに出ることがある。数字はその期間の騰落率。銘柄名 → TradingView（マウスを乗せるとコード・RS・細かいテーマ）
       </p>
 
@@ -58,7 +59,7 @@ export default function ThemeMembers({
       ) : (
         <div className="text-small">
           {/* 見出し (md 以上) */}
-          <div className="hidden md:grid grid-cols-[9rem_minmax(0,1fr)_minmax(0,1fr)] gap-x-4 border-b-[0.5px] border-[var(--border)] pb-2 text-caption text-[var(--text-muted)]">
+          <div className="hidden lg:grid grid-cols-[8rem_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] gap-x-4 border-b-[0.5px] border-[var(--border)] pb-2 text-caption text-[var(--text-muted)]">
             <div>Theme</div>
             {PERIODS.map(p => (
               <div key={p.key}>
@@ -71,7 +72,7 @@ export default function ThemeMembers({
           {rows.map(r => (
             <div
               key={r.group}
-              className="grid grid-cols-1 md:grid-cols-[9rem_minmax(0,1fr)_minmax(0,1fr)] gap-x-4 gap-y-1.5 py-2.5 border-b-[0.5px] border-[var(--border)] last:border-b-0"
+              className="grid grid-cols-1 lg:grid-cols-[8rem_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] gap-x-4 gap-y-1.5 py-2.5 border-b-[0.5px] border-[var(--border)] last:border-b-0"
             >
               <div className={`font-medium ${r.group === OTHER_GROUP ? 'text-[var(--text-muted)]' : 'text-[var(--text-primary)]'}`}>
                 {r.group}
@@ -82,7 +83,7 @@ export default function ThemeMembers({
                   <div key={p.key} className="min-w-0 flex items-start gap-2">
                     {/* 件数は左の固定幅の列。チップが折り返しても件数の下に回り込まない */}
                     <span className="text-caption text-[var(--text-muted)] num shrink-0 w-6 leading-[22px] text-right">
-                      <span className="md:hidden">{p.label} </span>
+                      <span className="lg:hidden">{p.label} </span>
                       <span className={list.length ? 'text-[var(--text-primary)] font-medium' : ''}>{list.length}</span>
                     </span>
                     <div className="flex flex-wrap gap-1.5 min-w-0 flex-1">

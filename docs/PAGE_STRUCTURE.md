@@ -49,7 +49,7 @@ app/layout.tsx  (RootLayout, lang="ja")
 | ルート | ファイル | 種別 | 概要 |
 |---|---|---|---|
 | `/` | `app/page.tsx` | 画面 | Market Dashboard（指数・セクター・ブレッド） |
-| `/rs-themes` | `app/rs-themes/page.tsx` | 画面 | RS Themes（RS 上位 約 2% の銘柄がどのテーマグループに集まっているか。`rs_themes` / `rs_themes_members`。21 日・63 日の 2 本。上から Theme Lines（テーマごとの小さな折れ線、21d 濃・63d 薄、縦軸の最大は全グラフ共通。一度も 5 に届かないテーマは Minor themes に畳む。Lines / Heatmap の切り替えあり、Heatmap は段階の色）/ Today's Members（テーマ 1 行に 21d / 63d の銘柄を左右のチップで並べる。行は 21d の件数順、チップは銘柄名（押すと TradingView）+ その期間の騰落率で騰落率順。コード・RS・細かいテーマはツールチップ）。ヘッダーに As of（rs_themes の max(date)）。「その他」は Theme Lines の Minor themes の最後に置く。定数は `types/rsThemes.ts`） |
+| `/rs-themes` | `app/rs-themes/page.tsx` | 画面 | RS Themes（RS 上位 約 2% の銘柄がどのテーマグループに集まっているか。`rs_themes` / `rs_themes_members`。21 日・63 日・126 日の 3 本。上から Theme Lines（テーマごとの小さな折れ線、21d 濃・63d 薄・126d 点線、縦軸の最大は全グラフ共通。一度も 5 に届かないテーマは Minor themes に畳む。Lines / Heatmap の切り替えあり、Heatmap は段階の色）/ Today's Members（テーマ 1 行に 21d / 63d / 126d の銘柄を横 3 列のチップで並べる。行は 21d の件数順、チップは銘柄名（押すと TradingView）+ その期間の騰落率で騰落率順。コード・RS・細かいテーマはツールチップ）。ヘッダーに As of（rs_themes の max(date)）。「その他」は Theme Lines の Minor themes の最後に置く。定数は `types/rsThemes.ts`。取得値は `lib/rsThemesFetch.ts` で型をそろえ、表示中の例外は `app/rs-themes/error.tsx` で画面に出す） |
 | `/leaders` | `app/leaders/page.tsx` | 画面 | Liquid Leaders (リキッド・リーダー) |
 | `/rs-leaders` | `app/rs-leaders/page.tsx` | 画面 | RS Leaders（Sector Board / Pullback Board。`rs_leaders` / `rs_leaders_sector`。札クリックで TradingView。Pullback Board の押しの段階 = Above 9EMA / 9-21EMA / 21-50EMA / 50-150EMA / Below 150EMA（週足 9EMA の上）/ Below W9EMA。線が密集している銘柄（spread_21_50 < 1.0）も同じ列に入れ、銘柄名の横に Tight の印。札の下段 = 9 / 21 / 50 / 150EMA までの ATR 距離） |
 | `/earnings` | `app/earnings/page.tsx` | 画面 | Earnings Quality |
