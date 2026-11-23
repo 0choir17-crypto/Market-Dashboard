@@ -7,18 +7,32 @@ import type { SemanticTone } from '@/types/semantic'
 // この画面は「その記録を読むだけ」で、追加・編集・削除は一切できない
 // （Supabase 側にも write policy を付けていない）。
 
-/** TradingView のセクション = 銘柄の状態。 */
+/**
+ * TradingView のセクション（2026-11-18〜 は旗の色 + 見出し）= 銘柄の状態。
+ *
+ * 2026-11-23〜 の旗（記録上はどれも Watch list）:
+ *   赤 FOCUS    翌日に動きそうな銘柄 → FOCUS
+ *   青 STALK    1 週間以内に動きそうな銘柄 → STALK
+ *   緑 WATCHING とりあえず気になる銘柄。見出し BREAKOUT / PULLBACK / PEG / INBOX
+ *   オレンジ    SHORT
+ */
 export type WatchState =
   | 'HOLD'
   | 'SOLD'
-  | 'READY'
+  | 'FOCUS'
+  | 'STALK'
   | 'PULLBACK'
   | 'BREAKOUT'
+  | 'PEG'
   | 'EARNINGS'
   | 'SHORT'
   | 'INBOX'
-  // 2026-11-07 に廃止した見出し。過去の記録にだけ残る
-  | 'FOCUS'
+  // 廃止した見出し。過去の記録にだけ残る
+  // MAIN は 2026-11-18〜11-22（赤の旗で見出しより上）。READY は 2026-11-07〜11-17（11-17 に FOCUS へ改名）。
+  // SECOND / OTHERS は 2026-11-07 まで。
+  // FOCUS は 〜11-07 序列型の「注目」/ 11-17〜11-22「最優先で見る銘柄」/ 11-23〜「翌日に動きそう」で意味が違う
+  | 'MAIN'
+  | 'READY'
   | 'SECOND'
   | 'OTHERS'
 
@@ -27,14 +41,17 @@ export type WatchEventType = 'enter' | 'move' | 'exit'
 /** §3.1 の表示順。ここに無い状態（想定外の値）は末尾に回す。 */
 export const STATE_ORDER: WatchState[] = [
   'HOLD',
-  'READY',
-  'PULLBACK',
-  'BREAKOUT',
-  'EARNINGS',
-  'SHORT',
-  'INBOX',
-  // 2026-11-07 に廃止した見出し。過去の記録を読むためだけに残す
   'FOCUS',
+  'STALK',
+  'BREAKOUT',
+  'PULLBACK',
+  'PEG',
+  'EARNINGS',
+  'INBOX',
+  'SHORT',
+  // 廃止した見出し。過去の記録を読むためだけに残す
+  'MAIN',
+  'READY',
   'SECOND',
   'OTHERS',
   'SOLD',
