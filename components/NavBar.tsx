@@ -45,20 +45,6 @@ export default function NavBar() {
         !isLatest && showPicker ? 'border-[var(--sem-watch-bd)]' : 'border-[var(--border)]'
       }`}
     >
-      {/* ブランド */}
-      <Link
-        href="/"
-        className="flex items-center gap-1.5 mr-2 flex-shrink-0"
-        aria-label="21 Cloud ホーム"
-      >
-        <span className="w-6 h-6 rounded-md bg-[var(--accent)] text-white text-caption font-medium flex items-center justify-center font-mono">
-          21
-        </span>
-        <span className="text-small font-medium tracking-tight text-[var(--text-primary)] hidden md:inline">
-          Cloud
-        </span>
-      </Link>
-
       {/* 日付ピッカー（対象ページのみ表示） */}
       {showPicker && availableDates.length > 0 && (
         <div className="flex items-center gap-1.5 flex-shrink-0 mr-1">

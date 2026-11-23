@@ -1,6 +1,6 @@
 'use client'
 
-// 「1 回のリスク」下段: 次に買う銘柄の検討中リスト（前日夜に計画する）。
+// 「1 回のリスク」下段: 次に買う銘柄の候補リスト（前日夜に計画する）。
 //   寄りで買う前提。想定エントリー = 前日終値、損切り = 手入力の価格。
 //   株数 = 許容損失 ÷（前日終値 − 損切り）を 100 株単位で切り捨て（lib/rStats#suggestShares）。
 // 計画は Supabase の trade_plans に保存（全端末で共有、書き込みはログイン必須）。
@@ -128,7 +128,7 @@ export default function TradePlans({ capital, holdingsCost, riskPct, onUseForTra
     if (error) {
       setMsg(isMissingTable(error)
         ? 'trade_plans テーブルがありません。supabase/migrations/20261110_trade_plans.sql を Supabase の SQL Editor で実行してください'
-        : `検討中の読み込みに失敗: ${error.message}`)
+        : `候補の読み込みに失敗: ${error.message}`)
       return
     }
     setPlans([...((data ?? []) as TradePlan[])].sort(byPriority))
@@ -168,7 +168,7 @@ export default function TradePlans({ capital, holdingsCost, riskPct, onUseForTra
     if (form.id && count === 0) { setMsg(NOT_WRITTEN); return }
     setMsg(stripped.includes('company_name')
       ? '保存しました（銘柄名は未保存: supabase/migrations/20261112_trade_plans_company_name.sql を実行してください）'
-      : form.id ? '更新しました' : '検討中に保存しました')
+      : form.id ? '更新しました' : '候補に保存しました')
     setForm(EMPTY)
     load()
   }
@@ -289,7 +289,7 @@ export default function TradePlans({ capital, holdingsCost, riskPct, onUseForTra
 
       <div className="mt-2 flex flex-wrap items-center gap-2">
         <button type="button" onClick={save} disabled={!canSave} className={btnPrimary}>
-          {form.id ? '計画を更新' : '検討中に保存'}
+          {form.id ? '計画を更新' : '候補に保存'}
         </button>
         {onUseForTrade && (
           <button
@@ -307,10 +307,10 @@ export default function TradePlans({ capital, holdingsCost, riskPct, onUseForTra
         {msg && <span className="text-small text-[var(--text-muted)]">{msg}</span>}
       </div>
 
-      {/* 検討中 */}
+      {/* 候補 */}
       <div className="mt-4">
         <div className="text-small font-medium text-[var(--text-secondary)] mb-1.5">
-          検討中{plans.length > 0 && <span className="num">（{plans.length}）</span>}
+          候補{plans.length > 0 && <span className="num">（{plans.length}）</span>}
         </div>
         {buyingPower == null ? (
           <div className="text-small text-[var(--text-muted)] mb-2">現金を入れると買付余力が出ます</div>
@@ -318,7 +318,7 @@ export default function TradePlans({ capital, holdingsCost, riskPct, onUseForTra
           <div className="grid grid-cols-3 gap-2 mb-2">
             <Stat label="買付余力" value={formatYen(buyingPower)}
                   sub={holdingsCost > 0 ? `保有中 ${formatYen(holdingsCost)} を除く` : undefined} />
-            <Stat label="検討中の合計" value={formatYen(plannedTotal)} />
+            <Stat label="候補の合計" value={formatYen(plannedTotal)} />
             <Stat label="買った後の残り" value={formatYen(buyingPower - plannedTotal)}
                   danger={buyingPower - plannedTotal < 0} />
           </div>
@@ -364,13 +364,13 @@ export default function TradePlans({ capital, holdingsCost, riskPct, onUseForTra
   )
 }
 
-// 検討中の 1 行の列幅（PC）: 順位 / 銘柄 / 価格 / 損切り幅 / ポジションサイズ / 株数 / 建玉 / 想定損失 / 操作
+// 候補の 1 行の列幅（PC）: 順位 / 銘柄 / 価格 / 損切り幅 / ポジションサイズ / 株数 / 建玉 / 想定損失 / 操作
 const ROW_COLS = 'md:grid-cols-[3rem_minmax(0,1.3fr)_minmax(0,1.2fr)_4.5rem_minmax(0,1.1fr)_4.5rem_minmax(0,1.1fr)_minmax(0,1fr)_15rem]'
 
-/** ポジションサイズ = 許容損失（現金 × リスク %）÷ 損切り幅 %。1 円未満は切り捨て */
-function positionSize(capital: number, riskPct: number, stopPct: number): number | null {
-  if (!(capital > 0) || !(riskPct > 0) || !(stopPct > 0)) return null
-  return Math.floor(capital * riskPct / 100 / (stopPct / 100))
+/** ポジションサイズ（株）=（口座残高 × リスク %）÷（終値 − 損切り価格）。1 株未満は切り捨て */
+function positionSize(capital: number, riskPct: number, perShare: number): number | null {
+  if (!(capital > 0) || !(riskPct > 0) || !(perShare > 0)) return null
+  return Math.floor(capital * riskPct / 100 / perShare)
 }
 const DANGER = 'text-[var(--sem-weak-fg)]'
 
@@ -393,7 +393,7 @@ function PlanRow({ p, c, index, last, capital, riskPct, editing, onMove, onUse, 
   const usable = sz != null && sz.shares > 0
   const over = ok?.overRisk ?? false
   const noPower = ok?.capped != null && sz != null && sz.shares === 0
-  const ps = ok ? positionSize(capital, riskPct, ok.stopPct) : null
+  const ps = ok ? positionSize(capital, riskPct, ok.perShare) : null
   const arrow = 'px-1 leading-none text-small text-[var(--text-secondary)] hover:text-[var(--text-primary)] disabled:opacity-25 disabled:cursor-not-allowed'
   const linkBtn = 'text-small text-[var(--text-muted)] hover:text-[var(--text-primary)] px-1'
   // スマホは「ラベル 値」で並べ、PC は見出し付きの列にする
@@ -430,7 +430,7 @@ function PlanRow({ p, c, index, last, capital, riskPct, editing, onMove, onUse, 
           <>
             {cell('損切り幅', `−${formatPct(ok.stopPct)}`, 'text-[var(--text-secondary)]')}
             {cell('ポジションサイズ', ps != null
-              ? <>{formatYen(ps)}<span className="text-caption text-[var(--text-muted)] ml-1">{(ps / capital * 100).toFixed(1)}%</span></>
+              ? `${ps.toLocaleString('ja-JP')} 株`
               : '—', 'text-[var(--text-primary)]')}
             {sz == null ? (
               <span className="md:col-span-3 text-small text-[var(--text-muted)]">現金とリスク % を入れると株数が出ます</span>
@@ -474,9 +474,9 @@ function CalcLine({ c, capital, riskPct, compact = false }: { c: Calc; capital: 
       {!compact && <>（{c.perShare.toLocaleString('ja-JP', { maximumFractionDigits: 1 })} 円/株）</>}
     </span>
   )
-  const ps = positionSize(capital, riskPct, c.stopPct)
+  const ps = positionSize(capital, riskPct, c.perShare)
   const psLine = ps != null && (
-    <span className="text-[var(--text-secondary)]">ポジションサイズ <strong className="text-[var(--text-primary)]">{formatYen(ps)}</strong>（{(ps / capital * 100).toFixed(1)}%）</span>
+    <span className="text-[var(--text-secondary)]">ポジションサイズ <strong className="text-[var(--text-primary)]">{ps.toLocaleString('ja-JP')} 株</strong></span>
   )
   if (c.sz == null) {
     return <span className="inline-flex flex-wrap gap-x-4">{head}<span className="text-small text-[var(--text-muted)]">現金とリスク % を入れると株数が出ます</span></span>

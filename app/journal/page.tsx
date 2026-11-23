@@ -48,7 +48,7 @@ export default function JournalPage() {
   const [showNewTrade, setShowNewTrade] = useState(false)
   // 「1 回のリスク」の次に買う銘柄から引き継いだ値。state で持つ（PositionModal は initial の参照が変わると入力を初期化する）
   const [newTradeInitial, setNewTradeInitial] = useState<Partial<Trade> | undefined>(undefined)
-  // 引き継いだ検討中の計画。新規トレードを記録したら trade_plans から消す
+  // 引き継いだ候補の計画。新規トレードを記録したら trade_plans から消す
   const [pendingPlanId, setPendingPlanId] = useState<string | null>(null)
   const [plansReloadKey, setPlansReloadKey] = useState(0)
   const [editingTrade, setEditingTrade] = useState<Trade | null>(null)
