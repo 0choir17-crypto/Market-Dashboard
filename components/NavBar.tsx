@@ -87,7 +87,8 @@ export default function NavBar() {
       ))}
 
       {/* 認証状態（書き込みは authenticated 限定 — RLS 移行 20260704 参照） */}
-      <div className="ml-auto flex items-center gap-2 flex-shrink-0 pl-2">
+      {/* 横スクロールしてもログインボタンが画面の右端に残るよう sticky にする */}
+      <div className="ml-auto sticky -right-4 sm:-right-6 flex items-center gap-2 flex-shrink-0 pl-2 pr-4 sm:pr-6 -mr-4 sm:-mr-6 bg-[var(--bg-card)]">
         {!authLoading && (session ? (
           <>
             <span className="text-caption text-[var(--text-muted)] hidden sm:inline" title={session.user.email ?? ''}>

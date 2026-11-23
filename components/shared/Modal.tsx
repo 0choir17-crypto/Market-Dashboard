@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
+import { createPortal } from 'react-dom'
 
 type Props = {
   open: boolean
@@ -29,8 +30,10 @@ export default function Modal({ open, onClose, children, title, size = 'lg' }: P
 
   if (!open) return null
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+  // body 直下に出す。ナビ（sticky・横スクロール・折り返しなし）の中で開くと、
+  // iPhone で表示が崩れたり入力欄をタップしても反応しなかったりするため。
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 whitespace-normal">
       {/* backdrop */}
       <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" onClick={onClose} />
       {/* dialog */}
@@ -38,7 +41,7 @@ export default function Modal({ open, onClose, children, title, size = 'lg' }: P
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className={`relative bg-[var(--bg-card)] rounded-xl shadow-xl w-full ${size === 'xl' ? 'max-w-6xl' : 'max-w-lg'} mx-4 overflow-y-auto max-h-[90vh]`}
+        className={`relative bg-[var(--bg-card)] rounded-xl shadow-xl w-full ${size === 'xl' ? 'max-w-6xl' : 'max-w-lg'} mx-4 overflow-y-auto max-h-[90dvh]`}
       >
         {title && (
           <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border)]">
@@ -54,6 +57,7 @@ export default function Modal({ open, onClose, children, title, size = 'lg' }: P
         )}
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
