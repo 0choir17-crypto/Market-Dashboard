@@ -2,18 +2,17 @@
 
 // 「1 回のリスク」下段: 次に買う銘柄の候補リスト（前日夜に計画する）。
 //   寄りで買う前提。想定エントリー = 前日終値、損切り = 手入力の価格。
-//   株数 = 許容損失 ÷（前日終値 − 損切り）を 100 株単位で切り捨て（lib/rStats#suggestShares）。
+//   ポジションサイズ（株）= 許容損失 ÷（前日終値 − 損切り）を 1 株未満切り捨て。100 株未満なら 100 株（赤字）。
 // 計画は Supabase の trade_plans に保存（全端末で共有、書き込みはログイン必須）。
 // 株数は保存せず、現金・リスク % が変われば一覧の株数も計算し直す。
 // 「新規トレードに入力」で新規トレード画面へ引き継ぎ、記録したら一覧から消える（app/journal/page.tsx）。
 // 買付余力（現物のみ）= 口座総額（現金欄）− 保有中の取得額（エントリー × 株数）。
-//   一覧は上から順に買う前提で、残り余力を超える行は買える株数（100 株単位）まで減らす。
+//   一覧は上から順に買う前提で、残り余力を超える行は買える株数（1 株未満切り捨て、100 株未満は買えない扱い）まで減らす。
 // 並び順 = 優先順位（sort_order）。↑↓ で入れ替える。列が未作成なら作成順。
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { supabase } from '@/lib/supabase'
 import { insertResilient, updateResilient } from '@/lib/resilientWrite'
-import { suggestShares } from '@/lib/rStats'
 import { formatYen, formatPct } from '@/lib/format'
 
 export type TradePlan = {
@@ -73,10 +72,28 @@ const btnSmall =
 const btnPrimary =
   'px-3 py-1.5 rounded-lg text-small font-medium text-white bg-[var(--sem-focus-fg)] hover:brightness-110 transition-colors min-h-[36px] disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap'
 
+type Sizing = { shares: number; riskYen: number; positionYen: number; positionPct: number }
+
+/** 1 銘柄の最低株数。ポジションサイズがこれ未満なら、この株数で計算して赤字にする */
+const MIN_SHARES = 100
+/** 1 トレードの建玉が口座残高のこの割合（%）以上なら赤字 */
+const MAX_POSITION_PCT = 30
+
+function sizing(shares: number, entry: number, perShare: number, capital: number): Sizing {
+  return { shares, riskYen: shares * perShare, positionYen: shares * entry, positionPct: capital > 0 ? shares * entry / capital * 100 : 0 }
+}
+
+/** ポジションサイズ（株）=（口座残高 × リスク %）÷（終値 − 損切り価格）。1 株未満は切り捨て
+ *  （浮動小数の誤差で 100 が 99.999… になり 1 株減るのを防ぐため、ごくわずかに足してから切り捨てる） */
+function positionSize(capital: number, riskPct: number, perShare: number): number | null {
+  if (!(capital > 0) || !(riskPct > 0) || !(perShare > 0)) return null
+  return Math.floor(capital * riskPct / 100 / perShare + 1e-9)
+}
+
 type Calc =
   | { kind: 'invalid' }
   | {
-      kind: 'ok'; entry: number; stopPct: number; perShare: number; sz: ReturnType<typeof suggestShares>; overRisk: boolean
+      kind: 'ok'; entry: number; stopPct: number; perShare: number; sz: Sizing | null; overRisk: boolean
       /** 残り余力で株数を減らした時: リスク計算の株数と、減らす前の残り余力 */
       capped?: { riskShares: number; remaining: number }
     }
@@ -85,24 +102,22 @@ function calc(entry: number, stop: number, capital: number, riskPct: number): Ca
   if (!(entry > 0) || !(stop > 0)) return null
   if (stop >= entry) return { kind: 'invalid' }
   const perShare = entry - stop
-  let sz = suggestShares({ capital, riskPct, entry, stop })
-  // 損切り幅が広く許容損失では 100 株に届かない時も、最小単位の 100 株で計算する（警告は残す）
-  const overRisk = sz != null && sz.shares === 0
-  if (sz != null && overRisk) {
-    sz = { shares: 100, riskYen: 100 * perShare, positionYen: 100 * entry, positionPct: 100 * entry / capital * 100 }
-  }
+  const ps = positionSize(capital, riskPct, perShare)
+  // 損切り幅が広く許容損失では 100 株に届かない時は、最低の 100 株で計算する（赤字で警告）
+  const overRisk = ps != null && ps < MIN_SHARES
+  const sz = ps == null ? null : sizing(Math.max(ps, MIN_SHARES), entry, perShare, capital)
   return { kind: 'ok', entry, stopPct: perShare / entry * 100, perShare, sz, overRisk }
 }
 
-/** 残り余力で買える株数（100 株単位）まで減らす */
+/** 残り余力で買える株数（1 株未満切り捨て）まで減らす。100 株に届かなければ 0（買えない） */
 function capToPower(c: Calc | null, entry: number, remaining: number | null, capital: number): Calc | null {
   if (c?.kind !== 'ok' || c.sz == null || remaining == null) return c
-  const affordable = Math.max(0, Math.floor(remaining / entry / 100) * 100)
+  const floored = Math.max(0, Math.floor(remaining / entry + 1e-9))
+  const affordable = floored >= MIN_SHARES ? floored : 0
   if (c.sz.shares <= affordable) return c
-  const shares = affordable
   return {
     ...c,
-    sz: { shares, riskYen: shares * c.perShare, positionYen: shares * entry, positionPct: capital > 0 ? shares * entry / capital * 100 : 0 },
+    sz: sizing(affordable, entry, c.perShare, capital),
     capped: { riskShares: c.sz.shares, remaining },
   }
 }
@@ -279,7 +294,7 @@ export default function TradePlans({ capital, holdingsCost, riskPct, onUseForTra
           <span className="text-small text-[var(--text-muted)]">前日終値と損切り価格を入れると損切り幅と株数が出ます</span>
         ) : (
           <span className="inline-flex flex-wrap gap-x-4">
-            {formCalcCapped && <CalcLine c={formCalcCapped} capital={capital} riskPct={riskPct} />}
+            {formCalcCapped && <CalcLine c={formCalcCapped} capital={capital} />}
             {formPos != null && formRemaining != null && (
               <span className="text-[var(--text-secondary)]">追加後の残り余力 {formatYen(formRemaining - formPos)}</span>
             )}
@@ -330,14 +345,14 @@ export default function TradePlans({ capital, holdingsCost, riskPct, onUseForTra
             {/* 見出し（PC のみ） */}
             <div className={`hidden md:grid ${ROW_COLS} gap-x-3 px-3 py-1.5 text-caption text-[var(--text-muted)] bg-[var(--bg-subtle,transparent)] border-b-[0.5px] border-[var(--border)]`}>
               <span>順位</span><span>銘柄</span><span className="text-right">前日終値 → 損切り</span>
-              <span className="text-right">損切り幅</span><span className="text-right">ポジションサイズ</span><span className="text-right">株数</span>
+              <span className="text-right">損切り幅</span><span className="text-right">ポジションサイズ</span>
               <span className="text-right">建玉</span><span className="text-right">想定損失</span><span />
             </div>
             <ul className="divide-y-[0.5px] divide-[var(--border)]">
               {rows.map(({ p, c }, i) => (
                 <PlanRow
                   key={p.id}
-                  p={p} c={c} index={i} last={i === rows.length - 1} capital={capital} riskPct={riskPct}
+                  p={p} c={c} index={i} last={i === rows.length - 1} capital={capital}
                   editing={form.id === p.id}
                   onMove={dir => move(i, dir)}
                   onUse={onUseForTrade ? () => handoff(p.id, p.ticker, p.company_name, Number(p.prev_close), Number(p.stop_price), p.memo, c) : undefined}
@@ -356,7 +371,7 @@ export default function TradePlans({ capital, holdingsCost, riskPct, onUseForTra
         )}
         {plans.length > 0 && (
           <div className="text-caption text-[var(--text-muted)] mt-1.5">
-            上から順に買付余力を割り当てます（▲▼ で順位を変更）。<span className="text-[var(--sem-weak-fg)]">赤字</span>は 1 回の許容損失を超える値と、建玉が口座残高の {MAX_POSITION_PCT}% 以上になるポジションサイズ。寄り値は新規トレード画面で直してください。
+            上から順に買付余力を割り当てます（▲▼ で順位を変更）。<span className="text-[var(--sem-weak-fg)]">赤字</span>は 1 回の許容損失を超える値（ポジションサイズが {MIN_SHARES} 株未満の時は {MIN_SHARES} 株で表示）と、建玉が口座残高の {MAX_POSITION_PCT}% 以上になるポジションサイズ。寄り値は新規トレード画面で直してください。
           </div>
         )}
       </div>
@@ -364,21 +379,9 @@ export default function TradePlans({ capital, holdingsCost, riskPct, onUseForTra
   )
 }
 
-// 候補の 1 行の列幅（PC）: 順位 / 銘柄 / 価格 / 損切り幅 / ポジションサイズ / 株数 / 建玉 / 想定損失 / 操作
-const ROW_COLS = 'md:grid-cols-[3rem_minmax(0,1.3fr)_minmax(0,1.2fr)_4.5rem_minmax(0,1.1fr)_4.5rem_minmax(0,1.1fr)_minmax(0,1fr)_15rem]'
+// 候補の 1 行の列幅（PC）: 順位 / 銘柄 / 価格 / 損切り幅 / ポジションサイズ / 建玉 / 想定損失 / 操作
+const ROW_COLS = 'md:grid-cols-[3rem_minmax(0,1.3fr)_minmax(0,1.2fr)_4.5rem_minmax(0,1fr)_minmax(0,1.1fr)_minmax(0,1fr)_15rem]'
 
-/** ポジションサイズ（株）=（口座残高 × リスク %）÷（終値 − 損切り価格）。1 株未満は切り捨て
- *  （浮動小数の誤差で 100 が 99.999… になり 1 株減るのを防ぐため、ごくわずかに足してから切り捨てる） */
-function positionSize(capital: number, riskPct: number, perShare: number): number | null {
-  if (!(capital > 0) || !(riskPct > 0) || !(perShare > 0)) return null
-  return Math.floor(capital * riskPct / 100 / perShare + 1e-9)
-}
-/** 1 トレードの建玉がこの割合（%）以上なら赤字 */
-const MAX_POSITION_PCT = 30
-/** ポジションサイズ × 終値 が口座残高の何 % か */
-function positionPctOf(ps: number, entry: number, capital: number): number {
-  return capital > 0 ? ps * entry / capital * 100 : 0
-}
 const DANGER = 'text-[var(--sem-weak-fg)]'
 
 function Stat({ label, value, sub, danger = false }: { label: string; value: string; sub?: string; danger?: boolean }) {
@@ -391,8 +394,8 @@ function Stat({ label, value, sub, danger = false }: { label: string; value: str
   )
 }
 
-function PlanRow({ p, c, index, last, capital, riskPct, editing, onMove, onUse, onEdit, onRemove }: {
-  p: TradePlan; c: Calc | null; index: number; last: boolean; capital: number; riskPct: number; editing: boolean
+function PlanRow({ p, c, index, last, capital, editing, onMove, onUse, onEdit, onRemove }: {
+  p: TradePlan; c: Calc | null; index: number; last: boolean; capital: number; editing: boolean
   onMove: (dir: -1 | 1) => void; onUse?: () => void; onEdit: () => void; onRemove: () => void
 }) {
   const ok = c?.kind === 'ok' ? c : null
@@ -400,9 +403,7 @@ function PlanRow({ p, c, index, last, capital, riskPct, editing, onMove, onUse, 
   const usable = sz != null && sz.shares > 0
   const over = ok?.overRisk ?? false
   const noPower = ok?.capped != null && sz != null && sz.shares === 0
-  const ps = ok ? positionSize(capital, riskPct, ok.perShare) : null
-  const psPct = ok && ps != null ? positionPctOf(ps, ok.entry, capital) : 0
-  const psOver = psPct >= MAX_POSITION_PCT
+  const psRed = over || (sz != null && sz.positionPct >= MAX_POSITION_PCT)
   const arrow = 'px-1 leading-none text-small text-[var(--text-secondary)] hover:text-[var(--text-primary)] disabled:opacity-25 disabled:cursor-not-allowed'
   const linkBtn = 'text-small text-[var(--text-muted)] hover:text-[var(--text-primary)] px-1'
   // スマホは「ラベル 値」で並べ、PC は見出し付きの列にする
@@ -434,20 +435,17 @@ function PlanRow({ p, c, index, last, capital, riskPct, editing, onMove, onUse, 
       <span className="col-start-2 md:col-start-auto md:contents flex flex-wrap gap-x-3 gap-y-0.5 text-small md:text-body">
         {cell('価格', <>{Number(p.prev_close).toLocaleString('ja-JP')} → {Number(p.stop_price).toLocaleString('ja-JP')}</>, 'text-[var(--text-secondary)]')}
         {c?.kind === 'invalid' ? (
-          <span className={`md:col-span-5 text-small ${DANGER}`}>損切り価格が前日終値以上です</span>
+          <span className={`md:col-span-4 text-small ${DANGER}`}>損切り価格が前日終値以上です</span>
         ) : ok == null ? null : (
           <>
             {cell('損切り幅', `−${formatPct(ok.stopPct)}`, 'text-[var(--text-secondary)]')}
-            {cell('ポジションサイズ', ps != null
-              ? <>{ps.toLocaleString('ja-JP')} 株<span className="text-caption ml-1">{psPct.toFixed(1)}%</span></>
-              : '—', psOver ? `font-medium ${DANGER}` : 'text-[var(--text-primary)]')}
             {sz == null ? (
               <span className="md:col-span-3 text-small text-[var(--text-muted)]">現金とリスク % を入れると株数が出ます</span>
             ) : noPower ? (
               <span className={`md:col-span-3 text-small ${DANGER}`}>余力不足で買えません</span>
             ) : (
               <>
-                {cell('株数', `${sz.shares.toLocaleString('ja-JP')} 株`, `font-medium ${over ? DANGER : 'text-[var(--text-primary)]'}`)}
+                {cell('ポジションサイズ', `${sz.shares.toLocaleString('ja-JP')} 株`, `font-medium ${psRed ? DANGER : 'text-[var(--text-primary)]'}`)}
                 {cell('建玉', <>{formatYen(sz.positionYen)}<span className="text-caption text-[var(--text-muted)] ml-1">{sz.positionPct.toFixed(1)}%</span></>,
                   ok.capped ? 'text-[var(--sem-watch-fg)]' : 'text-[var(--text-primary)]')}
                 {cell('想定損失', <>{formatYen(sz.riskYen)}{capital > 0 && <span className="text-caption ml-1">{(sz.riskYen / capital * 100).toFixed(2)}%</span>}</>,
@@ -465,7 +463,7 @@ function PlanRow({ p, c, index, last, capital, riskPct, editing, onMove, onUse, 
         <button type="button" className={linkBtn} onClick={onRemove}>削除</button>
       </span>
       {ok?.capped && sz != null && sz.shares > 0 && (
-        <span className="col-start-2 md:col-start-2 md:col-span-7 text-caption text-[var(--sem-watch-fg)]">
+        <span className="col-start-2 md:col-start-2 md:col-span-6 text-caption text-[var(--sem-watch-fg)]">
           余力不足のため減額（リスク計算では {ok.capped.riskShares.toLocaleString('ja-JP')} 株）
         </span>
       )}
@@ -473,7 +471,7 @@ function PlanRow({ p, c, index, last, capital, riskPct, editing, onMove, onUse, 
   )
 }
 
-function CalcLine({ c, capital, riskPct, compact = false }: { c: Calc; capital: number; riskPct: number; compact?: boolean }) {
+function CalcLine({ c, capital, compact = false }: { c: Calc; capital: number; compact?: boolean }) {
   if (c.kind === 'invalid') {
     return <span className="text-small text-[var(--sem-watch-fg)]">損切り価格が前日終値以上です</span>
   }
@@ -483,21 +481,14 @@ function CalcLine({ c, capital, riskPct, compact = false }: { c: Calc; capital: 
       {!compact && <>（{c.perShare.toLocaleString('ja-JP', { maximumFractionDigits: 1 })} 円/株）</>}
     </span>
   )
-  const ps = positionSize(capital, riskPct, c.perShare)
-  const psPct = ps != null ? positionPctOf(ps, c.entry, capital) : 0
-  const psLine = ps != null && (
-    <span className={psPct >= MAX_POSITION_PCT ? DANGER : 'text-[var(--text-secondary)]'}>
-      ポジションサイズ <strong className={psPct >= MAX_POSITION_PCT ? DANGER : 'text-[var(--text-primary)]'}>{ps.toLocaleString('ja-JP')} 株</strong>
-      <span className="ml-1">（{psPct.toFixed(1)}%）</span>
-    </span>
-  )
+  const red = c.sz != null && (c.overRisk || c.sz.positionPct >= MAX_POSITION_PCT)
   if (c.sz == null) {
     return <span className="inline-flex flex-wrap gap-x-4">{head}<span className="text-small text-[var(--text-muted)]">現金とリスク % を入れると株数が出ます</span></span>
   }
   if (c.capped && c.sz.shares === 0) {
     return (
       <span className="inline-flex flex-wrap gap-x-4">
-        {head}{psLine}
+        {head}
         <span className="text-[var(--sem-watch-fg)]">
           余力不足で買えません（残り余力 {formatYen(Math.max(0, c.capped.remaining))}・リスク計算では {c.capped.riskShares.toLocaleString('ja-JP')} 株）
         </span>
@@ -506,8 +497,10 @@ function CalcLine({ c, capital, riskPct, compact = false }: { c: Calc; capital: 
   }
   return (
     <span className="inline-flex flex-wrap gap-x-4 gap-y-0.5">
-      {head}{psLine}
-      <strong className="text-[var(--text-primary)]">{c.sz.shares.toLocaleString('ja-JP')} 株</strong>
+      {head}
+      <span className={red ? DANGER : 'text-[var(--text-secondary)]'}>
+        ポジションサイズ <strong className={red ? DANGER : 'text-[var(--text-primary)]'}>{c.sz.shares.toLocaleString('ja-JP')} 株</strong>
+      </span>
       <span className="text-[var(--text-secondary)]">建玉 {formatYen(c.sz.positionYen)}（{c.sz.positionPct.toFixed(1)}%）</span>
       {c.capped && (
         <span className="text-[var(--sem-watch-fg)]">
