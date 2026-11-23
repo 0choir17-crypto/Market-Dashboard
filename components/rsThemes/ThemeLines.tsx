@@ -1,8 +1,8 @@
 'use client'
 
-// Theme Lines — テーマグループごとの小さな折れ線 (21d = 濃い線、63d = 同じ色の薄い線)。
+// Theme Lines — テーマグループごとの小さな折れ線 (21d = 濃い線、63d = 同じ色の薄い線、126d = 同じ色の点線)。
 // 縦軸 = n_stocks。全グラフで縦軸の最大を揃え、テーマ間で量を比べられるようにする。
-// 並び = 今日の 21d の多い順 (同数は 63d の多い順)。表示期間に 21d も 63d も一度も
+// 並び = 今日の 21d の多い順 (同数は 63d → 126d の多い順)。表示期間に 21d / 63d / 126d のどれも一度も
 // MINOR_THEME_MAX 以上にならなかったテーマは Minor themes に畳む。「その他」はその最後。
 // 右上の切り替えで Heatmap 表示にもできる (初期は Lines)。
 
@@ -19,8 +19,10 @@ type Series = {
   order: number
   v21: number[]
   v63: number[]
+  v126: number[]
   t21: number[]
   t63: number[]
+  t126: number[]
   minor: boolean
 }
 
@@ -35,29 +37,32 @@ export default function ThemeLines({ grids }: { grids: Record<RsPeriod, ThemeGri
 
   const g21 = grids[21]
   const g63 = grids[63]
+  const g126 = grids[126]
   const dates = g21.dates
   const ticks = useMemo(() => spaceTicks(monthTicks(dates)), [dates])
 
   const { major, minor, yMax } = useMemo(() => {
     const t21 = dates.map(d => g21.totals.get(d) ?? 0)
     const t63 = dates.map(d => g63.totals.get(d) ?? 0)
+    const t126 = dates.map(d => g126.totals.get(d) ?? 0)
     const all: Series[] = g21.groups.map(g => {
       const v21 = dates.map(d => g21.cells.get(`${g.name}|${d}`) ?? 0)
       const v63 = dates.map(d => g63.cells.get(`${g.name}|${d}`) ?? 0)
-      const peak = Math.max(0, ...v21, ...v63)
-      return { group: g.name, order: g.order, v21, v63, t21, t63, minor: g.name === OTHER_GROUP || peak < MINOR_THEME_MAX }
+      const v126 = dates.map(d => g126.cells.get(`${g.name}|${d}`) ?? 0)
+      const peak = Math.max(0, ...v21, ...v63, ...v126)
+      return { group: g.name, order: g.order, v21, v63, v126, t21, t63, t126, minor: g.name === OTHER_GROUP || peak < MINOR_THEME_MAX }
     })
     const last = dates.length - 1
     const byToday = (a: Series, b: Series) =>
-      (b.v21[last] ?? 0) - (a.v21[last] ?? 0) || (b.v63[last] ?? 0) - (a.v63[last] ?? 0) || a.order - b.order
+      (b.v21[last] ?? 0) - (a.v21[last] ?? 0) || (b.v63[last] ?? 0) - (a.v63[last] ?? 0) || (b.v126[last] ?? 0) - (a.v126[last] ?? 0) || a.order - b.order
     const major = all.filter(s => !s.minor).sort(byToday)
     const minor = all
       .filter(s => s.minor)
       .sort((a, b) => (a.group === OTHER_GROUP ? 1 : 0) - (b.group === OTHER_GROUP ? 1 : 0) || byToday(a, b))
-    const peak = Math.max(1, ...all.flatMap(s => [...s.v21, ...s.v63]))
+    const peak = Math.max(1, ...all.flatMap(s => [...s.v21, ...s.v63, ...s.v126]))
     const yMax = Math.ceil(peak / 5) * 5
     return { major, minor, yMax }
-  }, [g21, g63, dates])
+  }, [g21, g63, g126, dates])
 
   const common = { dates, ticks, yMax, hoverI, hoverGroup, onHover: (i: number | null, g: string | null) => { setHoverI(i); setHoverGroup(g) } }
 
@@ -68,7 +73,7 @@ export default function ThemeLines({ grids }: { grids: Record<RsPeriod, ThemeGri
           <h2 className="text-small font-medium text-[var(--text-primary)]">{view === 'lines' ? 'Theme Lines' : 'Theme Heatmap'}</h2>
           <p className="text-caption text-[var(--text-secondary)] mt-0.5">
             {view === 'lines'
-              ? '濃い線 = 21 日、薄い線 = 63 日。21 日が先に上がればテーマの出始め、先に落ちれば勢いの落ち始め。1 銘柄が複数のテーマに入ることがあります。'
+              ? '濃い線 = 21 日、薄い線 = 63 日、点線 = 126 日。21 日が先に上がればテーマの出始め、先に落ちれば勢いの落ち始め。1 銘柄が複数のテーマに入ることがあります。'
               : '色の濃さ = そのテーマに入る強い銘柄の数。上の灰色の棒はその日の対象銘柄数。1 銘柄が複数のテーマに入ることがあります。'}
           </p>
         </div>
@@ -80,6 +85,9 @@ export default function ThemeLines({ grids }: { grids: Record<RsPeriod, ThemeGri
               </span>
               <span className="flex items-center gap-1">
                 <span className="inline-block w-4 h-[2px] bg-[var(--text-secondary)] opacity-40" />63d
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="inline-block w-4 border-t-2 border-dotted border-[var(--text-secondary)]" />126d
               </span>
             </span>
           )}
@@ -114,7 +122,7 @@ export default function ThemeLines({ grids }: { grids: Record<RsPeriod, ThemeGri
               >
                 {minorOpen ? '▾' : '▸'} Minor themes ({minor.length})
                 <span className="ml-2 font-normal text-[var(--text-muted)]">
-                  直近 {dates.length} 営業日で 21d・63d とも一度も {MINOR_THEME_MAX} 銘柄に届かなかったテーマ
+                  直近 {dates.length} 営業日で 21d・63d・126d のどれも一度も {MINOR_THEME_MAX} 銘柄に届かなかったテーマ
                 </span>
               </button>
               {minorOpen && (
@@ -178,7 +186,8 @@ function SmallChart({
         </span>
         <span className="ml-auto text-caption text-[var(--text-muted)] num whitespace-nowrap">
           21d <span className="text-[var(--text-primary)]">{s.v21[last] ?? 0}</span> / 63d{' '}
-          <span className="text-[var(--text-primary)]">{s.v63[last] ?? 0}</span>
+          <span className="text-[var(--text-primary)]">{s.v63[last] ?? 0}</span> / 126d{' '}
+          <span className="text-[var(--text-primary)]">{s.v126[last] ?? 0}</span>
         </span>
       </div>
 
@@ -189,6 +198,7 @@ function SmallChart({
           <line x1={0} x2={VB_W} y1={0} y2={0} stroke="var(--border-subtle)" vectorEffect="non-scaling-stroke" />
           <line x1={0} x2={VB_W} y1={VB_H / 2} y2={VB_H / 2} stroke="var(--border-subtle)" vectorEffect="non-scaling-stroke" />
           <line x1={0} x2={VB_W} y1={VB_H} y2={VB_H} stroke="var(--border)" vectorEffect="non-scaling-stroke" />
+          <path d={path(s.v126, yMax)} fill="none" stroke={color} strokeWidth={1.5} strokeDasharray="1.5 3" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
           <path d={path(s.v63, yMax)} fill="none" stroke={color} strokeOpacity={0.35} strokeWidth={2} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
           <path d={path(s.v21, yMax)} fill="none" stroke={color} strokeWidth={2} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
         </svg>
@@ -207,6 +217,10 @@ function SmallChart({
             <div className="flex items-center gap-1.5">
               <span className="inline-block w-3 h-[2px] opacity-40" style={{ backgroundColor: color }} />
               63d <span className="ml-auto pl-3 text-[var(--text-primary)]">{s.v63[hoverI]} / {s.t63[hoverI]}</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="inline-block w-3 border-t-2 border-dotted" style={{ borderColor: color }} />
+              126d <span className="ml-auto pl-3 text-[var(--text-primary)]">{s.v126[hoverI]} / {s.t126[hoverI]}</span>
             </div>
           </ChartTip>
         )}

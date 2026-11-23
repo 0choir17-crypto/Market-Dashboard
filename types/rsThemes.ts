@@ -1,11 +1,12 @@
 // RS Themes — 強い銘柄 (RS 上位 約 2%) がどのテーマグループに集まっているか。
 // 配信: jquants-scanner scripts/daily/rs_themes.py → rs_themes / rs_themes_members
 
-export type RsPeriod = 21 | 63
+export type RsPeriod = 21 | 63 | 126
 
 export const PERIODS: { key: RsPeriod; label: string }[] = [
   { key: 21, label: '21d' },
   { key: 63, label: '63d' },
+  { key: 126, label: '126d' },
 ]
 
 /** ヒートマップに出す営業日数 (≒ 直近 6 か月)。データは約 1 年分ある。 */
