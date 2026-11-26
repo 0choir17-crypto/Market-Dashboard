@@ -1,7 +1,9 @@
 'use client'
 
 // Theme Lines — テーマグループごとの小さな折れ線 (21d = 濃い線、63d = 同じ色の薄い線、126d = 同じ色の点線)。
-// 縦軸 = n_stocks。全グラフで縦軸の最大を揃え、テーマ間で量を比べられるようにする。
+// 縦軸 = n_stocks。「共通」= 全グラフで 0〜最大を揃え、テーマ間で量を比べる。
+// 「個別」= グラフごとに自分の最小〜最大に合わせ、件数の少ないテーマでも増減の形が見えるようにする
+// (1〜2 銘柄の揺れを大げさにしないよう、幅は最低 INDIV_MIN_SPAN 銘柄)。
 // 並び = 今日の 21d の多い順 (同数は 63d → 126d の多い順)。表示期間に 21d / 63d / 126d のどれも一度も
 // MINOR_THEME_MAX 以上にならなかったテーマは Minor themes に畳む。「その他」はその最後。
 // 右上の切り替えで Heatmap 表示にもできる (初期は Lines)。
@@ -13,6 +15,7 @@ import ThemeHeatmap from './ThemeHeatmap'
 import { MINOR_THEME_MAX, OTHER_GROUP, themeColor, type RsPeriod, type ThemeGrid } from '@/types/rsThemes'
 
 type View = 'lines' | 'heatmap'
+type Scale = 'shared' | 'each'
 
 type Series = {
   group: string
@@ -28,9 +31,27 @@ type Series = {
 
 const VB_W = 300
 const VB_H = 100
+const INDIV_MIN_SPAN = 4
+
+type YRange = { lo: number; hi: number }
+
+/** 個別の縦軸: そのテーマの最小〜最大。幅が INDIV_MIN_SPAN 未満なら上下に広げる (下限は 0 未満にしない)。 */
+function ownRange(s: Series): YRange {
+  const vals = [...s.v21, ...s.v63, ...s.v126]
+  let lo = Math.min(...vals)
+  let hi = Math.max(...vals)
+  if (!Number.isFinite(lo)) return { lo: 0, hi: 1 }
+  const lack = INDIV_MIN_SPAN - (hi - lo)
+  if (lack > 0) {
+    lo = Math.max(0, lo - Math.ceil(lack / 2))
+    hi = lo + INDIV_MIN_SPAN
+  }
+  return { lo, hi }
+}
 
 export default function ThemeLines({ grids }: { grids: Record<RsPeriod, ThemeGrid> }) {
   const [view, setView] = useState<View>('lines')
+  const [scale, setScale] = useState<Scale>('shared')
   const [hoverI, setHoverI] = useState<number | null>(null)
   const [hoverGroup, setHoverGroup] = useState<string | null>(null)
   const [minorOpen, setMinorOpen] = useState(false)
@@ -64,7 +85,7 @@ export default function ThemeLines({ grids }: { grids: Record<RsPeriod, ThemeGri
     return { major, minor, yMax }
   }, [g21, g63, g126, dates])
 
-  const common = { dates, ticks, yMax, hoverI, hoverGroup, onHover: (i: number | null, g: string | null) => { setHoverI(i); setHoverGroup(g) } }
+  const common = { dates, ticks, yMax, scale, hoverI, hoverGroup, onHover: (i: number | null, g: string | null) => { setHoverI(i); setHoverGroup(g) } }
 
   return (
     <section className="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] shadow-sm p-5">
@@ -73,7 +94,9 @@ export default function ThemeLines({ grids }: { grids: Record<RsPeriod, ThemeGri
           <h2 className="text-small font-medium text-[var(--text-primary)]">{view === 'lines' ? 'Theme Lines' : 'Theme Heatmap'}</h2>
           <p className="text-caption text-[var(--text-secondary)] mt-0.5">
             {view === 'lines'
-              ? '濃い線 = 21 日、薄い線 = 63 日、点線 = 126 日。21 日が先に上がればテーマの出始め、先に落ちれば勢いの落ち始め。1 銘柄が複数のテーマに入ることがあります。'
+              ? `濃い線 = 21 日、薄い線 = 63 日、点線 = 126 日。21 日が先に上がればテーマの出始め、先に落ちれば勢いの落ち始め。${
+                  scale === 'shared' ? '縦軸は全グラフ共通 (量を比べる)。' : '縦軸はグラフごと (形を見る。高さはテーマ間で比べられません)。'
+                }1 銘柄が複数のテーマに入ることがあります。`
               : '色の濃さ = そのテーマに入る強い銘柄の数。上の灰色の棒はその日の対象銘柄数。1 銘柄が複数のテーマに入ることがあります。'}
           </p>
         </div>
@@ -90,6 +113,17 @@ export default function ThemeLines({ grids }: { grids: Record<RsPeriod, ThemeGri
                 <span className="inline-block w-4 border-t-2 border-dotted border-[var(--text-secondary)]" />126d
               </span>
             </span>
+          )}
+          {view === 'lines' && (
+            <Segmented
+              label="縦軸"
+              value={scale}
+              onChange={setScale}
+              options={[
+                { key: 'shared', label: '共通' },
+                { key: 'each', label: '個別' },
+              ]}
+            />
           )}
           <Segmented
             label="View"
@@ -140,11 +174,12 @@ export default function ThemeLines({ grids }: { grids: Record<RsPeriod, ThemeGri
   )
 }
 
-function path(vals: number[], yMax: number): string {
+function path(vals: number[], { lo, hi }: YRange): string {
   const n = vals.length
   if (n === 0) return ''
   const dx = n > 1 ? VB_W / (n - 1) : 0
-  return vals.map((v, i) => `${i ? 'L' : 'M'}${(i * dx).toFixed(2)},${(VB_H - (v / yMax) * VB_H).toFixed(2)}`).join('')
+  const span = hi - lo || 1
+  return vals.map((v, i) => `${i ? 'L' : 'M'}${(i * dx).toFixed(2)},${(VB_H - ((v - lo) / span) * VB_H).toFixed(2)}`).join('')
 }
 
 function SmallChart({
@@ -152,6 +187,7 @@ function SmallChart({
   dates,
   ticks,
   yMax,
+  scale,
   hoverI,
   hoverGroup,
   onHover,
@@ -160,6 +196,7 @@ function SmallChart({
   dates: string[]
   ticks: (string | null)[]
   yMax: number
+  scale: Scale
   hoverI: number | null
   hoverGroup: string | null
   onHover: (i: number | null, g: string | null) => void
@@ -169,6 +206,7 @@ function SmallChart({
   const n = dates.length
   const last = n - 1
   const xOf = (i: number) => (n > 1 ? i / (n - 1) : 0)
+  const range = useMemo<YRange>(() => (scale === 'each' ? ownRange(s) : { lo: 0, hi: yMax }), [scale, s, yMax])
 
   const onMove = (e: React.MouseEvent) => {
     const r = ref.current?.getBoundingClientRect()
@@ -192,15 +230,18 @@ function SmallChart({
       </div>
 
       <div className="relative" ref={ref} onMouseMove={onMove} onMouseLeave={() => onHover(null, null)}>
-        <span className="absolute left-0.5 top-0 text-[10px] leading-none text-[var(--text-muted)] num">{yMax}</span>
+        <span className="absolute left-0.5 top-0 text-[10px] leading-none text-[var(--text-muted)] num">{range.hi}</span>
+        {range.lo > 0 && (
+          <span className="absolute left-0.5 bottom-0.5 text-[10px] leading-none text-[var(--text-muted)] num">{range.lo}</span>
+        )}
         <svg viewBox={`0 0 ${VB_W} ${VB_H}`} preserveAspectRatio="none" className="block w-full h-[84px] overflow-visible">
           {/* 目盛り: 上端 (最大) と底 */}
           <line x1={0} x2={VB_W} y1={0} y2={0} stroke="var(--border-subtle)" vectorEffect="non-scaling-stroke" />
           <line x1={0} x2={VB_W} y1={VB_H / 2} y2={VB_H / 2} stroke="var(--border-subtle)" vectorEffect="non-scaling-stroke" />
           <line x1={0} x2={VB_W} y1={VB_H} y2={VB_H} stroke="var(--border)" vectorEffect="non-scaling-stroke" />
-          <path d={path(s.v126, yMax)} fill="none" stroke={color} strokeWidth={1.5} strokeDasharray="1.5 3" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
-          <path d={path(s.v63, yMax)} fill="none" stroke={color} strokeOpacity={0.35} strokeWidth={2} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
-          <path d={path(s.v21, yMax)} fill="none" stroke={color} strokeWidth={2} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+          <path d={path(s.v126, range)} fill="none" stroke={color} strokeWidth={1.5} strokeDasharray="1.5 3" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+          <path d={path(s.v63, range)} fill="none" stroke={color} strokeOpacity={0.35} strokeWidth={2} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+          <path d={path(s.v21, range)} fill="none" stroke={color} strokeWidth={2} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
         </svg>
 
         {/* 同じ日に縦線を全グラフで揃える */}
