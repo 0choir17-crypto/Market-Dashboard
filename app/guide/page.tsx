@@ -301,10 +301,10 @@ export default function GuidePage() {
               <span className="font-mono"> HOLD / FOCUS / STALK / BREAKOUT / PULLBACK / PEG / EP / INBOX / SHORT / SOLD</span>{' '}
               ごとに現在のリストを表示。既定は<strong>滞在日数の長い順</strong>で、
               「FOCUS で何日止まっているか」が一目で分かるようにしています。
-              2026-11-23 から候補は TradingView の旗の色で分けています:
+              2026-11-23 から候補は TradingView の旗の色で分けています（2026-11-27 夜に緑と青を入れ替え）:
               赤 <span className="font-mono">FOCUS</span>（翌日に動きそう）/
-              青 <span className="font-mono">STALK</span>（1 週間以内に動きそう）/
-              緑 <span className="font-mono">WATCHING</span>（とりあえず気になる。中を
+              緑 <span className="font-mono">STALK</span>（1 週間以内に動きそう）/
+              青 <span className="font-mono">WATCHING</span>（とりあえず気になる。中を
               <span className="font-mono"> BREAKOUT / PULLBACK / PEG / EPISODIC PIVOTS / INBOX</span> の見出しで分ける。EPISODIC PIVOTS の状態名は EP）/
               オレンジ <span className="font-mono">SHORT</span>。
             </li>
@@ -319,6 +319,8 @@ export default function GuidePage() {
               は旧セクションの「注目」で、意味が違います。
               さらに 2026-11-23 から <span className="font-mono">FOCUS</span> は「翌日に動きそうな銘柄」になりました。
               11-23 の青の <span className="font-mono">INBOX→STALK</span> と同日の仕分け直しは判断ではありません。
+              11-27 夜の緑と青の入れ替えは中身ごとなので、状態名は変わらず差分にも出ません
+              （色で読むときは 11-27 の前後で緑と青が逆になります）。
             </li>
             <li>
               <strong className="text-[var(--text-primary)]">見逃しボード</strong> — Watch list に入れたのに

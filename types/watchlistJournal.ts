@@ -10,10 +10,10 @@ import type { SemanticTone } from '@/types/semantic'
 /**
  * TradingView のセクション（2026-11-18〜 は旗の色 + 見出し）= 銘柄の状態。
  *
- * 2026-11-23〜 の旗（記録上はどれも Watch list）:
+ * 2026-11-27 夜〜 の旗（記録上はどれも Watch list。11-23〜11-27 は緑と青が逆）:
  *   赤 FOCUS    翌日に動きそうな銘柄 → FOCUS
- *   青 STALK    1 週間以内に動きそうな銘柄 → STALK
- *   緑 WATCHING とりあえず気になる銘柄。見出し BREAKOUT / PULLBACK / PEG / EPISODIC PIVOTS(→EP) / INBOX
+ *   緑 STALK    1 週間以内に動きそうな銘柄 → STALK
+ *   青 WATCHING とりあえず気になる銘柄。見出し BREAKOUT / PULLBACK / PEG / EPISODIC PIVOTS(→EP) / INBOX
  *   オレンジ    SHORT
  */
 export type WatchState =
